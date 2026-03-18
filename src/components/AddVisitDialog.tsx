@@ -22,6 +22,8 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { ContractorScreening } from "@/components/ContractorScreening";
 import { Supplier } from "@/hooks/useSuppliers";
+import { useResidents } from "@/hooks/useResidents";
+import { useStaffMembers } from "@/hooks/useStaffMembers";
 
 interface AddVisitDialogProps {
   open: boolean;
