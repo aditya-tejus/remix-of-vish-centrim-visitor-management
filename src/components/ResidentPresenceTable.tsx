@@ -106,7 +106,7 @@ export function ResidentPresenceTable({
     });
   }, [residents, statusFilter, visitorMap]);
 
-  // Green empty state when all residents are in building
+  // Green empty state when all residents are on site
   if (exceptionResidents.length === 0) {
     const total = totalResidentCount ?? residents.length;
     return (
