@@ -16,6 +16,8 @@ import { Visitor, CompanionDetail } from "@/types/visitor";
 import { Search, ArrowLeft, ArrowRight, Check, Home, Clock, CalendarDays, Users, Plus, Trash2, ScrollText, Shield } from "lucide-react";
 import { useActiveLeaveTypes } from "@/hooks/useLeaveTypes";
 import { useCompanionFields } from "@/hooks/useFormFields";
+import { useResidents } from "@/hooks/useResidents";
+import { useStaffMembers } from "@/hooks/useStaffMembers";
 import { format } from "date-fns";
 
 interface ResidentLeaveDialogProps {
@@ -23,19 +25,6 @@ interface ResidentLeaveDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (visitor: Omit<Visitor, "id">) => void;
 }
-
-const mockResidents = [
-  { id: "r1", name: "Mary Johnson", room: "Room 12", wing: "East Wing" },
-  { id: "r2", name: "Robert Davis", room: "Room 8", wing: "West Wing" },
-  { id: "r3", name: "Patricia Wilson", room: "Room 3", wing: "East Wing" },
-  { id: "r4", name: "George Thompson", room: "Room 15", wing: "North Wing" },
-];
-
-const mockStaff = [
-  { id: "s1", name: "Dr. Helen Carter", role: "GP" },
-  { id: "s2", name: "Nurse Amy Roberts", role: "Nurse" },
-  { id: "s3", name: "Mark Stevens", role: "Manager" },
-];
 
 const escortOptions = [
   { value: "family", label: "Family Member", emoji: "👨‍👩‍👧", showName: true },
