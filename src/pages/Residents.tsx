@@ -18,7 +18,7 @@ import { DoorOpen, LogIn, ShieldAlert, Clock, AlertTriangle } from "lucide-react
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Residents() {
-  const { visitors, addVisitor, checkOutVisitor, checkInReturn, deleteVisitor } = useVisitors();
+  const { visitors, addVisitor, checkOutVisitor, checkInReturn, deleteVisitor, markResidentAway } = useVisitors();
   const { residents, loading } = useResidents();
   const { data: wings = [] } = useWings();
   const { data: residentDetails = [] } = useResidentDetails();
