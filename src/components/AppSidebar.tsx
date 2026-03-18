@@ -37,7 +37,7 @@ interface NavGroup {
 export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { overstayedCount } = useVisitors();
+  const { visitors, overstayedCount } = useVisitors();
   const [pendingCheckoutRequests, setPendingCheckoutRequests] = useState(0);
 
   useEffect(() => {
@@ -51,6 +51,14 @@ export function AppSidebar() {
     fetchPending();
   }, []);
 
+  const activeVisitorCount = visitors.filter(
+    (v) => v.status === "checked-in" && v.type !== "resident"
+  ).length;
+
+  const residentsAwayCount = visitors.filter(
+    (v) => v.type === "resident" && v.status !== "checked-in"
+  ).length;
+
   const totalVisitorBadge = overstayedCount > 0 ? overstayedCount : null;
 
   const navGroups: NavGroup[] = [
@@ -60,8 +68,8 @@ export function AppSidebar() {
       iconColor: "text-blue-400",
       collapsible: true,
       items: [
-        { title: "Visitor List", path: "/", badge: totalVisitorBadge, badgeVariant: "blue", activeDot: true },
-        { title: "Residents", path: "/residents" },
+        { title: "Visitor List", path: "/", badge: activeVisitorCount || null, badgeVariant: "blue", activeDot: true },
+        { title: "Residents", path: "/residents", badge: residentsAwayCount || null, badgeVariant: "amber" },
         { title: "Visitor Profiles", path: "/visitors" },
         { title: "Evacuation Report", path: "/evacuation" },
       ],
