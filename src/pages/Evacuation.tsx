@@ -88,22 +88,39 @@ export default function Evacuation() {
     return list;
   }, [checkedIn, searchQuery, filterType, filterWing, filterStatus, safeIds]);
 
-  // Group the filtered list
+  // Group the filtered list — when grouped by type, residents are sub-grouped by wing
   const grouped = useMemo((): { label: string; items: Visitor[] }[] => {
     if (groupBy === "none") return [{ label: "", items: filtered }];
 
     const map = new Map<string, Visitor[]>();
     filtered.forEach((v) => {
       let key = "";
-      if (groupBy === "wing") key = v.type === "resident" ? extractWing(v.address) : "Visitors / Staff";
-      else if (groupBy === "type") key = v.type.charAt(0).toUpperCase() + v.type.slice(1) + "s";
-      else if (groupBy === "status") key = safeIds.has(v.id) ? "✅ Safe" : "⚠️ Unaccounted";
+      if (groupBy === "type") {
+        // Residents get sub-grouped by wing
+        if (v.type === "resident") {
+          const wing = extractWing(v.address);
+          key = `Residents — ${wing}`;
+        } else {
+          key = v.type.charAt(0).toUpperCase() + v.type.slice(1) + "s";
+        }
+      } else if (groupBy === "wing") {
+        key = v.type === "resident" ? extractWing(v.address) : "Visitors / Staff";
+      } else if (groupBy === "status") {
+        key = safeIds.has(v.id) ? "✅ Safe" : "⚠️ Unaccounted";
+      }
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(v);
     });
 
+    // Sort: resident wings first (alphabetical), then other types
     return [...map.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
+      .sort(([a], [b]) => {
+        const aIsResident = a.startsWith("Residents");
+        const bIsResident = b.startsWith("Residents");
+        if (aIsResident && !bIsResident) return -1;
+        if (!aIsResident && bIsResident) return 1;
+        return a.localeCompare(b);
+      })
       .map(([label, items]) => ({ label, items }));
   }, [filtered, groupBy, safeIds]);
 
