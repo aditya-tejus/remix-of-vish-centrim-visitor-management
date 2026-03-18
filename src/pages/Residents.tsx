@@ -31,7 +31,7 @@ export default function Residents() {
   const [outingOpen, setOutingOpen] = useState(false);
   const [outingMode, setOutingMode] = useState<"short" | "planned">("short");
   const [outingResident, setOutingResident] = useState<{ id: string; name: string; room: string; wing: string } | null>(null);
-  const [activeTab, setActiveTab] = useState("presence");
+  const [activeTab, setActiveTab] = useState("leave");
   const [draftCount, setDraftCount] = useState(0);
   const [pendingApprovals, setPendingApprovals] = useState(0);
 
