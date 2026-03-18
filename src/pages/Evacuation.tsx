@@ -479,10 +479,11 @@ export default function Evacuation() {
                     <Layers className="h-3 w-3" /> Group:
                   </span>
                   {([
-                    { value: "none", label: "None" },
-                    { value: "wing", label: "Wing" },
+                    { value: "residents", label: "Residents" },
                     { value: "type", label: "Type" },
+                    { value: "wing", label: "Wing" },
                     { value: "status", label: "Status" },
+                    { value: "none", label: "None" },
                   ] as { value: GroupBy; label: string }[]).map((g) => (
                     <Button
                       key={g.value}
