@@ -18,9 +18,9 @@
 - [x] Jurisdiction toggle (AU/UK) in Settings → Presence tab
 - [x] Jurisdiction loaded from DB and used by contractor screening
 
-## Phase 3: Resident Leave Separation
-- [ ] Separate Resident Leave module (Option C: Room → short list → confirm)
-- [ ] Ensure visitor check-in never prompts resident leave
+## Phase 3: Resident Leave Separation ✅ DONE
+- [x] Separate Resident Leave module (standalone ResidentLeaveDialog with Room → short list → confirm flow)
+- [x] Ensure visitor check-in never prompts resident leave (removed resident from AddVisitDialog types)
 
 ## Phase 4: Settings & Governance
 - [ ] Expand Settings tabs (Presence, T&C, Alerts, Automation, Printing, Profiles & Badges, Resident Leave, Lock & Governance)
