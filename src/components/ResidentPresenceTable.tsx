@@ -64,7 +64,7 @@ export function ResidentPresenceTable({
       const isAway = visitor.leaveType === "Away" || !visitor.leaveType;
       return { status: isAway ? "away" : "on-leave", visitor };
     }
-    return { status: "in-building", visitor };
+    return { status: "on-site", visitor };
   };
 
   // Urgency sort order: overdue → due-back-today → away → on-leave
@@ -72,7 +72,7 @@ export function ResidentPresenceTable({
     overdue: 0,
     away: 1,
     "on-leave": 2,
-    "in-building": 3,
+    "on-site": 3,
   };
 
   // Get only exception residents (not in-building) unless a specific filter is applied
