@@ -209,7 +209,7 @@ export function useCheckInFlow(open: boolean) {
       case "identify":
         return true; // Can always proceed (new or returning)
       case "details":
-        return !!(formData.firstName && formData.surname && formData.email);
+        return !!(formData.firstName && formData.surname);
       case "screening":
         return true; // Screening is advisory, not blocking
       case "confirm":

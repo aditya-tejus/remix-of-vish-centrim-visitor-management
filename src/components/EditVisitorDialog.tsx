@@ -20,7 +20,7 @@ import { z } from "zod";
 const visitorSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required").max(100),
   surname: z.string().trim().min(1, "Surname is required").max(100),
-  email: z.string().trim().email("Invalid email").max(255),
+  email: z.string().trim().email("Invalid email").max(255).or(z.literal("")).optional(),
   mobile: z.string().trim().min(1, "Mobile is required").max(50),
   type: z.enum(["visitor", "resident", "contractor", "staff"]),
   address: z.string().max(500).optional(),

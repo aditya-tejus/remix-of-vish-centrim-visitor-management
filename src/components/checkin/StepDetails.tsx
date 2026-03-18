@@ -152,8 +152,8 @@ export function StepDetails({
               </div>
             </div>
             <div className="space-y-1">
-              <Label className="text-[12px]">Email <span className="text-destructive">*</span></Label>
-              <Input type="email" value={formData.email} onChange={(e) => updateField("email", e.target.value)} placeholder="email@example.com" className="rounded-xl h-10 text-[14px]" />
+              <Label className="text-[12px]">Email</Label>
+              <Input type="email" value={formData.email} onChange={(e) => updateField("email", e.target.value)} placeholder="email@example.com (optional)" className="rounded-xl h-10 text-[14px]" />
             </div>
             <div className="grid grid-cols-2 gap-2.5">
               <div className="space-y-1">
