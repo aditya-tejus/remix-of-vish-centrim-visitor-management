@@ -229,7 +229,7 @@ export default function Residents() {
               <div className="border-b border-border px-4">
                 <TabsList className="inline-flex items-center bg-transparent rounded-none p-0 gap-0 h-auto">
                   <TabsTrigger value="board" className="rounded-none h-11 px-5 text-[15px] font-medium border-b-[3px] border-b-transparent transition-all duration-150 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:border-b-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground">
-                    Board
+                    Away / Leave
                   </TabsTrigger>
                   <TabsTrigger value="directory" className="rounded-none h-11 px-5 text-[15px] font-medium border-b-[3px] border-b-transparent transition-all duration-150 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:border-b-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground">
                     Directory
