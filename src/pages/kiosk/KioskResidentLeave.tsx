@@ -27,7 +27,7 @@ export default function KioskResidentLeave() {
     if (!room.trim()) return residents;
     const q = room.toLowerCase();
     return residents.filter((r) =>
-      r.room?.toLowerCase().includes(q) || `${r.first_name} ${r.surname}`.toLowerCase().includes(q)
+      r.room?.toLowerCase().includes(q) || `${r.firstName} ${r.surname}`.toLowerCase().includes(q)
     );
   }, [residents, room]);
 
