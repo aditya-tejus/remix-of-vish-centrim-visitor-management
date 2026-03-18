@@ -45,9 +45,9 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<HomeWorkbench />} />
+          <Route path="/" element={<VisitList />} />
           <Route path="/dashboard" element={<Navigate to="/" replace />} />
-          <Route path="/visit-list" element={<VisitList />} />
+          <Route path="/visit-list" element={<Navigate to="/" replace />} />
           <Route path="/visitors" element={<Visitors />} />
           <Route path="/visitors/:id" element={<VisitorProfilePage />} />
           <Route path="/check-in" element={<Navigate to="/person-type" replace />} />

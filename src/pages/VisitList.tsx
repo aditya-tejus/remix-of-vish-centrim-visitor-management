@@ -284,6 +284,10 @@ export default function VisitList() {
       )}
       <VisitListQRDialog open={qrOpen} onOpenChange={setQrOpen} />
       <HandoverPrintDialog open={handoverOpen} onOpenChange={setHandoverOpen} visitors={filteredVisitors} date={selectedDate} />
+      <ResidentLeaveDialog open={residentLeaveOpen} onOpenChange={setResidentLeaveOpen} onSubmit={(visitor) => {
+        addVisitor(visitor);
+        toast({ title: "Resident Marked Away", description: `${visitor.firstName} ${visitor.surname} has been checked out.` });
+      }} />
     </SidebarProvider>
   );
 }
