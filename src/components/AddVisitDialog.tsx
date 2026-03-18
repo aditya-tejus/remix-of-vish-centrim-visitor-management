@@ -182,6 +182,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
     setHealthAnswers({}); setPrivacyAcknowledged(false);
     setReturnNotificationOptIn(false);
     setPhoto(null); setCompanions([]); stopCamera();
+    setContractorScreeningAnswers({}); setSelectedSupplier(null);
   };
 
   const handleSelectProfile = (profile: typeof mockProfiles[0]) => {
