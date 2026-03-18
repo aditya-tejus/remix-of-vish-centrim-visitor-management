@@ -125,24 +125,14 @@ export default function Residents() {
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <SidebarInset className="flex-1">
-          {/* Header */}
-          <header className="sticky top-0 z-10 bg-card border-b border-border">
-            <div className="flex items-center justify-between px-6 h-14">
-              <div className="flex items-center gap-4">
-                <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-                <div>
-                  <h1 className="text-xl font-bold text-foreground leading-tight">Residents</h1>
-                  <p className="text-[13px] text-muted-foreground">Manage resident presence, leave & returns</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <NotificationBell
-                  overstayedCount={0}
-                  overdueCount={overdueCount}
-                  draftCount={draftCount}
-                  pendingCount={pendingApprovals}
-                />
-                <div className="w-px h-5 bg-border" />
+          <AppHeader
+            title="Residents"
+            subtitle="Manage resident presence, leave & returns"
+            overdueCount={overdueCount}
+            draftCount={draftCount}
+            pendingCount={pendingApprovals}
+            actions={
+              <>
                 <Button variant="outline" size="sm" className="h-[34px] text-[13px] gap-1.5 border-border" onClick={() => setMarkAwayOpen(true)}>
                   <DoorOpen className="h-4 w-4" />
                   Mark Away
@@ -153,9 +143,9 @@ export default function Residents() {
                   <LogIn className="h-4 w-4" />
                   Mark Return
                 </Button>
-              </div>
-            </div>
-          </header>
+              </>
+            }
+          />
 
           {/* Count cards */}
           <div className="px-6 pt-4 pb-2">
