@@ -120,7 +120,6 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
     contractor: "🔧",
     volunteer: "🤝",
     staff: "👨‍💼",
-    resident: "🏠",
   };
 
   const getColumns = (type: string) => {
