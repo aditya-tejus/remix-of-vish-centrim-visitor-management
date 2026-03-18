@@ -19,9 +19,6 @@ import LeaveRequests from "./pages/LeaveRequests";
 import NotFound from "./pages/NotFound";
 // Phase 6-7 new pages
 import Residents from "./pages/Residents";
-import PersonTypeSelector from "./pages/PersonTypeSelector";
-import GroupCheckIn from "./pages/GroupCheckIn";
-import QRFastLane from "./pages/QRFastLane";
 import ReportsHome from "./pages/ReportsHome";
 import EvacuationReport from "./pages/EvacuationReport";
 import PresenceLog from "./pages/PresenceLog";
