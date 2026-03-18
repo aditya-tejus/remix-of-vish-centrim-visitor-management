@@ -70,11 +70,6 @@ export default function VisitList() {
     [visitors, selectedDate]
   );
 
-  // Computed stats
-  const checkedIn = filteredVisitors.filter(v => v.status === "checked-in").length;
-  const checkedOut = filteredVisitors.filter(v => v.status === "checked-out").length;
-  const residentsOnLeave = visitors.filter(v => v.type === "resident" && v.status === "checked-out").length;
-  const staffOnSite = filteredVisitors.filter(v => v.type === "staff" && v.status === "checked-in").length;
   const overdueResidents = visitors.filter(v => v.type === "resident" && v.status === "checked-out" && v.expectedReturnDate && isPast(v.expectedReturnDate)).length;
 
   // Apply filter to table
@@ -85,7 +80,6 @@ export default function VisitList() {
       case "checked-out": return filteredVisitors.filter(v => v.status === "checked-out");
       case "overstayed": return filteredVisitors.filter(v => v.status === "checked-in" && Date.now() - v.checkInTime.getTime() > 8 * 3600000);
       case "on-leave": return visitors.filter(v => v.type === "resident" && v.status === "checked-out");
-      case "staff": return filteredVisitors.filter(v => v.type === "staff" && v.status === "checked-in");
       default: return filteredVisitors;
     }
   }, [filteredVisitors, visitors, activeFilter]);
@@ -103,27 +97,7 @@ export default function VisitList() {
     "checked-out": "Checked Out",
     "overstayed": "Overstayed",
     "on-leave": "Residents On Leave",
-    "pending": "Pending Approvals",
-    "staff": "Staff On Site",
   };
-
-  const handleFilter = (key: string) => {
-    if (key === activeFilter) {
-      setActiveFilter(null);
-    } else {
-      setActiveFilter(key);
-      // Auto-switch tabs
-      if (key === "on-leave" || key === "overdue") setActiveTab("resident");
-      else if (key === "staff") setActiveTab("staff");
-      else if (key !== "pending") setActiveTab("visitor");
-    }
-  };
-
-  const handleFilterOverstayed = useCallback(() => { handleFilter("overstayed"); }, [activeFilter]);
-  const handleFilterDrafts = useCallback(() => { setActiveTab("resident"); setActiveFilter(null); }, []);
-  const handleFilterOverdue = useCallback(() => { setActiveTab("resident"); setActiveFilter("overdue"); }, []);
-  const handleFilterPending = useCallback(() => { navigate("/checkout-requests"); }, [navigate]);
-  const handleFilterReturnsToday = useCallback(() => { setActiveTab("resident"); setActiveFilter(null); }, []);
 
   return (
     <SidebarProvider>
