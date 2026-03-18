@@ -39,7 +39,7 @@
 - [ ] Replace all `mockStaff` arrays with queries to `staff_members` table
 - [ ] Wire resident photos into visit target selection UI
 
-## Phase 6: Staff Desktop — Batch 1 (Enhance Existing Screens 1, 3, 6, 8, 10)
+## Phase 6: Staff Desktop — Batch 1 (Enhance Existing Screens 1, 3, 6, 8, 10-14)
 
 ### Screen 1 — Home Workbench enhancements
 - [ ] Search bar (name/resident/company) filtering Active Now + History
@@ -78,7 +78,29 @@
 - [ ] AU: Mobility aids noted (wheelchair, walker)
 - [ ] Mark Returned: quick action
 
-## Phase 7: Staff Desktop — Batch 2 (New Screens 2, 4, 5, 7, 9, 15-17)
+### Screen 11 — Emergency Roll Call
+- [ ] Grouped sections: Visitors, Contractors, Volunteers, Residents Away, Overdue
+- [ ] Mark safe / not accounted actions per person
+- [ ] Export snapshot (PDF/CSV)
+- [ ] Resident mobility data displayed in roll call (wheelchair, walker, bed-bound)
+
+### Screen 12 — Visitor Profiles List
+- [ ] Search and filters (by type, date range, status)
+- [ ] List columns: name, type, last visit, visit count, status
+- [ ] Quick check-in action from profile list
+
+### Screen 13 — Visitor Profile Detail
+- [ ] Tabs: Summary, Badges, Visit History, Contact, Privacy (UK)
+- [ ] Issue / revoke / reprint badge (revoke requires reason)
+- [ ] Visit history timeline with check-in/out times
+
+### Screen 14 — Reports Home
+- [ ] Card layout linking to: Evacuation Report, Presence Log, Visit Trends
+- [ ] Each card shows last-run date and quick stats
+
+## Phase 7: Staff Desktop — Batch 2 (New Screens 2, 4, 5, 7, 9, 15-17) + Settings Screens (18-29)
+
+### New Screens
 - [ ] Screen 2: Person Type Selector tiles (Visitor, Contractor, Volunteer, Other; Visitor has "QR Fast Lane" sub-option)
 - [ ] Screen 4: Group Check-In (multi-row, batch print, post-confirm summary)
 - [ ] Screen 5: QR Fast Lane — scan → resolve → select target → screening → terms → confirm; duplicate scan = already checked in → checkout prompt
@@ -87,6 +109,20 @@
 - [ ] Screen 15: Evacuation Report (snapshot history from `evacuation_drills`)
 - [ ] Screen 16: Presence Log (filterable by date, type, company, work type, method, risk; export with permission gating)
 - [ ] Screen 17: Visit Trends (counts per day/week by person type, using recharts)
+
+### Settings Screens
+- [ ] Screen 18 — Settings Home: sections listed, role-gated access
+- [ ] Screen 19 — Settings: Presence (jurisdiction, person types, enabled features)
+- [ ] Screen 20 — Settings: Screening (tabs by person type + jurisdiction AU/UK)
+- [ ] Screen 21 — Settings: Terms & Conditions (per person type, versioned documents)
+- [ ] Screen 22 — Settings: Alerts (overdue thresholds, watchlist, email recipients)
+- [ ] Screen 23 — Settings: Automation (auto-checkout hours per type, data cleanup)
+- [ ] Screen 24 — Settings: Printing (Brother QL template, label size, badge content)
+- [ ] Screen 25 — Settings: Profiles & Badges (photo/signature per type)
+- [ ] Screen 26 — Settings: Resident Leave Self-Service (Option C controls, kiosk enable)
+- [ ] Screen 27 — Settings: GDPR/UK (data minimisation rules, DSAR role, retention/anonymise per type)
+- [ ] Screen 28 — Settings: Audit Log (filters by action/date/user + CSV export)
+- [ ] Screen 29 — Settings: Lock & Governance (lock enabled, locked sections, change reason requirement)
 
 ## Phase 8: Safeguarding & Compliance
 - [ ] **Watchlist enforcement during check-in**: When visitor name matches `visitor_watchlist`, block and alert staff with instructions
