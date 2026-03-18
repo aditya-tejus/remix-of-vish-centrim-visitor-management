@@ -29,6 +29,7 @@ interface NavItem {
 interface NavGroup {
   label: string;
   icon: LucideIcon;
+  iconColor: string;
   items: NavItem[];
   collapsible?: boolean;
 }
@@ -56,6 +57,7 @@ export function AppSidebar() {
     {
       label: "Visitors",
       icon: Users,
+      iconColor: "text-blue-400",
       collapsible: true,
       items: [
         { title: "Visitor List", path: "/", badge: totalVisitorBadge, badgeVariant: "blue", activeDot: true },
@@ -68,6 +70,7 @@ export function AppSidebar() {
     {
       label: "Residents",
       icon: DoorOpen,
+      iconColor: "text-emerald-400",
       collapsible: true,
       items: [
         { title: "Residents", path: "/residents", activeDot: true },
@@ -76,6 +79,7 @@ export function AppSidebar() {
     {
       label: "Insights",
       icon: BarChart3,
+      iconColor: "text-violet-400",
       collapsible: true,
       items: [
         { title: "Reports", path: "/reports", indent: true },
@@ -87,6 +91,7 @@ export function AppSidebar() {
     {
       label: "Safety & Compliance",
       icon: Shield,
+      iconColor: "text-amber-400",
       collapsible: true,
       items: [
         { title: "Emergency Evacuation", path: "/evacuation", indent: true },
@@ -98,7 +103,7 @@ export function AppSidebar() {
   ];
 
   const badgeClasses: Record<string, string> = {
-    blue: "bg-info text-info-foreground",
+    blue: "bg-blue-500 text-white",
     red: "bg-destructive text-destructive-foreground",
     amber: "bg-warning text-warning-foreground",
     green: "bg-success text-success-foreground",
@@ -125,8 +130,8 @@ export function AppSidebar() {
           <Collapsible key={group.label} defaultOpen={isGroupActive(group) || group.label === "Visitors"}>
             <SidebarGroup>
               <CollapsibleTrigger className="w-full">
-                <SidebarGroupLabel className="flex items-center gap-2 text-[13px] font-semibold text-sidebar-foreground px-3 py-2 hover:bg-[rgba(255,255,255,0.05)] rounded-lg cursor-pointer transition-colors">
-                  <group.icon className="h-4 w-4 text-sidebar-muted" />
+                <SidebarGroupLabel className="flex items-center gap-2.5 text-[13px] font-semibold text-sidebar-foreground px-3 py-2 hover:bg-[rgba(255,255,255,0.05)] rounded-lg cursor-pointer transition-colors">
+                  <group.icon className={`h-4 w-4 ${group.iconColor}`} />
                   <span className="flex-1 text-left">{group.label}</span>
                   {group.label === "Visitors" && totalVisitorBadge != null && totalVisitorBadge > 0 && (
                     <span className={`${badgeClasses["red"]} text-[10px] font-bold min-w-[20px] h-5 rounded-full flex items-center justify-center px-1.5`}>
@@ -183,7 +188,7 @@ export function AppSidebar() {
                 tooltip="Kiosk Mode"
                 className="rounded-lg h-8 text-[13px] font-medium gap-3 px-3 text-sidebar-muted hover:bg-[rgba(255,255,255,0.05)] hover:text-sidebar-foreground"
               >
-                <Layers className="h-4 w-4 shrink-0" />
+                <Layers className="h-4 w-4 shrink-0 text-cyan-400" />
                 <span>Kiosk Mode</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -204,7 +209,7 @@ export function AppSidebar() {
                     : "text-sidebar-muted hover:bg-[rgba(255,255,255,0.05)] hover:text-sidebar-foreground"
                   }`}
               >
-                <Settings className="h-4 w-4 shrink-0" />
+                <Settings className="h-4 w-4 shrink-0 text-gray-400" />
                 <span>Settings</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
