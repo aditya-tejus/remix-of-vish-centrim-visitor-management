@@ -28,7 +28,7 @@ export default function VisitList() {
   const { visitors, addVisitor, checkOutVisitor, checkInReturn, deleteVisitor, overstayedCount } = useVisitors();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [checkOutDialogOpen, setCheckOutDialogOpen] = useState(false);
-  const [residentLeaveOpen, setResidentLeaveOpen] = useState(false);
+  
   const [qrOpen, setQrOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [feedbackVisitor, setFeedbackVisitor] = useState<Visitor | null>(null);
