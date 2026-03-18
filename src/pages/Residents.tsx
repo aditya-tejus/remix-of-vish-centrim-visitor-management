@@ -18,7 +18,7 @@ import { DoorOpen, LogIn, ShieldAlert, Clock, AlertTriangle } from "lucide-react
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Residents() {
-  const { visitors, addVisitor, checkOutVisitor, checkInReturn, deleteVisitor } = useVisitors();
+  const { visitors, addVisitor, checkOutVisitor, checkInReturn, deleteVisitor, markResidentAway } = useVisitors();
   const { residents, loading } = useResidents();
   const { data: wings = [] } = useWings();
   const { data: residentDetails = [] } = useResidentDetails();
@@ -288,13 +288,14 @@ export default function Residents() {
         onOpenChange={setOutingOpen}
         defaultMode={outingMode}
         preselectedResident={outingResident}
-        onSubmit={(visitor) => {
-          addVisitor(visitor);
+        presenceMap={presenceMap}
+        onMarkAway={async (visitorId, details) => {
+          await markResidentAway(visitorId, details);
           setOutingResident(null);
-          const isShort = visitor.leaveType === "Away";
+          const isShort = details.leaveType === "Away";
           toast({
             title: isShort ? "Resident Marked Away" : "Leave Recorded",
-            description: `${visitor.firstName} ${visitor.surname} ${isShort ? "is away" : "has been checked out on leave"}.`,
+            description: `Resident ${isShort ? "is away" : "has been checked out on leave"}.`,
           });
         }}
       />

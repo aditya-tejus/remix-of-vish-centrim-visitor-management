@@ -18,7 +18,7 @@ import { Visitor } from "@/types/visitor";
 
 export default function HomeWorkbench() {
   const navigate = useNavigate();
-  const { visitors, addVisitor, checkOutVisitor, checkInReturn, overstayedCount } = useVisitors();
+  const { visitors, addVisitor, checkOutVisitor, checkInReturn, overstayedCount, markResidentAway } = useVisitors();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [checkOutDialogOpen, setCheckOutDialogOpen] = useState(false);
   const [residentLeaveOpen, setResidentLeaveOpen] = useState(false);
@@ -175,7 +175,7 @@ export default function HomeWorkbench() {
 
       <AddVisitDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onAdd={addVisitor} />
       <CheckOutSheet open={checkOutDialogOpen} onOpenChange={setCheckOutDialogOpen} visitors={visitors} onCheckOut={checkOutVisitor} />
-      <ResidentOutingDialog open={residentLeaveOpen} onOpenChange={setResidentLeaveOpen} onSubmit={addVisitor} />
+      <ResidentOutingDialog open={residentLeaveOpen} onOpenChange={setResidentLeaveOpen} onMarkAway={markResidentAway} />
     </SidebarProvider>
   );
 }

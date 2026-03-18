@@ -147,6 +147,58 @@ export function useVisitors() {
     return newVisitor;
   };
 
+  const markResidentAway = async (visitorId: string, details: {
+    expectedReturnDate?: Date;
+    checkoutReason?: string;
+    leaveType?: string;
+    accompaniedBy?: string;
+    accompaniedByName?: string;
+    comments?: string;
+    returnNotificationOptIn?: boolean;
+    companionDetails?: CompanionDetail[];
+  }) => {
+    const now = new Date();
+    // Optimistic update
+    setVisitors((prev) =>
+      prev.map((v) =>
+        v.id === visitorId
+          ? {
+              ...v,
+              checkOutTime: now,
+              status: "checked-out" as const,
+              expectedReturnDate: details.expectedReturnDate,
+              checkoutReason: details.checkoutReason ?? null,
+              leaveType: details.leaveType,
+              accompaniedBy: details.accompaniedBy,
+              accompaniedByName: details.accompaniedByName,
+              comments: details.comments || v.comments,
+              returnNotificationOptIn: details.returnNotificationOptIn ?? false,
+              companionDetails: details.companionDetails || v.companionDetails,
+              additionalVisitors: details.companionDetails?.length || 0,
+            }
+          : v
+      )
+    );
+
+    const updateData: Record<string, unknown> = {
+      check_out_time: now.toISOString(),
+      status: "checked-out",
+      expected_return_date: details.expectedReturnDate?.toISOString() ?? null,
+      checkout_reason: details.checkoutReason ?? null,
+      leave_type: details.leaveType ?? null,
+      accompanied_by: details.accompaniedBy ?? null,
+      accompanied_by_name: details.accompaniedByName ?? null,
+      return_notification_opt_in: details.returnNotificationOptIn ?? false,
+    };
+    if (details.comments) updateData.comments = details.comments;
+    if (details.companionDetails) {
+      updateData.companion_details = details.companionDetails;
+      updateData.additional_visitors = details.companionDetails.length;
+    }
+
+    await supabase.from("visitors").update(updateData).eq("id", visitorId);
+  };
+
   const checkOutVisitor = async (id: string, reason?: string) => {
     setVisitors((prev) =>
       prev.map((v) =>
@@ -208,6 +260,7 @@ export function useVisitors() {
     visitors,
     loading,
     addVisitor,
+    markResidentAway,
     checkOutVisitor,
     checkInReturn,
     checkOutAllOverstayed,
