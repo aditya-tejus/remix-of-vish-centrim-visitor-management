@@ -482,7 +482,8 @@ export default function Evacuation() {
                 {group.label && (
                   <div className="flex items-center gap-2 px-1">
                     <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
-                      {groupBy === "wing" ? <MapPin className="h-3.5 w-3.5 text-primary" /> :
+                      {group.label.startsWith("Residents") ? <Home className="h-3.5 w-3.5 text-primary" /> :
+                       groupBy === "wing" ? <MapPin className="h-3.5 w-3.5 text-primary" /> :
                        groupBy === "type" ? <Users className="h-3.5 w-3.5 text-primary" /> :
                        <Shield className="h-3.5 w-3.5 text-primary" />}
                     </div>
