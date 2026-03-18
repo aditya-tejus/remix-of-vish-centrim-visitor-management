@@ -30,7 +30,7 @@ const mobilityColors: Record<string, string> = {
 };
 
 const presenceDot: Record<string, string> = {
-  "in-building": "bg-success",
+  "on-site": "bg-success",
   "away": "bg-warning",
   "on-leave": "bg-info",
   "overdue": "bg-destructive animate-pulse",
