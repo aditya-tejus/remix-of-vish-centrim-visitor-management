@@ -18,6 +18,7 @@ import { exportVisitorsToCSV, exportVisitorToPDF, exportVisitorsToPDFBulk } from
 import { useToast } from "@/hooks/use-toast";
 import { CheckInReturnDialog } from "@/components/CheckInReturnDialog";
 import { ResidentLeaveTable } from "@/components/ResidentLeaveTable";
+import { TabContextStats } from "@/components/TabContextStats";
 
 interface VisitorTableProps {
   visitors: Visitor[];
@@ -301,6 +302,12 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
             ))}
           </TabsList>
         </div>
+
+        <TabContextStats
+          tab={activeTab || "all"}
+          visitors={visitorsByType[activeTab || "all"]}
+          allVisitors={visitors}
+        />
 
         {/* Residents tab — completely independent view */}
         <TabsContent value="resident" className="mt-0">
