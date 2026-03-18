@@ -66,12 +66,11 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
   const { toast } = useToast();
 
   const visitorsByType: Record<string, Visitor[]> = {
-    all: visitors,
+    all: visitors.filter((v) => v.type !== "resident"),
     visitor: visitors.filter((v) => v.type === "visitor"),
     contractor: visitors.filter((v) => v.type === "contractor"),
     volunteer: visitors.filter((v) => v.type === "volunteer"),
     staff: visitors.filter((v) => v.type === "staff"),
-    resident: visitors.filter((v) => v.type === "resident"),
   };
 
   const toggleSelect = (id: string) => {
