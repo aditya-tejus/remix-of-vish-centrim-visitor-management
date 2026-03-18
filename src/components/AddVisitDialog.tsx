@@ -22,6 +22,8 @@ import { useCompanionFields } from "@/hooks/useFormFields";
 import { useActiveLeaveTypes } from "@/hooks/useLeaveTypes";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { ContractorScreening } from "@/components/ContractorScreening";
+import { Supplier } from "@/hooks/useSuppliers";
 
 interface AddVisitDialogProps {
   open: boolean;
