@@ -179,6 +179,15 @@ export default function GroupCheckIn() {
           </main>
         </SidebarInset>
       </div>
+      {watchlistEntry && (
+        <WatchlistAlertDialog
+          open={watchlistOpen}
+          onOpenChange={setWatchlistOpen}
+          entry={watchlistEntry}
+          onProceed={() => {}}
+          onDeny={() => toast({ title: "Entry Denied", description: `${blockedMember} is on the watchlist and cannot be checked in.`, variant: "destructive" })}
+        />
+      )}
     </SidebarProvider>
   );
 }
