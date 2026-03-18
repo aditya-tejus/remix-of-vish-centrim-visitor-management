@@ -81,7 +81,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
   const activeCompanionFields = companionFieldsConfig.filter((f) => f.is_active).sort((a, b) => a.sort_order - b.sort_order);
   const healthQuestions: HealthQuestion[] = dbQuestions.length > 0 ? dbQuestions : fallbackHealthQuestions;
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedProfile, setSelectedProfile] = useState<typeof mockProfiles[0] | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<VisitorProfile | null>(null);
   const [selectedResident, setSelectedResident] = useState<{ id: string; name: string; room: string; wing: string } | null>(null);
   const [formData, setFormData] = useState({
     firstName: "", surname: "", email: "", mobile: "", address: "",

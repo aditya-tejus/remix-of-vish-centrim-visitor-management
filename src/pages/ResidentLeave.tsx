@@ -195,7 +195,10 @@ export default function ResidentLeave() {
           </main>
         </SidebarInset>
       </div>
-      <ResidentLeaveDialog open={markAwayOpen} onOpenChange={setMarkAwayOpen} onSubmit={() => {}} />
+      <ResidentLeaveDialog open={markAwayOpen} onOpenChange={setMarkAwayOpen} onSubmit={(visitor) => {
+        addVisitor(visitor);
+        toast({ title: "Resident Marked Away", description: `${visitor.firstName} ${visitor.surname} has been checked out.` });
+      }} />
     </SidebarProvider>
   );
 }

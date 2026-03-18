@@ -2,7 +2,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { useVisitors } from "@/hooks/useVisitors";
+import { useWatchlist } from "@/hooks/useWatchlist";
+import { WatchlistAlertDialog } from "@/components/WatchlistAlertDialog";
 import { useToast } from "@/hooks/use-toast";
 import { User, Truck, Heart, ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 
@@ -17,28 +19,48 @@ const STEPS = ["type", "details", "confirm"];
 export default function KioskCheckIn() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { addVisitor } = useVisitors();
+  const { checkVisitor } = useWatchlist();
   const [step, setStep] = useState(0);
   const [selectedType, setSelectedType] = useState("");
   const [form, setForm] = useState({ firstName: "", surname: "", email: "", mobile: "", whomToVisit: "" });
   const [submitted, setSubmitted] = useState(false);
+  const [watchlistEntry, setWatchlistEntry] = useState<any>(null);
+  const [watchlistOpen, setWatchlistOpen] = useState(false);
 
   const update = (field: string, value: string) => setForm((prev) => ({ ...prev, [field]: value }));
 
-  const handleSubmit = async () => {
-    await supabase.from("visitors").insert({
-      first_name: form.firstName,
+  const doCheckIn = () => {
+    addVisitor({
+      firstName: form.firstName,
       surname: form.surname,
-      email: form.email,
-      mobile: form.mobile,
-      type: selectedType,
-      whom_to_visit: form.whomToVisit,
+      email: form.email || "",
+      mobile: form.mobile || "",
+      type: selectedType as any,
+      checkInTime: new Date(),
+      checkOutTime: null,
+      whomToVisit: form.whomToVisit,
+      address: "",
       status: "checked-in",
-      health_declaration: false,
-      privacy_acknowledged: false,
+      healthDeclaration: false,
+      additionalVisitors: 0,
+      comments: "",
+      retentionExpiry: new Date(Date.now() + 86400000 * 60),
+      acknowledgedPrivacy: false,
     });
     setSubmitted(true);
     toast({ title: "Checked In", description: `Welcome, ${form.firstName}!` });
     setTimeout(() => navigate("/kiosk"), 3000);
+  };
+
+  const handleSubmit = () => {
+    const match = checkVisitor(form.firstName, form.surname);
+    if (match) {
+      setWatchlistEntry(match);
+      setWatchlistOpen(true);
+      if (match.alert_type === "hard") return;
+    }
+    doCheckIn();
   };
 
   if (submitted) {

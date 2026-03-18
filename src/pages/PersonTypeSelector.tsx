@@ -80,7 +80,7 @@ export default function PersonTypeSelector() {
           </main>
         </SidebarInset>
       </div>
-      <AddVisitDialog open={dialogOpen} onOpenChange={setDialogOpen} onAdd={addVisitor} />
+      <AddVisitDialog open={dialogOpen} onOpenChange={setDialogOpen} onAdd={addVisitor} initialType={selectedType as any} />
     </SidebarProvider>
   );
 }
