@@ -5,7 +5,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppHeader } from "@/components/AppHeader";
 import { useVisitors } from "@/hooks/useVisitors";
 import { AddVisitDialog } from "@/components/AddVisitDialog";
-import { CheckOutDialog } from "@/components/CheckOutDialog";
+import { CheckOutSheet } from "@/components/CheckOutSheet";
 import { ResidentLeaveDialog } from "@/components/ResidentLeaveDialog";
 
 import { ActiveNowList } from "@/components/workbench/ActiveNowList";
