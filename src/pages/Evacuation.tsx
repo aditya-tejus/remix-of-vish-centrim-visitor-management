@@ -37,7 +37,7 @@ function extractRoom(address: string): string {
   return roomPart || parts[0] || "";
 }
 
-type GroupBy = "none" | "wing" | "type" | "status" | "residents";
+type GroupBy = "type" | "status";
 
 export default function Evacuation() {
   const { visitors } = useVisitors();
