@@ -68,7 +68,7 @@ export function ResidentDirectoryTable({ residents, wingMap, presenceMap, onQuic
       <TableBody>
         {residents.map(resident => {
           const wing = resident.wingId ? wingMap.get(resident.wingId) : null;
-          const presence = presenceMap?.get(resident.visitorId) || "in-building";
+          const presence = presenceMap?.get(resident.visitorId) || "on-site";
 
           return (
             <TableRow
