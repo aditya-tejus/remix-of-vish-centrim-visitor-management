@@ -56,7 +56,7 @@ export function AppSidebar() {
   ).length;
 
   const residentsAwayCount = visitors.filter(
-    (v) => v.type === "resident" && (v.status === "checked-out" || v.status === "away" || v.status === "on-leave")
+    (v) => v.type === "resident" && v.status !== "checked-in"
   ).length;
 
   const totalVisitorBadge = overstayedCount > 0 ? overstayedCount : null;
