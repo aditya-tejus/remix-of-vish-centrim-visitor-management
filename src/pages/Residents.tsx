@@ -55,8 +55,8 @@ export default function Residents() {
 
   // Presence map
   const presenceMap = useMemo(() => {
-    const map = new Map<string, "in-building" | "away" | "on-leave" | "overdue">();
-    residents.forEach(r => map.set(r.visitorId, "in-building"));
+    const map = new Map<string, "on-site" | "away" | "on-leave" | "overdue">();
+    residents.forEach(r => map.set(r.visitorId, "on-site"));
     residentVisitors.forEach(v => {
       if (v.status === "checked-out") {
         const isOverdue = v.expectedReturnDate && isPast(v.expectedReturnDate);
@@ -72,7 +72,7 @@ export default function Residents() {
   }, [residents, residentVisitors]);
 
   // Derived counts
-  const inBuilding = residents.filter(r => presenceMap.get(r.visitorId) === "in-building").length;
+  const inBuilding = residents.filter(r => presenceMap.get(r.visitorId) === "on-site").length;
   const awayCount = residents.filter(r => presenceMap.get(r.visitorId) === "away").length;
   const onLeaveCount = residents.filter(r => presenceMap.get(r.visitorId) === "on-leave").length;
   const overdueCount = residents.filter(r => presenceMap.get(r.visitorId) === "overdue").length;
@@ -114,7 +114,7 @@ export default function Residents() {
   };
 
   const toggleCardFilter = (filter: string) => {
-    if (filter === "in-building") {
+    if (filter === "on-site") {
       // Switch to Directory tab instead of filtering Board
       setActiveTab("directory");
       setActiveCardFilter(null);
@@ -126,8 +126,8 @@ export default function Residents() {
 
   const countCards = [
     {
-      key: "in-building",
-      label: "In Building",
+      key: "on-site",
+      label: "On Site",
       value: inBuilding,
       colorClass: "text-success",
       borderClass: "border-l-success",

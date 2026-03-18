@@ -10,7 +10,7 @@ import { Wing } from "@/hooks/useWings";
 interface ResidentDirectoryTableProps {
   residents: Resident[];
   wingMap: Map<string, Wing>;
-  presenceMap?: Map<string, "in-building" | "away" | "on-leave" | "overdue">;
+  presenceMap?: Map<string, "on-site" | "away" | "on-leave" | "overdue">;
   onQuickAway?: (resident: Resident) => void;
 }
 
@@ -30,7 +30,7 @@ const mobilityColors: Record<string, string> = {
 };
 
 const presenceDot: Record<string, string> = {
-  "in-building": "bg-success",
+  "on-site": "bg-success",
   "away": "bg-warning",
   "on-leave": "bg-info",
   "overdue": "bg-destructive animate-pulse",
@@ -68,7 +68,7 @@ export function ResidentDirectoryTable({ residents, wingMap, presenceMap, onQuic
       <TableBody>
         {residents.map(resident => {
           const wing = resident.wingId ? wingMap.get(resident.wingId) : null;
-          const presence = presenceMap?.get(resident.visitorId) || "in-building";
+          const presence = presenceMap?.get(resident.visitorId) || "on-site";
 
           return (
             <TableRow
@@ -164,7 +164,7 @@ export function ResidentDirectoryTable({ residents, wingMap, presenceMap, onQuic
               </TableCell>
               {onQuickAway && (
                 <TableCell onClick={e => e.stopPropagation()} className="py-3">
-                  {presence === "in-building" && (
+                  {presence === "on-site" && (
                     <Button
                       variant="ghost"
                       size="sm"

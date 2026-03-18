@@ -21,7 +21,7 @@ interface ResidentPresenceTableProps {
   totalResidentCount?: number;
 }
 
-type PresenceStatus = "in-building" | "away" | "on-leave" | "overdue";
+type PresenceStatus = "on-site" | "away" | "on-leave" | "overdue";
 
 const careLevelColors: Record<string, string> = {
   standard: "bg-muted text-muted-foreground",
@@ -57,14 +57,14 @@ export function ResidentPresenceTable({
 
   const getPresence = (resident: Resident): { status: PresenceStatus; visitor: Visitor | null } => {
     const visitor = visitorMap.get(resident.visitorId);
-    if (!visitor) return { status: "in-building", visitor: null };
+    if (!visitor) return { status: "on-site", visitor: null };
     if (visitor.status === "checked-out") {
       const isOverdue = visitor.expectedReturnDate && isPast(visitor.expectedReturnDate);
       if (isOverdue) return { status: "overdue", visitor };
       const isAway = visitor.leaveType === "Away" || !visitor.leaveType;
       return { status: isAway ? "away" : "on-leave", visitor };
     }
-    return { status: "in-building", visitor };
+    return { status: "on-site", visitor };
   };
 
   // Urgency sort order: overdue → due-back-today → away → on-leave
@@ -72,10 +72,10 @@ export function ResidentPresenceTable({
     overdue: 0,
     away: 1,
     "on-leave": 2,
-    "in-building": 3,
+    "on-site": 3,
   };
 
-  // Get only exception residents (not in-building) unless a specific filter is applied
+  // Get only exception residents (not on-site) unless a specific filter is applied
   const exceptionResidents = useMemo(() => {
     let filtered: Resident[];
 
@@ -85,11 +85,11 @@ export function ResidentPresenceTable({
         const { visitor } = getPresence(r);
         return visitor?.status === "checked-out" && visitor.expectedReturnDate && isToday(visitor.expectedReturnDate);
       });
-    } else if (statusFilter && statusFilter !== "in-building") {
+    } else if (statusFilter && statusFilter !== "on-site") {
       filtered = residents.filter(r => getPresence(r).status === statusFilter);
     } else {
-      // Default: show only exceptions (not in-building)
-      filtered = residents.filter(r => getPresence(r).status !== "in-building");
+      // Default: show only exceptions (not on-site)
+      filtered = residents.filter(r => getPresence(r).status !== "on-site");
     }
 
     // Sort by urgency, then by nearest return time
@@ -106,7 +106,7 @@ export function ResidentPresenceTable({
     });
   }, [residents, statusFilter, visitorMap]);
 
-  // Green empty state when all residents are in building
+  // Green empty state when all residents are on site
   if (exceptionResidents.length === 0) {
     const total = totalResidentCount ?? residents.length;
     return (
@@ -115,7 +115,7 @@ export function ResidentPresenceTable({
           <CheckCircle2 className="h-7 w-7 text-success" />
         </div>
         <p className="text-base font-semibold text-foreground mt-3">
-          All {total} residents in building
+          All {total} residents on site
         </p>
         <p className="text-sm text-muted-foreground mt-1">
           No one is currently away, on leave, or overdue
@@ -127,7 +127,7 @@ export function ResidentPresenceTable({
   // Render expanded row for away/leave/overdue
   const renderExceptionRow = (resident: Resident) => {
     const { status, visitor } = getPresence(resident);
-    if (status === "in-building") return null;
+    if (status === "on-site") return null;
 
     const borderClass = {
       away: "border-l-warning bg-warning/[0.03]",
