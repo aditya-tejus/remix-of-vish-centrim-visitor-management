@@ -259,7 +259,8 @@ export default function Residents() {
                     wingMap={wingMap}
                     onCheckInReturn={checkInReturn}
                     onQuickAway={handleQuickAway}
-                    statusFilter={activeCardFilter !== "due-today" ? activeCardFilter : null}
+                    statusFilter={activeCardFilter}
+                    totalResidentCount={residents.length}
                   />
                 )}
               </TabsContent>
