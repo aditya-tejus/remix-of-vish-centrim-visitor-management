@@ -133,7 +133,6 @@ export default function VisitList() {
               {/* Left: clock + date nav */}
               <div className="flex items-center gap-3 shrink-0">
                 <span className="text-[13px] text-muted-foreground font-medium">
-                <span className="text-[13px] text-muted-foreground font-medium">
                   {format(selectedDate, "EEE, dd MMM yyyy")}
                 </span>
                 <div className="flex items-center gap-0.5">
