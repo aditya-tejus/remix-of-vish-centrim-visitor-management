@@ -79,7 +79,7 @@ export default function VisitList() {
       case "checked-in": return filteredVisitors.filter(v => v.status === "checked-in");
       case "checked-out": return filteredVisitors.filter(v => v.status === "checked-out");
       case "overstayed": return filteredVisitors.filter(v => v.status === "checked-in" && Date.now() - v.checkInTime.getTime() > 8 * 3600000);
-      case "on-leave": return visitors.filter(v => v.type === "resident" && v.status === "checked-out");
+      
       default: return filteredVisitors;
     }
   }, [filteredVisitors, visitors, activeFilter]);
