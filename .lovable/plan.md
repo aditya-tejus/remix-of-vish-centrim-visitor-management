@@ -22,8 +22,8 @@
 - [x] Separate Resident Leave module (standalone ResidentLeaveDialog with Room → short list → confirm flow)
 - [x] Ensure visitor check-in never prompts resident leave (removed resident from AddVisitDialog types)
 
-## Phase 4: Settings & Governance
-- [ ] Expand Settings tabs (Presence, T&C, Alerts, Automation, Printing, Profiles & Badges, Resident Leave, Lock & Governance)
+## Phase 4: Settings & Governance (in progress)
+- [x] Expand Settings tabs (Presence, Screening, T&C, Alerts, Automation, Printing, Profiles & Badges, Resident Leave, Returns, GDPR, Integration, Audit, Feedback, Lock & Governance)
 - [ ] Settings governance (change reason, audit log, admin override, transactional audit)
 - [ ] Badge printing settings (Brother QL, failure-tolerant)
 
