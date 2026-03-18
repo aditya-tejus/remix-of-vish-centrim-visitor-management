@@ -1093,8 +1093,8 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
                       <SelectTrigger className="rounded-lg h-9"><SelectValue placeholder="Select..." /></SelectTrigger>
                       <SelectContent>
                         {formData.whomToVisit === "Resident"
-                          ? mockResidents.map((r) => <SelectItem key={r.id} value={r.name}>{r.name} • {r.room}</SelectItem>)
-                          : mockStaff.map((s) => <SelectItem key={s.id} value={s.name}>{s.name} • {s.role}</SelectItem>)
+                          ? residentItems.map((r) => <SelectItem key={r.id} value={r.name}>{r.name} • {r.room}</SelectItem>)
+                          : staffItems.map((s) => <SelectItem key={s.id} value={s.name}>{s.name} • {s.role}</SelectItem>)
                         }
                       </SelectContent>
                     </Select>
