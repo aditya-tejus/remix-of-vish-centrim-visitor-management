@@ -888,7 +888,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
                     <Select value={formData.accompaniedByName} onValueChange={(val) => updateField("accompaniedByName", val)}>
                       <SelectTrigger className="rounded-lg h-9 text-sm"><SelectValue placeholder="Select staff member..." /></SelectTrigger>
                       <SelectContent>
-                        {mockStaff.map((s) => (
+                        {staffItems.map((s) => (
                           <SelectItem key={s.id} value={s.name}>{s.name} — {s.role}</SelectItem>
                         ))}
                       </SelectContent>
