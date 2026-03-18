@@ -517,71 +517,103 @@ export default function Evacuation() {
             </div>
 
             {/* Evacuation list */}
-            {grouped.map((group, gIdx) => (
-              <div key={group.label || "all"} className="space-y-2">
-                {group.label && (
-                  <div className="flex items-center gap-2 px-1">
-                    <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
-                      {group.label.startsWith("Residents") ? <Home className="h-3.5 w-3.5 text-primary" /> :
-                       groupBy === "wing" ? <MapPin className="h-3.5 w-3.5 text-primary" /> :
-                       groupBy === "type" ? <Users className="h-3.5 w-3.5 text-primary" /> :
-                       <Shield className="h-3.5 w-3.5 text-primary" />}
+            {sections.map((section, sIdx) => (
+              <div key={section.label || "all"} className="space-y-3">
+                {/* Section header (e.g. "Residents", "Other") */}
+                {section.label && (
+                  <div className="flex items-center gap-2 px-1 pt-2">
+                    <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
+                      {section.label.startsWith("Residents") ? <Home className="h-4 w-4 text-primary" /> :
+                       <Users className="h-4 w-4 text-primary" />}
                     </div>
-                    <h3 className="text-sm font-semibold text-foreground">{group.label}</h3>
-                    <Badge variant="secondary" className="text-[10px]">{group.items.length}</Badge>
+                    <h2 className="text-base font-bold text-foreground">{section.label}</h2>
                     {(() => {
-                      const groupSafe = group.items.filter((v) => safeIds.has(v.id)).length;
-                      const groupTotal = group.items.length;
-                      const allSafe = groupSafe === groupTotal;
+                      const allItems = section.groups.flatMap((g) => g.items);
+                      const sectionSafe = allItems.filter((v) => safeIds.has(v.id)).length;
+                      const sectionTotal = allItems.length;
+                      const allSafe = sectionSafe === sectionTotal;
                       return (
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] gap-1 ${allSafe ? "border-success/40 text-success" : "border-destructive/40 text-destructive"}`}
-                        >
-                          {allSafe ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
-                          {groupSafe}/{groupTotal} safe
-                        </Badge>
+                        <>
+                          <Badge variant="secondary" className="text-[10px]">{sectionTotal}</Badge>
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] gap-1 ${allSafe ? "border-success/40 text-success" : "border-destructive/40 text-destructive"}`}
+                          >
+                            {allSafe ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+                            {sectionSafe}/{sectionTotal} safe
+                          </Badge>
+                        </>
                       );
                     })()}
                     <div className="flex-1 h-px bg-border" />
                   </div>
                 )}
-                <div className="rounded-xl border border-border bg-card overflow-hidden">
-                  <Table>
-                    {gIdx === 0 && (
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[40px]">
-                            <Checkbox
-                              checked={allUnaccountedSelected}
-                              onCheckedChange={toggleSelectAll}
-                              aria-label="Select all"
-                            />
-                          </TableHead>
-                          <TableHead className="w-[60px] text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
-                          <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Name / Location</TableHead>
-                          <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Type</TableHead>
-                          <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Visiting</TableHead>
-                          <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Checked In</TableHead>
-                          <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Duration</TableHead>
-                          <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Companions</TableHead>
-                          <TableHead className="w-[100px] text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Action</TableHead>
-                        </TableRow>
-                      </TableHeader>
+
+                {/* Sub-groups (wings) or flat group */}
+                {section.groups.map((group, gIdx) => (
+                  <div key={group.label || `flat-${gIdx}`} className={`space-y-2 ${group.isSubGroup ? "ml-6" : ""}`}>
+                    {group.label && (
+                      <div className="flex items-center gap-2 px-1">
+                        <div className="h-5 w-5 rounded bg-muted flex items-center justify-center">
+                          <MapPin className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                        <h3 className="text-sm font-semibold text-foreground">{group.label}</h3>
+                        <Badge variant="secondary" className="text-[10px]">{group.items.length}</Badge>
+                        {(() => {
+                          const groupSafe = group.items.filter((v) => safeIds.has(v.id)).length;
+                          const groupTotal = group.items.length;
+                          const allSafe = groupSafe === groupTotal;
+                          return (
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] gap-1 ${allSafe ? "border-success/40 text-success" : "border-destructive/40 text-destructive"}`}
+                            >
+                              {allSafe ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+                              {groupSafe}/{groupTotal} safe
+                            </Badge>
+                          );
+                        })()}
+                        <div className="flex-1 h-px bg-border/50" />
+                      </div>
                     )}
-                    <TableBody>
-                      {group.items.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={9} className="text-center py-8">
-                            <p className="text-xs text-muted-foreground">No people in this group</p>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        group.items.map(renderRow)
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                    <div className="rounded-xl border border-border bg-card overflow-hidden">
+                      <Table>
+                        {sIdx === 0 && gIdx === 0 && (
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[40px]">
+                                <Checkbox
+                                  checked={allUnaccountedSelected}
+                                  onCheckedChange={toggleSelectAll}
+                                  aria-label="Select all"
+                                />
+                              </TableHead>
+                              <TableHead className="w-[60px] text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
+                              <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Name / Location</TableHead>
+                              <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Type</TableHead>
+                              <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Visiting</TableHead>
+                              <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Checked In</TableHead>
+                              <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Duration</TableHead>
+                              <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Companions</TableHead>
+                              <TableHead className="w-[100px] text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Action</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                        )}
+                        <TableBody>
+                          {group.items.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={9} className="text-center py-8">
+                                <p className="text-xs text-muted-foreground">No people in this group</p>
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            group.items.map(renderRow)
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                ))}
               </div>
             ))}
           </main>
