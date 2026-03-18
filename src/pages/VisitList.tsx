@@ -139,10 +139,6 @@ export default function VisitList() {
             <div className="flex items-center justify-between px-6 py-2.5 gap-4">
               {/* Left: clock + date nav */}
               <div className="flex items-center gap-3 shrink-0">
-                <div className="flex items-center gap-1.5 font-mono">
-                  <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-sm font-semibold text-foreground tabular-nums">{format(currentTime, "HH:mm")}</span>
-                </div>
                 <div className="w-px h-4 bg-border" />
                 <span className="text-[13px] text-muted-foreground font-medium">
                   {format(selectedDate, "EEE, dd MMM yyyy")}
