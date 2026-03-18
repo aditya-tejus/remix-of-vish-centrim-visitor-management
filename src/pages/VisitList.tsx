@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Plus, QrCode, LogOut, ChevronLeft, ChevronRight, CalendarDays,
-  X, Clock, Printer, Search, Users, AlertTriangle, LogIn,
+  X, Clock, Printer, Search,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -95,6 +95,35 @@ export default function VisitList() {
     setActiveFilter(prev => prev === key ? null : key);
   };
 
+  const countCards = [
+    {
+      key: "all",
+      label: "All Visitors Today",
+      value: totalToday,
+      colorClass: "text-primary",
+      borderClass: "border-l-primary",
+      bgClass: "bg-primary/5",
+    },
+    {
+      key: "checked-in",
+      label: "Active / On-site",
+      value: activeCount,
+      colorClass: "text-success",
+      borderClass: "border-l-success",
+      bgClass: "bg-success/5",
+      dot: true,
+    },
+    {
+      key: "overstayed",
+      label: "Overstayed",
+      value: overstayedToday,
+      colorClass: "text-destructive",
+      borderClass: "border-l-destructive",
+      bgClass: "bg-destructive/5",
+      pulse: overstayedToday > 0,
+    },
+  ];
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
@@ -104,7 +133,7 @@ export default function VisitList() {
           <header className="sticky top-0 z-10 bg-card border-b border-border">
             <div className="flex items-center px-6 h-12">
               <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-              <h1 className="text-lg font-bold text-foreground ml-4">Visitor List</h1>
+              <h1 className="text-xl font-bold text-foreground ml-4">Visitor List</h1>
             </div>
           </header>
 
@@ -172,19 +201,19 @@ export default function VisitList() {
 
               {/* Right: actions */}
               <div className="flex items-center gap-1.5 shrink-0">
-                <Button variant="ghost" size="sm" className="h-8 text-[12px] gap-1.5 text-muted-foreground" onClick={() => setHandoverOpen(true)}>
+                <Button variant="ghost" size="sm" className="h-8 text-[13px] gap-1.5 text-muted-foreground" onClick={() => setHandoverOpen(true)}>
                   <Printer className="h-3.5 w-3.5" />
                   <span className="hidden xl:inline">Handover</span>
                 </Button>
-                <Button variant="ghost" size="sm" className="h-8 text-[12px] gap-1.5 text-muted-foreground" onClick={() => setCheckOutDialogOpen(true)}>
+                <Button variant="ghost" size="sm" className="h-8 text-[13px] gap-1.5 text-muted-foreground" onClick={() => setCheckOutDialogOpen(true)}>
                   <LogOut className="h-3.5 w-3.5" />
                   <span className="hidden xl:inline">Check Out</span>
                 </Button>
-                <Button variant="ghost" size="sm" className="h-8 text-[12px] gap-1.5 text-muted-foreground" onClick={() => setQrOpen(true)}>
+                <Button variant="ghost" size="sm" className="h-8 text-[13px] gap-1.5 text-muted-foreground" onClick={() => setQrOpen(true)}>
                   <QrCode className="h-3.5 w-3.5" />
                   <span className="hidden xl:inline">QR</span>
                 </Button>
-                <Button onClick={() => setAddDialogOpen(true)} size="sm" className="h-8 text-[12px] gap-1.5 bg-primary hover:bg-primary/90 shadow-sm">
+                <Button onClick={() => setAddDialogOpen(true)} size="sm" className="h-8 text-[13px] gap-1.5 px-4 bg-primary hover:bg-primary/90 shadow-sm">
                   <Plus className="h-3.5 w-3.5" />
                   New Visit
                 </Button>
@@ -194,60 +223,32 @@ export default function VisitList() {
 
           {/* ZONE C — Summary count cards */}
           <div className="px-6 pt-4 pb-2">
-            <div className="grid grid-cols-3 gap-3">
-              {/* All Today */}
-              <button
-                onClick={() => handleStatCardClick("all")}
-                className={`rounded-lg border p-3.5 text-left transition-all duration-150 hover:shadow-sm ${
-                  !activeFilter || activeFilter === "all"
-                    ? "border-border bg-card"
-                    : "border-transparent bg-muted/40 hover:bg-muted/60"
-                }`}
-              >
-                <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                  <Users className="h-4 w-4" />
-                  <span className="text-[11px] font-semibold uppercase tracking-wider">All Today</span>
-                </div>
-                <p className="text-2xl font-bold text-foreground tabular-nums">{totalToday}</p>
-              </button>
-
-              {/* Active / On-site */}
-              <button
-                onClick={() => handleStatCardClick("checked-in")}
-                className={`rounded-lg border p-3.5 text-left transition-all duration-150 hover:shadow-sm ${
-                  activeFilter === "checked-in"
-                    ? "border-primary/30 bg-primary/5 ring-1 ring-primary/20"
-                    : "border-transparent bg-muted/40 hover:bg-muted/60"
-                }`}
-              >
-                <div className="flex items-center gap-2 text-success mb-1">
-                  <LogIn className="h-4 w-4" />
-                  <span className="text-[11px] font-semibold uppercase tracking-wider">Active</span>
-                </div>
-                <p className="text-2xl font-bold text-foreground tabular-nums">{activeCount}</p>
-              </button>
-
-              {/* Overstayed */}
-              <button
-                onClick={() => handleStatCardClick("overstayed")}
-                className={`rounded-lg border p-3.5 text-left transition-all duration-150 hover:shadow-sm ${
-                  activeFilter === "overstayed"
-                    ? "border-destructive/30 bg-destructive/5 ring-1 ring-destructive/20"
-                    : "border-transparent bg-muted/40 hover:bg-muted/60"
-                }`}
-              >
-                <div className="flex items-center gap-2 text-destructive mb-1">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span className="text-[11px] font-semibold uppercase tracking-wider">Overstayed</span>
-                  {overstayedToday > 0 && (
-                    <span className="relative flex h-1.5 w-1.5 ml-auto">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75" />
-                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-destructive" />
-                    </span>
-                  )}
-                </div>
-                <p className={`text-2xl font-bold tabular-nums ${overstayedToday > 0 ? "text-destructive" : "text-foreground"}`}>{overstayedToday}</p>
-              </button>
+            <div className="grid grid-cols-3 gap-4">
+              {countCards.map(card => (
+                <button
+                  key={card.key}
+                  onClick={() => handleStatCardClick(card.key)}
+                  className={`rounded-xl border border-l-[3px] ${card.borderClass} p-5 text-left transition-all duration-150 hover:shadow-card ${
+                    activeFilter === card.key
+                      ? `${card.bgClass} border-border shadow-sm`
+                      : "bg-card border-border hover:bg-muted/30"
+                  }`}
+                >
+                  <p className={`text-3xl font-bold tabular-nums ${card.colorClass}`}>
+                    {card.value}
+                    {card.dot && card.value > 0 && (
+                      <span className="inline-flex h-2 w-2 rounded-full bg-success ml-2 align-middle" />
+                    )}
+                    {card.pulse && (
+                      <span className="relative inline-flex h-2 w-2 ml-2 align-middle">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive" />
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1 font-medium">{card.label}</p>
+                </button>
+              ))}
             </div>
           </div>
 

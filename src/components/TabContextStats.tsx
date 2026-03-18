@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { Visitor } from "@/types/visitor";
-import { Users, LogIn, LogOut, AlertTriangle, ShieldCheck, Clock, Home, DoorOpen } from "lucide-react";
-import { isPast, isToday } from "date-fns";
+import { LogIn, LogOut, AlertTriangle, ShieldCheck, Clock } from "lucide-react";
 
 interface StatDef {
   label: string;
@@ -75,12 +74,12 @@ export function TabContextStats({ tab, visitors, allVisitors, onFilter, activeFi
   if (stats.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-1.5 px-4 py-2 border-b border-border bg-muted/30">
-      {stats.map((stat, i) => (
+    <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-border bg-muted/30">
+      {stats.map((stat) => (
         <button
           key={stat.label}
           onClick={() => stat.filterKey && onFilter?.(stat.filterKey)}
-          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all duration-150 hover:bg-card hover:shadow-sm ${
+          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium transition-all duration-150 hover:bg-card hover:shadow-sm ${
             activeFilter === stat.filterKey
               ? "bg-card shadow-sm ring-1 ring-primary/20"
               : "bg-transparent"
