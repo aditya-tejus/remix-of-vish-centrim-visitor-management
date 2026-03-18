@@ -198,7 +198,18 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
         </TableCell>
 
         {/* Visiting / Department / Company */}
-        <TableCell className="text-[13px] text-foreground py-3">{visitor.whomToVisit || "—"}</TableCell>
+        <TableCell className="py-3">
+          {visitor.whomToVisit ? (
+            <div className="flex flex-col">
+              <span className="text-[13px] text-foreground">{visitor.whomToVisit}</span>
+              <span className="text-[11px] text-muted-foreground">
+                {visitor.type === "staff" ? "Department" : visitor.type === "contractor" ? "Work site" : "Resident"}
+              </span>
+            </div>
+          ) : (
+            <span className="text-[13px] text-muted-foreground">—</span>
+          )}
+        </TableCell>
 
         {/* Companions (visitors/volunteers only) */}
         {(type === "visitor" || type === "volunteer" || type === "all") && (
