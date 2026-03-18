@@ -268,7 +268,7 @@ export default function VisitList() {
         </SidebarInset>
       </div>
 
-      <AddVisitDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onAdd={addVisitor} />
+      <CheckInSheet open={addDialogOpen} onOpenChange={setAddDialogOpen} onAdd={addVisitor} />
       <CheckOutDialog open={checkOutDialogOpen} onOpenChange={setCheckOutDialogOpen} visitors={visitors} onCheckOut={checkOutVisitor} />
       {feedbackVisitor && (
         <FeedbackDialog
