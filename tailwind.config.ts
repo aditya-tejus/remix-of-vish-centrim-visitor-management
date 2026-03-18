@@ -55,6 +55,10 @@ export default {
           DEFAULT: 'hsl(var(--warning))',
           foreground: 'hsl(var(--warning-foreground))'
         },
+        checkout: {
+          DEFAULT: 'hsl(var(--checkout))',
+          foreground: 'hsl(var(--checkout-foreground))'
+        },
         info: {
           DEFAULT: 'hsl(var(--info))',
           foreground: 'hsl(var(--info-foreground))'
