@@ -251,7 +251,7 @@ export default function VisitorAnalytics() {
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total Residents</p>
-                    <p className="text-3xl font-bold tracking-tight text-foreground">{mockResidents.length}</p>
+                    <p className="text-3xl font-bold tracking-tight text-foreground">{residentItems.length}</p>
                   </div>
                   <div className="rounded-xl p-2.5 bg-primary/10 text-primary">
                     <Users className="h-5 w-5" />
