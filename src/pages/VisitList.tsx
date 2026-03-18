@@ -186,9 +186,9 @@ export default function VisitList() {
 
               {/* Right: actions */}
               <div className="flex items-center gap-1.5 shrink-0">
-                <Button variant="ghost" size="sm" className="h-8 text-[13px] gap-1.5 text-muted-foreground" onClick={() => setHandoverOpen(true)}>
-                  <Printer className="h-3.5 w-3.5" />
-                  <span className="hidden xl:inline">Handover</span>
+                <Button onClick={() => setAddDialogOpen(true)} size="sm" className="h-8 text-[13px] gap-1.5 px-4 bg-primary hover:bg-primary/90 shadow-sm">
+                  <Plus className="h-3.5 w-3.5" />
+                  Check In
                 </Button>
                 <Button variant="ghost" size="sm" className="h-8 text-[13px] gap-1.5 text-muted-foreground" onClick={() => setCheckOutDialogOpen(true)}>
                   <LogOut className="h-3.5 w-3.5" />
@@ -198,9 +198,9 @@ export default function VisitList() {
                   <QrCode className="h-3.5 w-3.5" />
                   <span className="hidden xl:inline">QR</span>
                 </Button>
-                <Button onClick={() => setAddDialogOpen(true)} size="sm" className="h-8 text-[13px] gap-1.5 px-4 bg-primary hover:bg-primary/90 shadow-sm">
-                  <Plus className="h-3.5 w-3.5" />
-                  New Visit
+                <Button variant="ghost" size="sm" className="h-8 text-[13px] gap-1.5 text-muted-foreground" onClick={() => setHandoverOpen(true)}>
+                  <Printer className="h-3.5 w-3.5" />
+                  <span className="hidden xl:inline">Handover</span>
                 </Button>
               </div>
             </div>
