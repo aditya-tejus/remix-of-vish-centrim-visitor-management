@@ -18,6 +18,7 @@ import { exportVisitorsToCSV, exportVisitorToPDF, exportVisitorsToPDFBulk } from
 import { useToast } from "@/hooks/use-toast";
 import { CheckInReturnDialog } from "@/components/CheckInReturnDialog";
 import { ResidentLeaveTable } from "@/components/ResidentLeaveTable";
+import { TabContextStats } from "@/components/TabContextStats";
 
 interface VisitorTableProps {
   visitors: Visitor[];
