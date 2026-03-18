@@ -120,7 +120,7 @@ export default function HomeWorkbench() {
                 </button>
 
                 <button
-                  onClick={() => navigate("/leave-requests")}
+                  onClick={() => setResidentLeaveOpen(true)}
                   className="group relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-border bg-card p-8 min-h-[160px] transition-all duration-200 hover:border-info hover:shadow-md active:scale-[0.98]"
                 >
                   <div className="flex h-14 w-14 items-center justify-center rounded-full bg-info/10 text-info transition-colors group-hover:bg-info group-hover:text-info-foreground">
