@@ -18,7 +18,7 @@ import { Visitor } from "@/types/visitor";
 
 export default function HomeWorkbench() {
   const navigate = useNavigate();
-  const { visitors, addVisitor, checkOutVisitor, checkInReturn, overstayedCount } = useVisitors();
+  const { visitors, addVisitor, checkOutVisitor, checkInReturn, overstayedCount, markResidentAway } = useVisitors();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [checkOutDialogOpen, setCheckOutDialogOpen] = useState(false);
   const [residentLeaveOpen, setResidentLeaveOpen] = useState(false);
