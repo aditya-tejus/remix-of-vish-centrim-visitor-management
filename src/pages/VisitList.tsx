@@ -96,7 +96,7 @@ export default function VisitList() {
     "checked-in": "Currently Inside",
     "checked-out": "Checked Out",
     "overstayed": "Overstayed",
-    "on-leave": "Residents On Leave",
+    
   };
 
   return (
