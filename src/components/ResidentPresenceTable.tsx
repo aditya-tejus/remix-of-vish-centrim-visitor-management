@@ -127,7 +127,7 @@ export function ResidentPresenceTable({
   // Render expanded row for away/leave/overdue
   const renderExceptionRow = (resident: Resident) => {
     const { status, visitor } = getPresence(resident);
-    if (status === "in-building") return null;
+    if (status === "on-site") return null;
 
     const borderClass = {
       away: "border-l-warning bg-warning/[0.03]",

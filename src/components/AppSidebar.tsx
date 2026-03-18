@@ -62,7 +62,7 @@ export function AppSidebar() {
       items: [
         { title: "Visitor List", path: "/", badge: totalVisitorBadge, badgeVariant: "blue", activeDot: true },
         { title: "Residents", path: "/residents" },
-        { title: "Visitor Directory", path: "/visitors" },
+        { title: "Visitor Profiles", path: "/visitors" },
         { title: "Evacuation Report", path: "/evacuation" },
       ],
     },

@@ -124,7 +124,7 @@ export default function Visitors() {
               <div className="flex items-center gap-4">
                 <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
                 <div>
-                  <h1 className="text-xl font-bold text-foreground leading-tight">Visitor Directory</h1>
+                  <h1 className="text-xl font-bold text-foreground leading-tight">Visitor Profiles</h1>
                   <p className="text-[13px] text-muted-foreground">All contacts by type & watchlist</p>
                 </div>
               </div>
