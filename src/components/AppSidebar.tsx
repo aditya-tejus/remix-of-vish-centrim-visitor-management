@@ -61,16 +61,20 @@ export function AppSidebar() {
       collapsible: true,
       items: [
         { title: "Visitor List", path: "/", badge: totalVisitorBadge, badgeVariant: "blue", activeDot: true },
+        { title: "Residents", path: "/residents" },
         { title: "Visitor Directory", path: "/visitors" },
+        { title: "Evacuation Report", path: "/evacuation" },
       ],
     },
     {
-      label: "Residents",
-      icon: DoorOpen,
-      iconColor: "text-emerald-400",
+      label: "Safety & Compliance",
+      icon: Shield,
+      iconColor: "text-amber-400",
       collapsible: true,
       items: [
-        { title: "Residents", path: "/residents", activeDot: true },
+        { title: "GDPR & Privacy", path: "/gdpr", indent: true },
+        { title: "Audit Trail", path: "/audit-log", indent: true },
+        { title: "Coverage Checklist", path: "/coverage", indent: true },
       ],
     },
     {
@@ -80,21 +84,8 @@ export function AppSidebar() {
       collapsible: true,
       items: [
         { title: "Reports", path: "/reports", indent: true },
-        { title: "Visit Calendar", path: "/calendar", indent: true },
         { title: "Visitor Analytics", path: "/visitor-analytics", indent: true },
         { title: "Visitor Feedback", path: "/feedback", indent: true },
-      ],
-    },
-    {
-      label: "Safety & Compliance",
-      icon: Shield,
-      iconColor: "text-amber-400",
-      collapsible: true,
-      items: [
-        { title: "Emergency Evacuation", path: "/evacuation", indent: true },
-        { title: "GDPR & Privacy", path: "/gdpr", indent: true },
-        { title: "Audit Trail", path: "/audit-log", indent: true },
-        { title: "Coverage Checklist", path: "/coverage", indent: true },
       ],
     },
   ];
