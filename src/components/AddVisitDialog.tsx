@@ -45,18 +45,6 @@ const mockProfiles = [
   { id: "p4", firstName: "Emma", surname: "Johnson", mobile: "07700 900321", email: "emma.j@email.com", address: "78 Elm Road, Leeds" },
 ];
 
-const mockResidents = [
-  { id: "r1", name: "Mary Johnson", room: "Room 12", wing: "East Wing" },
-  { id: "r2", name: "Robert Davis", room: "Room 8", wing: "West Wing" },
-  { id: "r3", name: "Patricia Wilson", room: "Room 3", wing: "East Wing" },
-  { id: "r4", name: "George Thompson", room: "Room 15", wing: "North Wing" },
-];
-
-const mockStaff = [
-  { id: "s1", name: "Dr. Helen Carter", role: "GP", department: "Medical" },
-  { id: "s2", name: "Nurse Amy Roberts", role: "Nurse", department: "Care" },
-  { id: "s3", name: "Mark Stevens", role: "Manager", department: "Admin" },
-];
 
 
 type QuestionType = "yesno" | "text" | "textarea" | "select" | "checkbox" | "file";
