@@ -226,7 +226,7 @@ export default function Evacuation() {
       .footer{margin-top:24px;font-size:11px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:12px}
     </style></head><body>
       <h1>🚨 Emergency Evacuation List</h1>
-      <div class="sub">${date} • ${filtered.length} people listed${evacuationPoint !== "all" ? ` • Assembly: ${evacuationPoint}` : ""}</div>
+      <div class="sub">${date} • ${filtered.length} people listed</div>
       <div class="summary">
         <span><strong>Total:</strong> ${checkedIn.length}</span>
         <span style="color:#16a34a"><strong>Safe:</strong> ${safeCount}</span>
