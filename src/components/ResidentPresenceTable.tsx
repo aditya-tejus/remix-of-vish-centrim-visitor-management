@@ -115,7 +115,7 @@ export function ResidentPresenceTable({
           <CheckCircle2 className="h-7 w-7 text-success" />
         </div>
         <p className="text-base font-semibold text-foreground mt-3">
-          All {total} residents in building
+          All {total} residents on site
         </p>
         <p className="text-sm text-muted-foreground mt-1">
           No one is currently away, on leave, or overdue
