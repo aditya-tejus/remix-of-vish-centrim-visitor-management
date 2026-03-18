@@ -36,11 +36,11 @@ interface SectionConfig {
 }
 
 const personTypeConfigs: Record<string, Omit<PersonTypeConfig, "sections">> = {
-  visitor: { id: "visitor", label: "Visitor Settings", description: "Configure check-in fields, screening, and automation for visitor check-ins.", icon: Users, color: "text-primary", dotColor: "bg-primary", visitorType: "visitor" },
-  contractor: { id: "contractor", label: "Contractor Settings", description: "Configure contractor check-in, supplier management, and screening.", icon: HardHat, color: "text-amber-500", dotColor: "bg-amber-500", visitorType: "contractor" },
-  resident: { id: "resident", label: "Resident Settings", description: "Configure directory display, leave management, and resident notifications.", icon: Home, color: "text-emerald-500", dotColor: "bg-emerald-500", visitorType: "resident" },
-  staff: { id: "staff", label: "Staff Settings", description: "Configure staff check-in fields and badge settings.", icon: UserCog, color: "text-violet-500", dotColor: "bg-violet-500", visitorType: "staff" },
-  volunteer: { id: "volunteer", label: "Volunteer Settings", description: "Configure volunteer check-in, screening, and compliance.", icon: Heart, color: "text-rose-500", dotColor: "bg-rose-500", visitorType: "volunteer" },
+  visitor: { id: "visitor", label: "Visitor Settings", description: "Configure check-in fields, screening, and automation for visitor check-ins.", icon: Users, color: "text-primary", dotColor: "bg-primary/10", visitorType: "visitor" },
+  contractor: { id: "contractor", label: "Contractor Settings", description: "Configure contractor check-in, supplier management, and screening.", icon: HardHat, color: "text-amber-500", dotColor: "bg-amber-500/10", visitorType: "contractor" },
+  resident: { id: "resident", label: "Resident Settings", description: "Configure directory display, leave management, and resident notifications.", icon: Home, color: "text-emerald-500", dotColor: "bg-emerald-500/10", visitorType: "resident" },
+  staff: { id: "staff", label: "Staff Settings", description: "Configure staff check-in fields and badge settings.", icon: UserCog, color: "text-violet-500", dotColor: "bg-violet-500/10", visitorType: "staff" },
+  volunteer: { id: "volunteer", label: "Volunteer Settings", description: "Configure volunteer check-in, screening, and compliance.", icon: Heart, color: "text-rose-500", dotColor: "bg-rose-500/10", visitorType: "volunteer" },
 };
 
 function getSections(type: string): SectionConfig[] {
