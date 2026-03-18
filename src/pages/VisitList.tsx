@@ -7,7 +7,7 @@ import { VisitorTable } from "@/components/VisitorTable";
 import { useVisitors } from "@/hooks/useVisitors";
 import { AddVisitDialog } from "@/components/AddVisitDialog";
 import { CheckOutDialog } from "@/components/CheckOutDialog";
-import { ResidentLeaveDialog } from "@/components/ResidentLeaveDialog";
+
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useKeyboardShortcuts, KeyboardShortcutBar } from "@/hooks/useKeyboardShortcuts";
