@@ -5,6 +5,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { useVisitors } from "@/hooks/useVisitors";
 import { AddVisitDialog } from "@/components/AddVisitDialog";
 import { CheckOutDialog } from "@/components/CheckOutDialog";
+import { ResidentLeaveDialog } from "@/components/ResidentLeaveDialog";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ActiveNowList } from "@/components/workbench/ActiveNowList";
 import { DayGroupedHistory } from "@/components/workbench/DayGroupedHistory";
@@ -19,6 +20,7 @@ export default function HomeWorkbench() {
   const { visitors, addVisitor, checkOutVisitor, checkInReturn, overstayedCount } = useVisitors();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [checkOutDialogOpen, setCheckOutDialogOpen] = useState(false);
+  const [residentLeaveOpen, setResidentLeaveOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [draftCount, setDraftCount] = useState(0);
   const [pendingApprovals, setPendingApprovals] = useState(0);
@@ -118,7 +120,7 @@ export default function HomeWorkbench() {
                 </button>
 
                 <button
-                  onClick={() => navigate("/leave-requests")}
+                  onClick={() => setResidentLeaveOpen(true)}
                   className="group relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-border bg-card p-8 min-h-[160px] transition-all duration-200 hover:border-info hover:shadow-md active:scale-[0.98]"
                 >
                   <div className="flex h-14 w-14 items-center justify-center rounded-full bg-info/10 text-info transition-colors group-hover:bg-info group-hover:text-info-foreground">
@@ -189,6 +191,7 @@ export default function HomeWorkbench() {
 
       <AddVisitDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onAdd={addVisitor} />
       <CheckOutDialog open={checkOutDialogOpen} onOpenChange={setCheckOutDialogOpen} visitors={visitors} onCheckOut={checkOutVisitor} />
+      <ResidentLeaveDialog open={residentLeaveOpen} onOpenChange={setResidentLeaveOpen} onSubmit={addVisitor} />
     </SidebarProvider>
   );
 }
