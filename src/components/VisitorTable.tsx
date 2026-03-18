@@ -303,6 +303,12 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
           </TabsList>
         </div>
 
+        <TabContextStats
+          tab={activeTab || "all"}
+          visitors={visitorsByType[activeTab || "all"]}
+          allVisitors={visitors}
+        />
+
         {/* Residents tab — completely independent view */}
         <TabsContent value="resident" className="mt-0">
           <ResidentLeaveTable
