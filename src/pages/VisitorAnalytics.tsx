@@ -170,7 +170,7 @@ export default function VisitorAnalytics() {
     residentStats[0] || { residentName: "—", totalVisits: 0 }
   );
 
-  const wings = [...new Set(mockResidents.map((r) => r.wing))];
+  const wings = [...new Set(residentItems.map((r) => r.wing))];
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
