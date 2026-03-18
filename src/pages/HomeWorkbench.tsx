@@ -20,6 +20,7 @@ export default function HomeWorkbench() {
   const { visitors, addVisitor, checkOutVisitor, checkInReturn, overstayedCount } = useVisitors();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [checkOutDialogOpen, setCheckOutDialogOpen] = useState(false);
+  const [residentLeaveOpen, setResidentLeaveOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [draftCount, setDraftCount] = useState(0);
   const [pendingApprovals, setPendingApprovals] = useState(0);
