@@ -63,12 +63,12 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
   const [returnNotificationOptIn, setReturnNotificationOptIn] = useState(false);
 
   const filteredResidents = useMemo(() => {
-    if (!searchQuery.trim()) return mockResidents;
+    if (!searchQuery.trim()) return residentItems;
     const q = searchQuery.toLowerCase();
-    return mockResidents.filter(
+    return residentItems.filter(
       (r) => r.name.toLowerCase().includes(q) || r.room.toLowerCase().includes(q) || r.wing.toLowerCase().includes(q)
     );
-  }, [searchQuery]);
+  }, [searchQuery, residentItems]);
 
   const resetForm = () => {
     setStep(1);
