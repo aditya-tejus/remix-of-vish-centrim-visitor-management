@@ -210,9 +210,10 @@ export function ResidentLeaveTable({ residents, onCheckInReturn, onDelete }: Res
             <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Room</TableHead>
             <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Wing</TableHead>
             <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Care Level</TableHead>
-            <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Reason for Checkout</TableHead>
+            <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Reason</TableHead>
+            <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Escort / Accompanied By</TableHead>
             <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground font-bold">Expected Return</TableHead>
-            <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Days Absent</TableHead>
+            <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Days Away</TableHead>
             <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
             <TableHead className="w-10"></TableHead>
           </TableRow>
