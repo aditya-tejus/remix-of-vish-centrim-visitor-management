@@ -37,7 +37,7 @@ function extractRoom(address: string): string {
   return roomPart || parts[0] || "";
 }
 
-type GroupBy = "none" | "wing" | "type" | "status";
+type GroupBy = "none" | "wing" | "type" | "status" | "residents";
 
 export default function Evacuation() {
   const { visitors } = useVisitors();
@@ -48,7 +48,7 @@ export default function Evacuation() {
   const [safeIds, setSafeIds] = useState<Set<string>>(new Set());
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [groupBy, setGroupBy] = useState<GroupBy>("type");
+  const [groupBy, setGroupBy] = useState<GroupBy>("residents");
 
   const checkedIn = useMemo(() =>
     visitors.filter((v) => v.status === "checked-in"),
@@ -95,8 +95,15 @@ export default function Evacuation() {
     const map = new Map<string, Visitor[]>();
     filtered.forEach((v) => {
       let key = "";
-      if (groupBy === "type") {
-        // Residents get sub-grouped by wing
+      if (groupBy === "residents") {
+        // Residents grouped by wing first, then all others in one group
+        if (v.type === "resident") {
+          const wing = extractWing(v.address);
+          key = `Residents — ${wing}`;
+        } else {
+          key = "Other (Visitors, Staff & Contractors)";
+        }
+      } else if (groupBy === "type") {
         if (v.type === "resident") {
           const wing = extractWing(v.address);
           key = `Residents — ${wing}`;
@@ -309,16 +316,20 @@ export default function Evacuation() {
         </TableCell>
         <TableCell className="text-sm text-foreground">{v.whomToVisit || "—"}</TableCell>
         <TableCell>
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <LogIn className="h-3 w-3" />
-            {format(new Date(v.checkInTime), "HH:mm")}
-          </span>
+          {v.type !== "resident" ? (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <LogIn className="h-3 w-3" />
+              {format(new Date(v.checkInTime), "HH:mm")}
+            </span>
+          ) : <span className="text-xs text-muted-foreground">—</span>}
         </TableCell>
         <TableCell>
-          <span className="text-xs font-medium text-foreground flex items-center gap-1">
-            <Clock className="h-3 w-3 text-muted-foreground" />
-            {formatDuration(new Date(v.checkInTime))}
-          </span>
+          {v.type !== "resident" ? (
+            <span className="text-xs font-medium text-foreground flex items-center gap-1">
+              <Clock className="h-3 w-3 text-muted-foreground" />
+              {formatDuration(new Date(v.checkInTime))}
+            </span>
+          ) : <span className="text-xs text-muted-foreground">—</span>}
         </TableCell>
         <TableCell>
           {(v.additionalVisitors || 0) > 0 ? (
@@ -468,10 +479,11 @@ export default function Evacuation() {
                     <Layers className="h-3 w-3" /> Group:
                   </span>
                   {([
-                    { value: "none", label: "None" },
-                    { value: "wing", label: "Wing" },
+                    { value: "residents", label: "Residents" },
                     { value: "type", label: "Type" },
+                    { value: "wing", label: "Wing" },
                     { value: "status", label: "Status" },
+                    { value: "none", label: "None" },
                   ] as { value: GroupBy; label: string }[]).map((g) => (
                     <Button
                       key={g.value}
