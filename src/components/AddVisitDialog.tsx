@@ -225,7 +225,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
     setContractorScreeningAnswers({}); setSelectedSupplier(null);
   };
 
-  const handleSelectProfile = (profile: typeof mockProfiles[0]) => {
+  const handleSelectProfile = (profile: VisitorProfile) => {
     setSelectedProfile(profile);
     setFormData((prev) => ({
       ...prev,
