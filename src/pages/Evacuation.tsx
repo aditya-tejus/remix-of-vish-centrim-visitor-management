@@ -430,17 +430,7 @@ export default function Evacuation() {
                     <SelectItem value="unaccounted">Unaccounted</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={evacuationPoint} onValueChange={setEvacuationPoint}>
-                  <SelectTrigger className="w-[180px] h-9 text-xs">
-                    <SelectValue placeholder="Assembly Point" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Assembly Points</SelectItem>
-                    {evacuationPoints.map((p) => (
-                      <SelectItem key={p} value={p}>{p}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
 
                 <div className="h-6 w-px bg-border" />
 
