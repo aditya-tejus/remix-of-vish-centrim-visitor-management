@@ -112,7 +112,6 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
     contractor: "Contractors",
     volunteer: "Volunteers",
     staff: "Staff",
-    resident: "Residents",
   };
 
   const emptyIcons: Record<string, string> = {
