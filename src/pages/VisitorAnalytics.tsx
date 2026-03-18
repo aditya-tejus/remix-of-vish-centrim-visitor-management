@@ -49,6 +49,8 @@ interface ResidentVisitStats {
 
 export default function VisitorAnalytics() {
   const { visitors } = useVisitors();
+  const { residents: dbResidents } = useResidents();
+  const residentItems = useMemo(() => dbResidents.map(r => ({ id: r.visitorId, name: r.name, room: r.room, wing: r.wing })), [dbResidents]);
   const { toast } = useToast();
 
   const [datePreset, setDatePreset] = useState<DatePreset>("30d");
