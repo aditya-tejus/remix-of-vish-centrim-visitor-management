@@ -272,7 +272,7 @@ export function ResidentLeaveTable({ residents, onCheckInReturn, onDelete }: Res
           {/* Resident rows */}
           {!showDraftsOnly && filteredResidents.length === 0 && drafts.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={10} className="text-center py-16">
+              <TableCell colSpan={11} className="text-center py-16">
                 <div className="flex flex-col items-center gap-2">
                   <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
                     <span className="text-muted-foreground text-lg">🏠</span>
