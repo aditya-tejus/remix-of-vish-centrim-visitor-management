@@ -169,8 +169,6 @@ export function ResidentLeaveTable({ residents, onCheckInReturn, onDelete }: Res
         onWingsChange={setSelectedWings}
         careLevel={careLevel}
         onCareLevelChange={setCareLevel}
-        leaveStatus={leaveStatus}
-        onLeaveStatusChange={setLeaveStatus}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
       />
