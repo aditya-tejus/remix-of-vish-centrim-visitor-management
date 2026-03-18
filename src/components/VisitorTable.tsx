@@ -107,17 +107,21 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
   };
 
   const typeLabels: Record<string, string> = {
+    all: "All",
     visitor: "Visitors",
-    resident: "Residents",
-    staff: "Staff",
     contractor: "Contractors",
+    volunteer: "Volunteers",
+    staff: "Staff",
+    resident: "Residents",
   };
 
   const emptyIcons: Record<string, string> = {
+    all: "📋",
     visitor: "👤",
-    resident: "🏠",
-    staff: "👨‍💼",
     contractor: "🔧",
+    volunteer: "🤝",
+    staff: "👨‍💼",
+    resident: "🏠",
   };
 
   const getColumns = (type: string) => {
