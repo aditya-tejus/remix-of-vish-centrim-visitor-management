@@ -8,16 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { useVisitors } from "@/hooks/useVisitors";
 import { useResidents, Resident } from "@/hooks/useResidents";
 import { useWings, useResidentDetails } from "@/hooks/useWings";
-import { ResidentLeaveDialog } from "@/components/ResidentLeaveDialog";
 import { ResidentLeaveTable } from "@/components/ResidentLeaveTable";
 import { ResidentFilterBar } from "@/components/ResidentFilterBar";
 import { ResidentPresenceTable } from "@/components/ResidentPresenceTable";
 import { ResidentDirectoryTable } from "@/components/ResidentDirectoryTable";
-import { QuickAwayDialog } from "@/components/QuickAwayDialog";
+import { ResidentOutingDialog } from "@/components/ResidentOutingDialog";
 
 import { useToast } from "@/hooks/use-toast";
 import { isPast } from "date-fns";
-import { DoorOpen, CalendarDays, LogIn, AlertTriangle, ShieldAlert } from "lucide-react";
+import { DoorOpen, LogIn, AlertTriangle, ShieldAlert } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
@@ -29,9 +28,9 @@ export default function Residents() {
   const { data: residentDetails = [] } = useResidentDetails();
   const { toast } = useToast();
 
-  const [markAwayOpen, setMarkAwayOpen] = useState(false);
-  const [planLeaveOpen, setPlanLeaveOpen] = useState(false);
-  const [quickAwayResident, setQuickAwayResident] = useState<{ id: string; name: string; room: string; wing: string } | null>(null);
+  const [outingOpen, setOutingOpen] = useState(false);
+  const [outingMode, setOutingMode] = useState<"short" | "planned">("short");
+  const [outingResident, setOutingResident] = useState<{ id: string; name: string; room: string; wing: string } | null>(null);
   const [activeTab, setActiveTab] = useState("presence");
   const [draftCount, setDraftCount] = useState(0);
   const [pendingApprovals, setPendingApprovals] = useState(0);
@@ -74,9 +73,7 @@ export default function Residents() {
   // Build presence map for directory dots (by visitorId)
   const presenceMap = useMemo(() => {
     const map = new Map<string, "in-building" | "away" | "on-leave" | "overdue">();
-    // Default all to in-building
     residents.forEach(r => map.set(r.visitorId, "in-building"));
-    // Override with actual visitor status
     residentVisitors.forEach(v => {
       if (v.status === "checked-out") {
         const isOverdue = v.expectedReturnDate && isPast(v.expectedReturnDate);
@@ -113,8 +110,15 @@ export default function Residents() {
   };
 
   const handleQuickAway = (resident: Resident) => {
-    setQuickAwayResident({ id: resident.visitorId, name: resident.name, room: resident.room, wing: resident.wing });
-    setMarkAwayOpen(true);
+    setOutingResident({ id: resident.visitorId, name: resident.name, room: resident.room, wing: resident.wing });
+    setOutingMode("short");
+    setOutingOpen(true);
+  };
+
+  const openOuting = (mode: "short" | "planned" = "short") => {
+    setOutingResident(null);
+    setOutingMode(mode);
+    setOutingOpen(true);
   };
 
   const countCards = [
@@ -126,7 +130,7 @@ export default function Residents() {
       dot: true,
     },
     {
-      label: "Away Now",
+      label: "Away",
       value: awayCount,
       colorClass: "text-warning",
       borderClass: "border-l-warning",
@@ -160,19 +164,15 @@ export default function Residents() {
         <SidebarInset className="flex-1">
           <AppHeader
             title="Residents"
-            subtitle="Manage resident presence, leave & returns"
+            subtitle="Manage resident presence, outings & returns"
             overdueCount={overdueCount}
             draftCount={draftCount}
             pendingCount={pendingApprovals}
             actions={
               <>
-                <Button variant="outline" size="sm" className="h-[34px] text-[13px] gap-1.5 border-border" onClick={() => setMarkAwayOpen(true)}>
+                <Button variant="outline" size="sm" className="h-[34px] text-[13px] gap-1.5 border-border" onClick={() => openOuting("short")}>
                   <DoorOpen className="h-4 w-4" />
-                  Quick Away
-                </Button>
-                <Button variant="outline" size="sm" className="h-[34px] text-[13px] gap-1.5 border-border" onClick={() => setPlanLeaveOpen(true)}>
-                  <CalendarDays className="h-4 w-4" />
-                  Plan Leave
+                  Record Outing
                 </Button>
                 <Button size="sm" className="h-[34px] text-[13px] gap-1.5 bg-primary hover:bg-primary/90" onClick={() => {
                   setActiveTab("presence");
@@ -224,7 +224,7 @@ export default function Residents() {
                     Presence
                   </TabsTrigger>
                   <TabsTrigger value="leave" className="rounded-none h-11 px-5 text-[15px] font-medium border-b-[3px] border-b-transparent transition-all duration-150 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:border-b-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground">
-                    Leave & Away
+                    Away & Leave
                     {draftCount > 0 && (
                       <Badge variant="secondary" className="ml-1.5 text-[10px] bg-warning/10 text-warning">{draftCount}</Badge>
                     )}
@@ -304,23 +304,22 @@ export default function Residents() {
         </SidebarInset>
       </div>
 
-      {/* Quick Away Dialog */}
-      <QuickAwayDialog
-        open={markAwayOpen}
-        onOpenChange={setMarkAwayOpen}
-        preselectedResident={quickAwayResident}
+      {/* Unified Outing Dialog */}
+      <ResidentOutingDialog
+        open={outingOpen}
+        onOpenChange={setOutingOpen}
+        defaultMode={outingMode}
+        preselectedResident={outingResident}
         onSubmit={(visitor) => {
           addVisitor(visitor);
-          setQuickAwayResident(null);
-          toast({ title: "Resident Marked Away", description: `${visitor.firstName} ${visitor.surname} is away.` });
+          setOutingResident(null);
+          const isShort = visitor.leaveType === "Away";
+          toast({
+            title: isShort ? "Resident Marked Away" : "Leave Recorded",
+            description: `${visitor.firstName} ${visitor.surname} ${isShort ? "is away" : "has been checked out on leave"}.`,
+          });
         }}
       />
-
-      {/* Plan Leave (full dialog) */}
-      <ResidentLeaveDialog open={planLeaveOpen} onOpenChange={setPlanLeaveOpen} onSubmit={(visitor) => {
-        addVisitor(visitor);
-        toast({ title: "Leave Recorded", description: `${visitor.firstName} ${visitor.surname} has been checked out on leave.` });
-      }} />
     </SidebarProvider>
   );
 }
