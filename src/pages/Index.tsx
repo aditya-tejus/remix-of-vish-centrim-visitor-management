@@ -49,7 +49,7 @@ const Index = () => {
         onOpenChange={setAddDialogOpen}
         onAdd={handleAddVisitor}
       />
-      <CheckOutDialog
+      <CheckOutSheet
         open={checkOutDialogOpen}
         onOpenChange={setCheckOutDialogOpen}
         visitors={visitors}
