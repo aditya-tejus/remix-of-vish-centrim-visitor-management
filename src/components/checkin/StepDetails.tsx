@@ -172,26 +172,60 @@ export function StepDetails({
       {/* Visit details */}
       <div className="space-y-3 pt-3 border-t border-border">
         <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Who Are You Visiting?</p>
-        <div className="grid grid-cols-2 gap-2.5">
-          <Select value={formData.whomToVisit} onValueChange={(val) => { updateField("whomToVisit", val); updateField("selectPerson", ""); }}>
-            <SelectTrigger className="rounded-xl h-10 text-[14px]"><SelectValue placeholder="Visiting..." /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Resident">Resident</SelectItem>
-              <SelectItem value="Staff">Staff Member</SelectItem>
-            </SelectContent>
-          </Select>
-          {formData.whomToVisit && (
+        <Select value={formData.whomToVisit} onValueChange={(val) => { updateField("whomToVisit", val); updateField("selectPerson", ""); }}>
+          <SelectTrigger className="rounded-xl h-10 text-[14px]"><SelectValue placeholder="Visiting a..." /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Resident">Resident</SelectItem>
+            <SelectItem value="Staff">Staff Member</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {formData.whomToVisit === "Resident" && (
+          <div className="space-y-1.5">
+            <Label className="text-[12px]">Select Resident</Label>
             <Select value={formData.selectPerson} onValueChange={(val) => updateField("selectPerson", val)}>
-              <SelectTrigger className="rounded-xl h-10 text-[14px]"><SelectValue placeholder="Select..." /></SelectTrigger>
+              <SelectTrigger className="rounded-xl h-10 text-[14px]"><SelectValue placeholder="Search or select resident..." /></SelectTrigger>
               <SelectContent>
-                {formData.whomToVisit === "Resident"
-                  ? residentItems.map((r) => <SelectItem key={r.id} value={r.name}>{r.name} • {r.room}</SelectItem>)
-                  : staffItems.map((s) => <SelectItem key={s.id} value={s.name}>{s.name} • {s.role}</SelectItem>)
-                }
+                {residentItems.map((r) => (
+                  <SelectItem key={r.id} value={r.name}>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">{r.name}</span>
+                      <span className="text-muted-foreground text-[12px]">•</span>
+                      <span className="text-muted-foreground text-[12px]">{r.room || "No room"}</span>
+                      {r.wing && (
+                        <>
+                          <span className="text-muted-foreground text-[12px]">•</span>
+                          <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-primary/10 text-primary font-medium">{r.wing}</span>
+                        </>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-          )}
-        </div>
+          </div>
+        )}
+
+        {formData.whomToVisit === "Staff" && (
+          <div className="space-y-1.5">
+            <Label className="text-[12px]">Select Staff Member</Label>
+            <Select value={formData.selectPerson} onValueChange={(val) => updateField("selectPerson", val)}>
+              <SelectTrigger className="rounded-xl h-10 text-[14px]"><SelectValue placeholder="Select staff member..." /></SelectTrigger>
+              <SelectContent>
+                {staffItems.map((s) => (
+                  <SelectItem key={s.id} value={s.name}>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">{s.name}</span>
+                      <span className="text-muted-foreground text-[12px]">• {s.role}</span>
+                      {s.department && <span className="text-muted-foreground text-[12px]">• {s.department}</span>}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <div className="space-y-1">
           <Label className="text-[12px]">Comments (optional)</Label>
           <Textarea value={formData.comments} onChange={(e) => updateField("comments", e.target.value)}
