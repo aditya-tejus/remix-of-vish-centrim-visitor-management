@@ -136,7 +136,7 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
 
   const canProceed = () => {
     if (step === 1) return !!selectedResident;
-    if (step === 2) return !!expectedReturnDate && !!email && !!mobile;
+    if (step === 2) return !!expectedReturnDate;
     if (step === 3) return !!checkoutReason;
     if (step === 4) return !!accompaniedBy;
     return privacyAcknowledged;
