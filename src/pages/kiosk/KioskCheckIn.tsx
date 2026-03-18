@@ -140,6 +140,18 @@ export default function KioskCheckIn() {
           </div>
         </div>
       )}
+      {watchlistEntry && (
+        <WatchlistAlertDialog
+          open={watchlistOpen}
+          onOpenChange={setWatchlistOpen}
+          entry={watchlistEntry}
+          onProceed={doCheckIn}
+          onDeny={() => {
+            toast({ title: "Entry Denied", description: "This visitor has been denied entry.", variant: "destructive" });
+            setTimeout(() => navigate("/kiosk"), 2000);
+          }}
+        />
+      )}
     </div>
   );
 }
