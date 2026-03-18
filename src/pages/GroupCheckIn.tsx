@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useVisitors } from "@/hooks/useVisitors";
+import { useWatchlist } from "@/hooks/useWatchlist";
+import { WatchlistAlertDialog } from "@/components/WatchlistAlertDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Users, Plus, Trash2, CheckCircle2, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,6 +21,7 @@ interface GroupMember {
 
 export default function GroupCheckIn() {
   const { addVisitor } = useVisitors();
+  const { checkVisitor } = useWatchlist();
   const { toast } = useToast();
   const [members, setMembers] = useState<GroupMember[]>([
     { id: crypto.randomUUID(), firstName: "", surname: "", email: "", mobile: "" },
@@ -26,6 +29,9 @@ export default function GroupCheckIn() {
   const [whomToVisit, setWhomToVisit] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [watchlistEntry, setWatchlistEntry] = useState<any>(null);
+  const [watchlistOpen, setWatchlistOpen] = useState(false);
+  const [blockedMember, setBlockedMember] = useState<string>("");
 
   const addRow = () => {
     setMembers((prev) => [...prev, { id: crypto.randomUUID(), firstName: "", surname: "", email: "", mobile: "" }]);
@@ -44,32 +50,47 @@ export default function GroupCheckIn() {
     const valid = members.filter((m) => m.firstName.trim() && m.surname.trim());
     if (valid.length === 0) return;
 
+    // Check watchlist for all members
+    for (const m of valid) {
+      const match = checkVisitor(m.firstName, m.surname);
+      if (match) {
+        setWatchlistEntry(match);
+        setBlockedMember(`${m.firstName} ${m.surname}`);
+        setWatchlistOpen(true);
+        if (match.alert_type === "hard") return;
+      }
+    }
+
     setSubmitting(true);
     const groupId = crypto.randomUUID();
 
-    for (const m of valid) {
-      addVisitor({
-        firstName: m.firstName,
-        surname: m.surname,
-        email: m.email,
-        mobile: m.mobile,
-        type: "visitor",
-        checkInTime: new Date(),
-        checkOutTime: null,
-        whomToVisit,
-        address: "",
-        status: "checked-in",
-        healthDeclaration: false,
-        additionalVisitors: 0,
-        comments: `Group check-in (${valid.length} members)`,
-        retentionExpiry: new Date(Date.now() + 86400000 * 60),
-        acknowledgedPrivacy: false,
-      });
+    try {
+      for (const m of valid) {
+        addVisitor({
+          firstName: m.firstName,
+          surname: m.surname,
+          email: m.email,
+          mobile: m.mobile,
+          type: "visitor",
+          checkInTime: new Date(),
+          checkOutTime: null,
+          whomToVisit,
+          address: "",
+          status: "checked-in",
+          healthDeclaration: false,
+          additionalVisitors: 0,
+          comments: `Group check-in (${valid.length} members) [group:${groupId}]`,
+          retentionExpiry: new Date(Date.now() + 86400000 * 60),
+          acknowledgedPrivacy: false,
+        });
+      }
+      setSubmitted(true);
+      toast({ title: "Group Checked In", description: `${valid.length} visitors checked in successfully.` });
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to check in group. Please try again.", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
     }
-
-    setSubmitting(false);
-    setSubmitted(true);
-    toast({ title: "Group Checked In", description: `${valid.length} visitors checked in successfully.` });
   };
 
   if (submitted) {
@@ -158,6 +179,15 @@ export default function GroupCheckIn() {
           </main>
         </SidebarInset>
       </div>
+      {watchlistEntry && (
+        <WatchlistAlertDialog
+          open={watchlistOpen}
+          onOpenChange={setWatchlistOpen}
+          entry={watchlistEntry}
+          onProceed={() => {}}
+          onDeny={() => toast({ title: "Entry Denied", description: `${blockedMember} is on the watchlist and cannot be checked in.`, variant: "destructive" })}
+        />
+      )}
     </SidebarProvider>
   );
 }

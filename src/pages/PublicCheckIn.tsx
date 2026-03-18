@@ -15,9 +15,8 @@ import { VisitorType } from "@/types/visitor";
 
 const visitorTypes: { type: VisitorType; label: string; emoji: string }[] = [
   { type: "visitor", label: "Visitor", emoji: "👋" },
-  { type: "resident", label: "Resident", emoji: "🏠" },
   { type: "contractor", label: "Contractor", emoji: "🔧" },
-  { type: "staff", label: "Staff", emoji: "💼" },
+  { type: "volunteer", label: "Volunteer", emoji: "🤝" },
 ];
 
 const healthQuestions = [

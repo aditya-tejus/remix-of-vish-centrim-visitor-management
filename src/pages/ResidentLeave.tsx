@@ -29,7 +29,7 @@ const DESTINATION_CATEGORIES = [
 ];
 
 export default function ResidentLeave() {
-  const { visitors, checkOutVisitor, checkInReturn } = useVisitors();
+  const { visitors, addVisitor, checkOutVisitor, checkInReturn } = useVisitors();
   const { residents, loading } = useResidents();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
@@ -195,7 +195,10 @@ export default function ResidentLeave() {
           </main>
         </SidebarInset>
       </div>
-      <ResidentLeaveDialog open={markAwayOpen} onOpenChange={setMarkAwayOpen} onSubmit={() => {}} />
+      <ResidentLeaveDialog open={markAwayOpen} onOpenChange={setMarkAwayOpen} onSubmit={(visitor) => {
+        addVisitor(visitor);
+        toast({ title: "Resident Marked Away", description: `${visitor.firstName} ${visitor.surname} has been checked out.` });
+      }} />
     </SidebarProvider>
   );
 }

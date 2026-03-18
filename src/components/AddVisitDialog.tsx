@@ -38,12 +38,14 @@ const visitorTypes: { type: VisitorType; label: string; icon: typeof User; emoji
   { type: "staff", label: "Staff", icon: UserCog, emoji: "💼" },
 ];
 
-const mockProfiles = [
-  { id: "p1", firstName: "John", surname: "Smith", mobile: "07700 900123", email: "john.smith@email.com", address: "12 High Street, London" },
-  { id: "p2", firstName: "Sarah", surname: "Williams", mobile: "07700 900456", email: "sarah.w@email.com", address: "5 Park Lane, Manchester" },
-  { id: "p3", firstName: "James", surname: "Brown", mobile: "07700 900789", email: "james.b@email.com", address: "45 Oak Avenue, Birmingham" },
-  { id: "p4", firstName: "Emma", surname: "Johnson", mobile: "07700 900321", email: "emma.j@email.com", address: "78 Elm Road, Leeds" },
-];
+interface VisitorProfile {
+  id: string;
+  firstName: string;
+  surname: string;
+  mobile: string;
+  email: string;
+  address: string;
+}
 
 
 
@@ -64,9 +66,10 @@ const fallbackHealthQuestions: HealthQuestion[] = [
   { id: "consent_screening", question: "I consent to compliance screening and temperature check", type: "checkbox", required: true },
 ];
 
-export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProps) {
+export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVisitDialogProps & { initialType?: VisitorType }) {
   const { residents: dbResidents } = useResidents();
   const { staff: dbStaff } = useStaffMembers();
+  const [previousVisitors, setPreviousVisitors] = useState<VisitorProfile[]>([]);
   const residentItems = useMemo(() => dbResidents.map(r => ({ id: r.visitorId, name: r.name, room: r.room, wing: r.wing })), [dbResidents]);
   const staffItems = useMemo(() => dbStaff.map(s => ({ id: s.id, name: s.name, role: s.role, department: s.department || "" })), [dbStaff]);
   const [step, setStep] = useState(1);
@@ -78,7 +81,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
   const activeCompanionFields = companionFieldsConfig.filter((f) => f.is_active).sort((a, b) => a.sort_order - b.sort_order);
   const healthQuestions: HealthQuestion[] = dbQuestions.length > 0 ? dbQuestions : fallbackHealthQuestions;
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedProfile, setSelectedProfile] = useState<typeof mockProfiles[0] | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<VisitorProfile | null>(null);
   const [selectedResident, setSelectedResident] = useState<{ id: string; name: string; room: string; wing: string } | null>(null);
   const [formData, setFormData] = useState({
     firstName: "", surname: "", email: "", mobile: "", address: "",
@@ -119,7 +122,6 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
     : ["Search", "Details", "Health", "Confirm"];
   const totalSteps = steps.length;
 
-  // Load branch document URLs from settings
   // Load branch document URLs and jurisdiction from settings
   useEffect(() => {
     supabase
@@ -138,6 +140,13 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
       });
   }, []);
 
+  // Set initial type from prop
+  useEffect(() => {
+    if (initialType && open) {
+      setSelectedType(initialType);
+    }
+  }, [initialType, open]);
+
   const filteredResidents = useMemo(() => {
     if (!residentSearchQuery.trim()) return residentItems;
     const q = residentSearchQuery.toLowerCase();
@@ -146,16 +155,54 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
     );
   }, [residentSearchQuery, residentItems]);
 
+  // Query previous visitors from DB for returning visitor lookup
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
+    if (!searchQuery.trim()) return previousVisitors;
     const q = searchQuery.toLowerCase();
-    return mockProfiles.filter(
+    return previousVisitors.filter(
       (p) =>
         p.firstName.toLowerCase().includes(q) ||
         p.surname.toLowerCase().includes(q) ||
         p.mobile.includes(q) ||
         `${p.firstName} ${p.surname}`.toLowerCase().includes(q)
     );
+  }, [searchQuery, previousVisitors]);
+
+  // Fetch previous visitors when search query changes
+  useEffect(() => {
+    if (!searchQuery.trim() || searchQuery.length < 2) {
+      setPreviousVisitors([]);
+      return;
+    }
+    const q = searchQuery.toLowerCase();
+    supabase
+      .from("visitors")
+      .select("id, first_name, surname, mobile, email, address")
+      .or(`first_name.ilike.%${q}%,surname.ilike.%${q}%,mobile.ilike.%${q}%`)
+      .neq("type", "resident")
+      .order("check_in_time", { ascending: false })
+      .limit(10)
+      .then(({ data }) => {
+        if (data) {
+          const seen = new Set<string>();
+          const unique: VisitorProfile[] = [];
+          for (const r of data) {
+            const key = `${r.first_name}|${r.surname}|${r.email}`.toLowerCase();
+            if (!seen.has(key)) {
+              seen.add(key);
+              unique.push({
+                id: r.id,
+                firstName: r.first_name,
+                surname: r.surname,
+                mobile: r.mobile || "",
+                email: r.email || "",
+                address: r.address || "",
+              });
+            }
+          }
+          setPreviousVisitors(unique);
+        }
+      });
   }, [searchQuery]);
 
   const resetForm = () => {
@@ -178,7 +225,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
     setContractorScreeningAnswers({}); setSelectedSupplier(null);
   };
 
-  const handleSelectProfile = (profile: typeof mockProfiles[0]) => {
+  const handleSelectProfile = (profile: VisitorProfile) => {
     setSelectedProfile(profile);
     setFormData((prev) => ({
       ...prev,
