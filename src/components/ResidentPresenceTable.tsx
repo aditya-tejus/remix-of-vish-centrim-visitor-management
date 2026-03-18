@@ -134,7 +134,7 @@ export function ResidentPresenceTable({ residents, residentVisitors, detailsMap,
                       <div className="flex items-center gap-1.5">
                         <span className="font-semibold text-[15px]">{resident.firstName} {resident.surname}</span>
                         {resident.dolsLpsFlag && (
-                          <ShieldAlert className="h-3.5 w-3.5 text-destructive" title="DoLS/LPS" />
+                          <span title="DoLS/LPS"><ShieldAlert className="h-3.5 w-3.5 text-destructive" /></span>
                         )}
                       </div>
                       {resident.keyWorker && (
