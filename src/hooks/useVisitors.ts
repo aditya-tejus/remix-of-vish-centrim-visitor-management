@@ -260,6 +260,7 @@ export function useVisitors() {
     visitors,
     loading,
     addVisitor,
+    markResidentAway,
     checkOutVisitor,
     checkInReturn,
     checkOutAllOverstayed,
