@@ -56,8 +56,7 @@ export default function Evacuation() {
   const [safeIds, setSafeIds] = useState<Set<string>>(new Set());
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [groupBy, setGroupBy] = useState<GroupBy>("none");
-  const [evacuationPoint, setEvacuationPoint] = useState<string>("all");
+  const [groupBy, setGroupBy] = useState<GroupBy>("type");
 
   const checkedIn = useMemo(() =>
     visitors.filter((v) => v.status === "checked-in"),
