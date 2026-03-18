@@ -4,7 +4,7 @@ import { DashboardHeader } from "@/components/DashboardHeader";
 import { VisitorStats } from "@/components/VisitorStats";
 import { UrgentActions } from "@/components/UrgentActions";
 import { AddVisitDialog } from "@/components/AddVisitDialog";
-import { CheckOutDialog } from "@/components/CheckOutDialog";
+import { CheckOutSheet } from "@/components/CheckOutSheet";
 import { QRCodeDialog } from "@/components/QRCodeDialog";
 import { useVisitors } from "@/hooks/useVisitors";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
@@ -49,7 +49,7 @@ const Index = () => {
         onOpenChange={setAddDialogOpen}
         onAdd={handleAddVisitor}
       />
-      <CheckOutDialog
+      <CheckOutSheet
         open={checkOutDialogOpen}
         onOpenChange={setCheckOutDialogOpen}
         visitors={visitors}

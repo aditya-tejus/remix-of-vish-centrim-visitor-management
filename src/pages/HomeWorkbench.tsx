@@ -5,7 +5,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppHeader } from "@/components/AppHeader";
 import { useVisitors } from "@/hooks/useVisitors";
 import { AddVisitDialog } from "@/components/AddVisitDialog";
-import { CheckOutDialog } from "@/components/CheckOutDialog";
+import { CheckOutSheet } from "@/components/CheckOutSheet";
 import { ResidentLeaveDialog } from "@/components/ResidentLeaveDialog";
 
 import { ActiveNowList } from "@/components/workbench/ActiveNowList";
@@ -174,7 +174,7 @@ export default function HomeWorkbench() {
       </div>
 
       <AddVisitDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onAdd={addVisitor} />
-      <CheckOutDialog open={checkOutDialogOpen} onOpenChange={setCheckOutDialogOpen} visitors={visitors} onCheckOut={checkOutVisitor} />
+      <CheckOutSheet open={checkOutDialogOpen} onOpenChange={setCheckOutDialogOpen} visitors={visitors} onCheckOut={checkOutVisitor} />
       <ResidentLeaveDialog open={residentLeaveOpen} onOpenChange={setResidentLeaveOpen} onSubmit={addVisitor} />
     </SidebarProvider>
   );

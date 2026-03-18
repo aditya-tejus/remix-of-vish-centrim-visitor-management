@@ -35,6 +35,9 @@
     --warning: 38 92% 50%;
     --warning-foreground: 38 92% 16%;
 
+    --checkout: 25 95% 53%;
+    --checkout-foreground: 0 0% 100%;
+
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
 
@@ -113,6 +116,9 @@
 
     --warning: 38 80% 48%;
     --warning-foreground: 0 0% 100%;
+
+    --checkout: 25 90% 50%;
+    --checkout-foreground: 0 0% 100%;
 
     --info: 199 80% 50%;
     --info-foreground: 0 0% 100%;
