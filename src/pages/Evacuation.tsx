@@ -309,16 +309,20 @@ export default function Evacuation() {
         </TableCell>
         <TableCell className="text-sm text-foreground">{v.whomToVisit || "—"}</TableCell>
         <TableCell>
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <LogIn className="h-3 w-3" />
-            {format(new Date(v.checkInTime), "HH:mm")}
-          </span>
+          {v.type !== "resident" ? (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <LogIn className="h-3 w-3" />
+              {format(new Date(v.checkInTime), "HH:mm")}
+            </span>
+          ) : <span className="text-xs text-muted-foreground">—</span>}
         </TableCell>
         <TableCell>
-          <span className="text-xs font-medium text-foreground flex items-center gap-1">
-            <Clock className="h-3 w-3 text-muted-foreground" />
-            {formatDuration(new Date(v.checkInTime))}
-          </span>
+          {v.type !== "resident" ? (
+            <span className="text-xs font-medium text-foreground flex items-center gap-1">
+              <Clock className="h-3 w-3 text-muted-foreground" />
+              {formatDuration(new Date(v.checkInTime))}
+            </span>
+          ) : <span className="text-xs text-muted-foreground">—</span>}
         </TableCell>
         <TableCell>
           {(v.additionalVisitors || 0) > 0 ? (
