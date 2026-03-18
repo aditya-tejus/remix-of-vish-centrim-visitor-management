@@ -113,10 +113,16 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [companions, setCompanions] = useState<CompanionDetail[]>([]);
   const [residentSearchQuery, setResidentSearchQuery] = useState("");
+  const [contractorScreeningAnswers, setContractorScreeningAnswers] = useState<Record<string, any>>({});
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const [jurisdiction, setJurisdiction] = useState<"AU" | "UK">("AU");
 
   const isResident = selectedType === "resident";
+  const isContractor = selectedType === "contractor";
   const steps = isResident
     ? ["Resident", "Schedule", "Reason", "Companions", "Confirm"]
+    : isContractor
+    ? ["Search", "Details", "Screening", "Confirm"]
     : ["Search", "Details", "Health", "Confirm"];
   const totalSteps = steps.length;
 
