@@ -179,27 +179,6 @@ export default function VisitList() {
             </div>
           </header>
 
-          {/* ZONE 1 — Summary Strip */}
-          <SummaryStrip
-            totalToday={filteredVisitors.length}
-            currentlyInside={checkedIn}
-            checkedOut={checkedOut}
-            overstayed={overstayedCount}
-            onFilter={handleFilter}
-            activeFilter={activeFilter}
-          />
-
-          {/* ZONE 2 — Alert Cards */}
-          <AlertCards
-            visitors={visitors}
-            draftCount={draftCount}
-            pendingApprovals={pendingApprovals}
-            onFilterOverstayed={handleFilterOverstayed}
-            onFilterDrafts={handleFilterDrafts}
-            onFilterOverdue={handleFilterOverdue}
-            onFilterPending={handleFilterPending}
-            onFilterReturnsToday={handleFilterReturnsToday}
-          />
 
           {/* Date Navigator */}
           <div className="border-b border-border bg-card">
