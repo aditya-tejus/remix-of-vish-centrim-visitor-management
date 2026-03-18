@@ -27,6 +27,7 @@ import ReportsPage from "./pages/Reports";
 import CoverageChecklist from "./pages/CoverageChecklist";
 // Kiosk
 import KioskLayout from "./pages/kiosk/KioskLayout";
+import KioskAttract from "./pages/kiosk/KioskAttract";
 import KioskHome from "./pages/kiosk/KioskHome";
 import KioskCheckIn from "./pages/kiosk/KioskCheckIn";
 import KioskCheckOut from "./pages/kiosk/KioskCheckOut";
@@ -70,7 +71,8 @@ const App = () => (
           <Route path="/coverage" element={<CoverageChecklist />} />
           {/* Kiosk routes */}
           <Route path="/kiosk" element={<KioskLayout />}>
-            <Route index element={<KioskHome />} />
+            <Route index element={<KioskAttract />} />
+            <Route path="home" element={<KioskHome />} />
             <Route path="checkin" element={<KioskCheckIn />} />
             <Route path="checkout" element={<KioskCheckOut />} />
             <Route path="resident-leave" element={<KioskResidentLeave />} />

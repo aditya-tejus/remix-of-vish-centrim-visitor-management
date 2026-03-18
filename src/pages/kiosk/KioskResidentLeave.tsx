@@ -1,11 +1,14 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useResidents } from "@/hooks/useResidents";
 import { useVisitors } from "@/hooks/useVisitors";
 import { useToast } from "@/hooks/use-toast";
-import { DoorOpen, ArrowLeftRight, Search, CheckCircle2, Home } from "lucide-react";
+import { DoorOpen, Search, Home, ArrowLeft } from "lucide-react";
+import { motion } from "framer-motion";
+import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
+import { KioskSuccessScreen } from "@/components/kiosk/KioskSuccessScreen";
 
 type Mode = "select" | "leaving" | "returning";
 
@@ -16,7 +19,7 @@ export default function KioskResidentLeave() {
   const { toast } = useToast();
   const [mode, setMode] = useState<Mode>("select");
   const [room, setRoom] = useState("");
-  const [done, setDone] = useState<string | null>(null);
+  const [doneMessage, setDoneMessage] = useState<{ title: string; subtitle: string } | null>(null);
 
   const awayResidents = useMemo(
     () => visitors.filter((v) => v.type === "resident" && v.status === "checked-out"),
@@ -31,115 +34,135 @@ export default function KioskResidentLeave() {
     );
   }, [residents, room]);
 
-  const handleLeave = async (visitorId: string, name: string) => {
+  const handleLeave = async (visitorId: string, name: string, roomNum: string) => {
     await checkOutVisitor(visitorId, "Kiosk self-service departure");
-    setDone(`${name} — have a safe trip!`);
+    setDoneMessage({ title: `${name} — have a safe trip!`, subtitle: `Room ${roomNum || "—"} departure recorded` });
     toast({ title: "Departure Recorded", description: `${name} has been marked as away.` });
-    setTimeout(() => navigate("/kiosk"), 3000);
   };
 
   const handleReturn = async (visitorId: string, name: string) => {
     await checkInReturn(visitorId, "Kiosk self-service return");
-    setDone(`Welcome back, ${name}!`);
+    setDoneMessage({ title: `Welcome back, ${name}!`, subtitle: "Return has been recorded" });
     toast({ title: "Return Recorded", description: `${name} has been marked as returned.` });
-    setTimeout(() => navigate("/kiosk"), 3000);
   };
 
-  if (done) {
+  const handleComplete = useCallback(() => navigate("/kiosk/home"), [navigate]);
+
+  if (doneMessage) {
     return (
-      <div className="text-center space-y-4 max-w-md">
-        <div className="h-20 w-20 rounded-full bg-success/10 flex items-center justify-center mx-auto">
-          <CheckCircle2 className="h-10 w-10 text-success" />
-        </div>
-        <h2 className="text-2xl font-bold text-foreground">{done}</h2>
-      </div>
+      <KioskSuccessScreen
+        title={doneMessage.title}
+        subtitle={doneMessage.subtitle}
+        accentColor="info"
+        onComplete={handleComplete}
+      />
     );
   }
 
   if (mode === "select") {
     return (
-      <div className="w-full max-w-md space-y-6">
-        <h2 className="text-2xl font-bold text-foreground text-center">Resident Leave</h2>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md space-y-6"
+      >
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-foreground">Resident Leave</h2>
+          <p className="text-base text-muted-foreground mt-1">Are you leaving or returning?</p>
+        </div>
         <div className="grid grid-cols-2 gap-4">
           <button
             onClick={() => setMode("leaving")}
-            className="flex flex-col items-center gap-3 p-8 rounded-2xl border-2 border-border bg-card hover:border-warning transition-all min-h-[160px]"
+            className="flex flex-col items-center gap-4 p-8 rounded-2xl border-2 border-warning/20 bg-warning/10 text-warning hover:bg-warning hover:text-warning-foreground transition-all duration-200 min-h-[200px] active:scale-[0.96]"
           >
-            <DoorOpen className="h-10 w-10 text-warning" />
-            <span className="text-lg font-semibold">Leaving</span>
+            <DoorOpen className="h-12 w-12" />
+            <div className="text-center">
+              <span className="text-xl font-bold block">Leaving</span>
+              <span className="text-sm opacity-80 mt-1 block">Record departure</span>
+            </div>
           </button>
           <button
             onClick={() => setMode("returning")}
-            className="flex flex-col items-center gap-3 p-8 rounded-2xl border-2 border-border bg-card hover:border-success transition-all min-h-[160px]"
+            className="flex flex-col items-center gap-4 p-8 rounded-2xl border-2 border-success/20 bg-success/10 text-success hover:bg-success hover:text-success-foreground transition-all duration-200 min-h-[200px] active:scale-[0.96]"
           >
-            <Home className="h-10 w-10 text-success" />
-            <span className="text-lg font-semibold">Returning</span>
+            <Home className="h-12 w-12" />
+            <div className="text-center">
+              <span className="text-xl font-bold block">Returning</span>
+              <span className="text-sm opacity-80 mt-1 block">{awayResidents.length} away</span>
+            </div>
           </button>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   if (mode === "returning") {
     return (
-      <div className="w-full max-w-lg space-y-6">
+      <motion.div
+        initial={{ opacity: 0, x: 40 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="w-full max-w-lg space-y-6"
+      >
         <div className="flex items-center gap-3">
-          <Button variant="ghost" onClick={() => setMode("select")}>← Back</Button>
+          <Button variant="ghost" onClick={() => setMode("select")} className="h-12 gap-2">
+            <ArrowLeft className="h-5 w-5" /> Back
+          </Button>
           <h2 className="text-2xl font-bold text-foreground">Welcome Back</h2>
         </div>
         <div className="space-y-2 max-h-[400px] overflow-y-auto">
           {awayResidents.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">No residents currently away</div>
+            <div className="text-center py-12 text-muted-foreground text-lg">No residents currently away</div>
           ) : (
             awayResidents.map((v) => (
-              <button
+              <KioskPersonCard
                 key={v.id}
+                name={`${v.firstName} ${v.surname}`}
+                subtitle={v.address || "—"}
+                accentColor="success"
+                rightIcon={<Home className="h-5 w-5 text-success shrink-0" />}
                 onClick={() => handleReturn(v.id, `${v.firstName} ${v.surname}`)}
-                className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-border bg-card hover:border-success transition-all text-left"
-              >
-                <div>
-                  <p className="text-base font-semibold">{v.firstName} {v.surname}</p>
-                  <p className="text-sm text-muted-foreground">{v.address || "—"}</p>
-                </div>
-                <CheckCircle2 className="h-5 w-5 text-success" />
-              </button>
+              />
             ))
           )}
         </div>
-      </div>
+      </motion.div>
     );
   }
 
-  // Leaving mode
+  // Leaving mode — room-first display
   return (
-    <div className="w-full max-w-lg space-y-6">
+    <motion.div
+      initial={{ opacity: 0, x: 40 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="w-full max-w-lg space-y-6"
+    >
       <div className="flex items-center gap-3">
-        <Button variant="ghost" onClick={() => setMode("select")}>← Back</Button>
-        <h2 className="text-2xl font-bold text-foreground">Enter Room / Search</h2>
+        <Button variant="ghost" onClick={() => setMode("select")} className="h-12 gap-2">
+          <ArrowLeft className="h-5 w-5" /> Back
+        </Button>
+        <h2 className="text-2xl font-bold text-foreground">Find Your Room</h2>
       </div>
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-        <Input value={room} onChange={(e) => setRoom(e.target.value)} placeholder="Room number or name..." className="pl-12 h-12 text-base" autoFocus />
+        <Input value={room} onChange={(e) => setRoom(e.target.value)} placeholder="Room number or name..." className="pl-12 h-14 text-lg" autoFocus />
       </div>
       <div className="space-y-2 max-h-[400px] overflow-y-auto">
         {filteredResidents.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">No residents found</div>
+          <div className="text-center py-12 text-muted-foreground text-lg">No residents found</div>
         ) : (
           filteredResidents.map((r) => (
-              <button
-                key={r.id}
-                onClick={() => handleLeave(r.visitorId, `${r.firstName} ${r.surname}`)}
-                className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-border bg-card hover:border-warning transition-all text-left"
-              >
-                <div>
-                  <p className="text-base font-semibold">{r.firstName} {r.surname}</p>
-                  <p className="text-sm text-muted-foreground">{r.room || "—"} {r.wing ? `• ${r.wing}` : ""}</p>
-              </div>
-              <DoorOpen className="h-5 w-5 text-warning" />
-            </button>
+            <KioskPersonCard
+              key={r.id}
+              name={`${r.firstName} ${r.surname}`}
+              initials={r.room || `${r.firstName[0]}${r.surname[0]}`.toUpperCase()}
+              subtitle={`Room ${r.room || "—"} ${r.wing ? `• ${r.wing}` : ""}`}
+              accentColor="warning"
+              rightIcon={<DoorOpen className="h-5 w-5 text-warning shrink-0" />}
+              onClick={() => handleLeave(r.visitorId, `${r.firstName} ${r.surname}`, r.room)}
+            />
           ))
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
