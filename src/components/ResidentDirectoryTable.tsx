@@ -1,6 +1,5 @@
 import { useNavigate } from "react-router-dom";
 import { Resident } from "@/hooks/useResidents";
-import { Visitor } from "@/types/visitor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -97,7 +96,13 @@ export function ResidentDirectoryTable({ residents, wingMap, presenceMap, onQuic
                       )}
                     </div>
                     {resident.mobile && (
-                      <p className="text-[11px] text-muted-foreground">{resident.mobile}</p>
+                      <a
+                        href={`tel:${resident.mobile}`}
+                        className="text-[11px] text-primary hover:underline"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        {resident.mobile}
+                      </a>
                     )}
                   </div>
                 </div>
@@ -132,9 +137,13 @@ export function ResidentDirectoryTable({ residents, wingMap, presenceMap, onQuic
                   <div className="text-[13px]">
                     <span className="font-medium">{resident.emergencyContactName}</span>
                     {resident.emergencyContactPhone && (
-                      <span className="flex items-center gap-1 text-muted-foreground">
+                      <a
+                        href={`tel:${resident.emergencyContactPhone}`}
+                        className="flex items-center gap-1 text-primary hover:underline"
+                        onClick={e => e.stopPropagation()}
+                      >
                         <Phone className="h-3 w-3" /> {resident.emergencyContactPhone}
-                      </span>
+                      </a>
                     )}
                   </div>
                 ) : (
