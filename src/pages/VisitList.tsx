@@ -6,7 +6,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { VisitorTable } from "@/components/VisitorTable";
 import { useVisitors } from "@/hooks/useVisitors";
 import { CheckInSheet } from "@/components/checkin/CheckInSheet";
-import { CheckOutDialog } from "@/components/CheckOutDialog";
+import { CheckOutSheet } from "@/components/CheckOutSheet";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { useKeyboardShortcuts, KeyboardShortcutBar } from "@/hooks/useKeyboardShortcuts";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,8 @@ export default function VisitList() {
   const navigate = useNavigate();
   const { visitors, addVisitor, checkOutVisitor, checkInReturn, deleteVisitor, overstayedCount } = useVisitors();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [checkOutDialogOpen, setCheckOutDialogOpen] = useState(false);
+  const [checkOutSheetOpen, setCheckOutSheetOpen] = useState(false);
+  const [checkOutPreSelectedId, setCheckOutPreSelectedId] = useState<string | null>(null);
   const [qrOpen, setQrOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [feedbackVisitor, setFeedbackVisitor] = useState<Visitor | null>(null);
@@ -38,7 +39,7 @@ export default function VisitList() {
   // Keyboard shortcuts
   useKeyboardShortcuts({
     onNewVisit: () => setAddDialogOpen(true),
-    onQuickCheckOut: () => setCheckOutDialogOpen(true),
+    onQuickCheckOut: () => setCheckOutSheetOpen(true),
     onQRScan: () => setQrOpen(true),
   });
 
@@ -86,6 +87,11 @@ export default function VisitList() {
 
   const handleStatCardClick = (key: string) => {
     setActiveFilter(prev => prev === key ? null : key);
+  };
+
+  const handleCheckOutFromTable = (visitorId: string) => {
+    setCheckOutPreSelectedId(visitorId);
+    setCheckOutSheetOpen(true);
   };
 
   const countCards = [
@@ -190,7 +196,7 @@ export default function VisitList() {
                   <Plus className="h-3.5 w-3.5" />
                   Check In
                 </Button>
-                <Button variant="ghost" size="sm" className="h-8 text-[13px] gap-1.5 text-muted-foreground" onClick={() => setCheckOutDialogOpen(true)}>
+                <Button variant="ghost" size="sm" className="h-8 text-[13px] gap-1.5 text-muted-foreground" onClick={() => setCheckOutSheetOpen(true)}>
                   <LogOut className="h-3.5 w-3.5" />
                   <span className="hidden xl:inline">Check Out</span>
                 </Button>
@@ -253,7 +259,7 @@ export default function VisitList() {
           <main className="px-6 pb-16 pt-2">
             <VisitorTable
               visitors={displayVisitors}
-              onCheckOut={checkOutVisitor}
+              onCheckOut={handleCheckOutFromTable}
               onCheckInReturn={checkInReturn}
               onDelete={deleteVisitor}
               onFeedback={(v) => setFeedbackVisitor(v)}
@@ -269,7 +275,14 @@ export default function VisitList() {
       </div>
 
       <CheckInSheet open={addDialogOpen} onOpenChange={setAddDialogOpen} onAdd={addVisitor} />
-      <CheckOutDialog open={checkOutDialogOpen} onOpenChange={setCheckOutDialogOpen} visitors={visitors} onCheckOut={checkOutVisitor} />
+      <CheckOutSheet
+        open={checkOutSheetOpen}
+        onOpenChange={setCheckOutSheetOpen}
+        visitors={visitors}
+        onCheckOut={checkOutVisitor}
+        preSelectedVisitorId={checkOutPreSelectedId}
+        onPreSelectedClear={() => setCheckOutPreSelectedId(null)}
+      />
       {feedbackVisitor && (
         <FeedbackDialog
           open={!!feedbackVisitor}
