@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { AppHeader } from "@/components/AppHeader";
 import { useVisitors } from "@/hooks/useVisitors";
 import { AddVisitDialog } from "@/components/AddVisitDialog";
 import { CheckOutDialog } from "@/components/CheckOutDialog";
 import { ResidentLeaveDialog } from "@/components/ResidentLeaveDialog";
-import { NotificationBell } from "@/components/NotificationBell";
+
 import { ActiveNowList } from "@/components/workbench/ActiveNowList";
 import { DayGroupedHistory } from "@/components/workbench/DayGroupedHistory";
 import { Button } from "@/components/ui/button";
@@ -67,31 +68,14 @@ export default function HomeWorkbench() {
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <SidebarInset className="flex-1">
-          {/* Header */}
-          <header className="sticky top-0 z-10 bg-card border-b border-border">
-            <div className="flex items-center justify-between px-6 h-14">
-              <div className="flex items-center gap-4">
-                <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-                <div>
-                  <h1 className="text-xl font-bold text-foreground leading-tight">Home</h1>
-                  <p className="text-[13px] text-muted-foreground">{format(currentTime, "EEEE, dd MMMM yyyy")}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 font-mono text-muted-foreground mr-1">
-                  <Clock className="h-3.5 w-3.5" />
-                  <span className="text-sm font-semibold text-foreground">{format(currentTime, "HH:mm")}</span>
-                </div>
-                <div className="w-px h-5 bg-border" />
-                <NotificationBell
-                  overstayedCount={overstayedCount}
-                  overdueCount={overdueResidents}
-                  draftCount={draftCount}
-                  pendingCount={pendingApprovals}
-                />
-              </div>
-            </div>
-          </header>
+          <AppHeader
+            title="Home"
+            subtitle={format(currentTime, "EEEE, dd MMMM yyyy")}
+            overstayedCount={overstayedCount}
+            overdueCount={overdueResidents}
+            draftCount={draftCount}
+            pendingCount={pendingApprovals}
+          />
 
           <main className="p-6 space-y-6">
             {/* 3 Big Action Buttons */}
