@@ -2,13 +2,14 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Syringe, Link2, CalendarClock, ClipboardList, MessageSquare } from "lucide-react";
+import { Shield, Syringe, Link2, CalendarClock, ClipboardList, MessageSquare, Globe } from "lucide-react";
 import { ComplianceTab } from "@/components/settings/ComplianceTab";
 import { HealthScreeningTab } from "@/components/settings/HealthScreeningTab";
 import { ReturnNotificationSettingsTab } from "@/components/settings/ReturnNotificationSettingsTab";
 import { IntegrationTab } from "@/components/settings/IntegrationTab";
 import { AuditTrailTab } from "@/components/settings/AuditTrailTab";
 import { FeedbackSettingsTab } from "@/components/settings/FeedbackSettingsTab";
+import { PresenceTab } from "@/components/settings/PresenceTab";
 
 export default function SettingsPage() {
   return (
@@ -26,8 +27,11 @@ export default function SettingsPage() {
             </div>
           </header>
           <main className="p-6">
-            <Tabs defaultValue="compliance" className="space-y-6">
+            <Tabs defaultValue="presence" className="space-y-6">
               <TabsList className="inline-flex items-center bg-muted rounded-lg p-1 gap-0.5 flex-wrap h-auto">
+                <TabsTrigger value="presence" className="gap-1.5 rounded-md text-[13px] font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm h-8 px-3">
+                  <Globe className="h-3.5 w-3.5" />Presence
+                </TabsTrigger>
                 <TabsTrigger value="compliance" className="gap-1.5 rounded-md text-[13px] font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm h-8 px-3">
                   <Shield className="h-3.5 w-3.5" />GDPR
                 </TabsTrigger>
@@ -48,6 +52,7 @@ export default function SettingsPage() {
                 </TabsTrigger>
               </TabsList>
 
+              <TabsContent value="presence"><PresenceTab /></TabsContent>
               <TabsContent value="compliance"><ComplianceTab /></TabsContent>
               <TabsContent value="forms"><HealthScreeningTab /></TabsContent>
               <TabsContent value="returns"><ReturnNotificationSettingsTab /></TabsContent>

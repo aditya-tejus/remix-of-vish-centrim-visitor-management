@@ -646,6 +646,45 @@ export type Database = {
         }
         Relationships: []
       }
+      suppliers_min: {
+        Row: {
+          abn: string | null
+          company_number: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          abn?: string | null
+          company_number?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          abn?: string | null
+          company_number?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -772,6 +811,7 @@ export type Database = {
           checkout_reason: string | null
           comments: string | null
           companion_details: Json | null
+          contractor_screening: Json | null
           created_at: string
           email: string
           expected_return_date: string | null
@@ -783,7 +823,9 @@ export type Database = {
           mobile: string
           privacy_acknowledged: boolean | null
           return_notification_opt_in: boolean | null
+          signature_url: string | null
           status: string
+          supplier_id: string | null
           surname: string
           type: string
           whom_to_visit: string | null
@@ -800,6 +842,7 @@ export type Database = {
           checkout_reason?: string | null
           comments?: string | null
           companion_details?: Json | null
+          contractor_screening?: Json | null
           created_at?: string
           email: string
           expected_return_date?: string | null
@@ -811,7 +854,9 @@ export type Database = {
           mobile: string
           privacy_acknowledged?: boolean | null
           return_notification_opt_in?: boolean | null
+          signature_url?: string | null
           status?: string
+          supplier_id?: string | null
           surname: string
           type?: string
           whom_to_visit?: string | null
@@ -828,6 +873,7 @@ export type Database = {
           checkout_reason?: string | null
           comments?: string | null
           companion_details?: Json | null
+          contractor_screening?: Json | null
           created_at?: string
           email?: string
           expected_return_date?: string | null
@@ -839,7 +885,9 @@ export type Database = {
           mobile?: string
           privacy_acknowledged?: boolean | null
           return_notification_opt_in?: boolean | null
+          signature_url?: string | null
           status?: string
+          supplier_id?: string | null
           surname?: string
           type?: string
           whom_to_visit?: string | null
@@ -850,6 +898,13 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visitors_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_min"
             referencedColumns: ["id"]
           },
         ]

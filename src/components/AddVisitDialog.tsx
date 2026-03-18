@@ -13,13 +13,15 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Visitor, VisitorType, CompanionDetail } from "@/types/visitor";
-import { Users, User, Truck, UserCog, Search, ArrowLeft, ArrowRight, Check, Phone, Mail, Shield, ScrollText, Camera, X, Thermometer, Syringe, Upload, FileText, Plus, Trash2, CalendarDays, Home, Clock } from "lucide-react";
+import { Users, User, Truck, UserCog, Heart, Search, ArrowLeft, ArrowRight, Check, Phone, Mail, Shield, ScrollText, Camera, X, Thermometer, Syringe, Upload, FileText, Plus, Trash2, CalendarDays, Home, Clock } from "lucide-react";
 import { PrivacyNotice } from "@/components/PrivacyNotice";
 import { useActiveHealthQuestions, useActiveVaccinationFields } from "@/hooks/useHealthQuestions";
 import { useCompanionFields } from "@/hooks/useFormFields";
 import { useActiveLeaveTypes } from "@/hooks/useLeaveTypes";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { ContractorScreening } from "@/components/ContractorScreening";
+import { Supplier } from "@/hooks/useSuppliers";
 
 interface AddVisitDialogProps {
   open: boolean;
@@ -31,6 +33,7 @@ const visitorTypes: { type: VisitorType; label: string; icon: typeof User; emoji
   { type: "visitor", label: "Visitor", icon: User, emoji: "👋" },
   { type: "resident", label: "Resident", icon: Users, emoji: "🏠" },
   { type: "contractor", label: "Contractor", icon: Truck, emoji: "🔧" },
+  { type: "volunteer", label: "Volunteer", icon: Heart, emoji: "🤝" },
   { type: "staff", label: "Staff", icon: UserCog, emoji: "💼" },
 ];
 
@@ -110,19 +113,26 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [companions, setCompanions] = useState<CompanionDetail[]>([]);
   const [residentSearchQuery, setResidentSearchQuery] = useState("");
+  const [contractorScreeningAnswers, setContractorScreeningAnswers] = useState<Record<string, any>>({});
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const [jurisdiction, setJurisdiction] = useState<"AU" | "UK">("AU");
 
   const isResident = selectedType === "resident";
+  const isContractor = selectedType === "contractor";
   const steps = isResident
     ? ["Resident", "Schedule", "Reason", "Companions", "Confirm"]
+    : isContractor
+    ? ["Search", "Details", "Screening", "Confirm"]
     : ["Search", "Details", "Health", "Confirm"];
   const totalSteps = steps.length;
 
   // Load branch document URLs from settings
+  // Load branch document URLs and jurisdiction from settings
   useEffect(() => {
     supabase
       .from("settings")
       .select("key, value")
-      .in("key", ["branch_tc_url", "branch_privacy_url", "show_branch_docs_in_form"])
+      .in("key", ["branch_tc_url", "branch_privacy_url", "show_branch_docs_in_form", "jurisdiction"])
       .then(({ data }) => {
         if (data) {
           const map: Record<string, string> = {};
@@ -130,6 +140,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
           const showDocs = map.show_branch_docs_in_form !== "false";
           setBranchTcUrl(showDocs && map.branch_tc_url ? map.branch_tc_url : null);
           setBranchPrivacyUrl(showDocs && map.branch_privacy_url ? map.branch_privacy_url : null);
+          if (map.jurisdiction === "UK" || map.jurisdiction === "AU") setJurisdiction(map.jurisdiction);
         }
       });
   }, []);
@@ -171,6 +182,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
     setHealthAnswers({}); setPrivacyAcknowledged(false);
     setReturnNotificationOptIn(false);
     setPhoto(null); setCompanions([]); stopCamera();
+    setContractorScreeningAnswers({}); setSelectedSupplier(null);
   };
 
   const handleSelectProfile = (profile: typeof mockProfiles[0]) => {
@@ -1109,9 +1121,21 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
 
           {!isResident && step === 3 && (
             <div className="space-y-4">
-              {renderHealthQuestions()}
-              {renderTemperature()}
-              {renderVaccination()}
+              {isContractor ? (
+                <ContractorScreening
+                  jurisdiction={jurisdiction}
+                  answers={contractorScreeningAnswers}
+                  onAnswersChange={setContractorScreeningAnswers}
+                  selectedSupplier={selectedSupplier}
+                  onSupplierChange={setSelectedSupplier}
+                />
+              ) : (
+                <>
+                  {renderHealthQuestions()}
+                  {renderTemperature()}
+                  {renderVaccination()}
+                </>
+              )}
             </div>
           )}
 

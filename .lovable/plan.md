@@ -1,21 +1,22 @@
 
 # Centrim Life Presence Engine — Implementation Plan
 
-## Phase 1: Foundation & Navigation ✅ IN PROGRESS
-
-### Completed
-- [x] **Home Workbench page** — 3 big action buttons (Check-In, Check-Out, Resident Leave), summary cards, pinned Active Now list, day-grouped history
-- [x] **Updated routing** — Home Workbench is now `/` (landing page), sidebar updated with Home link + Leave Requests
-- [x] **Volunteer person type** — added to `VisitorType` union
+## Phase 1: Foundation & Navigation ✅ DONE
+- [x] Home Workbench page (3 action buttons, summary cards, Active Now list, day-grouped history)
+- [x] Updated routing (Home = `/`, sidebar with Home link)
+- [x] Volunteer person type added
 
 ### Remaining Phase 1
-- [ ] **Kiosk mode** — new `/kiosk` route with 3 large tiles, one-question-per-screen flow, full-screen photo/signature capture
+- [ ] Kiosk mode (`/kiosk` route)
 
----
-
-## Phase 2: Contractor & Screening
-- [ ] Contractor flow overhaul (supplier autocomplete, AU/UK screening templates)
-- [ ] Jurisdiction toggle (AU/UK) in settings
+## Phase 2: Contractor & Screening ✅ DONE
+- [x] `suppliers_min` table created with seed data (6 AU + 2 UK suppliers)
+- [x] `signature_url`, `supplier_id`, `contractor_screening` columns added to visitors
+- [x] Supplier autocomplete hook (`useSuppliers`)
+- [x] `ContractorScreening` component with AU (SWMS/PPE/permits/insurance/induction/infection) and UK (RAMS/DBS/CSCS/safeguarding/infection) templates
+- [x] Contractor check-in flow integrated into AddVisitDialog (step 3 shows screening instead of health questions)
+- [x] Jurisdiction toggle (AU/UK) in Settings → Presence tab
+- [x] Jurisdiction loaded from DB and used by contractor screening
 
 ## Phase 3: Resident Leave Separation
 - [ ] Separate Resident Leave module (Option C: Room → short list → confirm)
@@ -39,9 +40,11 @@
 - [ ] Font size audit (names 16-18px, body 13-14px)
 - [ ] Edge states and validation messages
 
-## Database Changes Needed
-- [ ] `suppliers_min` table
+## Database Changes
+- [x] `suppliers_min` table
 - [x] `volunteer` added to visitor type
-- [ ] `jurisdiction` column/table
+- [x] `signature_url` on visitors
+- [x] `supplier_id` on visitors
+- [x] `contractor_screening` jsonb on visitors
+- [x] Jurisdiction via settings table
 - [ ] `change_reason` column on `audit_log`
-- [ ] `signature_url` column on `visitors`
