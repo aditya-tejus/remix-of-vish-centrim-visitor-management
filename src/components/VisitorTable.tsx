@@ -184,7 +184,7 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
 
         {/* Check-In time */}
         <TableCell className="py-3">
-          <span className="text-[13px] font-mono text-foreground">{format(visitor.checkInTime, "HH:mm")}</span>
+          <span className="text-[13px] font-mono text-foreground">{format(visitor.checkInTime, "hh:mm a")}</span>
           <span className="text-[11px] text-muted-foreground ml-1">{format(visitor.checkInTime, "dd MMM")}</span>
         </TableCell>
 
