@@ -12,10 +12,10 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Visitor, CompanionDetail } from "@/types/visitor";
+import { CompanionDetail } from "@/types/visitor";
 import {
-  Search, ArrowLeft, ArrowRight, Check, Home, Clock, CalendarDays,
-  Users, Plus, Trash2, ScrollText, MapPin, DoorOpen, ShieldAlert,
+  Search, ArrowLeft, ArrowRight, Check, Clock, CalendarDays,
+  Users, Plus, Trash2, ScrollText, MapPin, DoorOpen, ShieldAlert, AlertTriangle,
 } from "lucide-react";
 import { useActiveLeaveTypes } from "@/hooks/useLeaveTypes";
 import { useCompanionFields } from "@/hooks/useFormFields";
@@ -29,9 +29,20 @@ type OutingMode = "short" | "planned";
 interface ResidentOutingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (visitor: Omit<Visitor, "id">) => void;
+  onMarkAway: (visitorId: string, details: {
+    expectedReturnDate?: Date;
+    checkoutReason?: string;
+    leaveType?: string;
+    accompaniedBy?: string;
+    accompaniedByName?: string;
+    comments?: string;
+    returnNotificationOptIn?: boolean;
+    companionDetails?: CompanionDetail[];
+  }) => void;
   preselectedResident?: { id: string; name: string; room: string; wing: string } | null;
   defaultMode?: OutingMode;
+  /** Map of visitorId → presence status to show away residents */
+  presenceMap?: Map<string, "on-site" | "away" | "on-leave" | "overdue">;
 }
 
 const destinationCategories = [
@@ -55,8 +66,9 @@ const escortOptions = [
 ];
 
 export function ResidentOutingDialog({
-  open, onOpenChange, onSubmit,
+  open, onOpenChange, onMarkAway,
   preselectedResident = null, defaultMode = "short",
+  presenceMap,
 }: ResidentOutingDialogProps) {
   const { residents: dbResidents } = useResidents();
   const { staff: dbStaff } = useStaffMembers();
@@ -87,6 +99,7 @@ export function ResidentOutingDialog({
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
   const [checkoutReason, setCheckoutReason] = useState("");
+  const [customReason, setCustomReason] = useState("");
   const [comments, setComments] = useState("");
   const [accompaniedBy, setAccompaniedBy] = useState("");
   const [accompaniedByName, setAccompaniedByName] = useState("");
@@ -102,6 +115,12 @@ export function ResidentOutingDialog({
 
   const selectedEscort = escortOptions.find(o => o.value === (mode === "short" ? escortType : accompaniedBy));
   const needsEscortContact = mode === "short" && selectedEscort?.showContact;
+
+  const getPresence = (visitorId: string) => presenceMap?.get(visitorId) || "on-site";
+  const isAway = (visitorId: string) => {
+    const p = getPresence(visitorId);
+    return p === "away" || p === "on-leave" || p === "overdue";
+  };
 
   const resetForm = () => {
     setSearchQuery("");
@@ -120,6 +139,7 @@ export function ResidentOutingDialog({
     setMobile("");
     setEmail("");
     setCheckoutReason("");
+    setCustomReason("");
     setComments("");
     setAccompaniedBy("");
     setAccompaniedByName("");
@@ -133,36 +153,20 @@ export function ResidentOutingDialog({
   // ── Short outing submit ──
   const handleShortSubmit = () => {
     if (!selectedResident) return;
-    const [firstName, ...rest] = selectedResident.name.split(" ");
     const returnDate = new Date(Date.now() + Number(returnHours) * 3600000);
     const destLabel = destination === "other"
       ? customDestination
       : destinationCategories.find(d => d.value === destination)?.label || destination;
 
-    const visitor: Omit<Visitor, "id"> = {
-      firstName: firstName || "",
-      surname: rest.join(" ") || "",
-      email: "",
-      mobile: "",
-      type: "resident",
-      checkInTime: new Date(),
-      checkOutTime: new Date(),
-      whomToVisit: "",
-      address: `${selectedResident.room}, ${selectedResident.wing}`,
-      status: "checked-out",
-      healthDeclaration: false,
-      additionalVisitors: 0,
-      comments: [shortNotes, escortName ? `Escort: ${escortName}${escortPhone ? ` (${escortPhone})` : ""}` : ""].filter(Boolean).join("\n"),
-      retentionExpiry: new Date(Date.now() + 86400000 * 60),
-      acknowledgedPrivacy: true,
+    onMarkAway(selectedResident.id, {
       expectedReturnDate: returnDate,
       checkoutReason: destLabel || undefined,
       leaveType: "Away",
-      returnNotificationOptIn: true,
       accompaniedBy: escortType || undefined,
       accompaniedByName: escortName || undefined,
-    };
-    onSubmit(visitor);
+      comments: [shortNotes, escortName ? `Escort: ${escortName}${escortPhone ? ` (${escortPhone})` : ""}` : "", escortPhone ? `Escort phone: ${escortPhone}` : ""].filter(Boolean).join("\n") || undefined,
+      returnNotificationOptIn: true,
+    });
     resetForm();
     onOpenChange(false);
   };
@@ -170,38 +174,24 @@ export function ResidentOutingDialog({
   // ── Planned leave submit ──
   const handlePlannedSubmit = () => {
     if (!selectedResident) return;
-    const [firstName, ...rest] = selectedResident.name.split(" ");
     let combinedReturnDate: Date | undefined;
     if (expectedReturnDate) {
       const [h, m] = expectedReturnTime.split(":").map(Number);
       combinedReturnDate = new Date(expectedReturnDate);
       combinedReturnDate.setHours(h, m, 0, 0);
     }
-    const visitor: Omit<Visitor, "id"> = {
-      firstName: firstName || "",
-      surname: rest.join(" ") || "",
-      email,
-      mobile,
-      type: "resident",
-      checkInTime: new Date(),
-      checkOutTime: new Date(),
-      whomToVisit: "",
-      address: `${selectedResident.room}, ${selectedResident.wing}`,
-      status: "checked-out",
-      healthDeclaration: false,
-      additionalVisitors: companions.length,
-      companionDetails: companions.length > 0 ? companions : undefined,
-      comments,
-      retentionExpiry: new Date(Date.now() + 86400000 * 60),
-      acknowledgedPrivacy: privacyAcknowledged,
+    const reason = checkoutReason || customReason;
+
+    onMarkAway(selectedResident.id, {
       expectedReturnDate: combinedReturnDate,
-      checkoutReason: checkoutReason || undefined,
-      leaveType: checkoutReason || undefined,
-      returnNotificationOptIn,
+      checkoutReason: reason || undefined,
+      leaveType: reason || undefined,
       accompaniedBy: accompaniedBy || undefined,
       accompaniedByName: accompaniedByName || undefined,
-    };
-    onSubmit(visitor);
+      comments: comments || undefined,
+      returnNotificationOptIn,
+      companionDetails: companions.length > 0 ? companions : undefined,
+    });
     resetForm();
     onOpenChange(false);
   };
@@ -211,13 +201,20 @@ export function ResidentOutingDialog({
   const plannedSteps = ["Schedule", "Reason", "Companion", "Confirm"];
   const canProceedPlanned = () => {
     if (step === 1) return !!expectedReturnDate;
-    if (step === 2) return !!checkoutReason;
+    if (step === 2) return !!(checkoutReason || customReason);
     if (step === 3) return !!accompaniedBy;
     return privacyAcknowledged;
   };
 
   // ── Resident is selected? Show mode toggle + form ──
   const residentSelected = !!selectedResident;
+
+  const presenceBadge = (status: string) => {
+    if (status === "away") return <Badge variant="secondary" className="text-[9px] bg-warning/10 text-warning border-warning/30">Away</Badge>;
+    if (status === "on-leave") return <Badge variant="secondary" className="text-[9px] bg-info/10 text-info border-info/30">On Leave</Badge>;
+    if (status === "overdue") return <Badge variant="destructive" className="text-[9px]">Overdue</Badge>;
+    return null;
+  };
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
@@ -248,7 +245,7 @@ export function ResidentOutingDialog({
                 }`}
               >
                 <CalendarDays className="h-3.5 w-3.5" />
-                Planned Leave
+                Leave
               </button>
             </div>
           )}
@@ -290,20 +287,38 @@ export function ResidentOutingDialog({
                 </div>
               </div>
               <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
-                {filteredResidents.map(r => (
-                  <button key={r.id} onClick={() => setSelectedResident(r)}
-                    className="w-full text-left p-3 rounded-xl border border-border hover:border-primary/30 hover:bg-primary/5 transition-all">
-                    <div className="flex items-center gap-3">
-                      <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                        {r.name.split(" ").map(n => n[0]).join("")}
+                {filteredResidents.map(r => {
+                  const away = isAway(r.id);
+                  const presence = getPresence(r.id);
+                  return (
+                    <button
+                      key={r.id}
+                      onClick={() => { if (!away) setSelectedResident(r); }}
+                      disabled={away}
+                      className={`w-full text-left p-3 rounded-xl border transition-all ${
+                        away
+                          ? "border-border bg-muted/50 opacity-70 cursor-not-allowed"
+                          : "border-border hover:border-primary/30 hover:bg-primary/5"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`h-9 w-9 rounded-lg flex items-center justify-center text-xs font-bold ${
+                          away ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"
+                        }`}>
+                          {r.name.split(" ").map(n => n[0]).join("")}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-foreground truncate">{r.name}</p>
+                            {away && presenceBadge(presence)}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">{r.room} • {r.wing}</p>
+                        </div>
+                        {away && <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0" />}
                       </div>
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">{r.name}</p>
-                        <p className="text-[10px] text-muted-foreground">{r.room} • {r.wing}</p>
-                      </div>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
                 {filteredResidents.length === 0 && (
                   <div className="text-center py-8 border border-dashed border-border rounded-xl">
                     <p className="text-xs text-muted-foreground">No residents found</p>
@@ -432,7 +447,7 @@ export function ResidentOutingDialog({
               )}
 
               {/* ══════════════════════════════════════════════════ */}
-              {/* PLANNED LEAVE MODE                                 */}
+              {/* LEAVE MODE                                         */}
               {/* ══════════════════════════════════════════════════ */}
               {mode === "planned" && (
                 <>
@@ -501,20 +516,40 @@ export function ResidentOutingDialog({
                     <div className="space-y-4">
                       <div className="space-y-1">
                         <Label className="text-[11px]">Reason for Leave <span className="text-destructive">*</span></Label>
-                        <div className="grid grid-cols-2 gap-2">
-                          {leaveTypesData.map(lt => (
-                            <button key={lt.id} type="button" onClick={() => setCheckoutReason(lt.name)}
-                              className={`rounded-xl border-2 p-3 text-left transition-all ${
-                                checkoutReason === lt.name ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
-                              }`}>
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-lg">{lt.emoji}</span>
-                                <span className="text-xs font-bold text-foreground">{lt.name}</span>
-                              </div>
-                              <p className="text-[10px] text-muted-foreground">{lt.description}</p>
-                            </button>
-                          ))}
-                        </div>
+                        {leaveTypesData.length > 0 ? (
+                          <div className="grid grid-cols-2 gap-2">
+                            {leaveTypesData.map(lt => (
+                              <button key={lt.id} type="button" onClick={() => { setCheckoutReason(lt.name); setCustomReason(""); }}
+                                className={`rounded-xl border-2 p-3 text-left transition-all ${
+                                  checkoutReason === lt.name ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                                }`}>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-lg">{lt.emoji}</span>
+                                  <span className="text-xs font-bold text-foreground">{lt.name}</span>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground">{lt.description}</p>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <Input
+                            value={customReason}
+                            onChange={e => { setCustomReason(e.target.value); setCheckoutReason(""); }}
+                            placeholder="Enter reason for leave..."
+                            className="rounded-lg h-9 text-sm"
+                          />
+                        )}
+                        {leaveTypesData.length > 0 && (
+                          <div className="pt-2">
+                            <Label className="text-[11px] text-muted-foreground">Or enter a custom reason</Label>
+                            <Input
+                              value={customReason}
+                              onChange={e => { setCustomReason(e.target.value); setCheckoutReason(""); }}
+                              placeholder="Other reason..."
+                              className="rounded-lg h-9 text-sm mt-1"
+                            />
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-1">
                         <Label className="text-[11px]">Comments (optional)</Label>
@@ -630,12 +665,13 @@ export function ResidentOutingDialog({
                       <div className="rounded-xl border border-border bg-muted/30 p-4">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Summary</p>
                         <div className="grid grid-cols-2 gap-2">
-                          {checkoutReason && (() => {
-                            const lt = leaveTypesData.find(l => l.name === checkoutReason);
+                          {(checkoutReason || customReason) && (() => {
+                            const reason = checkoutReason || customReason;
+                            const lt = leaveTypesData.find(l => l.name === reason);
                             return (
                               <div className="rounded-lg bg-card p-2.5 border border-border">
                                 <p className="text-[10px] text-muted-foreground">Reason</p>
-                                <p className="text-xs font-semibold text-foreground">{lt ? `${lt.emoji} ${lt.name}` : checkoutReason}</p>
+                                <p className="text-xs font-semibold text-foreground">{lt ? `${lt.emoji} ${lt.name}` : reason}</p>
                               </div>
                             );
                           })()}
