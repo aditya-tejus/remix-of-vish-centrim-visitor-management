@@ -27,6 +27,7 @@ import ReportsPage from "./pages/Reports";
 import CoverageChecklist from "./pages/CoverageChecklist";
 // Kiosk
 import KioskLayout from "./pages/kiosk/KioskLayout";
+import KioskAttract from "./pages/kiosk/KioskAttract";
 import KioskHome from "./pages/kiosk/KioskHome";
 import KioskCheckIn from "./pages/kiosk/KioskCheckIn";
 import KioskCheckOut from "./pages/kiosk/KioskCheckOut";
