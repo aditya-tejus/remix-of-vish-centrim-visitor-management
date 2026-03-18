@@ -22,6 +22,7 @@ import {
   MoreHorizontal, MessageSquare, Bell, Sparkles, ArrowUpDown, AlertTriangle,
 } from "lucide-react";
 import { useVisitors } from "@/hooks/useVisitors";
+import { useResidents } from "@/hooks/useResidents";
 import {
   format, subDays, subMonths, differenceInCalendarMonths, isWithinInterval,
   startOfDay, endOfDay, isSameDay,
@@ -29,18 +30,6 @@ import {
 import { exportVisitorsToCSV } from "@/lib/exportVisitors";
 import { useToast } from "@/hooks/use-toast";
 import { WelfareNoteDialog } from "@/components/WelfareNoteDialog";
-
-// Mock residents list (matches AddVisitDialog)
-const mockResidents = [
-  { id: "r1", name: "Mary Johnson", room: "Room 12", wing: "East Wing" },
-  { id: "r2", name: "Robert Davis", room: "Room 8", wing: "West Wing" },
-  { id: "r3", name: "Patricia Wilson", room: "Room 3", wing: "East Wing" },
-  { id: "r4", name: "George Thompson", room: "Room 15", wing: "North Wing" },
-  { id: "r5", name: "Dorothy Brown", room: "Room 6", wing: "East Wing" },
-  { id: "r6", name: "Frank Harris", room: "Room 21", wing: "South Wing" },
-  { id: "r7", name: "Betty Clark", room: "Room 9", wing: "West Wing" },
-  { id: "r8", name: "Harold Lewis", room: "Room 18", wing: "North Wing" },
-];
 
 type DatePreset = "7d" | "30d" | "90d" | "custom";
 type SortField = "name" | "totalVisits" | "lastVisit" | "avgPerMonth";
@@ -60,6 +49,8 @@ interface ResidentVisitStats {
 
 export default function VisitorAnalytics() {
   const { visitors } = useVisitors();
+  const { residents: dbResidents } = useResidents();
+  const residentItems = useMemo(() => dbResidents.map(r => ({ id: r.visitorId, name: r.name, room: r.room, wing: r.wing })), [dbResidents]);
   const { toast } = useToast();
 
   const [datePreset, setDatePreset] = useState<DatePreset>("30d");
@@ -101,7 +92,7 @@ export default function VisitorAnalytics() {
     const thisMonth = new Date();
     const startOfMonth = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1);
 
-    return mockResidents.map((resident) => {
+    return residentItems.map((resident) => {
       // Find visitors who visited this resident
       const residentVisits = filteredVisitors.filter(
         (v) => v.whomToVisit?.toLowerCase().includes(resident.name.toLowerCase().split(" ")[0])
@@ -179,7 +170,7 @@ export default function VisitorAnalytics() {
     residentStats[0] || { residentName: "—", totalVisits: 0 }
   );
 
-  const wings = [...new Set(mockResidents.map((r) => r.wing))];
+  const wings = [...new Set(residentItems.map((r) => r.wing))];
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -260,7 +251,7 @@ export default function VisitorAnalytics() {
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total Residents</p>
-                    <p className="text-3xl font-bold tracking-tight text-foreground">{mockResidents.length}</p>
+                    <p className="text-3xl font-bold tracking-tight text-foreground">{residentItems.length}</p>
                   </div>
                   <div className="rounded-xl p-2.5 bg-primary/10 text-primary">
                     <Users className="h-5 w-5" />
@@ -337,7 +328,7 @@ export default function VisitorAnalytics() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Wings</SelectItem>
-                    {wings.map((w) => <SelectItem key={w} value={w}>{w}</SelectItem>)}
+                    {wings.map((w: string) => <SelectItem key={w} value={w}>{w}</SelectItem>)}
                   </SelectContent>
                 </Select>
 

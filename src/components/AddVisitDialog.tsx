@@ -22,6 +22,8 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { ContractorScreening } from "@/components/ContractorScreening";
 import { Supplier } from "@/hooks/useSuppliers";
+import { useResidents } from "@/hooks/useResidents";
+import { useStaffMembers } from "@/hooks/useStaffMembers";
 
 interface AddVisitDialogProps {
   open: boolean;
@@ -43,18 +45,6 @@ const mockProfiles = [
   { id: "p4", firstName: "Emma", surname: "Johnson", mobile: "07700 900321", email: "emma.j@email.com", address: "78 Elm Road, Leeds" },
 ];
 
-const mockResidents = [
-  { id: "r1", name: "Mary Johnson", room: "Room 12", wing: "East Wing" },
-  { id: "r2", name: "Robert Davis", room: "Room 8", wing: "West Wing" },
-  { id: "r3", name: "Patricia Wilson", room: "Room 3", wing: "East Wing" },
-  { id: "r4", name: "George Thompson", room: "Room 15", wing: "North Wing" },
-];
-
-const mockStaff = [
-  { id: "s1", name: "Dr. Helen Carter", role: "GP", department: "Medical" },
-  { id: "s2", name: "Nurse Amy Roberts", role: "Nurse", department: "Care" },
-  { id: "s3", name: "Mark Stevens", role: "Manager", department: "Admin" },
-];
 
 
 type QuestionType = "yesno" | "text" | "textarea" | "select" | "checkbox" | "file";
@@ -75,6 +65,10 @@ const fallbackHealthQuestions: HealthQuestion[] = [
 ];
 
 export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProps) {
+  const { residents: dbResidents } = useResidents();
+  const { staff: dbStaff } = useStaffMembers();
+  const residentItems = useMemo(() => dbResidents.map(r => ({ id: r.visitorId, name: r.name, room: r.room, wing: r.wing })), [dbResidents]);
+  const staffItems = useMemo(() => dbStaff.map(s => ({ id: s.id, name: s.name, role: s.role, department: s.department || "" })), [dbStaff]);
   const [step, setStep] = useState(1);
   const [selectedType, setSelectedType] = useState<VisitorType>("visitor");
   const { data: dbQuestions = [] } = useActiveHealthQuestions(selectedType as any);
@@ -85,7 +79,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
   const healthQuestions: HealthQuestion[] = dbQuestions.length > 0 ? dbQuestions : fallbackHealthQuestions;
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProfile, setSelectedProfile] = useState<typeof mockProfiles[0] | null>(null);
-  const [selectedResident, setSelectedResident] = useState<typeof mockResidents[0] | null>(null);
+  const [selectedResident, setSelectedResident] = useState<{ id: string; name: string; room: string; wing: string } | null>(null);
   const [formData, setFormData] = useState({
     firstName: "", surname: "", email: "", mobile: "", address: "",
     additionalVisitors: 0, whomToVisit: "" as "" | "Resident" | "Staff",
@@ -145,12 +139,12 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
   }, []);
 
   const filteredResidents = useMemo(() => {
-    if (!residentSearchQuery.trim()) return mockResidents;
+    if (!residentSearchQuery.trim()) return residentItems;
     const q = residentSearchQuery.toLowerCase();
-    return mockResidents.filter(
+    return residentItems.filter(
       (r) => r.name.toLowerCase().includes(q) || r.room.toLowerCase().includes(q) || r.wing.toLowerCase().includes(q)
     );
-  }, [residentSearchQuery]);
+  }, [residentSearchQuery, residentItems]);
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -193,7 +187,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
     }));
   };
 
-  const handleSelectResident = (resident: typeof mockResidents[0]) => {
+  const handleSelectResident = (resident: { id: string; name: string; room: string; wing: string }) => {
     setSelectedResident(resident);
     const [firstName, ...rest] = resident.name.split(" ");
     setFormData((prev) => ({
@@ -894,7 +888,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
                     <Select value={formData.accompaniedByName} onValueChange={(val) => updateField("accompaniedByName", val)}>
                       <SelectTrigger className="rounded-lg h-9 text-sm"><SelectValue placeholder="Select staff member..." /></SelectTrigger>
                       <SelectContent>
-                        {mockStaff.map((s) => (
+                        {staffItems.map((s) => (
                           <SelectItem key={s.id} value={s.name}>{s.name} — {s.role}</SelectItem>
                         ))}
                       </SelectContent>
@@ -1099,8 +1093,8 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
                       <SelectTrigger className="rounded-lg h-9"><SelectValue placeholder="Select..." /></SelectTrigger>
                       <SelectContent>
                         {formData.whomToVisit === "Resident"
-                          ? mockResidents.map((r) => <SelectItem key={r.id} value={r.name}>{r.name} • {r.room}</SelectItem>)
-                          : mockStaff.map((s) => <SelectItem key={s.id} value={s.name}>{s.name} • {s.role}</SelectItem>)
+                          ? residentItems.map((r) => <SelectItem key={r.id} value={r.name}>{r.name} • {r.room}</SelectItem>)
+                          : staffItems.map((s) => <SelectItem key={s.id} value={s.name}>{s.name} • {s.role}</SelectItem>)
                         }
                       </SelectContent>
                     </Select>

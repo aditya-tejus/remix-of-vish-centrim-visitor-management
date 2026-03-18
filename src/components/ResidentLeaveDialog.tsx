@@ -16,6 +16,8 @@ import { Visitor, CompanionDetail } from "@/types/visitor";
 import { Search, ArrowLeft, ArrowRight, Check, Home, Clock, CalendarDays, Users, Plus, Trash2, ScrollText, Shield } from "lucide-react";
 import { useActiveLeaveTypes } from "@/hooks/useLeaveTypes";
 import { useCompanionFields } from "@/hooks/useFormFields";
+import { useResidents } from "@/hooks/useResidents";
+import { useStaffMembers } from "@/hooks/useStaffMembers";
 import { format } from "date-fns";
 
 interface ResidentLeaveDialogProps {
@@ -23,19 +25,6 @@ interface ResidentLeaveDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (visitor: Omit<Visitor, "id">) => void;
 }
-
-const mockResidents = [
-  { id: "r1", name: "Mary Johnson", room: "Room 12", wing: "East Wing" },
-  { id: "r2", name: "Robert Davis", room: "Room 8", wing: "West Wing" },
-  { id: "r3", name: "Patricia Wilson", room: "Room 3", wing: "East Wing" },
-  { id: "r4", name: "George Thompson", room: "Room 15", wing: "North Wing" },
-];
-
-const mockStaff = [
-  { id: "s1", name: "Dr. Helen Carter", role: "GP" },
-  { id: "s2", name: "Nurse Amy Roberts", role: "Nurse" },
-  { id: "s3", name: "Mark Stevens", role: "Manager" },
-];
 
 const escortOptions = [
   { value: "family", label: "Family Member", emoji: "👨‍👩‍👧", showName: true },
@@ -50,13 +39,17 @@ const escortOptions = [
 const steps = ["Resident", "Schedule", "Reason", "Companions", "Confirm"];
 
 export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLeaveDialogProps) {
+  const { residents: dbResidents } = useResidents();
+  const { staff: dbStaff } = useStaffMembers();
+  const residentItems = useMemo(() => dbResidents.map(r => ({ id: r.visitorId, name: r.name, room: r.room, wing: r.wing })), [dbResidents]);
+  const staffItems = useMemo(() => dbStaff.map(s => ({ id: s.id, name: s.name, role: s.role })), [dbStaff]);
   const [step, setStep] = useState(1);
   const { data: leaveTypesData = [] } = useActiveLeaveTypes();
   const { data: companionFieldsConfig = [] } = useCompanionFields("resident");
   const activeCompanionFields = companionFieldsConfig.filter((f) => f.is_active).sort((a, b) => a.sort_order - b.sort_order);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedResident, setSelectedResident] = useState<typeof mockResidents[0] | null>(null);
+  const [selectedResident, setSelectedResident] = useState<{ id: string; name: string; room: string; wing: string } | null>(null);
   const [expectedReturnDate, setExpectedReturnDate] = useState<Date | undefined>(undefined);
   const [expectedReturnTime, setExpectedReturnTime] = useState("12:00");
   const [mobile, setMobile] = useState("");
@@ -70,12 +63,12 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
   const [returnNotificationOptIn, setReturnNotificationOptIn] = useState(false);
 
   const filteredResidents = useMemo(() => {
-    if (!searchQuery.trim()) return mockResidents;
+    if (!searchQuery.trim()) return residentItems;
     const q = searchQuery.toLowerCase();
-    return mockResidents.filter(
+    return residentItems.filter(
       (r) => r.name.toLowerCase().includes(q) || r.room.toLowerCase().includes(q) || r.wing.toLowerCase().includes(q)
     );
-  }, [searchQuery]);
+  }, [searchQuery, residentItems]);
 
   const resetForm = () => {
     setStep(1);
@@ -348,7 +341,7 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
                   <Select value={accompaniedByName} onValueChange={setAccompaniedByName}>
                     <SelectTrigger className="rounded-lg h-9 text-sm"><SelectValue placeholder="Select staff member..." /></SelectTrigger>
                     <SelectContent>
-                      {mockStaff.map((s) => (
+                      {staffItems.map((s) => (
                         <SelectItem key={s.id} value={s.name}>{s.name} — {s.role}</SelectItem>
                       ))}
                     </SelectContent>

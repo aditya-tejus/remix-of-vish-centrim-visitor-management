@@ -17,6 +17,7 @@ export type Database = {
       audit_log: {
         Row: {
           action: string
+          change_reason: string | null
           created_at: string
           details: Json | null
           id: string
@@ -26,6 +27,7 @@ export type Database = {
         }
         Insert: {
           action: string
+          change_reason?: string | null
           created_at?: string
           details?: Json | null
           id?: string
@@ -35,6 +37,7 @@ export type Database = {
         }
         Update: {
           action?: string
+          change_reason?: string | null
           created_at?: string
           details?: Json | null
           id?: string
@@ -569,12 +572,18 @@ export type Database = {
         Row: {
           care_level: string | null
           created_at: string | null
+          destination_categories: string[] | null
+          dols_lps_flag: boolean | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
           id: string
           key_worker: string | null
+          medication_notes: string | null
+          mobility_aids: string[] | null
+          mobility_level: string | null
           notes: string | null
           photo_url: string | null
+          risk_assessment_level: string | null
           room: string | null
           updated_at: string | null
           visitor_id: string
@@ -583,12 +592,18 @@ export type Database = {
         Insert: {
           care_level?: string | null
           created_at?: string | null
+          destination_categories?: string[] | null
+          dols_lps_flag?: boolean | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           id?: string
           key_worker?: string | null
+          medication_notes?: string | null
+          mobility_aids?: string[] | null
+          mobility_level?: string | null
           notes?: string | null
           photo_url?: string | null
+          risk_assessment_level?: string | null
           room?: string | null
           updated_at?: string | null
           visitor_id: string
@@ -597,12 +612,18 @@ export type Database = {
         Update: {
           care_level?: string | null
           created_at?: string | null
+          destination_categories?: string[] | null
+          dols_lps_flag?: boolean | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           id?: string
           key_worker?: string | null
+          medication_notes?: string | null
+          mobility_aids?: string[] | null
+          mobility_level?: string | null
           notes?: string | null
           photo_url?: string | null
+          risk_assessment_level?: string | null
           room?: string | null
           updated_at?: string | null
           visitor_id?: string
@@ -645,6 +666,56 @@ export type Database = {
           value?: string
         }
         Relationships: []
+      }
+      staff_members: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          department: string | null
+          email: string | null
+          first_name: string
+          id: string
+          is_active: boolean
+          phone: string | null
+          role: string
+          surname: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          first_name: string
+          id?: string
+          is_active?: boolean
+          phone?: string | null
+          role?: string
+          surname: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          first_name?: string
+          id?: string
+          is_active?: boolean
+          phone?: string | null
+          role?: string
+          surname?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_members_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       suppliers_min: {
         Row: {
@@ -816,19 +887,27 @@ export type Database = {
           email: string
           expected_return_date: string | null
           first_name: string
+          group_id: string | null
           health_answers: Json | null
           health_declaration: boolean | null
           id: string
           leave_type: string | null
           mobile: string
+          print_status: string | null
           privacy_acknowledged: boolean | null
+          qr_code: string | null
           return_notification_opt_in: boolean | null
+          safeguarding_hold: boolean | null
           signature_url: string | null
           status: string
           supplier_id: string | null
           surname: string
           type: string
+          visit_purpose: string | null
+          visited_resident_ids: string[] | null
           whom_to_visit: string | null
+          work_location: string | null
+          work_type: string | null
         }
         Insert: {
           accompanied_by?: string | null
@@ -847,19 +926,27 @@ export type Database = {
           email: string
           expected_return_date?: string | null
           first_name: string
+          group_id?: string | null
           health_answers?: Json | null
           health_declaration?: boolean | null
           id?: string
           leave_type?: string | null
           mobile: string
+          print_status?: string | null
           privacy_acknowledged?: boolean | null
+          qr_code?: string | null
           return_notification_opt_in?: boolean | null
+          safeguarding_hold?: boolean | null
           signature_url?: string | null
           status?: string
           supplier_id?: string | null
           surname: string
           type?: string
+          visit_purpose?: string | null
+          visited_resident_ids?: string[] | null
           whom_to_visit?: string | null
+          work_location?: string | null
+          work_type?: string | null
         }
         Update: {
           accompanied_by?: string | null
@@ -878,19 +965,27 @@ export type Database = {
           email?: string
           expected_return_date?: string | null
           first_name?: string
+          group_id?: string | null
           health_answers?: Json | null
           health_declaration?: boolean | null
           id?: string
           leave_type?: string | null
           mobile?: string
+          print_status?: string | null
           privacy_acknowledged?: boolean | null
+          qr_code?: string | null
           return_notification_opt_in?: boolean | null
+          safeguarding_hold?: boolean | null
           signature_url?: string | null
           status?: string
           supplier_id?: string | null
           surname?: string
           type?: string
+          visit_purpose?: string | null
+          visited_resident_ids?: string[] | null
           whom_to_visit?: string | null
+          work_location?: string | null
+          work_type?: string | null
         }
         Relationships: [
           {
