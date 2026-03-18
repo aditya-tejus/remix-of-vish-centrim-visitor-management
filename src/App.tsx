@@ -50,7 +50,7 @@ const App = () => (
           <Route path="/visit-list" element={<VisitList />} />
           <Route path="/visitors" element={<Visitors />} />
           <Route path="/visitors/:id" element={<VisitorProfilePage />} />
-          <Route path="/check-in" element={<CheckIn />} />
+          <Route path="/check-in" element={<Navigate to="/person-type" replace />} />
           <Route path="/person-type" element={<PersonTypeSelector />} />
           <Route path="/group-checkin" element={<GroupCheckIn />} />
           <Route path="/qr-fast-lane" element={<QRFastLane />} />
