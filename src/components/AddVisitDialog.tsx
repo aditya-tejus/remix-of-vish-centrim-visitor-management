@@ -139,12 +139,12 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
   }, []);
 
   const filteredResidents = useMemo(() => {
-    if (!residentSearchQuery.trim()) return mockResidents;
+    if (!residentSearchQuery.trim()) return residentItems;
     const q = residentSearchQuery.toLowerCase();
-    return mockResidents.filter(
+    return residentItems.filter(
       (r) => r.name.toLowerCase().includes(q) || r.room.toLowerCase().includes(q) || r.wing.toLowerCase().includes(q)
     );
-  }, [residentSearchQuery]);
+  }, [residentSearchQuery, residentItems]);
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
