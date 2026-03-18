@@ -4,8 +4,8 @@ import { Visitor } from "@/types/visitor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { LogIn, AlertTriangle, ShieldAlert, DoorOpen, Users, Clock, Phone } from "lucide-react";
-import { format, isPast, formatDistanceToNow } from "date-fns";
+import { LogIn, AlertTriangle, ShieldAlert, Clock, Phone, CheckCircle2 } from "lucide-react";
+import { format, isPast, formatDistanceToNow, isToday } from "date-fns";
 import { Wing, ResidentDetail } from "@/hooks/useWings";
 import { CheckInReturnDialog } from "@/components/CheckInReturnDialog";
 import { useState, useMemo } from "react";
@@ -18,6 +18,7 @@ interface ResidentPresenceTableProps {
   onCheckInReturn?: (id: string, comment?: string) => Promise<void>;
   onQuickAway?: (resident: Resident) => void;
   statusFilter?: string | null;
+  totalResidentCount?: number;
 }
 
 type PresenceStatus = "in-building" | "away" | "on-leave" | "overdue";
@@ -38,7 +39,7 @@ const escortLabels: Record<string, string> = {
 
 export function ResidentPresenceTable({
   residents, residentVisitors, detailsMap, wingMap,
-  onCheckInReturn, onQuickAway, statusFilter,
+  onCheckInReturn, onQuickAway, statusFilter, totalResidentCount,
 }: ResidentPresenceTableProps) {
   const navigate = useNavigate();
   const [returnResident, setReturnResident] = useState<{ id: string; name: string } | null>(null);
@@ -66,85 +67,65 @@ export function ResidentPresenceTable({
     return { status: "in-building", visitor };
   };
 
-  // Filter by status if active
-  const filteredResidents = useMemo(() => {
-    if (!statusFilter) return residents;
-    return residents.filter(r => getPresence(r).status === statusFilter);
+  // Urgency sort order: overdue → due-back-today → away → on-leave
+  const urgencyOrder: Record<PresenceStatus, number> = {
+    overdue: 0,
+    away: 1,
+    "on-leave": 2,
+    "in-building": 3,
+  };
+
+  // Get only exception residents (not in-building) unless a specific filter is applied
+  const exceptionResidents = useMemo(() => {
+    let filtered: Resident[];
+
+    if (statusFilter === "due-today") {
+      // Due back today filter
+      filtered = residents.filter(r => {
+        const { visitor } = getPresence(r);
+        return visitor?.status === "checked-out" && visitor.expectedReturnDate && isToday(visitor.expectedReturnDate);
+      });
+    } else if (statusFilter && statusFilter !== "in-building") {
+      filtered = residents.filter(r => getPresence(r).status === statusFilter);
+    } else {
+      // Default: show only exceptions (not in-building)
+      filtered = residents.filter(r => getPresence(r).status !== "in-building");
+    }
+
+    // Sort by urgency, then by nearest return time
+    return filtered.sort((a, b) => {
+      const presA = getPresence(a);
+      const presB = getPresence(b);
+      const urgencyDiff = urgencyOrder[presA.status] - urgencyOrder[presB.status];
+      if (urgencyDiff !== 0) return urgencyDiff;
+
+      // Within same urgency, sort by nearest return time
+      const retA = presA.visitor?.expectedReturnDate?.getTime() ?? Infinity;
+      const retB = presB.visitor?.expectedReturnDate?.getTime() ?? Infinity;
+      return retA - retB;
+    });
   }, [residents, statusFilter, visitorMap]);
 
-  // Group by wing
-  const wingGroups = useMemo(() => {
-    const statusOrder: Record<PresenceStatus, number> = { overdue: 0, away: 1, "on-leave": 2, "in-building": 3 };
-    const groups = new Map<string, { wing: Wing | null; residents: Resident[] }>();
-
-    const sortedWings = [...wingMap.values()].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
-    sortedWings.forEach(w => groups.set(w.id, { wing: w, residents: [] }));
-    groups.set("unassigned", { wing: null, residents: [] });
-
-    filteredResidents.forEach(r => {
-      const wingId = r.wingId || "unassigned";
-      if (!groups.has(wingId)) groups.set(wingId, { wing: wingMap.get(wingId) || null, residents: [] });
-      groups.get(wingId)!.residents.push(r);
-    });
-
-    groups.forEach(group => {
-      group.residents.sort((a, b) => statusOrder[getPresence(a).status] - statusOrder[getPresence(b).status]);
-    });
-
-    return Array.from(groups.entries())
-      .filter(([, g]) => g.residents.length > 0)
-      .map(([id, g]) => ({ id, ...g }));
-  }, [filteredResidents, wingMap, visitorMap]);
-
-  if (filteredResidents.length === 0) {
+  // Green empty state when all residents are in building
+  if (exceptionResidents.length === 0) {
+    const total = totalResidentCount ?? residents.length;
     return (
-      <div className="text-center py-16">
-        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center mx-auto">
-          <span className="text-muted-foreground text-lg">🏠</span>
+      <div className="text-center py-16 px-6">
+        <div className="h-14 w-14 rounded-full bg-success/10 flex items-center justify-center mx-auto">
+          <CheckCircle2 className="h-7 w-7 text-success" />
         </div>
-        <p className="text-sm text-muted-foreground mt-2">
-          {statusFilter ? "No residents match this filter" : "No residents found"}
+        <p className="text-base font-semibold text-foreground mt-3">
+          All {total} residents in building
+        </p>
+        <p className="text-sm text-muted-foreground mt-1">
+          No one is currently away, on leave, or overdue
         </p>
       </div>
     );
   }
 
-  const getWingStats = (wingResidents: Resident[]) => {
-    let inBuilding = 0, away = 0, onLeave = 0, overdue = 0;
-    wingResidents.forEach(r => {
-      const s = getPresence(r).status;
-      if (s === "in-building") inBuilding++;
-      else if (s === "away") away++;
-      else if (s === "on-leave") onLeave++;
-      else overdue++;
-    });
-    return { inBuilding, away, onLeave, overdue };
-  };
-
-  // Render compact chip for in-building residents
-  const renderInBuildingChip = (resident: Resident) => (
-    <button
-      key={resident.id}
-      onClick={() => navigate(`/visitors/${resident.visitorId}`)}
-      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/60 hover:bg-muted text-[12px] font-medium text-foreground transition-colors group/chip cursor-pointer border border-transparent hover:border-border"
-    >
-      <span className="h-1.5 w-1.5 rounded-full bg-success shrink-0" />
-      <span className="truncate max-w-[120px]">{resident.firstName} {resident.surname[0]}.</span>
-      <span className="text-muted-foreground font-mono text-[10px]">{resident.room?.replace("Room ", "R") || ""}</span>
-      {resident.dolsLpsFlag && <ShieldAlert className="h-3 w-3 text-destructive shrink-0" />}
-      {onQuickAway && (
-        <span
-          className="opacity-0 group-hover/chip:opacity-100 transition-opacity"
-          onClick={e => { e.stopPropagation(); onQuickAway(resident); }}
-        >
-          <DoorOpen className="h-3 w-3 text-warning" />
-        </span>
-      )}
-    </button>
-  );
-
   // Render expanded row for away/leave/overdue
-  const renderAwayRow = (resident: Resident) => {
+  const renderExceptionRow = (resident: Resident) => {
     const { status, visitor } = getPresence(resident);
     if (status === "in-building") return null;
 
@@ -164,7 +145,6 @@ export function ResidentPresenceTable({
       ),
     }[status];
 
-    // Extract escort phone from comments
     const escortPhone = visitor?.comments?.split("\n").find(l => l.startsWith("Escort phone:"))?.replace("Escort phone: ", "");
 
     return (
@@ -173,7 +153,6 @@ export function ResidentPresenceTable({
         className={`flex items-center gap-3 px-4 py-2.5 border-l-[3px] ${borderClass} cursor-pointer hover:bg-muted/30 transition-colors`}
         onClick={() => navigate(`/visitors/${resident.visitorId}`)}
       >
-        {/* Avatar + Name */}
         <Avatar className="h-9 w-9 shrink-0">
           <AvatarFallback className="bg-primary/10 text-primary text-[11px] font-semibold">
             {resident.firstName[0]}{resident.surname[0]}
@@ -263,55 +242,8 @@ export function ResidentPresenceTable({
 
   return (
     <>
-      <div className="divide-y divide-border">
-        {wingGroups.map(group => {
-          const stats = getWingStats(group.residents);
-          const inBuildingResidents = group.residents.filter(r => getPresence(r).status === "in-building");
-          const awayResidents = group.residents.filter(r => getPresence(r).status !== "in-building");
-
-          return (
-            <div key={group.id}>
-              {/* Wing header */}
-              <div className="flex items-center justify-between px-5 py-2.5 bg-muted/30">
-                <div className="flex items-center gap-2.5">
-                  <div
-                    className="h-5 w-1.5 rounded-full"
-                    style={{ backgroundColor: group.wing?.color || "hsl(var(--muted-foreground))" }}
-                  />
-                  <span className="text-sm font-semibold text-foreground">
-                    {group.wing?.name || "Unassigned"}
-                  </span>
-                  {group.wing?.floor && (
-                    <span className="text-[10px] text-muted-foreground font-medium">· {group.wing.floor}</span>
-                  )}
-                  <Badge variant="outline" className="text-[10px] font-mono tabular-nums">
-                    <Users className="h-3 w-3 mr-1" />{group.residents.length}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-3 text-[11px] font-medium">
-                  <span className="text-success">{stats.inBuilding} in</span>
-                  {stats.away > 0 && <span className="text-warning">{stats.away} away</span>}
-                  {stats.onLeave > 0 && <span className="text-info">{stats.onLeave} leave</span>}
-                  {stats.overdue > 0 && <span className="text-destructive animate-pulse">{stats.overdue} overdue</span>}
-                </div>
-              </div>
-
-              {/* Away/Leave/Overdue expanded rows */}
-              {awayResidents.length > 0 && (
-                <div className="divide-y divide-border/50">
-                  {awayResidents.map(renderAwayRow)}
-                </div>
-              )}
-
-              {/* In-building compact chips */}
-              {inBuildingResidents.length > 0 && (
-                <div className="px-5 py-2.5 flex flex-wrap gap-1.5">
-                  {inBuildingResidents.map(renderInBuildingChip)}
-                </div>
-              )}
-            </div>
-          );
-        })}
+      <div className="divide-y divide-border/50">
+        {exceptionResidents.map(renderExceptionRow)}
       </div>
 
       {returnResident && (
