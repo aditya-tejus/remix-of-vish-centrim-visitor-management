@@ -1,9 +1,10 @@
+import { useState, useEffect } from "react";
 import centrimLogo from "@/assets/centrim-life-logo.png";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { NotificationBell } from "@/components/NotificationBell";
-import { Search, CalendarDays, Grid3X3, User } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
 
 interface AppHeaderProps {
   /** Page title shown after the sidebar trigger */
@@ -28,6 +29,13 @@ export function AppHeader({
   draftCount = 0,
   pendingCount = 0,
 }: AppHeaderProps) {
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <header className="sticky top-0 z-10 bg-card border-b border-border">
       <div className="flex items-center justify-between px-6 h-14">
@@ -44,10 +52,20 @@ export function AppHeader({
           )}
         </div>
 
-        {/* Right: facility badge + toolbar + page actions */}
+        {/* Right: clock + facility badge + toolbar + page actions */}
         <div className="flex items-center gap-2">
+          {/* Live clock */}
+          <div className="hidden md:flex items-center gap-1.5 mr-1">
+            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-[13px] font-mono font-medium text-muted-foreground tabular-nums">
+              {format(now, "hh:mm a")}
+            </span>
+          </div>
+
+          <div className="w-px h-5 bg-border" />
+
           {/* Facility badge */}
-          <div className="hidden lg:flex items-center gap-2 mr-2">
+          <div className="hidden lg:flex items-center gap-2 mx-1">
             <span className="text-[13px] text-muted-foreground font-medium">Sydney Care Centre</span>
             <Badge variant="outline" className="text-[10px] font-bold bg-primary/10 text-primary border-primary/30">
               RAC
