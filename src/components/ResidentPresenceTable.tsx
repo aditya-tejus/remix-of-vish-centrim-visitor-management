@@ -75,7 +75,7 @@ export function ResidentPresenceTable({
     "on-site": 3,
   };
 
-  // Get only exception residents (not in-building) unless a specific filter is applied
+  // Get only exception residents (not on-site) unless a specific filter is applied
   const exceptionResidents = useMemo(() => {
     let filtered: Resident[];
 
@@ -85,11 +85,11 @@ export function ResidentPresenceTable({
         const { visitor } = getPresence(r);
         return visitor?.status === "checked-out" && visitor.expectedReturnDate && isToday(visitor.expectedReturnDate);
       });
-    } else if (statusFilter && statusFilter !== "in-building") {
+    } else if (statusFilter && statusFilter !== "on-site") {
       filtered = residents.filter(r => getPresence(r).status === statusFilter);
     } else {
-      // Default: show only exceptions (not in-building)
-      filtered = residents.filter(r => getPresence(r).status !== "in-building");
+      // Default: show only exceptions (not on-site)
+      filtered = residents.filter(r => getPresence(r).status !== "on-site");
     }
 
     // Sort by urgency, then by nearest return time
