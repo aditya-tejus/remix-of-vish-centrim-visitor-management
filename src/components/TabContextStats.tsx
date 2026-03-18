@@ -64,19 +64,6 @@ function getStats(tab: string, visitors: Visitor[], allVisitors: Visitor[]): Sta
         { label: "On Shift", value: onSite, icon: <Clock className="h-3.5 w-3.5" />, accent: "text-info" },
       ];
 
-    case "resident": {
-      const inBuilding = visitors.filter(v => v.status === "checked-in").length;
-      const away = visitors.filter(v => v.status === "checked-out").length;
-      const overdueReturn = visitors.filter(v =>
-        v.status === "checked-out" && v.expectedReturnDate && isPast(v.expectedReturnDate)
-      ).length;
-      return [
-        { label: "In Building", value: inBuilding, icon: <Home className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
-        { label: "Away", value: away, icon: <DoorOpen className="h-3.5 w-3.5" />, accent: "text-warning", filterKey: "checked-out" },
-        { label: "Overdue Return", value: overdueReturn, icon: <AlertTriangle className="h-3.5 w-3.5" />, accent: "text-destructive", filterKey: "overdue" },
-      ];
-    }
-
     default:
       return [];
   }

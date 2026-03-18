@@ -7,12 +7,12 @@ import { VisitorTable } from "@/components/VisitorTable";
 import { useVisitors } from "@/hooks/useVisitors";
 import { AddVisitDialog } from "@/components/AddVisitDialog";
 import { CheckOutDialog } from "@/components/CheckOutDialog";
-import { ResidentLeaveDialog } from "@/components/ResidentLeaveDialog";
+
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useKeyboardShortcuts, KeyboardShortcutBar } from "@/hooks/useKeyboardShortcuts";
 import { Button } from "@/components/ui/button";
-import { Plus, QrCode, LogOut, DoorOpen, ChevronLeft, ChevronRight, CalendarDays, X, Clock, Printer } from "lucide-react";
+import { Plus, QrCode, LogOut, ChevronLeft, ChevronRight, CalendarDays, X, Clock, Printer } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, isSameDay, addDays, subDays, isToday, isPast } from "date-fns";
@@ -28,7 +28,7 @@ export default function VisitList() {
   const { visitors, addVisitor, checkOutVisitor, checkInReturn, deleteVisitor, overstayedCount } = useVisitors();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [checkOutDialogOpen, setCheckOutDialogOpen] = useState(false);
-  const [residentLeaveOpen, setResidentLeaveOpen] = useState(false);
+  
   const [qrOpen, setQrOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [feedbackVisitor, setFeedbackVisitor] = useState<Visitor | null>(null);
@@ -79,7 +79,7 @@ export default function VisitList() {
       case "checked-in": return filteredVisitors.filter(v => v.status === "checked-in");
       case "checked-out": return filteredVisitors.filter(v => v.status === "checked-out");
       case "overstayed": return filteredVisitors.filter(v => v.status === "checked-in" && Date.now() - v.checkInTime.getTime() > 8 * 3600000);
-      case "on-leave": return visitors.filter(v => v.type === "resident" && v.status === "checked-out");
+      
       default: return filteredVisitors;
     }
   }, [filteredVisitors, visitors, activeFilter]);
@@ -96,7 +96,7 @@ export default function VisitList() {
     "checked-in": "Currently Inside",
     "checked-out": "Checked Out",
     "overstayed": "Overstayed",
-    "on-leave": "Residents On Leave",
+    
   };
 
   return (
@@ -132,10 +132,6 @@ export default function VisitList() {
                 <Button variant="outline" size="sm" className="h-[34px] text-[13px] gap-1.5 border-border" onClick={() => setHandoverOpen(true)}>
                   <Printer className="h-4 w-4" />
                   Handover
-                </Button>
-                <Button variant="outline" size="sm" className="h-[34px] text-[13px] gap-1.5 border-border" onClick={() => setResidentLeaveOpen(true)}>
-                  <DoorOpen className="h-4 w-4" />
-                  Resident Leave
                 </Button>
                 <Button variant="outline" size="sm" className="h-[34px] text-[13px] gap-1.5 border-border" onClick={() => setCheckOutDialogOpen(true)}>
                   <LogOut className="h-4 w-4" />
@@ -258,10 +254,6 @@ export default function VisitList() {
       )}
       <VisitListQRDialog open={qrOpen} onOpenChange={setQrOpen} />
       <HandoverPrintDialog open={handoverOpen} onOpenChange={setHandoverOpen} visitors={filteredVisitors} date={selectedDate} />
-      <ResidentLeaveDialog open={residentLeaveOpen} onOpenChange={setResidentLeaveOpen} onSubmit={(visitor) => {
-        addVisitor(visitor);
-        toast({ title: "Resident Marked Away", description: `${visitor.firstName} ${visitor.surname} has been checked out.` });
-      }} />
     </SidebarProvider>
   );
 }

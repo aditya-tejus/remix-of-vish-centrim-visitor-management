@@ -66,12 +66,11 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
   const { toast } = useToast();
 
   const visitorsByType: Record<string, Visitor[]> = {
-    all: visitors,
+    all: visitors.filter((v) => v.type !== "resident"),
     visitor: visitors.filter((v) => v.type === "visitor"),
     contractor: visitors.filter((v) => v.type === "contractor"),
     volunteer: visitors.filter((v) => v.type === "volunteer"),
     staff: visitors.filter((v) => v.type === "staff"),
-    resident: visitors.filter((v) => v.type === "resident"),
   };
 
   const toggleSelect = (id: string) => {
@@ -113,7 +112,6 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
     contractor: "Contractors",
     volunteer: "Volunteers",
     staff: "Staff",
-    resident: "Residents",
   };
 
   const emptyIcons: Record<string, string> = {
@@ -122,7 +120,6 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
     contractor: "🔧",
     volunteer: "🤝",
     staff: "👨‍💼",
-    resident: "🏠",
   };
 
   const getColumns = (type: string) => {
@@ -309,14 +306,6 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
           allVisitors={visitors}
         />
 
-        {/* Residents tab — completely independent view */}
-        <TabsContent value="resident" className="mt-0">
-          <ResidentLeaveTable
-            residents={visitorsByType.resident}
-            onCheckInReturn={onCheckInReturn}
-            onDelete={onDelete}
-          />
-        </TabsContent>
 
         {/* Visitors, Staff, Contractors tabs */}
         {(["all", "visitor", "contractor", "volunteer", "staff"] as const).map((type) => {

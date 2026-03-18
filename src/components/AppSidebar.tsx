@@ -70,9 +70,7 @@ export function AppSidebar() {
       icon: DoorOpen,
       collapsible: true,
       items: [
-        { title: "Resident Leave", path: "/resident-leave" },
-        { title: "Leave Requests", path: "/leave-requests" },
-        { title: "Checkout Requests", path: "/checkout-requests" },
+        { title: "Residents", path: "/residents", activeDot: true },
       ],
     },
     {

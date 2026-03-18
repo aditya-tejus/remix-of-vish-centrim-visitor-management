@@ -18,7 +18,7 @@ import VisitorAnalytics from "./pages/VisitorAnalytics";
 import LeaveRequests from "./pages/LeaveRequests";
 import NotFound from "./pages/NotFound";
 // Phase 6-7 new pages
-import ResidentLeave from "./pages/ResidentLeave";
+import Residents from "./pages/Residents";
 import PersonTypeSelector from "./pages/PersonTypeSelector";
 import GroupCheckIn from "./pages/GroupCheckIn";
 import QRFastLane from "./pages/QRFastLane";
@@ -53,7 +53,8 @@ const App = () => (
           <Route path="/person-type" element={<PersonTypeSelector />} />
           <Route path="/group-checkin" element={<GroupCheckIn />} />
           <Route path="/qr-fast-lane" element={<QRFastLane />} />
-          <Route path="/resident-leave" element={<ResidentLeave />} />
+          <Route path="/residents" element={<Residents />} />
+          <Route path="/resident-leave" element={<Navigate to="/residents" replace />} />
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/gdpr" element={<GDPRPage />} />
           <Route path="/reports" element={<ReportsHome />} />
@@ -66,8 +67,8 @@ const App = () => (
           <Route path="/feedback" element={<Feedback />} />
           <Route path="/visitor-analytics" element={<Navigate to="/reports/analytics" replace />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="/leave-requests" element={<LeaveRequests />} />
-          <Route path="/checkout-requests" element={<LeaveRequests />} />
+          <Route path="/leave-requests" element={<Navigate to="/residents" replace />} />
+          <Route path="/checkout-requests" element={<Navigate to="/residents" replace />} />
           <Route path="/public-checkin" element={<PublicCheckIn />} />
           <Route path="/coverage" element={<CoverageChecklist />} />
           {/* Kiosk routes */}
