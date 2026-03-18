@@ -113,6 +113,7 @@ export default function Evacuation() {
     });
 
     // Sort: resident wings first (alphabetical), then other types
+    // Within each group, sort residents by room number
     return [...map.entries()]
       .sort(([a], [b]) => {
         const aIsResident = a.startsWith("Residents");
@@ -121,7 +122,17 @@ export default function Evacuation() {
         if (!aIsResident && bIsResident) return 1;
         return a.localeCompare(b);
       })
-      .map(([label, items]) => ({ label, items }));
+      .map(([label, items]) => ({
+        label,
+        items: items.sort((a, b) => {
+          if (a.type === "resident" && b.type === "resident") {
+            const roomA = extractRoom(a.address).replace(/\D/g, "");
+            const roomB = extractRoom(b.address).replace(/\D/g, "");
+            return (parseInt(roomA) || 0) - (parseInt(roomB) || 0);
+          }
+          return 0;
+        }),
+      }));
   }, [filtered, groupBy, safeIds]);
 
   const totalPeople = checkedIn.reduce((sum, v) => sum + 1 + (v.additionalVisitors || 0), 0);
@@ -489,6 +500,20 @@ export default function Evacuation() {
                     </div>
                     <h3 className="text-sm font-semibold text-foreground">{group.label}</h3>
                     <Badge variant="secondary" className="text-[10px]">{group.items.length}</Badge>
+                    {(() => {
+                      const groupSafe = group.items.filter((v) => safeIds.has(v.id)).length;
+                      const groupTotal = group.items.length;
+                      const allSafe = groupSafe === groupTotal;
+                      return (
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] gap-1 ${allSafe ? "border-success/40 text-success" : "border-destructive/40 text-destructive"}`}
+                        >
+                          {allSafe ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+                          {groupSafe}/{groupTotal} safe
+                        </Badge>
+                      );
+                    })()}
                     <div className="flex-1 h-px bg-border" />
                   </div>
                 )}
