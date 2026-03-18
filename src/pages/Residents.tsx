@@ -114,6 +114,12 @@ export default function Residents() {
   };
 
   const toggleCardFilter = (filter: string) => {
+    if (filter === "in-building") {
+      // Switch to Directory tab instead of filtering Board
+      setActiveTab("directory");
+      setActiveCardFilter(null);
+      return;
+    }
     setActiveCardFilter(prev => prev === filter ? null : filter);
     if (activeTab !== "board") setActiveTab("board");
   };
