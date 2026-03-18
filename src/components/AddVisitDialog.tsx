@@ -65,6 +65,10 @@ const fallbackHealthQuestions: HealthQuestion[] = [
 ];
 
 export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProps) {
+  const { residents: dbResidents } = useResidents();
+  const { staff: dbStaff } = useStaffMembers();
+  const residentItems = useMemo(() => dbResidents.map(r => ({ id: r.visitorId, name: r.name, room: r.room, wing: r.wing })), [dbResidents]);
+  const staffItems = useMemo(() => dbStaff.map(s => ({ id: s.id, name: s.name, role: s.role, department: s.department || "" })), [dbStaff]);
   const [step, setStep] = useState(1);
   const [selectedType, setSelectedType] = useState<VisitorType>("visitor");
   const { data: dbQuestions = [] } = useActiveHealthQuestions(selectedType as any);
@@ -75,7 +79,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
   const healthQuestions: HealthQuestion[] = dbQuestions.length > 0 ? dbQuestions : fallbackHealthQuestions;
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProfile, setSelectedProfile] = useState<typeof mockProfiles[0] | null>(null);
-  const [selectedResident, setSelectedResident] = useState<typeof mockResidents[0] | null>(null);
+  const [selectedResident, setSelectedResident] = useState<{ id: string; name: string; room: string; wing: string } | null>(null);
   const [formData, setFormData] = useState({
     firstName: "", surname: "", email: "", mobile: "", address: "",
     additionalVisitors: 0, whomToVisit: "" as "" | "Resident" | "Staff",
