@@ -159,6 +159,10 @@ export default function VisitList() {
                   <Printer className="h-4 w-4" />
                   Handover
                 </Button>
+                <Button variant="outline" size="sm" className="h-[34px] text-[13px] gap-1.5 border-border" onClick={() => setResidentLeaveOpen(true)}>
+                  <DoorOpen className="h-4 w-4" />
+                  Resident Leave
+                </Button>
                 <Button variant="outline" size="sm" className="h-[34px] text-[13px] gap-1.5 border-border" onClick={() => setCheckOutDialogOpen(true)}>
                   <LogOut className="h-4 w-4" />
                   Check Out
