@@ -307,14 +307,6 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
           allVisitors={visitors}
         />
 
-        {/* Residents tab — completely independent view */}
-        <TabsContent value="resident" className="mt-0">
-          <ResidentLeaveTable
-            residents={visitorsByType.resident}
-            onCheckInReturn={onCheckInReturn}
-            onDelete={onDelete}
-          />
-        </TabsContent>
 
         {/* Visitors, Staff, Contractors tabs */}
         {(["all", "visitor", "contractor", "volunteer", "staff"] as const).map((type) => {
