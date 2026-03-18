@@ -95,8 +95,15 @@ export default function Evacuation() {
     const map = new Map<string, Visitor[]>();
     filtered.forEach((v) => {
       let key = "";
-      if (groupBy === "type") {
-        // Residents get sub-grouped by wing
+      if (groupBy === "residents") {
+        // Residents grouped by wing first, then all others in one group
+        if (v.type === "resident") {
+          const wing = extractWing(v.address);
+          key = `Residents — ${wing}`;
+        } else {
+          key = "Other (Visitors, Staff & Contractors)";
+        }
+      } else if (groupBy === "type") {
         if (v.type === "resident") {
           const wing = extractWing(v.address);
           key = `Residents — ${wing}`;
