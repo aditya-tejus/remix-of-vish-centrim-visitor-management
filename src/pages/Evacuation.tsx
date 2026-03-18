@@ -39,14 +39,6 @@ function extractRoom(address: string): string {
 
 type GroupBy = "none" | "wing" | "type" | "status";
 
-// Evacuation points (mock — could be pulled from DB)
-const evacuationPoints = [
-  "Main Car Park",
-  "Rear Garden Assembly",
-  "Front Reception",
-  "Side Gate Exit",
-];
-
 export default function Evacuation() {
   const { visitors } = useVisitors();
   const { toast } = useToast();
