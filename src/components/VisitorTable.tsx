@@ -69,12 +69,12 @@ function formatDuration(checkIn: Date, checkOut: Date | null): string {
   return `${hours}h ${mins}m`;
 }
 
-// Type badge colors
-const typeBadgeStyles: Record<string, string> = {
-  visitor: "bg-primary/10 text-primary border-primary/20",
-  contractor: "bg-warning/10 text-warning border-warning/20",
-  volunteer: "bg-info/10 text-info border-info/20",
-  staff: "bg-secondary text-secondary-foreground border-border",
+// Subtle type label colors — muted text only, no background or border
+const typeLabelStyles: Record<string, string> = {
+  visitor: "text-muted-foreground",
+  contractor: "text-muted-foreground",
+  volunteer: "text-muted-foreground",
+  staff: "text-muted-foreground",
 };
 
 const typeLabelsMap: Record<string, string> = {
@@ -168,7 +168,7 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
                 {visitor.firstName} {visitor.surname}
               </button>
               {showTypeBadge && (
-                <span className={`inline-flex items-center w-fit mt-0.5 text-[10px] font-semibold px-1.5 py-0 rounded border ${typeBadgeStyles[visitor.type] || "bg-muted text-muted-foreground border-border"}`}>
+                <span className={`text-[11px] font-normal tracking-wide ${typeLabelStyles[visitor.type] || "text-muted-foreground"}`}>
                   {typeLabelsMap[visitor.type] || visitor.type}
                 </span>
               )}
