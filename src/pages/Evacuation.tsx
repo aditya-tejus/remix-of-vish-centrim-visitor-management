@@ -89,24 +89,53 @@ export default function Evacuation() {
   }, [checkedIn, searchQuery, filterType, filterWing, filterStatus, safeIds]);
 
   // Group the filtered list — when grouped by type, residents are sub-grouped by wing
-  const grouped = useMemo((): { label: string; items: Visitor[] }[] => {
-    if (groupBy === "none") return [{ label: "", items: filtered }];
+  // Two-level structure: sections → groups
+  interface EvacGroup { label: string; items: Visitor[]; isSubGroup?: boolean }
+  interface EvacSection { label: string; groups: EvacGroup[] }
 
+  const sections = useMemo((): EvacSection[] => {
+    if (groupBy === "none") return [{ label: "", groups: [{ label: "", items: filtered }] }];
+
+    const sortByRoom = (items: Visitor[]) =>
+      items.sort((a, b) => {
+        if (a.type === "resident" && b.type === "resident") {
+          const roomA = extractRoom(a.address).replace(/\D/g, "");
+          const roomB = extractRoom(b.address).replace(/\D/g, "");
+          return (parseInt(roomA) || 0) - (parseInt(roomB) || 0);
+        }
+        return 0;
+      });
+
+    if (groupBy === "residents") {
+      // Parent "Residents" section with wing sub-groups, then "Others"
+      const wingMap = new Map<string, Visitor[]>();
+      const others: Visitor[] = [];
+      filtered.forEach((v) => {
+        if (v.type === "resident") {
+          const wing = extractWing(v.address);
+          if (!wingMap.has(wing)) wingMap.set(wing, []);
+          wingMap.get(wing)!.push(v);
+        } else {
+          others.push(v);
+        }
+      });
+      const wingGroups = [...wingMap.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([wing, items]) => ({ label: wing, items: sortByRoom(items), isSubGroup: true }));
+
+      const result: EvacSection[] = [];
+      if (wingGroups.length > 0) result.push({ label: "Residents", groups: wingGroups });
+      if (others.length > 0) result.push({ label: "Other (Visitors, Staff & Contractors)", groups: [{ label: "", items: others }] });
+      return result;
+    }
+
+    // Flat grouping for type/wing/status
     const map = new Map<string, Visitor[]>();
     filtered.forEach((v) => {
       let key = "";
-      if (groupBy === "residents") {
-        // Residents grouped by wing first, then all others in one group
+      if (groupBy === "type") {
         if (v.type === "resident") {
-          const wing = extractWing(v.address);
-          key = `Residents — ${wing}`;
-        } else {
-          key = "Other (Visitors, Staff & Contractors)";
-        }
-      } else if (groupBy === "type") {
-        if (v.type === "resident") {
-          const wing = extractWing(v.address);
-          key = `Residents — ${wing}`;
+          key = `Residents — ${extractWing(v.address)}`;
         } else {
           key = v.type.charAt(0).toUpperCase() + v.type.slice(1) + "s";
         }
@@ -119,8 +148,6 @@ export default function Evacuation() {
       map.get(key)!.push(v);
     });
 
-    // Sort: resident wings first (alphabetical), then other types
-    // Within each group, sort residents by room number
     return [...map.entries()]
       .sort(([a], [b]) => {
         const aIsResident = a.startsWith("Residents");
@@ -129,17 +156,7 @@ export default function Evacuation() {
         if (!aIsResident && bIsResident) return 1;
         return a.localeCompare(b);
       })
-      .map(([label, items]) => ({
-        label,
-        items: items.sort((a, b) => {
-          if (a.type === "resident" && b.type === "resident") {
-            const roomA = extractRoom(a.address).replace(/\D/g, "");
-            const roomB = extractRoom(b.address).replace(/\D/g, "");
-            return (parseInt(roomA) || 0) - (parseInt(roomB) || 0);
-          }
-          return 0;
-        }),
-      }));
+      .map(([label, items]) => ({ label, groups: [{ label: "", items: sortByRoom(items) }] }));
   }, [filtered, groupBy, safeIds]);
 
   const totalPeople = checkedIn.reduce((sum, v) => sum + 1 + (v.additionalVisitors || 0), 0);
