@@ -50,7 +50,7 @@ export function StepIdentify({
 
       {/* Type chips */}
       <div className="space-y-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Person Type</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Visitor Type</p>
         <div className="grid grid-cols-4 gap-2">
           {typeChips.map((tc) => (
             <button
