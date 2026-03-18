@@ -159,7 +159,7 @@ export function ResidentPresenceTable({
           </AvatarFallback>
         </Avatar>
 
-        <div className="flex-1 min-w-0 grid grid-cols-[1fr_minmax(80px,1.2fr)_minmax(80px,1fr)_minmax(60px,auto)_auto] gap-3 items-center">
+        <div className="flex-1 min-w-0 grid grid-cols-[1fr_minmax(70px,auto)_minmax(80px,1.2fr)_minmax(80px,1fr)_minmax(60px,auto)_auto] gap-3 items-center">
           {/* Resident + Room */}
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
@@ -170,6 +170,18 @@ export function ResidentPresenceTable({
               </Badge>
             </div>
             <span className="text-[11px] text-muted-foreground font-mono">{resident.room || "—"}</span>
+          </div>
+
+          {/* Left on */}
+          <div className="text-[12px] text-muted-foreground whitespace-nowrap">
+            {visitor?.checkOutTime ? (
+              <div>
+                <span className="block font-medium text-foreground">{format(visitor.checkOutTime, "dd MMM")}</span>
+                <span className="text-[11px]">{format(visitor.checkOutTime, "HH:mm")}</span>
+              </div>
+            ) : (
+              <span>—</span>
+            )}
           </div>
 
           {/* Where / Why */}
