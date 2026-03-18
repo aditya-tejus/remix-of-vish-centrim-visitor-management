@@ -92,7 +92,7 @@ export default function VisitorAnalytics() {
     const thisMonth = new Date();
     const startOfMonth = new Date(thisMonth.getFullYear(), thisMonth.getMonth(), 1);
 
-    return mockResidents.map((resident) => {
+    return residentItems.map((resident) => {
       // Find visitors who visited this resident
       const residentVisits = filteredVisitors.filter(
         (v) => v.whomToVisit?.toLowerCase().includes(resident.name.toLowerCase().split(" ")[0])
