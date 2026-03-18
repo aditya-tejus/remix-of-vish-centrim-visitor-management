@@ -126,7 +126,7 @@ export function PersonTypeSettings({ type }: Props) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center", `${config.dotColor}/10`)}>
+        <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center", config.dotColor)}>
           <Icon className={cn("h-5 w-5", config.color)} />
         </div>
         <div>
