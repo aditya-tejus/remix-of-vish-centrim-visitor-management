@@ -55,8 +55,8 @@ export default function Residents() {
 
   // Presence map
   const presenceMap = useMemo(() => {
-    const map = new Map<string, "in-building" | "away" | "on-leave" | "overdue">();
-    residents.forEach(r => map.set(r.visitorId, "in-building"));
+    const map = new Map<string, "on-site" | "away" | "on-leave" | "overdue">();
+    residents.forEach(r => map.set(r.visitorId, "on-site"));
     residentVisitors.forEach(v => {
       if (v.status === "checked-out") {
         const isOverdue = v.expectedReturnDate && isPast(v.expectedReturnDate);
