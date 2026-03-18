@@ -155,16 +155,54 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
     );
   }, [residentSearchQuery, residentItems]);
 
+  // Query previous visitors from DB for returning visitor lookup
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
+    if (!searchQuery.trim()) return previousVisitors;
     const q = searchQuery.toLowerCase();
-    return mockProfiles.filter(
+    return previousVisitors.filter(
       (p) =>
         p.firstName.toLowerCase().includes(q) ||
         p.surname.toLowerCase().includes(q) ||
         p.mobile.includes(q) ||
         `${p.firstName} ${p.surname}`.toLowerCase().includes(q)
     );
+  }, [searchQuery, previousVisitors]);
+
+  // Fetch previous visitors when search query changes
+  useEffect(() => {
+    if (!searchQuery.trim() || searchQuery.length < 2) {
+      setPreviousVisitors([]);
+      return;
+    }
+    const q = searchQuery.toLowerCase();
+    supabase
+      .from("visitors")
+      .select("id, first_name, surname, mobile, email, address")
+      .or(`first_name.ilike.%${q}%,surname.ilike.%${q}%,mobile.ilike.%${q}%`)
+      .neq("type", "resident")
+      .order("check_in_time", { ascending: false })
+      .limit(10)
+      .then(({ data }) => {
+        if (data) {
+          const seen = new Set<string>();
+          const unique: VisitorProfile[] = [];
+          for (const r of data) {
+            const key = `${r.first_name}|${r.surname}|${r.email}`.toLowerCase();
+            if (!seen.has(key)) {
+              seen.add(key);
+              unique.push({
+                id: r.id,
+                firstName: r.first_name,
+                surname: r.surname,
+                mobile: r.mobile || "",
+                email: r.email || "",
+                address: r.address || "",
+              });
+            }
+          }
+          setPreviousVisitors(unique);
+        }
+      });
   }, [searchQuery]);
 
   const resetForm = () => {
