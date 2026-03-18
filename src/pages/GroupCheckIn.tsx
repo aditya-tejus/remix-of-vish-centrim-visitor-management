@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useVisitors } from "@/hooks/useVisitors";
+import { useWatchlist } from "@/hooks/useWatchlist";
+import { WatchlistAlertDialog } from "@/components/WatchlistAlertDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Users, Plus, Trash2, CheckCircle2, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
