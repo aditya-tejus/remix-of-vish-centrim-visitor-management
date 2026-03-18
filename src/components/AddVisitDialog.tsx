@@ -122,7 +122,6 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
     : ["Search", "Details", "Health", "Confirm"];
   const totalSteps = steps.length;
 
-  // Load branch document URLs from settings
   // Load branch document URLs and jurisdiction from settings
   useEffect(() => {
     supabase
@@ -140,6 +139,13 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
         }
       });
   }, []);
+
+  // Set initial type from prop
+  useEffect(() => {
+    if (initialType && open) {
+      setSelectedType(initialType);
+    }
+  }, [initialType, open]);
 
   const filteredResidents = useMemo(() => {
     if (!residentSearchQuery.trim()) return residentItems;
