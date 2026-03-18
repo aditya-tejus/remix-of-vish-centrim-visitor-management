@@ -49,7 +49,7 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
   const activeCompanionFields = companionFieldsConfig.filter((f) => f.is_active).sort((a, b) => a.sort_order - b.sort_order);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedResident, setSelectedResident] = useState<typeof mockResidents[0] | null>(null);
+  const [selectedResident, setSelectedResident] = useState<{ id: string; name: string; room: string; wing: string } | null>(null);
   const [expectedReturnDate, setExpectedReturnDate] = useState<Date | undefined>(undefined);
   const [expectedReturnTime, setExpectedReturnTime] = useState("12:00");
   const [mobile, setMobile] = useState("");
