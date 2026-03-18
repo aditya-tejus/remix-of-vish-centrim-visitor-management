@@ -72,7 +72,7 @@ export default function Residents() {
   }, [residents, residentVisitors]);
 
   // Derived counts
-  const inBuilding = residents.filter(r => presenceMap.get(r.visitorId) === "in-building").length;
+  const inBuilding = residents.filter(r => presenceMap.get(r.visitorId) === "on-site").length;
   const awayCount = residents.filter(r => presenceMap.get(r.visitorId) === "away").length;
   const onLeaveCount = residents.filter(r => presenceMap.get(r.visitorId) === "on-leave").length;
   const overdueCount = residents.filter(r => presenceMap.get(r.visitorId) === "overdue").length;
