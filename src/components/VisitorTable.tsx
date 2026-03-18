@@ -312,7 +312,7 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
         </TabsContent>
 
         {/* Visitors, Staff, Contractors tabs */}
-        {(["visitor", "staff", "contractor"] as const).map((type) => {
+        {(["all", "visitor", "contractor", "volunteer", "staff"] as const).map((type) => {
           const list = visitorsByType[type];
           const columns = getColumns(type);
           return (
