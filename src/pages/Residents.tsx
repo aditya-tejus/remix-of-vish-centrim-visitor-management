@@ -232,7 +232,7 @@ export default function Residents() {
                     Board
                   </TabsTrigger>
                   <TabsTrigger value="directory" className="rounded-none h-11 px-5 text-[15px] font-medium border-b-[3px] border-b-transparent transition-all duration-150 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:border-b-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground">
-                    Profiles
+                    Directory
                     <span className="ml-1.5 text-[11px] rounded-full px-1.5 py-0.5 font-semibold tabular-nums">{residents.length}</span>
                   </TabsTrigger>
                 </TabsList>
