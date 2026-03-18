@@ -126,14 +126,14 @@ export default function KioskResidentLeave() {
           <div className="text-center py-12 text-muted-foreground">No residents found</div>
         ) : (
           filteredResidents.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => handleLeave(r.visitor_id, `${r.first_name} ${r.surname}`)}
-              className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-border bg-card hover:border-warning transition-all text-left"
-            >
-              <div>
-                <p className="text-base font-semibold">{r.first_name} {r.surname}</p>
-                <p className="text-sm text-muted-foreground">{r.room || "—"} {r.wing_name ? `• ${r.wing_name}` : ""}</p>
+              <button
+                key={r.id}
+                onClick={() => handleLeave(r.visitorId, `${r.firstName} ${r.surname}`)}
+                className="w-full flex items-center justify-between p-4 rounded-xl border-2 border-border bg-card hover:border-warning transition-all text-left"
+              >
+                <div>
+                  <p className="text-base font-semibold">{r.firstName} {r.surname}</p>
+                  <p className="text-sm text-muted-foreground">{r.room || "—"} {r.wing ? `• ${r.wing}` : ""}</p>
               </div>
               <DoorOpen className="h-5 w-5 text-warning" />
             </button>

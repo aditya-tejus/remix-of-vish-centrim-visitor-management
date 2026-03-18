@@ -11,7 +11,6 @@ import VisitorProfilePage from "./pages/VisitorProfilePage";
 import CheckIn from "./pages/CheckIn";
 import CalendarPage from "./pages/Calendar";
 import GDPRPage from "./pages/GDPR";
-import ReportsPage from "./pages/Reports";
 import AuditLogPage from "./pages/AuditLog";
 import PublicCheckIn from "./pages/PublicCheckIn";
 import Evacuation from "./pages/Evacuation";
@@ -19,6 +18,23 @@ import Feedback from "./pages/Feedback";
 import VisitorAnalytics from "./pages/VisitorAnalytics";
 import LeaveRequests from "./pages/LeaveRequests";
 import NotFound from "./pages/NotFound";
+// Phase 6-7 new pages
+import ResidentLeave from "./pages/ResidentLeave";
+import PersonTypeSelector from "./pages/PersonTypeSelector";
+import GroupCheckIn from "./pages/GroupCheckIn";
+import QRFastLane from "./pages/QRFastLane";
+import ReportsHome from "./pages/ReportsHome";
+import EvacuationReport from "./pages/EvacuationReport";
+import PresenceLog from "./pages/PresenceLog";
+import VisitTrends from "./pages/VisitTrends";
+import ReportsPage from "./pages/Reports";
+import CoverageChecklist from "./pages/CoverageChecklist";
+// Kiosk
+import KioskLayout from "./pages/kiosk/KioskLayout";
+import KioskHome from "./pages/kiosk/KioskHome";
+import KioskCheckIn from "./pages/kiosk/KioskCheckIn";
+import KioskCheckOut from "./pages/kiosk/KioskCheckOut";
+import KioskResidentLeave from "./pages/kiosk/KioskResidentLeave";
 
 const queryClient = new QueryClient();
 
@@ -35,9 +51,17 @@ const App = () => (
           <Route path="/visitors" element={<Visitors />} />
           <Route path="/visitors/:id" element={<VisitorProfilePage />} />
           <Route path="/check-in" element={<CheckIn />} />
+          <Route path="/person-type" element={<PersonTypeSelector />} />
+          <Route path="/group-checkin" element={<GroupCheckIn />} />
+          <Route path="/qr-fast-lane" element={<QRFastLane />} />
+          <Route path="/resident-leave" element={<ResidentLeave />} />
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/gdpr" element={<GDPRPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/reports" element={<ReportsHome />} />
+          <Route path="/reports/analytics" element={<ReportsPage />} />
+          <Route path="/reports/evacuation" element={<EvacuationReport />} />
+          <Route path="/reports/presence" element={<PresenceLog />} />
+          <Route path="/reports/trends" element={<VisitTrends />} />
           <Route path="/audit-log" element={<AuditLogPage />} />
           <Route path="/evacuation" element={<Evacuation />} />
           <Route path="/feedback" element={<Feedback />} />
@@ -46,6 +70,14 @@ const App = () => (
           <Route path="/leave-requests" element={<LeaveRequests />} />
           <Route path="/checkout-requests" element={<LeaveRequests />} />
           <Route path="/public-checkin" element={<PublicCheckIn />} />
+          <Route path="/coverage" element={<CoverageChecklist />} />
+          {/* Kiosk routes */}
+          <Route path="/kiosk" element={<KioskLayout />}>
+            <Route index element={<KioskHome />} />
+            <Route path="checkin" element={<KioskCheckIn />} />
+            <Route path="checkout" element={<KioskCheckOut />} />
+            <Route path="resident-leave" element={<KioskResidentLeave />} />
+          </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
