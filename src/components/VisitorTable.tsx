@@ -1,23 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Visitor } from "@/types/visitor";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, LogOut, LogIn, Trash2, FileText, FileSpreadsheet, X, Users, MessageSquare } from "lucide-react";
+import { MoreHorizontal, LogOut, Trash2, FileText, FileSpreadsheet, Users, MessageSquare } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { exportVisitorsToCSV, exportVisitorToPDF, exportVisitorsToPDFBulk } from "@/lib/exportVisitors";
 import { useToast } from "@/hooks/use-toast";
 import { CheckInReturnDialog } from "@/components/CheckInReturnDialog";
-import { ResidentLeaveTable } from "@/components/ResidentLeaveTable";
 import { TabContextStats } from "@/components/TabContextStats";
 
 interface VisitorTableProps {
@@ -28,14 +26,15 @@ interface VisitorTableProps {
   onFeedback?: (visitor: Visitor) => void;
   activeTab?: string;
   onTabChange?: (tab: string) => void;
+  onFilter?: (key: string) => void;
+  activeFilter?: string | null;
 }
 
-// Columns config per type
 const visitorColumns = [
   { key: "name", label: "Visitor" },
   { key: "contact", label: "Contact" },
   { key: "checkIn", label: "Check-In" },
-  { key: "checkOut", label: "Check-Out" },
+  { key: "duration", label: "Duration" },
   { key: "visiting", label: "Visiting" },
   { key: "companions", label: "Companions" },
   { key: "status", label: "Status" },
@@ -45,7 +44,7 @@ const staffColumns = [
   { key: "name", label: "Staff Member" },
   { key: "contact", label: "Contact" },
   { key: "checkIn", label: "Signed In" },
-  { key: "checkOut", label: "Signed Out" },
+  { key: "duration", label: "Duration" },
   { key: "department", label: "Department" },
   { key: "status", label: "Status" },
 ];
@@ -54,51 +53,57 @@ const contractorColumns = [
   { key: "name", label: "Contractor" },
   { key: "contact", label: "Contact" },
   { key: "checkIn", label: "Arrived" },
-  { key: "checkOut", label: "Departed" },
+  { key: "duration", label: "Duration" },
   { key: "company", label: "Company / Purpose" },
   { key: "status", label: "Status" },
 ];
 
-export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, onFeedback, activeTab, onTabChange }: VisitorTableProps) {
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+// Live duration formatter
+function formatDuration(checkIn: Date, checkOut: Date | null): string {
+  const end = checkOut || new Date();
+  const diffMs = end.getTime() - checkIn.getTime();
+  if (diffMs < 0) return "—";
+  const hours = Math.floor(diffMs / 3600000);
+  const mins = Math.floor((diffMs % 3600000) / 60000);
+  if (hours === 0) return `${mins}m`;
+  return `${hours}h ${mins}m`;
+}
+
+// Type badge colors
+const typeBadgeStyles: Record<string, string> = {
+  visitor: "bg-primary/10 text-primary border-primary/20",
+  contractor: "bg-warning/10 text-warning border-warning/20",
+  volunteer: "bg-info/10 text-info border-info/20",
+  staff: "bg-secondary text-secondary-foreground border-border",
+};
+
+const typeLabelsMap: Record<string, string> = {
+  visitor: "Visitor",
+  contractor: "Contractor",
+  volunteer: "Volunteer",
+  staff: "Staff",
+};
+
+export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, onFeedback, activeTab, onTabChange, onFilter, activeFilter }: VisitorTableProps) {
   const [returnVisitor, setReturnVisitor] = useState<Visitor | null>(null);
+  const [, setTick] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Tick every 30s to update durations for checked-in visitors
+  useEffect(() => {
+    const hasActive = visitors.some(v => v.status === "checked-in");
+    if (!hasActive) return;
+    const interval = setInterval(() => setTick(t => t + 1), 30000);
+    return () => clearInterval(interval);
+  }, [visitors]);
+
   const visitorsByType: Record<string, Visitor[]> = {
-    all: visitors.filter((v) => v.type !== "resident"),
+    all: visitors,
     visitor: visitors.filter((v) => v.type === "visitor"),
     contractor: visitors.filter((v) => v.type === "contractor"),
     volunteer: visitors.filter((v) => v.type === "volunteer"),
     staff: visitors.filter((v) => v.type === "staff"),
-  };
-
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-
-  const toggleAll = (list: Visitor[]) => {
-    const allSelected = list.every((v) => selectedIds.has(v.id));
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      list.forEach((v) => (allSelected ? next.delete(v.id) : next.add(v.id)));
-      return next;
-    });
-  };
-
-  const selectedVisitors = visitors.filter((v) => selectedIds.has(v.id));
-
-  const handleBulkCSV = () => {
-    exportVisitorsToCSV(selectedVisitors);
-    toast({ title: "CSV Exported", description: `${selectedVisitors.length} record(s) exported.` });
-  };
-
-  const handleBulkPDF = () => {
-    exportVisitorsToPDFBulk(selectedVisitors);
   };
 
   const handleSingleCSV = (visitor: Visitor) => {
@@ -106,7 +111,7 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
     toast({ title: "CSV Exported", description: `Record for ${visitor.firstName} ${visitor.surname} exported.` });
   };
 
-  const typeLabels: Record<string, string> = {
+  const tabLabels: Record<string, string> = {
     all: "All",
     visitor: "Visitors",
     contractor: "Contractors",
@@ -130,25 +135,24 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
     }
   };
 
-  const renderGenericRow = (visitor: Visitor, type: string) => {
-    const columns = getColumns(type);
+  const isOverstayed = (v: Visitor) => v.status === "checked-in" && Date.now() - v.checkInTime.getTime() > 8 * 3600000;
+
+  const renderRow = (visitor: Visitor, type: string) => {
+    const showTypeBadge = type === "all";
+    const duration = formatDuration(visitor.checkInTime, visitor.checkOutTime);
+    const overstayed = isOverstayed(visitor);
+
     return (
       <TableRow
         key={visitor.id}
         className={`group transition-colors cursor-pointer ${
           visitor.status === "checked-in"
-            ? "bg-primary/[0.04] border-l-2 border-l-primary shadow-sm"
-            : selectedIds.has(visitor.id)
-            ? "bg-primary/[0.03]"
+            ? "bg-primary/[0.03] border-l-2 border-l-primary"
             : "hover:bg-muted/50"
         }`}
         onClick={() => navigate(`/visitors/${visitor.id}`)}
       >
-        <TableCell className="pl-5" onClick={(e) => e.stopPropagation()}>
-          <Checkbox checked={selectedIds.has(visitor.id)} onCheckedChange={() => toggleSelect(visitor.id)} />
-        </TableCell>
-
-        {/* Name */}
+        {/* Name + optional type badge */}
         <TableCell>
           <div className="flex items-center gap-3">
             <Avatar className="h-8 w-8">
@@ -156,12 +160,19 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
                 {visitor.firstName[0]}{visitor.surname[0]}
               </AvatarFallback>
             </Avatar>
-            <button
-              className="font-medium text-sm text-primary hover:underline text-left"
-              onClick={(e) => { e.stopPropagation(); navigate(`/visitors/${visitor.id}`); }}
-            >
-              {visitor.firstName} {visitor.surname}
-            </button>
+            <div className="flex flex-col">
+              <button
+                className="font-medium text-sm text-primary hover:underline text-left"
+                onClick={(e) => { e.stopPropagation(); navigate(`/visitors/${visitor.id}`); }}
+              >
+                {visitor.firstName} {visitor.surname}
+              </button>
+              {showTypeBadge && (
+                <span className={`inline-flex items-center w-fit mt-0.5 text-[10px] font-semibold px-1.5 py-0 rounded border ${typeBadgeStyles[visitor.type] || "bg-muted text-muted-foreground border-border"}`}>
+                  {typeLabelsMap[visitor.type] || visitor.type}
+                </span>
+              )}
+            </div>
           </div>
         </TableCell>
 
@@ -171,36 +182,31 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
           <div className="text-[11px] text-muted-foreground">{visitor.email}</div>
         </TableCell>
 
-        {/* Check-In / Signed In / Arrived */}
+        {/* Check-In time */}
         <TableCell>
           <span className="text-sm font-mono text-foreground">{format(visitor.checkInTime, "HH:mm")}</span>
           <span className="text-[11px] text-muted-foreground ml-1">{format(visitor.checkInTime, "dd MMM")}</span>
         </TableCell>
 
-        {/* Check-Out / Signed Out / Departed */}
+        {/* Duration */}
         <TableCell>
-          {visitor.checkOutTime ? (
-            <>
-              <span className="text-sm font-mono text-foreground">{format(visitor.checkOutTime, "HH:mm")}</span>
-              <span className="text-[11px] text-muted-foreground ml-1">{format(visitor.checkOutTime, "dd MMM")}</span>
-            </>
-          ) : (
-            <span className="text-xs text-muted-foreground">—</span>
-          )}
+          <span className={`text-sm font-mono tabular-nums ${
+            overstayed ? "text-destructive font-semibold" : visitor.status === "checked-in" ? "text-foreground" : "text-muted-foreground"
+          }`}>
+            {duration}
+          </span>
         </TableCell>
 
         {/* Visiting / Department / Company */}
         <TableCell className="text-sm text-foreground">{visitor.whomToVisit || "—"}</TableCell>
 
-        {/* Companions (only for visitors) */}
-        {type === "visitor" && (
+        {/* Companions (visitors/volunteers only) */}
+        {(type === "visitor" || type === "volunteer" || type === "all") && (
           <TableCell>
             {visitor.additionalVisitors > 0 ? (
-              <div className="flex items-center gap-1.5">
-                <Badge variant="secondary" className="text-[10px] gap-1 font-semibold">
-                  <Users className="h-3 w-3" />{visitor.additionalVisitors}
-                </Badge>
-              </div>
+              <Badge variant="secondary" className="text-[10px] gap-1 font-semibold">
+                <Users className="h-3 w-3" />{visitor.additionalVisitors}
+              </Badge>
             ) : (
               <span className="text-xs text-muted-foreground">—</span>
             )}
@@ -218,7 +224,7 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
           ) : (
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
-              {type === "staff" ? "Signed Out" : type === "contractor" ? "Departed" : "Checked Out"}
+              {visitor.checkOutTime ? format(visitor.checkOutTime, "HH:mm") : "—"}
             </span>
           )}
         </TableCell>
@@ -259,29 +265,6 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
 
   return (
     <div className="rounded-[10px] border border-border bg-card overflow-hidden shadow-sm">
-      {/* Bulk actions bar */}
-      {selectedIds.size > 0 && (
-        <div className="flex items-center justify-between px-5 py-2.5 bg-info/5 border-b border-info/10">
-          <div className="flex items-center gap-2">
-            <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-              <span className="text-[10px] font-bold text-primary-foreground">{selectedIds.size}</span>
-            </div>
-            <span className="text-sm font-medium text-foreground">selected</span>
-          </div>
-          <div className="flex gap-1.5">
-            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={handleBulkCSV}>
-              <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5" />CSV
-            </Button>
-            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={handleBulkPDF}>
-              <FileText className="h-3.5 w-3.5 mr-1.5" />PDF
-            </Button>
-            <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={() => setSelectedIds(new Set())}>
-              <X className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        </div>
-      )}
-
       <Tabs value={activeTab || "all"} onValueChange={onTabChange} defaultValue="all">
         <div className="border-b border-border px-2">
           <TabsList className="inline-flex items-center bg-muted rounded-lg p-1 gap-0.5 h-auto">
@@ -291,8 +274,8 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
                 value={type}
                 className="rounded-md h-8 px-4 text-[13px] font-medium transition-all duration-150 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
               >
-                {typeLabels[type]}
-                <span className={`ml-1.5 text-[10px] rounded-full px-1.5 py-0.5 font-semibold`}>
+                {tabLabels[type]}
+                <span className="ml-1.5 text-[10px] rounded-full px-1.5 py-0.5 font-semibold">
                   {list.length}
                 </span>
               </TabsTrigger>
@@ -304,10 +287,10 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
           tab={activeTab || "all"}
           visitors={visitorsByType[activeTab || "all"]}
           allVisitors={visitors}
+          onFilter={onFilter}
+          activeFilter={activeFilter}
         />
 
-
-        {/* Visitors, Staff, Contractors tabs */}
         {(["all", "visitor", "contractor", "volunteer", "staff"] as const).map((type) => {
           const list = visitorsByType[type];
           const columns = getColumns(type);
@@ -315,15 +298,9 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
             <TabsContent key={type} value={type} className="mt-0">
               <Table>
                 <TableHeader>
-                <TableRow className="hover:bg-transparent bg-muted/50">
-                    <TableHead className="w-10 pl-5">
-                      <Checkbox
-                        checked={list.length > 0 && list.every((v) => selectedIds.has(v.id))}
-                        onCheckedChange={() => toggleAll(list)}
-                      />
-                    </TableHead>
+                  <TableRow className="hover:bg-transparent bg-muted/50">
                     {columns.map((col) => (
-                      <TableHead key={col.key} className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground h-[48px]">
+                      <TableHead key={col.key} className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground h-[44px]">
                         {col.label}
                       </TableHead>
                     ))}
@@ -333,17 +310,17 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
                 <TableBody>
                   {list.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={columns.length + 2} className="text-center py-16">
+                      <TableCell colSpan={columns.length + 1} className="text-center py-16">
                         <div className="flex flex-col items-center gap-2">
                           <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
                             <span className="text-muted-foreground text-lg">{emptyIcons[type]}</span>
                           </div>
-                          <p className="text-sm text-muted-foreground">No {typeLabels[type].toLowerCase()} found</p>
+                          <p className="text-sm text-muted-foreground">No {tabLabels[type].toLowerCase()} found</p>
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : (
-                    list.map((visitor) => renderGenericRow(visitor, type))
+                    list.map((visitor) => renderRow(visitor, type))
                   )}
                 </TableBody>
               </Table>
