@@ -33,14 +33,7 @@ export default function VisitList() {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("all");
   const [handoverOpen, setHandoverOpen] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState("");
-
-  // Live clock
-  useEffect(() => {
-    const interval = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
