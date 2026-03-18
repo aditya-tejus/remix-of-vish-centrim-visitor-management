@@ -288,13 +288,14 @@ export default function Residents() {
         onOpenChange={setOutingOpen}
         defaultMode={outingMode}
         preselectedResident={outingResident}
-        onSubmit={(visitor) => {
-          addVisitor(visitor);
+        presenceMap={presenceMap}
+        onMarkAway={async (visitorId, details) => {
+          await markResidentAway(visitorId, details);
           setOutingResident(null);
-          const isShort = visitor.leaveType === "Away";
+          const isShort = details.leaveType === "Away";
           toast({
             title: isShort ? "Resident Marked Away" : "Leave Recorded",
-            description: `${visitor.firstName} ${visitor.surname} ${isShort ? "is away" : "has been checked out on leave"}.`,
+            description: `Resident ${isShort ? "is away" : "has been checked out on leave"}.`,
           });
         }}
       />
