@@ -14,7 +14,7 @@ import { LeaveRequestsReview } from "@/components/LeaveRequestsReview";
 import { ResidentFilterBar } from "@/components/ResidentFilterBar";
 import { ResidentPresenceTable } from "@/components/ResidentPresenceTable";
 import { ResidentDirectoryTable } from "@/components/ResidentDirectoryTable";
-import { NotificationBell } from "@/components/NotificationBell";
+
 import { useToast } from "@/hooks/use-toast";
 import { isPast } from "date-fns";
 import { Home, DoorOpen, LogIn, AlertTriangle, Users } from "lucide-react";
