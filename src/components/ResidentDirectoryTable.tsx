@@ -1,14 +1,18 @@
 import { useNavigate } from "react-router-dom";
 import { Resident } from "@/hooks/useResidents";
+import { Visitor } from "@/types/visitor";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Phone, Footprints } from "lucide-react";
+import { Phone, Footprints, ShieldAlert, DoorOpen } from "lucide-react";
 import { Wing } from "@/hooks/useWings";
 
 interface ResidentDirectoryTableProps {
   residents: Resident[];
   wingMap: Map<string, Wing>;
+  presenceMap?: Map<string, "in-building" | "away" | "on-leave" | "overdue">;
+  onQuickAway?: (resident: Resident) => void;
 }
 
 const careLevelColors: Record<string, string> = {
@@ -26,7 +30,14 @@ const mobilityColors: Record<string, string> = {
   bedbound: "text-destructive",
 };
 
-export function ResidentDirectoryTable({ residents, wingMap }: ResidentDirectoryTableProps) {
+const presenceDot: Record<string, string> = {
+  "in-building": "bg-success",
+  "away": "bg-warning",
+  "on-leave": "bg-info",
+  "overdue": "bg-destructive animate-pulse",
+};
+
+export function ResidentDirectoryTable({ residents, wingMap, presenceMap, onQuickAway }: ResidentDirectoryTableProps) {
   const navigate = useNavigate();
 
   if (residents.length === 0) {
@@ -52,11 +63,13 @@ export function ResidentDirectoryTable({ residents, wingMap }: ResidentDirectory
           <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Mobility</TableHead>
           <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Emergency Contact</TableHead>
           <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Flags</TableHead>
+          {onQuickAway && <TableHead className="w-20"></TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
         {residents.map(resident => {
           const wing = resident.wingId ? wingMap.get(resident.wingId) : null;
+          const presence = presenceMap?.get(resident.visitorId) || "in-building";
 
           return (
             <TableRow
@@ -66,13 +79,23 @@ export function ResidentDirectoryTable({ residents, wingMap }: ResidentDirectory
             >
               <TableCell className="pl-5 py-3">
                 <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                      {resident.firstName[0]}{resident.surname[0]}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="relative">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                        {resident.firstName[0]}{resident.surname[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    {presenceMap && (
+                      <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card ${presenceDot[presence]}`} />
+                    )}
+                  </div>
                   <div>
-                    <span className="font-semibold text-[15px]">{resident.firstName} {resident.surname}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-[15px]">{resident.firstName} {resident.surname}</span>
+                      {resident.dolsLpsFlag && (
+                        <span title="DoLS/LPS"><ShieldAlert className="h-3.5 w-3.5 text-destructive" /></span>
+                      )}
+                    </div>
                     {resident.mobile && (
                       <p className="text-[11px] text-muted-foreground">{resident.mobile}</p>
                     )}
@@ -130,6 +153,20 @@ export function ResidentDirectoryTable({ residents, wingMap }: ResidentDirectory
                   )}
                 </div>
               </TableCell>
+              {onQuickAway && (
+                <TableCell onClick={e => e.stopPropagation()} className="py-3">
+                  {presence === "in-building" && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs gap-1 opacity-0 group-hover:opacity-100 transition-opacity text-warning hover:text-warning"
+                      onClick={() => onQuickAway(resident)}
+                    >
+                      <DoorOpen className="h-3 w-3" /> Away
+                    </Button>
+                  )}
+                </TableCell>
+              )}
             </TableRow>
           );
         })}

@@ -10,14 +10,14 @@ import { useResidents, Resident } from "@/hooks/useResidents";
 import { useWings, useResidentDetails } from "@/hooks/useWings";
 import { ResidentLeaveDialog } from "@/components/ResidentLeaveDialog";
 import { ResidentLeaveTable } from "@/components/ResidentLeaveTable";
-import { LeaveRequestsReview } from "@/components/LeaveRequestsReview";
 import { ResidentFilterBar } from "@/components/ResidentFilterBar";
 import { ResidentPresenceTable } from "@/components/ResidentPresenceTable";
 import { ResidentDirectoryTable } from "@/components/ResidentDirectoryTable";
+import { QuickAwayDialog } from "@/components/QuickAwayDialog";
 
 import { useToast } from "@/hooks/use-toast";
 import { isPast } from "date-fns";
-import { Home, DoorOpen, LogIn, AlertTriangle, Users } from "lucide-react";
+import { DoorOpen, CalendarDays, LogIn, AlertTriangle, ShieldAlert } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
@@ -30,17 +30,18 @@ export default function Residents() {
   const { toast } = useToast();
 
   const [markAwayOpen, setMarkAwayOpen] = useState(false);
+  const [planLeaveOpen, setPlanLeaveOpen] = useState(false);
+  const [quickAwayResident, setQuickAwayResident] = useState<{ id: string; name: string; room: string; wing: string } | null>(null);
   const [activeTab, setActiveTab] = useState("presence");
   const [draftCount, setDraftCount] = useState(0);
   const [pendingApprovals, setPendingApprovals] = useState(0);
 
-  // Filters — shared across tabs
+  // Filters
   const [selectedWings, setSelectedWings] = useState<string[]>([]);
   const [careLevel, setCareLevel] = useState("all");
   const [leaveStatus, setLeaveStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Fetch counts
   useEffect(() => {
     const fetchCounts = async () => {
       const [drafts, pending] = await Promise.all([
@@ -53,13 +54,11 @@ export default function Residents() {
     fetchCounts();
   }, []);
 
-  // Resident visitors (type=resident)
   const residentVisitors = useMemo(
     () => visitors.filter(v => v.type === "resident"),
     [visitors]
   );
 
-  // Details map
   const detailsMap = useMemo(() => {
     const map = new Map<string, typeof residentDetails[0]>();
     residentDetails.forEach(d => map.set(d.visitor_id, d));
@@ -72,14 +71,33 @@ export default function Residents() {
     return map;
   }, [wings]);
 
-  // Derived counts
-  const inBuilding = residentVisitors.filter(v => v.status === "checked-in").length;
-  const away = residentVisitors.filter(v => v.status === "checked-out").length;
-  const overdueCount = residentVisitors.filter(v =>
-    v.status === "checked-out" && v.expectedReturnDate && isPast(v.expectedReturnDate)
-  ).length;
+  // Build presence map for directory dots (by visitorId)
+  const presenceMap = useMemo(() => {
+    const map = new Map<string, "in-building" | "away" | "on-leave" | "overdue">();
+    // Default all to in-building
+    residents.forEach(r => map.set(r.visitorId, "in-building"));
+    // Override with actual visitor status
+    residentVisitors.forEach(v => {
+      if (v.status === "checked-out") {
+        const isOverdue = v.expectedReturnDate && isPast(v.expectedReturnDate);
+        if (isOverdue) {
+          map.set(v.id, "overdue");
+        } else {
+          const isAway = v.leaveType === "Away" || !v.leaveType;
+          map.set(v.id, isAway ? "away" : "on-leave");
+        }
+      }
+    });
+    return map;
+  }, [residents, residentVisitors]);
 
-  // Filter residents (used by Presence and Directory)
+  // Derived counts
+  const inBuilding = residents.filter(r => presenceMap.get(r.visitorId) === "in-building").length;
+  const awayCount = residents.filter(r => presenceMap.get(r.visitorId) === "away").length;
+  const onLeaveCount = residents.filter(r => presenceMap.get(r.visitorId) === "on-leave").length;
+  const overdueCount = residents.filter(r => presenceMap.get(r.visitorId) === "overdue").length;
+  const dolsCount = residents.filter(r => r.dolsLpsFlag).length;
+
   const filterResident = (r: any) => {
     const details = detailsMap.get(r.visitorId || r.id);
     if (selectedWings.length > 0 && (!details?.wing_id || !selectedWings.includes(details.wing_id))) return false;
@@ -94,29 +112,44 @@ export default function Residents() {
     return true;
   };
 
+  const handleQuickAway = (resident: Resident) => {
+    setQuickAwayResident({ id: resident.visitorId, name: resident.name, room: resident.room, wing: resident.wing });
+    setMarkAwayOpen(true);
+  };
+
   const countCards = [
     {
       label: "In Building",
       value: inBuilding,
       colorClass: "text-success",
       borderClass: "border-l-success",
-      bgClass: "bg-success/5",
       dot: true,
     },
     {
-      label: "Away",
-      value: away,
+      label: "Away Now",
+      value: awayCount,
       colorClass: "text-warning",
       borderClass: "border-l-warning",
-      bgClass: "bg-warning/5",
     },
     {
-      label: "Overdue Return",
+      label: "On Leave",
+      value: onLeaveCount,
+      colorClass: "text-info",
+      borderClass: "border-l-info",
+    },
+    {
+      label: "Overdue",
       value: overdueCount,
       colorClass: "text-destructive",
       borderClass: "border-l-destructive",
-      bgClass: "bg-destructive/5",
       pulse: overdueCount > 0,
+    },
+    {
+      label: "Total",
+      value: residents.length,
+      colorClass: "text-foreground",
+      borderClass: "border-l-primary",
+      extra: dolsCount > 0 ? `${dolsCount} DoLS` : undefined,
     },
   ];
 
@@ -135,7 +168,11 @@ export default function Residents() {
               <>
                 <Button variant="outline" size="sm" className="h-[34px] text-[13px] gap-1.5 border-border" onClick={() => setMarkAwayOpen(true)}>
                   <DoorOpen className="h-4 w-4" />
-                  Mark Away
+                  Quick Away
+                </Button>
+                <Button variant="outline" size="sm" className="h-[34px] text-[13px] gap-1.5 border-border" onClick={() => setPlanLeaveOpen(true)}>
+                  <CalendarDays className="h-4 w-4" />
+                  Plan Leave
                 </Button>
                 <Button size="sm" className="h-[34px] text-[13px] gap-1.5 bg-primary hover:bg-primary/90" onClick={() => {
                   setActiveTab("presence");
@@ -149,13 +186,13 @@ export default function Residents() {
 
           {/* Count cards */}
           <div className="px-6 pt-4 pb-2">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-5 gap-3">
               {countCards.map(card => (
                 <div
                   key={card.label}
-                  className={`rounded-xl border border-border border-l-[3px] ${card.borderClass} p-5 bg-card`}
+                  className={`rounded-xl border border-border border-l-[3px] ${card.borderClass} p-4 bg-card`}
                 >
-                  <p className={`text-3xl font-bold tabular-nums ${card.colorClass}`}>
+                  <p className={`text-2xl font-bold tabular-nums ${card.colorClass}`}>
                     {card.value}
                     {card.dot && card.value > 0 && (
                       <span className="inline-flex h-2 w-2 rounded-full bg-success ml-2 align-middle" />
@@ -167,7 +204,12 @@ export default function Residents() {
                       </span>
                     )}
                   </p>
-                  <p className="text-sm text-muted-foreground mt-1 font-medium">{card.label}</p>
+                  <p className="text-xs text-muted-foreground mt-1 font-medium">{card.label}</p>
+                  {card.extra && (
+                    <p className="text-[10px] text-destructive font-semibold mt-0.5 flex items-center gap-1">
+                      <ShieldAlert className="h-3 w-3" /> {card.extra}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
@@ -176,14 +218,13 @@ export default function Residents() {
           {/* Main content */}
           <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm mx-6 mt-2 mb-6">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              {/* Underline-style tabs */}
               <div className="border-b border-border px-4">
                 <TabsList className="inline-flex items-center bg-transparent rounded-none p-0 gap-0 h-auto">
                   <TabsTrigger value="presence" className="rounded-none h-11 px-5 text-[15px] font-medium border-b-[3px] border-b-transparent transition-all duration-150 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:border-b-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground">
                     Presence
                   </TabsTrigger>
                   <TabsTrigger value="leave" className="rounded-none h-11 px-5 text-[15px] font-medium border-b-[3px] border-b-transparent transition-all duration-150 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:border-b-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground">
-                    Leave
+                    Leave & Away
                     {draftCount > 0 && (
                       <Badge variant="secondary" className="ml-1.5 text-[10px] bg-warning/10 text-warning">{draftCount}</Badge>
                     )}
@@ -201,7 +242,6 @@ export default function Residents() {
                 </TabsList>
               </div>
 
-              {/* Shared filter bar */}
               <ResidentFilterBar
                 wings={wings}
                 selectedWings={selectedWings}
@@ -214,7 +254,6 @@ export default function Residents() {
                 onSearchChange={setSearchQuery}
               />
 
-              {/* Presence tab */}
               <TabsContent value="presence" className="mt-0">
                 {loading ? (
                   <div className="p-6 space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-14 w-full" />)}</div>
@@ -225,11 +264,11 @@ export default function Residents() {
                     detailsMap={detailsMap}
                     wingMap={wingMap}
                     onCheckInReturn={checkInReturn}
+                    onQuickAway={handleQuickAway}
                   />
                 )}
               </TabsContent>
 
-              {/* Leave tab */}
               <TabsContent value="leave" className="mt-0">
                 <ResidentLeaveTable
                   residents={residentVisitors}
@@ -238,7 +277,6 @@ export default function Residents() {
                 />
               </TabsContent>
 
-              {/* Directory tab */}
               <TabsContent value="directory" className="mt-0">
                 {loading ? (
                   <div className="p-6 space-y-2">{[1,2,3].map(i => <Skeleton key={i} className="h-14 w-full" />)}</div>
@@ -246,11 +284,12 @@ export default function Residents() {
                   <ResidentDirectoryTable
                     residents={residents.filter(filterResident)}
                     wingMap={wingMap}
+                    presenceMap={presenceMap}
+                    onQuickAway={handleQuickAway}
                   />
                 )}
               </TabsContent>
 
-              {/* Overdue tab */}
               <TabsContent value="overdue" className="mt-0">
                 <ResidentLeaveTable
                   residents={residentVisitors.filter(v =>
@@ -265,9 +304,22 @@ export default function Residents() {
         </SidebarInset>
       </div>
 
-      <ResidentLeaveDialog open={markAwayOpen} onOpenChange={setMarkAwayOpen} onSubmit={(visitor) => {
+      {/* Quick Away Dialog */}
+      <QuickAwayDialog
+        open={markAwayOpen}
+        onOpenChange={setMarkAwayOpen}
+        preselectedResident={quickAwayResident}
+        onSubmit={(visitor) => {
+          addVisitor(visitor);
+          setQuickAwayResident(null);
+          toast({ title: "Resident Marked Away", description: `${visitor.firstName} ${visitor.surname} is away.` });
+        }}
+      />
+
+      {/* Plan Leave (full dialog) */}
+      <ResidentLeaveDialog open={planLeaveOpen} onOpenChange={setPlanLeaveOpen} onSubmit={(visitor) => {
         addVisitor(visitor);
-        toast({ title: "Resident Marked Away", description: `${visitor.firstName} ${visitor.surname} has been checked out.` });
+        toast({ title: "Leave Recorded", description: `${visitor.firstName} ${visitor.surname} has been checked out on leave.` });
       }} />
     </SidebarProvider>
   );
