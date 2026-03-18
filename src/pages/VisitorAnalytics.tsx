@@ -22,6 +22,7 @@ import {
   MoreHorizontal, MessageSquare, Bell, Sparkles, ArrowUpDown, AlertTriangle,
 } from "lucide-react";
 import { useVisitors } from "@/hooks/useVisitors";
+import { useResidents } from "@/hooks/useResidents";
 import {
   format, subDays, subMonths, differenceInCalendarMonths, isWithinInterval,
   startOfDay, endOfDay, isSameDay,
@@ -29,18 +30,6 @@ import {
 import { exportVisitorsToCSV } from "@/lib/exportVisitors";
 import { useToast } from "@/hooks/use-toast";
 import { WelfareNoteDialog } from "@/components/WelfareNoteDialog";
-
-// Mock residents list (matches AddVisitDialog)
-const mockResidents = [
-  { id: "r1", name: "Mary Johnson", room: "Room 12", wing: "East Wing" },
-  { id: "r2", name: "Robert Davis", room: "Room 8", wing: "West Wing" },
-  { id: "r3", name: "Patricia Wilson", room: "Room 3", wing: "East Wing" },
-  { id: "r4", name: "George Thompson", room: "Room 15", wing: "North Wing" },
-  { id: "r5", name: "Dorothy Brown", room: "Room 6", wing: "East Wing" },
-  { id: "r6", name: "Frank Harris", room: "Room 21", wing: "South Wing" },
-  { id: "r7", name: "Betty Clark", room: "Room 9", wing: "West Wing" },
-  { id: "r8", name: "Harold Lewis", room: "Room 18", wing: "North Wing" },
-];
 
 type DatePreset = "7d" | "30d" | "90d" | "custom";
 type SortField = "name" | "totalVisits" | "lastVisit" | "avgPerMonth";

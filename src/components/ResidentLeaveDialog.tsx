@@ -341,7 +341,7 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
                   <Select value={accompaniedByName} onValueChange={setAccompaniedByName}>
                     <SelectTrigger className="rounded-lg h-9 text-sm"><SelectValue placeholder="Select staff member..." /></SelectTrigger>
                     <SelectContent>
-                      {mockStaff.map((s) => (
+                      {staffItems.map((s) => (
                         <SelectItem key={s.id} value={s.name}>{s.name} — {s.role}</SelectItem>
                       ))}
                     </SelectContent>
