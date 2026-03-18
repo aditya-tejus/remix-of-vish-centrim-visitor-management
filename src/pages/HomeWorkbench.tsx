@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { AppHeader } from "@/components/AppHeader";
 import { useVisitors } from "@/hooks/useVisitors";
 import { AddVisitDialog } from "@/components/AddVisitDialog";
 import { CheckOutDialog } from "@/components/CheckOutDialog";
