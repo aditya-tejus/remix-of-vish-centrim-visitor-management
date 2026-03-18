@@ -114,7 +114,7 @@ export default function Residents() {
   };
 
   const toggleCardFilter = (filter: string) => {
-    if (filter === "in-building") {
+    if (filter === "on-site") {
       // Switch to Directory tab instead of filtering Board
       setActiveTab("directory");
       setActiveCardFilter(null);
