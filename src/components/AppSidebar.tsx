@@ -73,8 +73,10 @@ export function AppSidebar() {
       icon: Users,
       collapsible: true,
       items: [
+        { title: "Home", path: "/", activeDot: true },
         { title: "Visitor List", path: "/visit-list", badge: totalVisitorBadge, badgeVariant: "blue", activeDot: true },
         { title: "Visitor Directory", path: "/visitors" },
+        { title: "Leave Requests", path: "/leave-requests" },
         { title: "Checkout Requests", path: "/checkout-requests" },
       ],
     },

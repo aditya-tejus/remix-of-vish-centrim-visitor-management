@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import HomeWorkbench from "./pages/HomeWorkbench";
 import VisitList from "./pages/VisitList";
 import Settings from "./pages/Settings";
 import Visitors from "./pages/Visitors";
@@ -28,8 +29,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/visit-list" replace />} />
-          <Route path="/dashboard" element={<Navigate to="/visit-list" replace />} />
+          <Route path="/" element={<HomeWorkbench />} />
+          <Route path="/dashboard" element={<Navigate to="/" replace />} />
           <Route path="/visit-list" element={<VisitList />} />
           <Route path="/visitors" element={<Visitors />} />
           <Route path="/visitors/:id" element={<VisitorProfilePage />} />

@@ -1,4 +1,4 @@
-export type VisitorType = "visitor" | "resident" | "contractor" | "staff";
+export type VisitorType = "visitor" | "resident" | "contractor" | "staff" | "volunteer";
 
 export interface CompanionDetail {
   name?: string;
