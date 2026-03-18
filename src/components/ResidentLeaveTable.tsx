@@ -210,9 +210,10 @@ export function ResidentLeaveTable({ residents, onCheckInReturn, onDelete }: Res
             <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Room</TableHead>
             <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Wing</TableHead>
             <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Care Level</TableHead>
-            <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Reason for Checkout</TableHead>
+            <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Reason</TableHead>
+            <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Escort / Accompanied By</TableHead>
             <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground font-bold">Expected Return</TableHead>
-            <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Days Absent</TableHead>
+            <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Days Away</TableHead>
             <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
             <TableHead className="w-10"></TableHead>
           </TableRow>
@@ -241,6 +242,11 @@ export function ResidentLeaveTable({ residents, onCheckInReturn, onDelete }: Res
               <TableCell className="text-sm text-muted-foreground">—</TableCell>
               <TableCell className="text-sm text-muted-foreground">—</TableCell>
               <TableCell className="text-sm">{draft.leave_type || "—"}</TableCell>
+              <TableCell className="text-sm text-muted-foreground">
+                {draft.companions && Array.isArray(draft.companions) && draft.companions.length > 0
+                  ? (draft.companions as any[]).map((c: any) => c.name || "").filter(Boolean).join(", ") || "—"
+                  : "—"}
+              </TableCell>
               <TableCell>
                 {draft.expected_return ? (
                   <span className="text-sm font-semibold">{format(new Date(draft.expected_return), "HH:mm dd MMM")}</span>
@@ -266,7 +272,7 @@ export function ResidentLeaveTable({ residents, onCheckInReturn, onDelete }: Res
           {/* Resident rows */}
           {!showDraftsOnly && filteredResidents.length === 0 && drafts.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={10} className="text-center py-16">
+              <TableCell colSpan={11} className="text-center py-16">
                 <div className="flex flex-col items-center gap-2">
                   <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
                     <span className="text-muted-foreground text-lg">🏠</span>
@@ -340,6 +346,25 @@ export function ResidentLeaveTable({ residents, onCheckInReturn, onDelete }: Res
                       <Badge variant="outline" className="text-[10px]">{resident.leaveType || resident.checkoutReason}</Badge>
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {resident.accompaniedBy ? (
+                      <div>
+                        <span className="text-xs font-medium text-foreground">
+                          {escortLabels[resident.accompaniedBy] || resident.accompaniedBy}
+                        </span>
+                        {resident.accompaniedByName && (
+                          <p className="text-[10px] text-muted-foreground">{resident.accompaniedByName}</p>
+                        )}
+                        {resident.comments && resident.comments.includes("Escort:") && (
+                          <p className="text-[10px] text-muted-foreground">
+                            {resident.comments.split("\n").find(l => l.startsWith("Escort:"))?.replace("Escort: ", "") || ""}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground">—</span>
                     )}
                   </TableCell>
                   <TableCell>
