@@ -147,6 +147,8 @@ export default function Evacuation() {
   const types = [...new Set(checkedIn.map((v) => v.type))];
   const safeCount = checkedIn.filter((v) => safeIds.has(v.id)).length;
   const unaccountedCount = checkedIn.length - safeCount;
+  const awayResidents = visitors.filter((v) => v.type === "resident" && v.status !== "checked-in");
+  const awayResidentCount = awayResidents.length;
 
   const toggleSafe = (id: string) => {
     setSafeIds((prev) => {
