@@ -175,7 +175,7 @@ export default function Residents() {
                   Record Outing
                 </Button>
                 <Button size="sm" className="h-[34px] text-[13px] gap-1.5 bg-primary hover:bg-primary/90" onClick={() => {
-                  setActiveTab("presence");
+                  setActiveTab("leave");
                 }}>
                   <LogIn className="h-4 w-4" />
                   Mark Return

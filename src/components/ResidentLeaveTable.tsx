@@ -349,6 +349,25 @@ export function ResidentLeaveTable({ residents, onCheckInReturn, onDelete }: Res
                     )}
                   </TableCell>
                   <TableCell>
+                    {resident.accompaniedBy ? (
+                      <div>
+                        <span className="text-xs font-medium text-foreground">
+                          {escortLabels[resident.accompaniedBy] || resident.accompaniedBy}
+                        </span>
+                        {resident.accompaniedByName && (
+                          <p className="text-[10px] text-muted-foreground">{resident.accompaniedByName}</p>
+                        )}
+                        {resident.comments && resident.comments.includes("Escort:") && (
+                          <p className="text-[10px] text-muted-foreground">
+                            {resident.comments.split("\n").find(l => l.startsWith("Escort:"))?.replace("Escort: ", "") || ""}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     {resident.expectedReturnDate ? (
                       <div className="flex items-center gap-1.5">
                         {isOverdue && <Clock className="h-3.5 w-3.5 text-destructive" />}
