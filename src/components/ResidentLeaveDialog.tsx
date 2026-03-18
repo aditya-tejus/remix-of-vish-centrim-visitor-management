@@ -136,7 +136,7 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
 
   const canProceed = () => {
     if (step === 1) return !!selectedResident;
-    if (step === 2) return !!expectedReturnDate && !!email && !!mobile;
+    if (step === 2) return !!expectedReturnDate;
     if (step === 3) return !!checkoutReason;
     if (step === 4) return !!accompaniedBy;
     return privacyAcknowledged;
@@ -235,11 +235,11 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
               <div className="space-y-2.5">
                 <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Communication Details</p>
                 <div className="space-y-1">
-                  <Label className="text-[11px]">Mobile Number <span className="text-destructive">*</span></Label>
+                  <Label className="text-[11px]">Mobile Number</Label>
                   <Input value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="07700..." className="rounded-lg h-9 text-sm" />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[11px]">Email <span className="text-destructive">*</span></Label>
+                  <Label className="text-[11px]">Email</Label>
                   <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" className="rounded-lg h-9 text-sm" />
                 </div>
               </div>
