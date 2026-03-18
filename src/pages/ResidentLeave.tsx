@@ -29,7 +29,7 @@ const DESTINATION_CATEGORIES = [
 ];
 
 export default function ResidentLeave() {
-  const { visitors, checkOutVisitor, checkInReturn } = useVisitors();
+  const { visitors, addVisitor, checkOutVisitor, checkInReturn } = useVisitors();
   const { residents, loading } = useResidents();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
