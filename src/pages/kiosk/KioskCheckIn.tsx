@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,10 @@ import { useVisitors } from "@/hooks/useVisitors";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { WatchlistAlertDialog } from "@/components/WatchlistAlertDialog";
 import { useToast } from "@/hooks/use-toast";
-import { User, Truck, Heart, ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
+import { User, Truck, Heart, ArrowLeft, ArrowRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { KioskProgressStepper } from "@/components/kiosk/KioskProgressStepper";
+import { KioskSuccessScreen } from "@/components/kiosk/KioskSuccessScreen";
 
 const TYPES = [
   { type: "visitor", label: "Visitor", icon: User },
@@ -14,7 +17,11 @@ const TYPES = [
   { type: "volunteer", label: "Volunteer", icon: Heart },
 ];
 
-const STEPS = ["type", "details", "confirm"];
+const STEP_META = [
+  { id: "type", label: "Type" },
+  { id: "details", label: "Your Details" },
+  { id: "confirm", label: "Review" },
+];
 
 export default function KioskCheckIn() {
   const navigate = useNavigate();
@@ -50,7 +57,6 @@ export default function KioskCheckIn() {
     });
     setSubmitted(true);
     toast({ title: "Checked In", description: `Welcome, ${form.firstName}!` });
-    setTimeout(() => navigate("/kiosk"), 3000);
   };
 
   const handleSubmit = () => {
@@ -63,83 +69,109 @@ export default function KioskCheckIn() {
     doCheckIn();
   };
 
+  const handleComplete = useCallback(() => navigate("/kiosk/home"), [navigate]);
+
   if (submitted) {
     return (
-      <div className="text-center space-y-6 max-w-md">
-        <div className="h-20 w-20 rounded-full bg-success/10 flex items-center justify-center mx-auto">
-          <CheckCircle2 className="h-10 w-10 text-success" />
-        </div>
-        <h2 className="text-2xl font-bold text-foreground">Welcome, {form.firstName}!</h2>
-        <p className="text-muted-foreground">You have been checked in successfully.</p>
-      </div>
+      <KioskSuccessScreen
+        title={`Welcome, ${form.firstName}!`}
+        subtitle="You have been checked in successfully."
+        accentColor="primary"
+        onComplete={handleComplete}
+      />
     );
   }
 
+  const slideDirection = 1;
+
   return (
-    <div className="w-full max-w-lg space-y-6">
-      {/* Progress */}
-      <div className="flex items-center gap-2 justify-center">
-        {STEPS.map((s, i) => (
-          <div key={s} className={`h-2 rounded-full transition-all ${i <= step ? "bg-primary w-12" : "bg-muted w-8"}`} />
-        ))}
-      </div>
+    <div className="w-full max-w-xl space-y-6 px-2">
+      <KioskProgressStepper steps={STEP_META} currentIndex={step} accentColor="primary" />
 
-      {step === 0 && (
-        <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-foreground text-center">I am a...</h2>
-          <div className="grid grid-cols-3 gap-4">
-            {TYPES.map((t) => (
-              <button
-                key={t.type}
-                onClick={() => { setSelectedType(t.type); setStep(1); }}
-                className={`flex flex-col items-center gap-3 p-6 rounded-xl border-2 transition-all duration-150 min-h-[120px]
-                  ${selectedType === t.type ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}
-              >
-                <t.icon className="h-8 w-8 text-primary" />
-                <span className="text-base font-semibold">{t.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      <AnimatePresence mode="wait">
+        {step === 0 && (
+          <motion.div
+            key="type"
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -40 }}
+            transition={{ duration: 0.25 }}
+            className="space-y-4"
+          >
+            <h2 className="text-3xl font-bold text-foreground text-center">I am a...</h2>
+            <div className="grid grid-cols-3 gap-4">
+              {TYPES.map((t) => (
+                <button
+                  key={t.type}
+                  onClick={() => { setSelectedType(t.type); setStep(1); }}
+                  className={`flex flex-col items-center gap-3 p-6 sm:p-8 rounded-xl border-2 transition-all duration-150 min-h-[140px]
+                    ${selectedType === t.type ? "border-primary bg-primary/5 shadow-md" : "border-border hover:border-primary/50"}`}
+                >
+                  <t.icon className="h-9 w-9 sm:h-10 sm:w-10 text-primary" />
+                  <span className="text-base sm:text-lg font-semibold">{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
-      {step === 1 && (
-        <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-foreground text-center">Your Details</h2>
-          <Input placeholder="First Name *" value={form.firstName} onChange={(e) => update("firstName", e.target.value)} className="h-12 text-base" />
-          <Input placeholder="Surname *" value={form.surname} onChange={(e) => update("surname", e.target.value)} className="h-12 text-base" />
-          <Input placeholder="Email" value={form.email} onChange={(e) => update("email", e.target.value)} className="h-12 text-base" />
-          <Input placeholder="Mobile" value={form.mobile} onChange={(e) => update("mobile", e.target.value)} className="h-12 text-base" />
-          <Input placeholder="Who are you visiting?" value={form.whomToVisit} onChange={(e) => update("whomToVisit", e.target.value)} className="h-12 text-base" />
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={() => setStep(0)} className="flex-1 h-12 text-base gap-2">
-              <ArrowLeft className="h-5 w-5" /> Back
-            </Button>
-            <Button onClick={() => setStep(2)} disabled={!form.firstName.trim() || !form.surname.trim()} className="flex-1 h-12 text-base gap-2">
-              Next <ArrowRight className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      )}
+        {step === 1 && (
+          <motion.div
+            key="details"
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -40 }}
+            transition={{ duration: 0.25 }}
+            className="space-y-4"
+          >
+            <h2 className="text-3xl font-bold text-foreground text-center">Your Details</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <Input placeholder="First Name *" value={form.firstName} onChange={(e) => update("firstName", e.target.value)} className="h-14 text-lg" />
+              <Input placeholder="Surname *" value={form.surname} onChange={(e) => update("surname", e.target.value)} className="h-14 text-lg" />
+            </div>
+            <Input placeholder="Email" value={form.email} onChange={(e) => update("email", e.target.value)} className="h-14 text-lg" />
+            <Input placeholder="Mobile" value={form.mobile} onChange={(e) => update("mobile", e.target.value)} className="h-14 text-lg" />
+            <Input placeholder="Who are you visiting?" value={form.whomToVisit} onChange={(e) => update("whomToVisit", e.target.value)} className="h-14 text-lg" />
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" onClick={() => setStep(0)} className="flex-1 h-14 text-base gap-2">
+                <ArrowLeft className="h-5 w-5" /> Back
+              </Button>
+              <Button onClick={() => setStep(2)} disabled={!form.firstName.trim() || !form.surname.trim()} className="flex-1 h-14 text-base gap-2">
+                Next <ArrowRight className="h-5 w-5" />
+              </Button>
+            </div>
+          </motion.div>
+        )}
 
-      {step === 2 && (
-        <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-foreground text-center">Confirm</h2>
-          <div className="rounded-xl border border-border bg-card p-6 space-y-3">
-            <div className="flex justify-between"><span className="text-muted-foreground">Name</span><span className="font-medium">{form.firstName} {form.surname}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Type</span><span className="font-medium capitalize">{selectedType}</span></div>
-            {form.whomToVisit && <div className="flex justify-between"><span className="text-muted-foreground">Visiting</span><span className="font-medium">{form.whomToVisit}</span></div>}
-          </div>
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={() => setStep(1)} className="flex-1 h-12 text-base gap-2">
-              <ArrowLeft className="h-5 w-5" /> Back
-            </Button>
-            <Button onClick={handleSubmit} className="flex-1 h-12 text-base gap-2 bg-success hover:bg-success/90 text-success-foreground">
-              <CheckCircle2 className="h-5 w-5" /> Complete
-            </Button>
-          </div>
-        </div>
-      )}
+        {step === 2 && (
+          <motion.div
+            key="confirm"
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -40 }}
+            transition={{ duration: 0.25 }}
+            className="space-y-4"
+          >
+            <h2 className="text-3xl font-bold text-foreground text-center">Review</h2>
+            <div className="rounded-2xl border-2 border-border bg-card p-6 sm:p-8 space-y-3 text-base">
+              <div className="flex justify-between"><span className="text-muted-foreground">Name</span><span className="font-medium">{form.firstName} {form.surname}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Type</span><span className="font-medium capitalize">{selectedType}</span></div>
+              {form.email && <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span className="font-medium">{form.email}</span></div>}
+              {form.mobile && <div className="flex justify-between"><span className="text-muted-foreground">Mobile</span><span className="font-medium">{form.mobile}</span></div>}
+              {form.whomToVisit && <div className="flex justify-between"><span className="text-muted-foreground">Visiting</span><span className="font-medium">{form.whomToVisit}</span></div>}
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" onClick={() => setStep(1)} className="flex-1 h-14 text-base gap-2">
+                <ArrowLeft className="h-5 w-5" /> Back
+              </Button>
+              <Button onClick={handleSubmit} className="flex-1 h-14 text-base gap-2 bg-success hover:bg-success/90 text-success-foreground">
+                ✓ Complete
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {watchlistEntry && (
         <WatchlistAlertDialog
           open={watchlistOpen}
@@ -148,7 +180,7 @@ export default function KioskCheckIn() {
           onProceed={doCheckIn}
           onDeny={() => {
             toast({ title: "Entry Denied", description: "This visitor has been denied entry.", variant: "destructive" });
-            setTimeout(() => navigate("/kiosk"), 2000);
+            setTimeout(() => navigate("/kiosk/home"), 2000);
           }}
         />
       )}
