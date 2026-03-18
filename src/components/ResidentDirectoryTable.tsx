@@ -10,7 +10,7 @@ import { Wing } from "@/hooks/useWings";
 interface ResidentDirectoryTableProps {
   residents: Resident[];
   wingMap: Map<string, Wing>;
-  presenceMap?: Map<string, "in-building" | "away" | "on-leave" | "overdue">;
+  presenceMap?: Map<string, "on-site" | "away" | "on-leave" | "overdue">;
   onQuickAway?: (resident: Resident) => void;
 }
 
