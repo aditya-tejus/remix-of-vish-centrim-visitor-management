@@ -129,13 +129,10 @@ export default function VisitList() {
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <SidebarInset className="flex-1">
-          {/* ZONE A — Shell header (slim, generic) */}
-          <header className="sticky top-0 z-10 bg-card border-b border-border">
-            <div className="flex items-center px-6 h-12">
-              <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-              <h1 className="text-xl font-bold text-foreground ml-4">Visitor List</h1>
-            </div>
-          </header>
+          <AppHeader
+            title="Visitor List"
+            overstayedCount={overstayedCount}
+          />
 
           {/* ZONE B — Page command bar */}
           <div className="sticky top-12 z-[9] border-b border-border bg-card/95 backdrop-blur-sm">
