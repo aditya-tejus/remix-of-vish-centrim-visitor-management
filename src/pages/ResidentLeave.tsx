@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useVisitors } from "@/hooks/useVisitors";
 import { useResidents } from "@/hooks/useResidents";
-import { ResidentLeaveDialog } from "@/components/ResidentLeaveDialog";
+import { ResidentOutingDialog } from "@/components/ResidentOutingDialog";
 import { format, isPast, differenceInHours } from "date-fns";
 import {
   DoorOpen, Search, ArrowLeftRight, AlertTriangle, Clock,
@@ -195,7 +195,7 @@ export default function ResidentLeave() {
           </main>
         </SidebarInset>
       </div>
-      <ResidentLeaveDialog open={markAwayOpen} onOpenChange={setMarkAwayOpen} onSubmit={(visitor) => {
+      <ResidentOutingDialog open={markAwayOpen} onOpenChange={setMarkAwayOpen} onSubmit={(visitor) => {
         addVisitor(visitor);
         toast({ title: "Resident Marked Away", description: `${visitor.firstName} ${visitor.surname} has been checked out.` });
       }} />

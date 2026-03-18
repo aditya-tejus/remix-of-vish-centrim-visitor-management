@@ -6,7 +6,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { useVisitors } from "@/hooks/useVisitors";
 import { AddVisitDialog } from "@/components/AddVisitDialog";
 import { CheckOutSheet } from "@/components/CheckOutSheet";
-import { ResidentLeaveDialog } from "@/components/ResidentLeaveDialog";
+import { ResidentOutingDialog } from "@/components/ResidentOutingDialog";
 
 import { ActiveNowList } from "@/components/workbench/ActiveNowList";
 import { DayGroupedHistory } from "@/components/workbench/DayGroupedHistory";
@@ -175,7 +175,7 @@ export default function HomeWorkbench() {
 
       <AddVisitDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onAdd={addVisitor} />
       <CheckOutSheet open={checkOutDialogOpen} onOpenChange={setCheckOutDialogOpen} visitors={visitors} onCheckOut={checkOutVisitor} />
-      <ResidentLeaveDialog open={residentLeaveOpen} onOpenChange={setResidentLeaveOpen} onSubmit={addVisitor} />
+      <ResidentOutingDialog open={residentLeaveOpen} onOpenChange={setResidentLeaveOpen} onSubmit={addVisitor} />
     </SidebarProvider>
   );
 }
