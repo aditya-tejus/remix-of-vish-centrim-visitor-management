@@ -7,7 +7,7 @@ import VisitList from "./pages/VisitList";
 import Settings from "./pages/Settings";
 import Visitors from "./pages/Visitors";
 import VisitorProfilePage from "./pages/VisitorProfilePage";
-import CheckIn from "./pages/CheckIn";
+
 import CalendarPage from "./pages/Calendar";
 import GDPRPage from "./pages/GDPR";
 import AuditLogPage from "./pages/AuditLog";
