@@ -227,7 +227,12 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
           ) : (
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
-              {visitor.checkOutTime ? format(visitor.checkOutTime, "hh:mm a") : "—"}
+              {visitor.checkOutTime ? (
+                <>
+                  <span className="font-mono">{format(visitor.checkOutTime, "hh:mm a")}</span>
+                  <span className="text-[11px]">{format(visitor.checkOutTime, "dd MMM")}</span>
+                </>
+              ) : "—"}
             </span>
           )}
         </TableCell>
