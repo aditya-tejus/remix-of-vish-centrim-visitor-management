@@ -1,181 +1,116 @@
 
-# Centrim Life Presence Engine — Implementation Plan
 
-## Phase 1: Foundation & Navigation ✅ DONE
-- [x] Home Workbench page (3 action buttons, summary cards, Active Now list, day-grouped history)
-- [x] Updated routing (Home = `/`, sidebar with Home link)
-- [x] Volunteer person type added
+# Deep Analysis: Mismatches, Gaps & Integration Issues
 
-### Remaining Phase 1
-- [ ] Kiosk mode (`/kiosk` route)
+## 1. MOCK DATA STILL IN USE
 
-## Phase 2: Contractor & Screening ✅ DONE
-- [x] `suppliers_min` table created with seed data (6 AU + 2 UK suppliers)
-- [x] `signature_url`, `supplier_id`, `contractor_screening` columns added to visitors
-- [x] Supplier autocomplete hook (`useSuppliers`)
-- [x] `ContractorScreening` component with AU/UK templates
-- [x] Contractor check-in flow integrated into AddVisitDialog
-- [x] Jurisdiction toggle (AU/UK) in Settings → Presence tab
-- [x] Jurisdiction loaded from DB and used by contractor screening
+**AddVisitDialog.tsx (line 41-46)** still contains hardcoded `mockProfiles` for visitor search. When staff type a name, they only see 4 fake profiles (John Smith, Sarah Williams, James Brown, Emma Johnson) instead of querying previous visitors from the database. This should query real `visitors` table for returning visitor lookup.
 
-## Phase 3: Resident Leave Separation ✅ DONE
-- [x] Separate Resident Leave module
-- [x] Ensure visitor check-in never prompts resident leave
+## 2. WATCHLIST NOT ENFORCED DURING CHECK-IN
 
-## Phase 4: Settings & Governance (in progress)
-- [x] Expand Settings tabs (Presence, Screening, T&C, Alerts, Automation, Printing, Profiles & Badges, Resident Leave, Returns, GDPR, Integration, Audit, Feedback, Lock & Governance)
-- [ ] Settings governance (change reason, audit log, admin override, transactional audit)
-- [ ] Badge printing settings (Brother QL, failure-tolerant)
+The `useWatchlist` hook has a `checkVisitor()` function and `WatchlistAlertDialog` exists, but **neither `AddVisitDialog`, `KioskCheckIn`, `PublicCheckIn`, nor `GroupCheckIn` call them**. The watchlist is only used on the Visitors directory page. A banned visitor can check in freely through any flow.
+
+## 3. GROUP CHECK-IN DOESN'T USE `group_id`
+
+`GroupCheckIn.tsx` generates a `groupId` (line 48) but **never passes it** to `addVisitor()`. The `group_id` column exists in the DB but is never populated. Group checkout (Screen 9, marked "partial") has no implementation — there's no prompt asking "Check out whole group?"
+
+## 4. RESIDENT LEAVE PAGE `onSubmit` IS BROKEN
+
+`ResidentLeave.tsx` line 198: `<ResidentLeaveDialog ... onSubmit={() => {}} />` — the submit callback is an empty function. When staff marks a resident as away through this page, the data is silently discarded. Should use `addVisitor` from `useVisitors()` or equivalent.
+
+## 5. DUPLICATE / OVERLAPPING PAGES
+
+| Route | Page | Overlap |
+|-------|------|---------|
+| `/check-in` | CheckIn.tsx | Opens same `AddVisitDialog` as HomeWorkbench and PersonTypeSelector |
+| `/person-type` | PersonTypeSelector.tsx | Also opens `AddVisitDialog` — doesn't pre-select the type clicked |
+| `/visitor-analytics` | VisitorAnalytics.tsx | Separate from `/reports/trends` (VisitTrends) but shows similar data |
+| `/reports/analytics` | Reports.tsx (old) | Overlaps with VisitorAnalytics |
+| `/leave-requests` and `/checkout-requests` | Both route to same LeaveRequests.tsx | Sidebar shows them as separate items |
+
+**PersonTypeSelector** opens `AddVisitDialog` but doesn't pass `selectedType` to it, so the dialog always starts on its own type selector — defeating the purpose of the tile selection.
+
+## 6. KIOSK MODE GAPS
+
+- **KioskCheckIn** inserts directly into Supabase (bypasses `useVisitors` hook) — no optimistic UI, no realtime sync with staff desktop, no health screening, no privacy acknowledgment, no watchlist check.
+- **KioskCheckOut** and **KioskResidentLeave** use `useVisitors()` hook correctly but KioskCheckIn doesn't.
+- **No kiosk QR route** — Screen 33 (Kiosk QR Fast Lane) points to `/qr-fast-lane` (staff page with sidebar), not a kiosk-compatible version.
+- **No "Staff" type in kiosk** — KioskCheckIn only offers Visitor/Contractor/Volunteer but the staff flow exists elsewhere.
+
+## 7. PUBLIC CHECK-IN ISSUES
+
+- `PublicCheckIn.tsx` still shows "Resident" as a type option (line 19) — residents shouldn't self-check-in via public form.
+- Hardcoded health questions (line 23-29) instead of using the DB-driven `useActiveHealthQuestions` hook.
+- No watchlist check.
+- Collects `address` for all types — violates GDPR data minimisation for social visitors.
+
+## 8. EVACUATION PAGE DOESN'T PERSIST
+
+The Evacuation page (`Evacuation.tsx`) manages `safeIds` in local React state only. The `evacuation_drills` and `evacuation_attendance` tables exist but are **never written to** from this page. Closing the browser loses the roll call. The EvacuationReport page reads from `evacuation_drills` but since nothing writes there, it always shows empty.
+
+## 9. SETTINGS TABS MISMATCHES
+
+- Settings has 14 tabs but Coverage Checklist shows 12 settings screens (18-29). Missing from Coverage: "Feedback" and "Returns" settings tabs.
+- Settings "GDPR" tab shows `ComplianceTab` component but sidebar nav has a separate `/gdpr` page (GDPRPage) — two separate GDPR sections with potentially different content.
+- Settings "Audit" tab vs standalone `/audit-log` page — both exist, unclear which is primary.
+
+## 10. DATA MODEL DISCONNECTS
+
+- **`whom_to_visit`** remains free text everywhere despite `visited_resident_ids` (uuid[]) column existing in DB. No component writes to or reads from `visited_resident_ids`.
+- **`visit_purpose`** column exists in DB but no UI sets it anywhere. PersonTypeSelector and AddVisitDialog don't offer purpose categories (Social, Professional, Delivery, etc.).
+- **`work_type` / `work_location`** columns exist but GroupCheckIn and ContractorScreening don't populate them.
+- **`print_status`** column exists but no badge printing logic writes to it.
+- **`qr_code`** column exists but QRFastLane matches by ID/name, not by an actual generated QR code value.
+- **`safeguarding_hold`** column exists but nothing sets it and erasure doesn't check it.
+
+## 11. `useVisitors` FETCHES ALL RECORDS
+
+`useVisitors()` does `SELECT * FROM visitors` with no date filter. As the system accumulates data, this will pull every historical record, hitting the 1000-row Supabase default limit and causing:
+- Dashboard counts to be wrong (only showing recent 1000)
+- VisitTrends/PresenceLog to have incomplete data
+- Slow load times
+
+Multiple pages all instantiate `useVisitors()` independently (HomeWorkbench, VisitList, Evacuation, ResidentLeave, QRFastLane, GroupCheckIn, etc.), each creating separate subscriptions and fetches.
+
+## 12. SIDEBAR NAV vs ACTUAL ROUTES
+
+- Sidebar "Checkout Requests" → `/checkout-requests` and "Leave Requests" → `/leave-requests` both render the same `LeaveRequests` component with no way to distinguish context.
+- No sidebar link to `/public-checkin` (intentional, but Coverage Checklist doesn't track it).
+- No sidebar link for the standalone EvacuationReport, PresenceLog, or VisitTrends — only reachable via ReportsHome cards.
+
+## 13. MISSING UX STATES
+
+Most pages added in Phase 6-7 have loading skeletons but:
+- **GroupCheckIn**: No loading state, no error handling on submission failure
+- **QRFastLane**: No loading state
+- **PersonTypeSelector**: No loading state
+- **HomeWorkbench**: No loading skeleton for the main content
+- **CoverageChecklist**: Static data — should track real completion status, not hardcoded statuses
+
+## 14. AUDIT LOGGING GAPS
+
+Only `VisitorProfilePage` writes to `audit_log`. None of these actions log:
+- Check-in, check-out, group check-in
+- Resident leave/return
+- Settings changes
+- Watchlist additions
+- Evacuation drills
+
+## 15. RECOMMENDED CONSOLIDATION
+
+| What | Action |
+|------|--------|
+| `mockProfiles` in AddVisitDialog | Replace with DB query of previous visitors |
+| `/check-in` and `/person-type` | Merge — PersonTypeSelector should pass selected type to AddVisitDialog |
+| `/visitor-analytics` and `/reports/analytics` | Merge into one route under `/reports` |
+| `/leave-requests` and `/checkout-requests` | Add URL param or separate components |
+| Watchlist check | Add to AddVisitDialog, KioskCheckIn, PublicCheckIn, GroupCheckIn |
+| Evacuation persistence | Write drill/attendance records to DB tables |
+| `useVisitors` | Add date filtering, share via context instead of re-instantiating |
+| Settings GDPR vs /gdpr page | Consolidate or make Settings link to /gdpr |
+| Settings Audit vs /audit-log | Same — pick one |
 
 ---
 
-## Phase 5: Database Foundation — Replace Mock Data & Extend Schema
-- [ ] Create `staff_members` table (name, role, phone, email, is_active, branch_id)
-- [ ] Extend `resident_details` with: `mobility_level`, `dols_lps_flag`, `risk_assessment_level`, `medication_notes`, `mobility_aids`, `destination_categories`
-- [ ] Add columns to `visitors`: `group_id` (uuid), `work_type` (text), `work_location` (text), `print_status` (text), `qr_code` (text), `visit_purpose` (text), `visited_resident_ids` (uuid[]), `safeguarding_hold` (boolean)
-- [ ] Add `change_reason` (text) to `audit_log`
-- [ ] Add `wwcc_number`, `wwcc_expiry`, `police_check_date`, `dbs_number`, `dbs_expiry`, `lone_working_declaration` (boolean) to `contractor_screening` jsonb or as columns on visitors
-- [ ] Replace all `mockResidents` arrays with queries to `visitors` WHERE `type='resident'` + `resident_details`
-- [ ] Replace all `mockStaff` arrays with queries to `staff_members` table
-- [ ] Wire resident photos into visit target selection UI
+This analysis identifies 15 categories of issues. The most critical are: watchlist not enforced (safety), ResidentLeave submit broken (data loss), Kiosk bypassing hooks (data integrity), and mockProfiles still hardcoded (usability).
 
-## Phase 6: Staff Desktop — Batch 1 (Enhance Existing Screens 1, 3, 6, 8, 10-14)
-
-### Screen 1 — Home Workbench enhancements
-- [ ] Search bar (name/resident/company) filtering Active Now + History
-- [ ] Exceptions rail: Overdue Residents, Print Failures, Screening WARN, Auto-checkouts
-- [ ] Fixed Emergency button top-right
-- [ ] Inline Reprint + status tags (ACTIVE/WARN/AUTO) on ActiveNowList rows
-
-### Screen 3 — Visitor Check-In polish
-- [ ] Visit purpose categories (Social, Professional, Delivery, Maintenance, Inspection/Audit)
-- [ ] Multi-resident visit support (multi-select whom_to_visit linked to resident records)
-- [ ] Professional visitors auto-tagged as "clinical visit" (different retention rules)
-- [ ] Terms acceptance checkbox + "View Terms" modal
-- [ ] Conditional Photo/Signature step (reads from settings)
-- [ ] Success state with print queued indicator
-
-### Screen 6 — Contractor Check-In polish
-- [ ] Work type button group (Maintenance, Cleaning, IT, Medical, Building, Other)
-- [ ] Work location optional dropdown
-- [ ] AU: WWCC verification field + Police check / National Criminal History Check capture
-- [ ] UK: DBS certificate number + expiry capture (not just yes/no)
-- [ ] UK: Lone working declaration (if unsupervised in resident areas)
-- [ ] Contractor-specific terms acceptance
-
-### Screen 8 — Check-Out enhancement
-- [ ] Person type tile selector before checkout list
-- [ ] Search within checkout list
-
-### Screen 10 — Resident Leave page overhaul
-- [ ] New page `/resident-leave` with 3 tabs: Away Now, Mark Away, Mark Returned
-- [ ] Away Now: table with overdue highlighting, actions (Mark Returned, Edit Expected Return)
-- [ ] Mark Away: resident select + form with destination categories (Home visit, Medical appointment, Day trip, Hospital, Other) — not free text
-- [ ] Leave exceeding 24h triggers different workflow (social leave vs medical leave vs hospital transfer)
-- [ ] Expected return overdue → automatic escalation to manager + next of kin
-- [ ] UK: DoLS/LPS flag check — if resident lacks capacity, require authoriser name before leave proceeds
-- [ ] AU: Medication dispensed indicator for outing period
-- [ ] AU: Mobility aids noted (wheelchair, walker)
-- [ ] Mark Returned: quick action
-
-### Screen 11 — Emergency Roll Call
-- [ ] Grouped sections: Visitors, Contractors, Volunteers, Residents Away, Overdue
-- [ ] Mark safe / not accounted actions per person
-- [ ] Export snapshot (PDF/CSV)
-- [ ] Resident mobility data displayed in roll call (wheelchair, walker, bed-bound)
-
-### Screen 12 — Visitor Profiles List
-- [ ] Search and filters (by type, date range, status)
-- [ ] List columns: name, type, last visit, visit count, status
-- [ ] Quick check-in action from profile list
-
-### Screen 13 — Visitor Profile Detail
-- [ ] Tabs: Summary, Badges, Visit History, Contact, Privacy (UK)
-- [ ] Issue / revoke / reprint badge (revoke requires reason)
-- [ ] Visit history timeline with check-in/out times
-
-### Screen 14 — Reports Home
-- [ ] Card layout linking to: Evacuation Report, Presence Log, Visit Trends
-- [ ] Each card shows last-run date and quick stats
-
-## Phase 7: Staff Desktop — Batch 2 (New Screens 2, 4, 5, 7, 9, 15-17) + Settings Screens (18-29)
-
-### New Screens
-- [ ] Screen 2: Person Type Selector tiles (Visitor, Contractor, Volunteer, Other; Visitor has "QR Fast Lane" sub-option)
-- [ ] Screen 4: Group Check-In (multi-row, batch print, post-confirm summary)
-- [ ] Screen 5: QR Fast Lane — scan → resolve → select target → screening → terms → confirm; duplicate scan = already checked in → checkout prompt
-- [ ] Screen 7: Volunteer Check-In (minimal fields + optional screening/terms)
-- [ ] Screen 9: Group Checkout prompt ("Check out whole group?" → Whole group / Just this person / Cancel)
-- [ ] Screen 15: Evacuation Report (snapshot history from `evacuation_drills`)
-- [ ] Screen 16: Presence Log (filterable by date, type, company, work type, method, risk; export with permission gating)
-- [ ] Screen 17: Visit Trends (counts per day/week by person type, using recharts)
-
-### Settings Screens
-- [ ] Screen 18 — Settings Home: sections listed, role-gated access
-- [ ] Screen 19 — Settings: Presence (jurisdiction, person types, enabled features)
-- [ ] Screen 20 — Settings: Screening (tabs by person type + jurisdiction AU/UK)
-- [ ] Screen 21 — Settings: Terms & Conditions (per person type, versioned documents)
-- [ ] Screen 22 — Settings: Alerts (overdue thresholds, watchlist, email recipients)
-- [ ] Screen 23 — Settings: Automation (auto-checkout hours per type, data cleanup)
-- [ ] Screen 24 — Settings: Printing (Brother QL template, label size, badge content)
-- [ ] Screen 25 — Settings: Profiles & Badges (photo/signature per type)
-- [ ] Screen 26 — Settings: Resident Leave Self-Service (Option C controls, kiosk enable)
-- [ ] Screen 27 — Settings: GDPR/UK (data minimisation rules, DSAR role, retention/anonymise per type)
-- [ ] Screen 28 — Settings: Audit Log (filters by action/date/user + CSV export)
-- [ ] Screen 29 — Settings: Lock & Governance (lock enabled, locked sections, change reason requirement)
-
-## Phase 8: Safeguarding & Compliance
-- [ ] **Watchlist enforcement during check-in**: When visitor name matches `visitor_watchlist`, block and alert staff with instructions
-- [ ] **Banned visitor hard-block**: `alert_type = "banned"` entries must prevent check-in entirely (not just warn)
-- [ ] AU: Influenza vaccination status check (mandatory during flu season)
-- [ ] AU vs UK privacy notice separation (APP notice vs GDPR notice — currently uses GDPR language for both)
-- [ ] UK: Lawful basis varies by visit type (legitimate interest for social, legal obligation for contractors, vital interests for emergency)
-- [ ] UK: Right to erasure must exclude safeguarding-held records (`safeguarding_hold` flag)
-- [ ] UK: Data minimisation — kiosk/public check-in should not collect address for social visitors
-- [ ] AU: Configurable retention per data type (visitor vs contractor vs clinical visit) — currently hardcoded 60 days
-
-## Phase 9: Notifications & Escalation
-- [ ] Resident return overdue notification — email/SMS to manager + next of kin after configurable delay
-- [ ] Contractor overstay notification — alert if contractor exceeds expected duration
-- [ ] Visitor time limit warning — configurable per outbreak mode (e.g. 2-hour limit)
-- [ ] Night-time check-in alert — check-in outside normal hours pings duty manager
-- [ ] Failed screening alert — if any health question answered "yes", notify infection control lead immediately
-
-## Phase 10: Kiosk Mode (Screens 30-36)
-- [ ] KioskLayout component (no sidebar, touch-first, 48px targets, large text)
-- [ ] Screen 30: Kiosk Home tiles (Check-In, Check-Out, Resident Leave if enabled)
-- [ ] Screen 31: Kiosk Check-In person type tiles
-- [ ] Screen 32: Kiosk Visitor Check-In (1 question per screen, large buttons)
-- [ ] Screen 33: Kiosk QR Fast Lane
-- [ ] Screen 34: Kiosk Contractor Check-In (step-by-step)
-- [ ] Screen 35: Kiosk Check-Out (QR scan preferred, fallback name search)
-- [ ] Screen 36: Kiosk Resident Leave Option C (Leaving/Returning tiles → Room entry → resident list → confirm → destination chips)
-
-## Phase 11: UX States & Polish
-- [ ] Loading state (skeleton placeholders) on all screens
-- [ ] Empty state (illustration + message + CTA) on all screens
-- [ ] Error state (alert + retry) on all screens
-- [ ] Permission denied state (lock icon + "Contact admin") where applicable
-- [ ] Returning visitor shortcut ("Recent visitors" quick-select for staff)
-- [ ] Resident photo on visit target selection
-- [ ] Large text mode toggle (accessibility for older receptionists)
-- [ ] Offline mode (queue check-ins locally, sync when online — AU rural facilities)
-- [ ] Shift handover report (auto-generate who's on site, who left, upcoming returns)
-- [ ] Touch target audit (44-48px)
-- [ ] Font size audit (names 16-18px, body 13-14px)
-
-## Phase 12: Coverage Checklist
-- [ ] Coverage Checklist page (`/coverage`) listing all 36+ screens with status and links
-
-## Database Changes Summary
-- [x] `suppliers_min` table
-- [x] `volunteer` added to visitor type
-- [x] `signature_url` on visitors
-- [x] `supplier_id` on visitors
-- [x] `contractor_screening` jsonb on visitors
-- [x] Jurisdiction via settings table
-- [ ] `staff_members` table (new)
-- [ ] `resident_details` extended (mobility_level, dols_lps_flag, risk_assessment_level, medication_notes, mobility_aids)
-- [ ] `visitors` extended (group_id, work_type, work_location, print_status, qr_code, visit_purpose, visited_resident_ids, safeguarding_hold)
-- [ ] `audit_log` extended (change_reason)
-- [ ] Contractor compliance fields (wwcc, dbs, police check, lone working)
