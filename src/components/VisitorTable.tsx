@@ -168,7 +168,7 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
                 {visitor.firstName} {visitor.surname}
               </button>
               {showTypeBadge && (
-                <span className={`inline-flex items-center w-fit mt-0.5 text-[10px] font-semibold px-1.5 py-0 rounded border ${typeBadgeStyles[visitor.type] || "bg-muted text-muted-foreground border-border"}`}>
+                <span className={`text-[11px] font-normal tracking-wide ${typeLabelStyles[visitor.type] || "text-muted-foreground"}`}>
                   {typeLabelsMap[visitor.type] || visitor.type}
                 </span>
               )}
