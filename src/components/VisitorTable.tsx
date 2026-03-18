@@ -203,7 +203,7 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
             <div className="flex flex-col">
               <span className="text-[13px] text-foreground">{visitor.whomToVisit}</span>
               <span className="text-[11px] text-muted-foreground">
-                {visitor.type === "staff" ? "Department" : visitor.type === "contractor" ? "Work site" : "Resident"}
+                {visitor.type === "staff" ? "Department" : visitor.type === "contractor" ? "Staff" : "Resident"}
               </span>
             </div>
           ) : (
