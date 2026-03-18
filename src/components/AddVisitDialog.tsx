@@ -66,9 +66,10 @@ const fallbackHealthQuestions: HealthQuestion[] = [
   { id: "consent_screening", question: "I consent to compliance screening and temperature check", type: "checkbox", required: true },
 ];
 
-export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProps) {
+export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVisitDialogProps & { initialType?: VisitorType }) {
   const { residents: dbResidents } = useResidents();
   const { staff: dbStaff } = useStaffMembers();
+  const [previousVisitors, setPreviousVisitors] = useState<VisitorProfile[]>([]);
   const residentItems = useMemo(() => dbResidents.map(r => ({ id: r.visitorId, name: r.name, room: r.room, wing: r.wing })), [dbResidents]);
   const staffItems = useMemo(() => dbStaff.map(s => ({ id: s.id, name: s.name, role: s.role, department: s.department || "" })), [dbStaff]);
   const [step, setStep] = useState(1);
