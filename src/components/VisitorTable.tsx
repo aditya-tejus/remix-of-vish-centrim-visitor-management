@@ -173,11 +173,6 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
           </div>
         </TableCell>
 
-        {/* Contact */}
-        <TableCell className="py-3">
-          <div className="text-[13px] text-foreground">{visitor.mobile}</div>
-          <div className="text-[11px] text-muted-foreground">{visitor.email}</div>
-        </TableCell>
 
         {/* Check-In time */}
         <TableCell className="py-3">
