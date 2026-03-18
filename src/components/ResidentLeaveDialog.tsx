@@ -39,6 +39,10 @@ const escortOptions = [
 const steps = ["Resident", "Schedule", "Reason", "Companions", "Confirm"];
 
 export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLeaveDialogProps) {
+  const { residents: dbResidents } = useResidents();
+  const { staff: dbStaff } = useStaffMembers();
+  const residentItems = useMemo(() => dbResidents.map(r => ({ id: r.visitorId, name: r.name, room: r.room, wing: r.wing })), [dbResidents]);
+  const staffItems = useMemo(() => dbStaff.map(s => ({ id: s.id, name: s.name, role: s.role })), [dbStaff]);
   const [step, setStep] = useState(1);
   const { data: leaveTypesData = [] } = useActiveLeaveTypes();
   const { data: companionFieldsConfig = [] } = useCompanionFields("resident");
