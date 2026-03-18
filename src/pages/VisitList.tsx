@@ -7,13 +7,12 @@ import { VisitorTable } from "@/components/VisitorTable";
 import { useVisitors } from "@/hooks/useVisitors";
 import { AddVisitDialog } from "@/components/AddVisitDialog";
 import { CheckOutDialog } from "@/components/CheckOutDialog";
+import { ResidentLeaveDialog } from "@/components/ResidentLeaveDialog";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
-import { SummaryStrip } from "@/components/SummaryStrip";
-import { AlertCards } from "@/components/AlertCards";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useKeyboardShortcuts, KeyboardShortcutBar } from "@/hooks/useKeyboardShortcuts";
 import { Button } from "@/components/ui/button";
-import { Plus, QrCode, LogOut, ChevronLeft, ChevronRight, CalendarDays, X, Clock, Printer } from "lucide-react";
+import { Plus, QrCode, LogOut, DoorOpen, ChevronLeft, ChevronRight, CalendarDays, X, Clock, Printer } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, isSameDay, addDays, subDays, isToday, isPast } from "date-fns";
@@ -21,17 +20,20 @@ import { Visitor } from "@/types/visitor";
 import { VisitListQRDialog } from "@/components/VisitListQRDialog";
 import { HandoverPrintDialog } from "@/components/HandoverPrintDialog";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export default function VisitList() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { visitors, addVisitor, checkOutVisitor, checkInReturn, deleteVisitor, overstayedCount } = useVisitors();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [checkOutDialogOpen, setCheckOutDialogOpen] = useState(false);
+  const [residentLeaveOpen, setResidentLeaveOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [feedbackVisitor, setFeedbackVisitor] = useState<Visitor | null>(null);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<string>("visitor");
+  const [activeTab, setActiveTab] = useState<string>("all");
   const [handoverOpen, setHandoverOpen] = useState(false);
   const [draftCount, setDraftCount] = useState(0);
   const [pendingApprovals, setPendingApprovals] = useState(0);
@@ -68,11 +70,6 @@ export default function VisitList() {
     [visitors, selectedDate]
   );
 
-  // Computed stats
-  const checkedIn = filteredVisitors.filter(v => v.status === "checked-in").length;
-  const checkedOut = filteredVisitors.filter(v => v.status === "checked-out").length;
-  const residentsOnLeave = visitors.filter(v => v.type === "resident" && v.status === "checked-out").length;
-  const staffOnSite = filteredVisitors.filter(v => v.type === "staff" && v.status === "checked-in").length;
   const overdueResidents = visitors.filter(v => v.type === "resident" && v.status === "checked-out" && v.expectedReturnDate && isPast(v.expectedReturnDate)).length;
 
   // Apply filter to table
@@ -83,7 +80,6 @@ export default function VisitList() {
       case "checked-out": return filteredVisitors.filter(v => v.status === "checked-out");
       case "overstayed": return filteredVisitors.filter(v => v.status === "checked-in" && Date.now() - v.checkInTime.getTime() > 8 * 3600000);
       case "on-leave": return visitors.filter(v => v.type === "resident" && v.status === "checked-out");
-      case "staff": return filteredVisitors.filter(v => v.type === "staff" && v.status === "checked-in");
       default: return filteredVisitors;
     }
   }, [filteredVisitors, visitors, activeFilter]);
@@ -101,27 +97,7 @@ export default function VisitList() {
     "checked-out": "Checked Out",
     "overstayed": "Overstayed",
     "on-leave": "Residents On Leave",
-    "pending": "Pending Approvals",
-    "staff": "Staff On Site",
   };
-
-  const handleFilter = (key: string) => {
-    if (key === activeFilter) {
-      setActiveFilter(null);
-    } else {
-      setActiveFilter(key);
-      // Auto-switch tabs
-      if (key === "on-leave" || key === "overdue") setActiveTab("resident");
-      else if (key === "staff") setActiveTab("staff");
-      else if (key !== "pending") setActiveTab("visitor");
-    }
-  };
-
-  const handleFilterOverstayed = useCallback(() => { handleFilter("overstayed"); }, [activeFilter]);
-  const handleFilterDrafts = useCallback(() => { setActiveTab("resident"); setActiveFilter(null); }, []);
-  const handleFilterOverdue = useCallback(() => { setActiveTab("resident"); setActiveFilter("overdue"); }, []);
-  const handleFilterPending = useCallback(() => { navigate("/checkout-requests"); }, [navigate]);
-  const handleFilterReturnsToday = useCallback(() => { setActiveTab("resident"); setActiveFilter(null); }, []);
 
   return (
     <SidebarProvider>
@@ -157,6 +133,10 @@ export default function VisitList() {
                   <Printer className="h-4 w-4" />
                   Handover
                 </Button>
+                <Button variant="outline" size="sm" className="h-[34px] text-[13px] gap-1.5 border-border" onClick={() => setResidentLeaveOpen(true)}>
+                  <DoorOpen className="h-4 w-4" />
+                  Resident Leave
+                </Button>
                 <Button variant="outline" size="sm" className="h-[34px] text-[13px] gap-1.5 border-border" onClick={() => setCheckOutDialogOpen(true)}>
                   <LogOut className="h-4 w-4" />
                   Check Out
@@ -173,27 +153,6 @@ export default function VisitList() {
             </div>
           </header>
 
-          {/* ZONE 1 — Summary Strip */}
-          <SummaryStrip
-            totalToday={filteredVisitors.length}
-            currentlyInside={checkedIn}
-            checkedOut={checkedOut}
-            overstayed={overstayedCount}
-            onFilter={handleFilter}
-            activeFilter={activeFilter}
-          />
-
-          {/* ZONE 2 — Alert Cards */}
-          <AlertCards
-            visitors={visitors}
-            draftCount={draftCount}
-            pendingApprovals={pendingApprovals}
-            onFilterOverstayed={handleFilterOverstayed}
-            onFilterDrafts={handleFilterDrafts}
-            onFilterOverdue={handleFilterOverdue}
-            onFilterPending={handleFilterPending}
-            onFilterReturnsToday={handleFilterReturnsToday}
-          />
 
           {/* Date Navigator */}
           <div className="border-b border-border bg-card">
@@ -299,6 +258,10 @@ export default function VisitList() {
       )}
       <VisitListQRDialog open={qrOpen} onOpenChange={setQrOpen} />
       <HandoverPrintDialog open={handoverOpen} onOpenChange={setHandoverOpen} visitors={filteredVisitors} date={selectedDate} />
+      <ResidentLeaveDialog open={residentLeaveOpen} onOpenChange={setResidentLeaveOpen} onSubmit={(visitor) => {
+        addVisitor(visitor);
+        toast({ title: "Resident Marked Away", description: `${visitor.firstName} ${visitor.surname} has been checked out.` });
+      }} />
     </SidebarProvider>
   );
 }

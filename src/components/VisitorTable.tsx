@@ -64,11 +64,13 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const visitorsByType = {
+  const visitorsByType: Record<string, Visitor[]> = {
+    all: visitors,
     visitor: visitors.filter((v) => v.type === "visitor"),
-    resident: visitors.filter((v) => v.type === "resident"),
-    staff: visitors.filter((v) => v.type === "staff"),
     contractor: visitors.filter((v) => v.type === "contractor"),
+    volunteer: visitors.filter((v) => v.type === "volunteer"),
+    staff: visitors.filter((v) => v.type === "staff"),
+    resident: visitors.filter((v) => v.type === "resident"),
   };
 
   const toggleSelect = (id: string) => {
@@ -105,17 +107,21 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
   };
 
   const typeLabels: Record<string, string> = {
+    all: "All",
     visitor: "Visitors",
-    resident: "Residents",
-    staff: "Staff",
     contractor: "Contractors",
+    volunteer: "Volunteers",
+    staff: "Staff",
+    resident: "Residents",
   };
 
   const emptyIcons: Record<string, string> = {
+    all: "📋",
     visitor: "👤",
-    resident: "🏠",
-    staff: "👨‍💼",
     contractor: "🔧",
+    volunteer: "🤝",
+    staff: "👨‍💼",
+    resident: "🏠",
   };
 
   const getColumns = (type: string) => {
@@ -278,7 +284,7 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
         </div>
       )}
 
-      <Tabs value={activeTab || "visitor"} onValueChange={onTabChange} defaultValue="visitor">
+      <Tabs value={activeTab || "all"} onValueChange={onTabChange} defaultValue="all">
         <div className="border-b border-border px-2">
           <TabsList className="inline-flex items-center bg-muted rounded-lg p-1 gap-0.5 h-auto">
             {Object.entries(visitorsByType).map(([type, list]) => (
@@ -306,7 +312,7 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
         </TabsContent>
 
         {/* Visitors, Staff, Contractors tabs */}
-        {(["visitor", "staff", "contractor"] as const).map((type) => {
+        {(["all", "visitor", "contractor", "volunteer", "staff"] as const).map((type) => {
           const list = visitorsByType[type];
           const columns = getColumns(type);
           return (
