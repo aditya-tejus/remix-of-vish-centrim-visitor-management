@@ -21,7 +21,7 @@ interface ResidentPresenceTableProps {
   totalResidentCount?: number;
 }
 
-type PresenceStatus = "in-building" | "away" | "on-leave" | "overdue";
+type PresenceStatus = "on-site" | "away" | "on-leave" | "overdue";
 
 const careLevelColors: Record<string, string> = {
   standard: "bg-muted text-muted-foreground",
