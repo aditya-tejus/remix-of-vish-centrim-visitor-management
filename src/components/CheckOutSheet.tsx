@@ -144,7 +144,7 @@ export function CheckOutSheet({
   return (
     <>
       <Sheet open={open && !feedbackVisitor} onOpenChange={handleClose}>
-        <SheetContent side="right" className="w-full sm:max-w-[460px] p-0 flex flex-col">
+        <SheetContent side="right" className="w-full sm:max-w-[50vw] min-w-[460px] p-0 flex flex-col">
           {/* Header */}
           <SheetHeader className="px-5 py-4 border-b border-border shrink-0">
             <div className="flex items-center justify-between">
