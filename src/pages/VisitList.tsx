@@ -12,7 +12,7 @@ import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useKeyboardShortcuts, KeyboardShortcutBar } from "@/hooks/useKeyboardShortcuts";
 import { Button } from "@/components/ui/button";
-import { Plus, QrCode, LogOut, DoorOpen, ChevronLeft, ChevronRight, CalendarDays, X, Clock, Printer } from "lucide-react";
+import { Plus, QrCode, LogOut, ChevronLeft, ChevronRight, CalendarDays, X, Clock, Printer } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, isSameDay, addDays, subDays, isToday, isPast } from "date-fns";
