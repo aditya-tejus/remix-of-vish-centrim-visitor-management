@@ -5,6 +5,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { useVisitors } from "@/hooks/useVisitors";
 import { AddVisitDialog } from "@/components/AddVisitDialog";
 import { CheckOutDialog } from "@/components/CheckOutDialog";
+import { ResidentLeaveDialog } from "@/components/ResidentLeaveDialog";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ActiveNowList } from "@/components/workbench/ActiveNowList";
 import { DayGroupedHistory } from "@/components/workbench/DayGroupedHistory";
