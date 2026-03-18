@@ -1121,9 +1121,21 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
 
           {!isResident && step === 3 && (
             <div className="space-y-4">
-              {renderHealthQuestions()}
-              {renderTemperature()}
-              {renderVaccination()}
+              {isContractor ? (
+                <ContractorScreening
+                  jurisdiction={jurisdiction}
+                  answers={contractorScreeningAnswers}
+                  onAnswersChange={setContractorScreeningAnswers}
+                  selectedSupplier={selectedSupplier}
+                  onSupplierChange={setSelectedSupplier}
+                />
+              ) : (
+                <>
+                  {renderHealthQuestions()}
+                  {renderTemperature()}
+                  {renderVaccination()}
+                </>
+              )}
             </div>
           )}
 
