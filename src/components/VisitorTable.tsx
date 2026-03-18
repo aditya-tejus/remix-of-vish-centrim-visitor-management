@@ -284,7 +284,7 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
         </div>
       )}
 
-      <Tabs value={activeTab || "visitor"} onValueChange={onTabChange} defaultValue="visitor">
+      <Tabs value={activeTab || "all"} onValueChange={onTabChange} defaultValue="all">
         <div className="border-b border-border px-2">
           <TabsList className="inline-flex items-center bg-muted rounded-lg p-1 gap-0.5 h-auto">
             {Object.entries(visitorsByType).map(([type, list]) => (
