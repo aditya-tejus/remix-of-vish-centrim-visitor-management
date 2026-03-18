@@ -15,7 +15,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Visitor, VisitorType, CompanionDetail } from "@/types/visitor";
-import { Users, User, Truck, UserCog, Search, ArrowLeft, ArrowRight, Check, Phone, Mail, Shield, ScrollText, Camera, X, Thermometer, Syringe, Upload, FileText, Plus, Trash2, CalendarDays, Home, Clock } from "lucide-react";
+import { Users, User, Truck, UserCog, Heart, Search, ArrowLeft, ArrowRight, Check, Phone, Mail, Shield, ScrollText, Camera, X, Thermometer, Syringe, Upload, FileText, Plus, Trash2, CalendarDays, Home, Clock } from "lucide-react";
 import { PrivacyNotice } from "@/components/PrivacyNotice";
 import { useActiveHealthQuestions, useActiveVaccinationFields } from "@/hooks/useHealthQuestions";
 import { useCompanionFields } from "@/hooks/useFormFields";
