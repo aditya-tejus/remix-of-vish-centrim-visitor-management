@@ -71,7 +71,8 @@ const App = () => (
           <Route path="/coverage" element={<CoverageChecklist />} />
           {/* Kiosk routes */}
           <Route path="/kiosk" element={<KioskLayout />}>
-            <Route index element={<KioskHome />} />
+            <Route index element={<KioskAttract />} />
+            <Route path="home" element={<KioskHome />} />
             <Route path="checkin" element={<KioskCheckIn />} />
             <Route path="checkout" element={<KioskCheckOut />} />
             <Route path="resident-leave" element={<KioskResidentLeave />} />
