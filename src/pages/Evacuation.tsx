@@ -408,7 +408,7 @@ export default function Evacuation() {
 
           <main className="p-6 space-y-5">
             {/* Summary cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="rounded-xl border border-border bg-card p-4 text-center">
                 <p className="text-2xl font-bold text-foreground">{checkedIn.length}</p>
                 <p className="text-xs text-muted-foreground">On-Site</p>
@@ -425,6 +425,10 @@ export default function Evacuation() {
                 onClick={() => setFilterStatus(filterStatus === "unaccounted" ? "all" : "unaccounted")}>
                 <p className={`text-2xl font-bold ${unaccountedCount > 0 ? "text-destructive" : "text-foreground"}`}>{unaccountedCount}</p>
                 <p className="text-xs text-muted-foreground">Unaccounted</p>
+              </div>
+              <div className={`rounded-xl border p-4 text-center ${awayResidentCount > 0 ? "border-warning/30 bg-warning/5" : "border-border bg-card"}`}>
+                <p className={`text-2xl font-bold ${awayResidentCount > 0 ? "text-warning" : "text-foreground"}`}>{awayResidentCount}</p>
+                <p className="text-xs text-muted-foreground">Residents Away</p>
               </div>
             </div>
 
