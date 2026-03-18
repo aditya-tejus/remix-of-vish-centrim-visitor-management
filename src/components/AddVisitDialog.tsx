@@ -38,12 +38,14 @@ const visitorTypes: { type: VisitorType; label: string; icon: typeof User; emoji
   { type: "staff", label: "Staff", icon: UserCog, emoji: "💼" },
 ];
 
-const mockProfiles = [
-  { id: "p1", firstName: "John", surname: "Smith", mobile: "07700 900123", email: "john.smith@email.com", address: "12 High Street, London" },
-  { id: "p2", firstName: "Sarah", surname: "Williams", mobile: "07700 900456", email: "sarah.w@email.com", address: "5 Park Lane, Manchester" },
-  { id: "p3", firstName: "James", surname: "Brown", mobile: "07700 900789", email: "james.b@email.com", address: "45 Oak Avenue, Birmingham" },
-  { id: "p4", firstName: "Emma", surname: "Johnson", mobile: "07700 900321", email: "emma.j@email.com", address: "78 Elm Road, Leeds" },
-];
+interface VisitorProfile {
+  id: string;
+  firstName: string;
+  surname: string;
+  mobile: string;
+  email: string;
+  address: string;
+}
 
 
 
