@@ -57,7 +57,7 @@ export function ResidentPresenceTable({
 
   const getPresence = (resident: Resident): { status: PresenceStatus; visitor: Visitor | null } => {
     const visitor = visitorMap.get(resident.visitorId);
-    if (!visitor) return { status: "in-building", visitor: null };
+    if (!visitor) return { status: "on-site", visitor: null };
     if (visitor.status === "checked-out") {
       const isOverdue = visitor.expectedReturnDate && isPast(visitor.expectedReturnDate);
       if (isOverdue) return { status: "overdue", visitor };
