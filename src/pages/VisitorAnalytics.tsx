@@ -328,7 +328,7 @@ export default function VisitorAnalytics() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Wings</SelectItem>
-                    {wings.map((w) => <SelectItem key={w} value={w}>{w}</SelectItem>)}
+                    {wings.map((w: string) => <SelectItem key={w} value={w}>{w}</SelectItem>)}
                   </SelectContent>
                 </Select>
 
