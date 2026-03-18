@@ -242,6 +242,11 @@ export function ResidentLeaveTable({ residents, onCheckInReturn, onDelete }: Res
               <TableCell className="text-sm text-muted-foreground">—</TableCell>
               <TableCell className="text-sm text-muted-foreground">—</TableCell>
               <TableCell className="text-sm">{draft.leave_type || "—"}</TableCell>
+              <TableCell className="text-sm text-muted-foreground">
+                {draft.companions && Array.isArray(draft.companions) && draft.companions.length > 0
+                  ? (draft.companions as any[]).map((c: any) => c.name || "").filter(Boolean).join(", ") || "—"
+                  : "—"}
+              </TableCell>
               <TableCell>
                 {draft.expected_return ? (
                   <span className="text-sm font-semibold">{format(new Date(draft.expected_return), "HH:mm dd MMM")}</span>
