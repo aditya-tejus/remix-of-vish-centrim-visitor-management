@@ -67,8 +67,8 @@ const App = () => (
           <Route path="/feedback" element={<Feedback />} />
           <Route path="/visitor-analytics" element={<Navigate to="/reports/analytics" replace />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="/leave-requests" element={<LeaveRequests />} />
-          <Route path="/checkout-requests" element={<LeaveRequests />} />
+          <Route path="/leave-requests" element={<Navigate to="/residents" replace />} />
+          <Route path="/checkout-requests" element={<Navigate to="/residents" replace />} />
           <Route path="/public-checkin" element={<PublicCheckIn />} />
           <Route path="/coverage" element={<CoverageChecklist />} />
           {/* Kiosk routes */}
