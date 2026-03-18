@@ -35,6 +35,7 @@ const visitorTypes: { type: VisitorType; label: string; icon: typeof User; emoji
   { type: "visitor", label: "Visitor", icon: User, emoji: "👋" },
   { type: "resident", label: "Resident", icon: Users, emoji: "🏠" },
   { type: "contractor", label: "Contractor", icon: Truck, emoji: "🔧" },
+  { type: "volunteer", label: "Volunteer", icon: Heart, emoji: "🤝" },
   { type: "staff", label: "Staff", icon: UserCog, emoji: "💼" },
 ];
 
