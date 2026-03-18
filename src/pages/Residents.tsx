@@ -126,8 +126,8 @@ export default function Residents() {
 
   const countCards = [
     {
-      key: "in-building",
-      label: "In Building",
+      key: "on-site",
+      label: "On Site",
       value: inBuilding,
       colorClass: "text-success",
       borderClass: "border-l-success",

@@ -164,7 +164,7 @@ export function ResidentDirectoryTable({ residents, wingMap, presenceMap, onQuic
               </TableCell>
               {onQuickAway && (
                 <TableCell onClick={e => e.stopPropagation()} className="py-3">
-                  {presence === "in-building" && (
+                  {presence === "on-site" && (
                     <Button
                       variant="ghost"
                       size="sm"
