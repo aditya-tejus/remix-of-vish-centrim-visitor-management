@@ -127,11 +127,12 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
   const totalSteps = steps.length;
 
   // Load branch document URLs from settings
+  // Load branch document URLs and jurisdiction from settings
   useEffect(() => {
     supabase
       .from("settings")
       .select("key, value")
-      .in("key", ["branch_tc_url", "branch_privacy_url", "show_branch_docs_in_form"])
+      .in("key", ["branch_tc_url", "branch_privacy_url", "show_branch_docs_in_form", "jurisdiction"])
       .then(({ data }) => {
         if (data) {
           const map: Record<string, string> = {};
@@ -139,6 +140,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
           const showDocs = map.show_branch_docs_in_form !== "false";
           setBranchTcUrl(showDocs && map.branch_tc_url ? map.branch_tc_url : null);
           setBranchPrivacyUrl(showDocs && map.branch_privacy_url ? map.branch_privacy_url : null);
+          if (map.jurisdiction === "UK" || map.jurisdiction === "AU") setJurisdiction(map.jurisdiction);
         }
       });
   }, []);
