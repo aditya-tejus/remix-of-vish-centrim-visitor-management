@@ -145,24 +145,24 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
     return (
       <TableRow
         key={visitor.id}
-        className={`group transition-colors cursor-pointer ${
+        className={`group transition-colors cursor-pointer min-h-[64px] ${
           visitor.status === "checked-in"
-            ? "bg-primary/[0.03] border-l-2 border-l-primary"
+            ? "bg-primary/[0.03] border-l-[3px] border-l-primary"
             : "hover:bg-muted/50"
         }`}
         onClick={() => navigate(`/visitors/${visitor.id}`)}
       >
         {/* Name + optional type badge */}
-        <TableCell>
+        <TableCell className="py-3">
           <div className="flex items-center gap-3">
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-primary/10 text-primary text-[11px] font-semibold">
+            <Avatar className="h-10 w-10">
+              <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
                 {visitor.firstName[0]}{visitor.surname[0]}
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
               <button
-                className="font-medium text-sm text-primary hover:underline text-left"
+                className="font-semibold text-[15px] text-primary hover:underline text-left"
                 onClick={(e) => { e.stopPropagation(); navigate(`/visitors/${visitor.id}`); }}
               >
                 {visitor.firstName} {visitor.surname}
@@ -177,20 +177,20 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
         </TableCell>
 
         {/* Contact */}
-        <TableCell>
-          <div className="text-sm text-foreground">{visitor.mobile}</div>
+        <TableCell className="py-3">
+          <div className="text-[13px] text-foreground">{visitor.mobile}</div>
           <div className="text-[11px] text-muted-foreground">{visitor.email}</div>
         </TableCell>
 
         {/* Check-In time */}
-        <TableCell>
-          <span className="text-sm font-mono text-foreground">{format(visitor.checkInTime, "HH:mm")}</span>
+        <TableCell className="py-3">
+          <span className="text-[13px] font-mono text-foreground">{format(visitor.checkInTime, "HH:mm")}</span>
           <span className="text-[11px] text-muted-foreground ml-1">{format(visitor.checkInTime, "dd MMM")}</span>
         </TableCell>
 
         {/* Duration */}
-        <TableCell>
-          <span className={`text-sm font-mono tabular-nums ${
+        <TableCell className="py-3">
+          <span className={`text-[13px] font-mono tabular-nums ${
             overstayed ? "text-destructive font-semibold" : visitor.status === "checked-in" ? "text-foreground" : "text-muted-foreground"
           }`}>
             {duration}
@@ -198,11 +198,11 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
         </TableCell>
 
         {/* Visiting / Department / Company */}
-        <TableCell className="text-sm text-foreground">{visitor.whomToVisit || "—"}</TableCell>
+        <TableCell className="text-[13px] text-foreground py-3">{visitor.whomToVisit || "—"}</TableCell>
 
         {/* Companions (visitors/volunteers only) */}
         {(type === "visitor" || type === "volunteer" || type === "all") && (
-          <TableCell>
+          <TableCell className="py-3">
             {visitor.additionalVisitors > 0 ? (
               <Badge variant="secondary" className="text-[10px] gap-1 font-semibold">
                 <Users className="h-3 w-3" />{visitor.additionalVisitors}
@@ -214,9 +214,9 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
         )}
 
         {/* Status */}
-        <TableCell onClick={(e) => e.stopPropagation()}>
+        <TableCell onClick={(e) => e.stopPropagation()} className="py-3">
           {visitor.status === "checked-in" ? (
-            <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
+            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
               onClick={() => onCheckOut(visitor.id)}>
               <LogOut className="h-3 w-3" />
               {type === "staff" ? "Sign Out" : type === "contractor" ? "Depart" : "Check Out"}
@@ -230,7 +230,7 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
         </TableCell>
 
         {/* Actions */}
-        <TableCell onClick={(e) => e.stopPropagation()}>
+        <TableCell onClick={(e) => e.stopPropagation()} className="py-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -264,18 +264,19 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
   };
 
   return (
-    <div className="rounded-[10px] border border-border bg-card overflow-hidden shadow-sm">
+    <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
       <Tabs value={activeTab || "all"} onValueChange={onTabChange} defaultValue="all">
-        <div className="border-b border-border px-2">
-          <TabsList className="inline-flex items-center bg-muted rounded-lg p-1 gap-0.5 h-auto">
+        {/* Underline-style tabs */}
+        <div className="border-b border-border px-4">
+          <TabsList className="inline-flex items-center bg-transparent rounded-none p-0 gap-0 h-auto">
             {Object.entries(visitorsByType).map(([type, list]) => (
               <TabsTrigger
                 key={type}
                 value={type}
-                className="rounded-md h-8 px-4 text-[13px] font-medium transition-all duration-150 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
+                className="rounded-none h-11 px-5 text-[15px] font-medium border-b-[3px] border-b-transparent transition-all duration-150 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:border-b-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground"
               >
                 {tabLabels[type]}
-                <span className="ml-1.5 text-[10px] rounded-full px-1.5 py-0.5 font-semibold">
+                <span className="ml-1.5 text-[11px] rounded-full px-1.5 py-0.5 font-semibold tabular-nums">
                   {list.length}
                 </span>
               </TabsTrigger>
@@ -300,7 +301,7 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
                 <TableHeader>
                   <TableRow className="hover:bg-transparent bg-muted/50">
                     {columns.map((col) => (
-                      <TableHead key={col.key} className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground h-[44px]">
+                      <TableHead key={col.key} className="text-xs uppercase tracking-wider font-semibold text-muted-foreground h-[48px]">
                         {col.label}
                       </TableHead>
                     ))}

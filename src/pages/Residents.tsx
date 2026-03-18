@@ -16,7 +16,7 @@ import { ResidentDirectoryTable } from "@/components/ResidentDirectoryTable";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useToast } from "@/hooks/use-toast";
 import { isPast } from "date-fns";
-import { Home, DoorOpen, LogIn, AlertTriangle, Users, BookOpen } from "lucide-react";
+import { Home, DoorOpen, LogIn, AlertTriangle, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
@@ -93,11 +93,30 @@ export default function Residents() {
     return true;
   };
 
-  const stats = [
-    { label: "In Building", value: inBuilding, icon: <Home className="h-3.5 w-3.5" />, accent: "text-success" },
-    { label: "Away", value: away, icon: <DoorOpen className="h-3.5 w-3.5" />, accent: "text-warning" },
-    { label: "Overdue Return", value: overdueCount, icon: <AlertTriangle className="h-3.5 w-3.5" />, accent: "text-destructive" },
-    { label: "Total Residents", value: residents.length, icon: <Users className="h-3.5 w-3.5" />, accent: "text-info" },
+  const countCards = [
+    {
+      label: "In Building",
+      value: inBuilding,
+      colorClass: "text-success",
+      borderClass: "border-l-success",
+      bgClass: "bg-success/5",
+      dot: true,
+    },
+    {
+      label: "Away",
+      value: away,
+      colorClass: "text-warning",
+      borderClass: "border-l-warning",
+      bgClass: "bg-warning/5",
+    },
+    {
+      label: "Overdue Return",
+      value: overdueCount,
+      colorClass: "text-destructive",
+      borderClass: "border-l-destructive",
+      bgClass: "bg-destructive/5",
+      pulse: overdueCount > 0,
+    },
   ];
 
   return (
@@ -128,7 +147,6 @@ export default function Residents() {
                   Mark Away
                 </Button>
                 <Button size="sm" className="h-[34px] text-[13px] gap-1.5 bg-primary hover:bg-primary/90" onClick={() => {
-                  // Switch to presence tab to see returns
                   setActiveTab("presence");
                 }}>
                   <LogIn className="h-4 w-4" />
@@ -138,47 +156,52 @@ export default function Residents() {
             </div>
           </header>
 
-          {/* Contextual stats */}
-          <div className="flex items-center gap-1.5 px-4 py-2 border-b border-border bg-muted/30">
-            {stats.map(stat => (
-              <div
-                key={stat.label}
-                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-medium"
-              >
-                <span className={stat.accent}>{stat.icon}</span>
-                <span className="text-muted-foreground">{stat.label}</span>
-                <span className={`font-bold tabular-nums ${stat.value > 0 && stat.accent.includes("destructive") ? "text-destructive" : "text-foreground"}`}>
-                  {stat.value}
-                </span>
-                {stat.label === "Overdue Return" && stat.value > 0 && (
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-destructive" />
-                  </span>
-                )}
-              </div>
-            ))}
+          {/* Count cards */}
+          <div className="px-6 pt-4 pb-2">
+            <div className="grid grid-cols-3 gap-4">
+              {countCards.map(card => (
+                <div
+                  key={card.label}
+                  className={`rounded-xl border border-border border-l-[3px] ${card.borderClass} p-5 bg-card`}
+                >
+                  <p className={`text-3xl font-bold tabular-nums ${card.colorClass}`}>
+                    {card.value}
+                    {card.dot && card.value > 0 && (
+                      <span className="inline-flex h-2 w-2 rounded-full bg-success ml-2 align-middle" />
+                    )}
+                    {card.pulse && (
+                      <span className="relative inline-flex h-2 w-2 ml-2 align-middle">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive" />
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1 font-medium">{card.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Main content */}
-          <div className="rounded-[10px] border border-border bg-card overflow-hidden shadow-sm mx-6 mt-4 mb-6">
+          <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm mx-6 mt-2 mb-6">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <div className="border-b border-border px-2">
-                <TabsList className="inline-flex items-center bg-muted rounded-lg p-1 gap-0.5 h-auto">
-                  <TabsTrigger value="presence" className="rounded-md h-8 px-4 text-[13px] font-medium transition-all duration-150 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground">
+              {/* Underline-style tabs */}
+              <div className="border-b border-border px-4">
+                <TabsList className="inline-flex items-center bg-transparent rounded-none p-0 gap-0 h-auto">
+                  <TabsTrigger value="presence" className="rounded-none h-11 px-5 text-[15px] font-medium border-b-[3px] border-b-transparent transition-all duration-150 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:border-b-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground">
                     Presence
                   </TabsTrigger>
-                  <TabsTrigger value="leave" className="rounded-md h-8 px-4 text-[13px] font-medium transition-all duration-150 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground">
+                  <TabsTrigger value="leave" className="rounded-none h-11 px-5 text-[15px] font-medium border-b-[3px] border-b-transparent transition-all duration-150 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:border-b-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground">
                     Leave
                     {draftCount > 0 && (
                       <Badge variant="secondary" className="ml-1.5 text-[10px] bg-warning/10 text-warning">{draftCount}</Badge>
                     )}
                   </TabsTrigger>
-                  <TabsTrigger value="directory" className="rounded-md h-8 px-4 text-[13px] font-medium transition-all duration-150 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground">
+                  <TabsTrigger value="directory" className="rounded-none h-11 px-5 text-[15px] font-medium border-b-[3px] border-b-transparent transition-all duration-150 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:border-b-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground">
                     Directory
-                    <span className="ml-1.5 text-[10px] rounded-full px-1.5 py-0.5 font-semibold">{residents.length}</span>
+                    <span className="ml-1.5 text-[11px] rounded-full px-1.5 py-0.5 font-semibold tabular-nums">{residents.length}</span>
                   </TabsTrigger>
-                  <TabsTrigger value="overdue" className="rounded-md h-8 px-4 text-[13px] font-medium transition-all duration-150 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground">
+                  <TabsTrigger value="overdue" className="rounded-none h-11 px-5 text-[15px] font-medium border-b-[3px] border-b-transparent transition-all duration-150 data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:border-b-primary data-[state=active]:shadow-none data-[state=inactive]:text-muted-foreground">
                     Overdue
                     {overdueCount > 0 && (
                       <Badge variant="destructive" className="ml-1.5 text-[10px] animate-pulse">{overdueCount}</Badge>
