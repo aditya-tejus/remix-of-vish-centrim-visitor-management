@@ -65,7 +65,7 @@ const App = () => (
           <Route path="/audit-log" element={<AuditLogPage />} />
           <Route path="/evacuation" element={<Evacuation />} />
           <Route path="/feedback" element={<Feedback />} />
-          <Route path="/visitor-analytics" element={<VisitorAnalytics />} />
+          <Route path="/visitor-analytics" element={<Navigate to="/reports/analytics" replace />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/leave-requests" element={<LeaveRequests />} />
           <Route path="/checkout-requests" element={<LeaveRequests />} />
