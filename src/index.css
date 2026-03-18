@@ -93,7 +93,7 @@
     --popover: 225 35% 13%;
     --popover-foreground: 0 0% 95%;
 
-    --primary: 217 91% 60%;
+    --primary: 217 91% 65%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 219 39% 19%;
@@ -108,18 +108,18 @@
     --destructive: 0 70% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 160 60% 35%;
+    --success: 142 60% 40%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 80% 48%;
     --warning-foreground: 0 0% 100%;
 
-    --info: 217 80% 55%;
+    --info: 199 80% 50%;
     --info-foreground: 0 0% 100%;
 
     --border: 220 20% 18%;
     --input: 220 20% 22%;
-    --ring: 217 91% 60%;
+    --ring: 217 91% 65%;
 
     --sidebar-background: 225 45% 7%;
     --sidebar-foreground: 0 0% 95%;
