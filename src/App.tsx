@@ -7,7 +7,7 @@ import VisitList from "./pages/VisitList";
 import Settings from "./pages/Settings";
 import Visitors from "./pages/Visitors";
 import VisitorProfilePage from "./pages/VisitorProfilePage";
-import CheckIn from "./pages/CheckIn";
+
 import CalendarPage from "./pages/Calendar";
 import GDPRPage from "./pages/GDPR";
 import AuditLogPage from "./pages/AuditLog";
@@ -19,9 +19,6 @@ import LeaveRequests from "./pages/LeaveRequests";
 import NotFound from "./pages/NotFound";
 // Phase 6-7 new pages
 import Residents from "./pages/Residents";
-import PersonTypeSelector from "./pages/PersonTypeSelector";
-import GroupCheckIn from "./pages/GroupCheckIn";
-import QRFastLane from "./pages/QRFastLane";
 import ReportsHome from "./pages/ReportsHome";
 import EvacuationReport from "./pages/EvacuationReport";
 import PresenceLog from "./pages/PresenceLog";
@@ -49,10 +46,10 @@ const App = () => (
           <Route path="/visit-list" element={<Navigate to="/" replace />} />
           <Route path="/visitors" element={<Visitors />} />
           <Route path="/visitors/:id" element={<VisitorProfilePage />} />
-          <Route path="/check-in" element={<Navigate to="/person-type" replace />} />
-          <Route path="/person-type" element={<PersonTypeSelector />} />
-          <Route path="/group-checkin" element={<GroupCheckIn />} />
-          <Route path="/qr-fast-lane" element={<QRFastLane />} />
+          <Route path="/check-in" element={<Navigate to="/" replace />} />
+          <Route path="/person-type" element={<Navigate to="/" replace />} />
+          <Route path="/group-checkin" element={<Navigate to="/" replace />} />
+          <Route path="/qr-fast-lane" element={<Navigate to="/" replace />} />
           <Route path="/residents" element={<Residents />} />
           <Route path="/resident-leave" element={<Navigate to="/residents" replace />} />
           <Route path="/calendar" element={<CalendarPage />} />

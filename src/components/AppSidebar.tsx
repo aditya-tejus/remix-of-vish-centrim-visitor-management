@@ -62,9 +62,6 @@ export function AppSidebar() {
       items: [
         { title: "Visitor List", path: "/", badge: totalVisitorBadge, badgeVariant: "blue", activeDot: true },
         { title: "Visitor Directory", path: "/visitors" },
-        { title: "New Check-In", path: "/person-type" },
-        { title: "Group Check-In", path: "/group-checkin" },
-        { title: "QR Fast Lane", path: "/qr-fast-lane" },
       ],
     },
     {

@@ -5,7 +5,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppHeader } from "@/components/AppHeader";
 import { VisitorTable } from "@/components/VisitorTable";
 import { useVisitors } from "@/hooks/useVisitors";
-import { AddVisitDialog } from "@/components/AddVisitDialog";
+import { CheckInSheet } from "@/components/checkin/CheckInSheet";
 import { CheckOutDialog } from "@/components/CheckOutDialog";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { useKeyboardShortcuts, KeyboardShortcutBar } from "@/hooks/useKeyboardShortcuts";
@@ -268,7 +268,7 @@ export default function VisitList() {
         </SidebarInset>
       </div>
 
-      <AddVisitDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onAdd={addVisitor} />
+      <CheckInSheet open={addDialogOpen} onOpenChange={setAddDialogOpen} onAdd={addVisitor} />
       <CheckOutDialog open={checkOutDialogOpen} onOpenChange={setCheckOutDialogOpen} visitors={visitors} onCheckOut={checkOutVisitor} />
       {feedbackVisitor && (
         <FeedbackDialog
