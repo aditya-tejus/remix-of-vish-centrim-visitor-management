@@ -187,7 +187,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd }: AddVisitDialogProp
     }));
   };
 
-  const handleSelectResident = (resident: typeof mockResidents[0]) => {
+  const handleSelectResident = (resident: { id: string; name: string; room: string; wing: string }) => {
     setSelectedResident(resident);
     const [firstName, ...rest] = resident.name.split(" ");
     setFormData((prev) => ({
