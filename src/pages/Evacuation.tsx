@@ -500,6 +500,20 @@ export default function Evacuation() {
                     </div>
                     <h3 className="text-sm font-semibold text-foreground">{group.label}</h3>
                     <Badge variant="secondary" className="text-[10px]">{group.items.length}</Badge>
+                    {(() => {
+                      const groupSafe = group.items.filter((v) => safeIds.has(v.id)).length;
+                      const groupTotal = group.items.length;
+                      const allSafe = groupSafe === groupTotal;
+                      return (
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] gap-1 ${allSafe ? "border-success/40 text-success" : "border-destructive/40 text-destructive"}`}
+                        >
+                          {allSafe ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+                          {groupSafe}/{groupTotal} safe
+                        </Badge>
+                      );
+                    })()}
                     <div className="flex-1 h-px bg-border" />
                   </div>
                 )}
