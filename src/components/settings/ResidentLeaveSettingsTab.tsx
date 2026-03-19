@@ -14,6 +14,8 @@ export function ResidentLeaveSettingsTab() {
   const [globalNameSearchEnabled, setGlobalNameSearchEnabled] = useState(false);
   const [requireApproval, setRequireApproval] = useState(false);
   const [defaultReturnHours, setDefaultReturnHours] = useState("4");
+  const [residentLookupMode, setResidentLookupMode] = useState<"show_all" | "search_first">("search_first");
+  const [staffLookupMode, setStaffLookupMode] = useState<"search_first" | "by_department" | "free_text">("search_first");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
