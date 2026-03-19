@@ -1,10 +1,10 @@
 import { cn } from "@/lib/utils";
-import { Users, HardHat, Home, UserCog, Heart, Globe, Printer, Shield, Link2, ClipboardList, Lock } from "lucide-react";
+import { Users, HardHat, Home, UserCog, Heart, Globe, Printer, Shield, Link2, ClipboardList, Lock, MessageSquare } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 export type SettingsSection =
   | "visitor" | "contractor" | "resident" | "staff" | "volunteer"
-  | "presence" | "printing" | "compliance" | "integration" | "audit" | "governance";
+  | "presence" | "printing" | "compliance" | "integration" | "audit" | "governance" | "feedback";
 
 interface PersonType {
   id: SettingsSection;
