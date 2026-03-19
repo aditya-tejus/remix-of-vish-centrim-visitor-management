@@ -22,7 +22,7 @@ export function ResidentLeaveSettingsTab() {
     supabase
       .from("settings")
       .select("key, value")
-      .in("key", ["leave_global_name_search", "leave_require_approval", "leave_default_return_hours"])
+      .in("key", ["leave_global_name_search", "leave_require_approval", "leave_default_return_hours", "kiosk_resident_lookup_mode", "kiosk_staff_lookup_mode"])
       .then(({ data }) => {
         if (data) {
           const map: Record<string, string> = {};
@@ -30,6 +30,8 @@ export function ResidentLeaveSettingsTab() {
           setGlobalNameSearchEnabled(map.leave_global_name_search === "true");
           setRequireApproval(map.leave_require_approval === "true");
           setDefaultReturnHours(map.leave_default_return_hours || "4");
+          if (map.kiosk_resident_lookup_mode === "show_all" || map.kiosk_resident_lookup_mode === "search_first") setResidentLookupMode(map.kiosk_resident_lookup_mode);
+          if (map.kiosk_staff_lookup_mode === "search_first" || map.kiosk_staff_lookup_mode === "by_department" || map.kiosk_staff_lookup_mode === "free_text") setStaffLookupMode(map.kiosk_staff_lookup_mode);
         }
       });
   }, []);
