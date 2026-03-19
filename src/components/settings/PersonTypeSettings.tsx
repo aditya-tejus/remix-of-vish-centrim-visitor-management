@@ -1,7 +1,7 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Users, HardHat, Home, UserCog, Heart, ClipboardList, Users2, Stethoscope, Syringe, Camera, ScrollText, Bell, Zap, MessageSquare, DoorOpen, CalendarClock, Search, Building2 } from "lucide-react";
+import { Users, HardHat, Home, UserCog, Heart, ClipboardList, Users2, Stethoscope, Syringe, Camera, ScrollText, Bell, Zap, DoorOpen, CalendarClock, Search, Building2 } from "lucide-react";
 import { FormFieldsManager } from "@/components/settings/FormFieldsManager";
 import { CompanionFieldsManager } from "@/components/settings/CompanionFieldsManager";
 import { HealthQuestionsManager } from "@/components/settings/HealthQuestionsManager";
@@ -10,7 +10,7 @@ import { PhotoSignatureSettings } from "@/components/settings/PhotoSignatureSett
 import { TermsSettingsPerType } from "@/components/settings/TermsSettingsPerType";
 import { AlertSettingsPerType } from "@/components/settings/AlertSettingsPerType";
 import { AutomationSettingsPerType } from "@/components/settings/AutomationSettingsPerType";
-import { FeedbackSettingsPerType } from "@/components/settings/FeedbackSettingsPerType";
+
 import { ResidentLeaveSettingsTab } from "@/components/settings/ResidentLeaveSettingsTab";
 import { ReturnNotificationSettingsTab } from "@/components/settings/ReturnNotificationSettingsTab";
 import type { VisitorType } from "@/hooks/useHealthQuestions";
@@ -99,12 +99,6 @@ function getSections(type: string): SectionConfig[] {
     );
   }
 
-  // Feedback for visitor-facing types
-  if (["visitor", "contractor", "volunteer"].includes(type)) {
-    sections.push(
-      { id: "feedback", label: "Feedback Questions", icon: MessageSquare, component: <FeedbackSettingsPerType personType={type} /> },
-    );
-  }
 
   return sections;
 }
