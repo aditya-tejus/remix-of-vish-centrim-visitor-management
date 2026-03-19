@@ -1,181 +1,114 @@
 
-# Centrim Life Presence Engine — Implementation Plan
 
-## Phase 1: Foundation & Navigation ✅ DONE
-- [x] Home Workbench page (3 action buttons, summary cards, Active Now list, day-grouped history)
-- [x] Updated routing (Home = `/`, sidebar with Home link)
-- [x] Volunteer person type added
+## Deep-Dive Analysis: Kiosk Mode Flow Gaps
 
-### Remaining Phase 1
-- [ ] Kiosk mode (`/kiosk` route)
+### 1. Data Flow Misalignment — Kiosk vs Desktop Check-In
 
-## Phase 2: Contractor & Screening ✅ DONE
-- [x] `suppliers_min` table created with seed data (6 AU + 2 UK suppliers)
-- [x] `signature_url`, `supplier_id`, `contractor_screening` columns added to visitors
-- [x] Supplier autocomplete hook (`useSuppliers`)
-- [x] `ContractorScreening` component with AU/UK templates
-- [x] Contractor check-in flow integrated into AddVisitDialog
-- [x] Jurisdiction toggle (AU/UK) in Settings → Presence tab
-- [x] Jurisdiction loaded from DB and used by contractor screening
+The desktop check-in (`useCheckInFlow.ts` + `CheckInSheet.tsx`) and the kiosk check-in (`KioskCheckIn.tsx`) are completely independent implementations with no shared logic. Here is what the desktop flow supports that the kiosk ignores:
 
-## Phase 3: Resident Leave Separation ✅ DONE
-- [x] Separate Resident Leave module
-- [x] Ensure visitor check-in never prompts resident leave
+```text
+Feature                         Desktop    Kiosk    Gap
+─────────────────────────────────────────────────────────
+Dynamic form fields (form_fields)   ✓         ✗      CRITICAL
+Returning visitor lookup            ✓         ✗      HIGH
+Photo capture                       ✓         ✗      MEDIUM
+Resident/Staff picker (structured)  ✓         ✗      HIGH
+Companion details                   ✓         ✗      MEDIUM
+Vaccination fields (vacc_fields)    ✓         ✗      MEDIUM
+Contractor screening (AU/UK)        ✓         ✗      HIGH
+Address field                       ✓         ✗      LOW
+Watchlist check timing              ✓         ~      Kiosk checks at submit only
+T&C per type (tc_content_*)         ✓         ✓      OK
+Health questions per type           ✓         ✓      OK
+Privacy notice component            ✓         ✗      MEDIUM
+Feedback on checkout                ✓         ✗      HIGH
+```
 
-## Phase 4: Settings & Governance (in progress)
-- [x] Expand Settings tabs (Presence, Screening, T&C, Alerts, Automation, Printing, Profiles & Badges, Resident Leave, Returns, GDPR, Integration, Audit, Feedback, Lock & Governance)
-- [ ] Settings governance (change reason, audit log, admin override, transactional audit)
-- [ ] Badge printing settings (Brother QL, failure-tolerant)
+**Root cause**: `KioskCheckIn` was built as a standalone component with hardcoded fields (`firstName`, `surname`, `email`, `mobile`, `whomToVisit`) instead of reusing `useCheckInFlow` or at least querying the `form_fields` table.
 
----
+### 2. Check-Out Flow Gaps
 
-## Phase 5: Database Foundation — Replace Mock Data & Extend Schema
-- [ ] Create `staff_members` table (name, role, phone, email, is_active, branch_id)
-- [ ] Extend `resident_details` with: `mobility_level`, `dols_lps_flag`, `risk_assessment_level`, `medication_notes`, `mobility_aids`, `destination_categories`
-- [ ] Add columns to `visitors`: `group_id` (uuid), `work_type` (text), `work_location` (text), `print_status` (text), `qr_code` (text), `visit_purpose` (text), `visited_resident_ids` (uuid[]), `safeguarding_hold` (boolean)
-- [ ] Add `change_reason` (text) to `audit_log`
-- [ ] Add `wwcc_number`, `wwcc_expiry`, `police_check_date`, `dbs_number`, `dbs_expiry`, `lone_working_declaration` (boolean) to `contractor_screening` jsonb or as columns on visitors
-- [ ] Replace all `mockResidents` arrays with queries to `visitors` WHERE `type='resident'` + `resident_details`
-- [ ] Replace all `mockStaff` arrays with queries to `staff_members` table
-- [ ] Wire resident photos into visit target selection UI
+The desktop `CheckOutSheet` triggers `FeedbackDialog` after checkout. The kiosk `KioskCheckOut` does **not** check for active feedback surveys or show any feedback prompt. It also lacks:
+- Checkout reason selection (desktop has type-specific reason dropdowns)
+- Companion checkout handling
+- Overstay warnings
 
-## Phase 6: Staff Desktop — Batch 1 (Enhance Existing Screens 1, 3, 6, 8, 10-14)
+### 3. Resident Leave Flow Gaps
 
-### Screen 1 — Home Workbench enhancements
-- [ ] Search bar (name/resident/company) filtering Active Now + History
-- [ ] Exceptions rail: Overdue Residents, Print Failures, Screening WARN, Auto-checkouts
-- [ ] Fixed Emergency button top-right
-- [ ] Inline Reprint + status tags (ACTIVE/WARN/AUTO) on ActiveNowList rows
+- No confirmation step before marking leave (single tap = immediate action)
+- No leave type selection (desktop supports leave types from `leave_types` table)
+- No expected return date capture
+- No companion/accompanied-by information
+- Returning mode shows `v.address` as subtitle instead of room/wing
 
-### Screen 3 — Visitor Check-In polish
-- [ ] Visit purpose categories (Social, Professional, Delivery, Maintenance, Inspection/Audit)
-- [ ] Multi-resident visit support (multi-select whom_to_visit linked to resident records)
-- [ ] Professional visitors auto-tagged as "clinical visit" (different retention rules)
-- [ ] Terms acceptance checkbox + "View Terms" modal
-- [ ] Conditional Photo/Signature step (reads from settings)
-- [ ] Success state with print queued indicator
+### 4. UI/UX Issues (Kiosk-Specific)
 
-### Screen 6 — Contractor Check-In polish
-- [ ] Work type button group (Maintenance, Cleaning, IT, Medical, Building, Other)
-- [ ] Work location optional dropdown
-- [ ] AU: WWCC verification field + Police check / National Criminal History Check capture
-- [ ] UK: DBS certificate number + expiry capture (not just yes/no)
-- [ ] UK: Lone working declaration (if unsupervised in resident areas)
-- [ ] Contractor-specific terms acceptance
+**A. Check-In Page**
+- `max-w-xl` (576px) is too narrow for a kiosk tablet (typically 10-12" landscape). Content feels cramped on large screens.
+- Type selection auto-advances on tap (no confirmation), meaning accidental taps skip directly to details.
+- "Who are you visiting?" is a plain text input — no way to search residents/staff. Desktop has a structured Resident/Staff picker with room numbers and wings.
+- No visual feedback for required fields (no asterisks except on first/surname).
+- The screening step has no progress indicator for how many questions answered vs total.
+- No keyboard/on-screen keyboard considerations for kiosk devices.
 
-### Screen 8 — Check-Out enhancement
-- [ ] Person type tile selector before checkout list
-- [ ] Search within checkout list
+**B. Check-Out Page**
+- Search input gets `autoFocus` but kiosks often don't have physical keyboards. No on-screen prompt.
+- No alphabetical grouping or "scroll to letter" for long visitor lists.
+- The `max-h-[400px]` scrollable area is fixed — doesn't adapt to screen size.
 
-### Screen 10 — Resident Leave page overhaul
-- [ ] New page `/resident-leave` with 3 tabs: Away Now, Mark Away, Mark Returned
-- [ ] Away Now: table with overdue highlighting, actions (Mark Returned, Edit Expected Return)
-- [ ] Mark Away: resident select + form with destination categories (Home visit, Medical appointment, Day trip, Hospital, Other) — not free text
-- [ ] Leave exceeding 24h triggers different workflow (social leave vs medical leave vs hospital transfer)
-- [ ] Expected return overdue → automatic escalation to manager + next of kin
-- [ ] UK: DoLS/LPS flag check — if resident lacks capacity, require authoriser name before leave proceeds
-- [ ] AU: Medication dispensed indicator for outing period
-- [ ] AU: Mobility aids noted (wheelchair, walker)
-- [ ] Mark Returned: quick action
+**C. Resident Leave Page**
+- Single-tap departure with no confirmation is dangerous — a resident could be marked as "away" by accident.
+- No search on the returning list.
+- Room number shown as `initials` prop on person cards (misusing the initials field).
 
-### Screen 11 — Emergency Roll Call
-- [ ] Grouped sections: Visitors, Contractors, Volunteers, Residents Away, Overdue
-- [ ] Mark safe / not accounted actions per person
-- [ ] Export snapshot (PDF/CSV)
-- [ ] Resident mobility data displayed in roll call (wheelchair, walker, bed-bound)
+**D. General Kiosk UX**
+- No "Cancel / Start Over" button visible on any step (only Back). Users stuck mid-flow must wait for idle timeout (90s).
+- No accessibility: no ARIA labels, no focus management, no high-contrast mode.
+- Success screen countdown (5s) may be too fast for users who need to read the confirmation.
+- QR route (`/kiosk/qr`) in home tiles leads to nowhere — no route defined in `App.tsx`.
 
-### Screen 12 — Visitor Profiles List
-- [ ] Search and filters (by type, date range, status)
-- [ ] List columns: name, type, last visit, visit count, status
-- [ ] Quick check-in action from profile list
+### 5. Proposed Solution
 
-### Screen 13 — Visitor Profile Detail
-- [ ] Tabs: Summary, Badges, Visit History, Contact, Privacy (UK)
-- [ ] Issue / revoke / reprint badge (revoke requires reason)
-- [ ] Visit history timeline with check-in/out times
+**A. Refactor KioskCheckIn to use shared logic**
+- Extract a `useKioskCheckInFlow` hook that wraps `useCheckInFlow` or shares its query logic.
+- Query `form_fields` for the selected type and render fields dynamically (respecting `is_active`, `required`, `sort_order`).
+- Add returning visitor search (query `visitors` table by name/phone).
+- Add structured Resident/Staff picker using `useResidents` / `useStaffMembers`.
+- Add contractor screening step (reuse `ContractorScreening` component with `compact` mode).
+- Add vaccination fields step when configured.
 
-### Screen 14 — Reports Home
-- [ ] Card layout linking to: Evacuation Report, Presence Log, Visit Trends
-- [ ] Each card shows last-run date and quick stats
+**B. Wire kiosk checkout to feedback system**
+- After successful checkout, query `feedback_surveys` for active survey matching the visitor type with `checkout` trigger.
+- If found: show a kiosk-optimized feedback screen (large emoji buttons, one question per screen).
+- If `centrim_compliance` source: show QR code or external link card.
+- If none: skip to success screen.
 
-## Phase 7: Staff Desktop — Batch 2 (New Screens 2, 4, 5, 7, 9, 15-17) + Settings Screens (18-29)
+**C. Fix Resident Leave flow**
+- Add a confirmation step (show resident name, room, wing) before executing.
+- Add leave type selector (from `leave_types` table).
+- Add optional expected return date/time picker.
+- Add search on the returning list.
 
-### New Screens
-- [ ] Screen 2: Person Type Selector tiles (Visitor, Contractor, Volunteer, Other; Visitor has "QR Fast Lane" sub-option)
-- [ ] Screen 4: Group Check-In (multi-row, batch print, post-confirm summary)
-- [ ] Screen 5: QR Fast Lane — scan → resolve → select target → screening → terms → confirm; duplicate scan = already checked in → checkout prompt
-- [ ] Screen 7: Volunteer Check-In (minimal fields + optional screening/terms)
-- [ ] Screen 9: Group Checkout prompt ("Check out whole group?" → Whole group / Just this person / Cancel)
-- [ ] Screen 15: Evacuation Report (snapshot history from `evacuation_drills`)
-- [ ] Screen 16: Presence Log (filterable by date, type, company, work type, method, risk; export with permission gating)
-- [ ] Screen 17: Visit Trends (counts per day/week by person type, using recharts)
+**D. UI/UX improvements**
+- Increase max width to `max-w-2xl` (672px) or responsive `max-w-[90vw]` for landscape tablets.
+- Add a persistent "Cancel" / "Start Over" button in the kiosk header or footer.
+- Add confirmation on type selection before advancing.
+- Replace plain text "who are you visiting" with searchable resident/staff list.
+- Add alphabetical scroll index for checkout and resident lists.
+- Fix QR tile: either implement route or remove from home.
+- Make success screen countdown configurable (setting) and add a "Done" button for early exit.
+- Increase `max-h` scroll areas to use `calc(100vh - ...)` for full-screen usage.
 
-### Settings Screens
-- [ ] Screen 18 — Settings Home: sections listed, role-gated access
-- [ ] Screen 19 — Settings: Presence (jurisdiction, person types, enabled features)
-- [ ] Screen 20 — Settings: Screening (tabs by person type + jurisdiction AU/UK)
-- [ ] Screen 21 — Settings: Terms & Conditions (per person type, versioned documents)
-- [ ] Screen 22 — Settings: Alerts (overdue thresholds, watchlist, email recipients)
-- [ ] Screen 23 — Settings: Automation (auto-checkout hours per type, data cleanup)
-- [ ] Screen 24 — Settings: Printing (Brother QL template, label size, badge content)
-- [ ] Screen 25 — Settings: Profiles & Badges (photo/signature per type)
-- [ ] Screen 26 — Settings: Resident Leave Self-Service (Option C controls, kiosk enable)
-- [ ] Screen 27 — Settings: GDPR/UK (data minimisation rules, DSAR role, retention/anonymise per type)
-- [ ] Screen 28 — Settings: Audit Log (filters by action/date/user + CSV export)
-- [ ] Screen 29 — Settings: Lock & Governance (lock enabled, locked sections, change reason requirement)
+**E. Implementation priority**
+1. KioskCheckIn dynamic fields + returning visitor + structured person picker (fixes the core data mismatch)
+2. Kiosk checkout feedback integration
+3. Resident leave confirmation + leave types
+4. UI polish (widths, cancel button, QR route, accessibility)
 
-## Phase 8: Safeguarding & Compliance
-- [ ] **Watchlist enforcement during check-in**: When visitor name matches `visitor_watchlist`, block and alert staff with instructions
-- [ ] **Banned visitor hard-block**: `alert_type = "banned"` entries must prevent check-in entirely (not just warn)
-- [ ] AU: Influenza vaccination status check (mandatory during flu season)
-- [ ] AU vs UK privacy notice separation (APP notice vs GDPR notice — currently uses GDPR language for both)
-- [ ] UK: Lawful basis varies by visit type (legitimate interest for social, legal obligation for contractors, vital interests for emergency)
-- [ ] UK: Right to erasure must exclude safeguarding-held records (`safeguarding_hold` flag)
-- [ ] UK: Data minimisation — kiosk/public check-in should not collect address for social visitors
-- [ ] AU: Configurable retention per data type (visitor vs contractor vs clinical visit) — currently hardcoded 60 days
+### Technical approach
+- Create `useKioskCheckInFlow` that calls `useFormFields(selectedType)`, `useActiveHealthQuestions(selectedType)`, `useActiveVaccinationFields(selectedType)`, and loads `tc_content_*` settings.
+- Build step pipeline dynamically based on what's configured (same pattern as desktop).
+- Reuse `ContractorScreening` component for contractor type.
+- Add `KioskFeedbackScreen` component (kiosk-optimized version of `FeedbackDialog`).
+- Add confirmation modal to `KioskResidentLeave` before executing leave/return.
 
-## Phase 9: Notifications & Escalation
-- [ ] Resident return overdue notification — email/SMS to manager + next of kin after configurable delay
-- [ ] Contractor overstay notification — alert if contractor exceeds expected duration
-- [ ] Visitor time limit warning — configurable per outbreak mode (e.g. 2-hour limit)
-- [ ] Night-time check-in alert — check-in outside normal hours pings duty manager
-- [ ] Failed screening alert — if any health question answered "yes", notify infection control lead immediately
-
-## Phase 10: Kiosk Mode (Screens 30-36)
-- [ ] KioskLayout component (no sidebar, touch-first, 48px targets, large text)
-- [ ] Screen 30: Kiosk Home tiles (Check-In, Check-Out, Resident Leave if enabled)
-- [ ] Screen 31: Kiosk Check-In person type tiles
-- [ ] Screen 32: Kiosk Visitor Check-In (1 question per screen, large buttons)
-- [ ] Screen 33: Kiosk QR Fast Lane
-- [ ] Screen 34: Kiosk Contractor Check-In (step-by-step)
-- [ ] Screen 35: Kiosk Check-Out (QR scan preferred, fallback name search)
-- [ ] Screen 36: Kiosk Resident Leave Option C (Leaving/Returning tiles → Room entry → resident list → confirm → destination chips)
-
-## Phase 11: UX States & Polish
-- [ ] Loading state (skeleton placeholders) on all screens
-- [ ] Empty state (illustration + message + CTA) on all screens
-- [ ] Error state (alert + retry) on all screens
-- [ ] Permission denied state (lock icon + "Contact admin") where applicable
-- [ ] Returning visitor shortcut ("Recent visitors" quick-select for staff)
-- [ ] Resident photo on visit target selection
-- [ ] Large text mode toggle (accessibility for older receptionists)
-- [ ] Offline mode (queue check-ins locally, sync when online — AU rural facilities)
-- [ ] Shift handover report (auto-generate who's on site, who left, upcoming returns)
-- [ ] Touch target audit (44-48px)
-- [ ] Font size audit (names 16-18px, body 13-14px)
-
-## Phase 12: Coverage Checklist
-- [ ] Coverage Checklist page (`/coverage`) listing all 36+ screens with status and links
-
-## Database Changes Summary
-- [x] `suppliers_min` table
-- [x] `volunteer` added to visitor type
-- [x] `signature_url` on visitors
-- [x] `supplier_id` on visitors
-- [x] `contractor_screening` jsonb on visitors
-- [x] Jurisdiction via settings table
-- [ ] `staff_members` table (new)
-- [ ] `resident_details` extended (mobility_level, dols_lps_flag, risk_assessment_level, medication_notes, mobility_aids)
-- [ ] `visitors` extended (group_id, work_type, work_location, print_status, qr_code, visit_purpose, visited_resident_ids, safeguarding_hold)
-- [ ] `audit_log` extended (change_reason)
-- [ ] Contractor compliance fields (wwcc, dbs, police check, lone working)
