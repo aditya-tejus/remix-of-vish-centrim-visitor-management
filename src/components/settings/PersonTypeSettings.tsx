@@ -70,7 +70,7 @@ function getSections(type: string): SectionConfig[] {
 
   if (["visitor", "contractor", "volunteer"].includes(type)) {
     sections.push(
-      { id: "health", label: "Health Screening", icon: Stethoscope, component: <HealthQuestionsManager visitorType={vt} /> },
+      { id: "health", label: "Check-in Questions", icon: Stethoscope, component: <HealthQuestionsManager visitorType={vt} /> },
       { id: "vaccination", label: "Vaccination Records", icon: Syringe, component: <VaccinationFieldsManager visitorType={vt} /> },
     );
   }
