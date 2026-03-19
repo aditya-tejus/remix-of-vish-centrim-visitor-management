@@ -65,7 +65,7 @@ export default function KioskCheckOut() {
   }
 
   if (phase === "feedback" && selected) {
-    const feedbackEl = (
+    return (
       <KioskFeedbackScreen
         visitorId={selected.id}
         visitorName={`${selected.firstName} ${selected.surname}`}
@@ -73,12 +73,6 @@ export default function KioskCheckOut() {
         onComplete={handleFeedbackComplete}
       />
     );
-    // KioskFeedbackScreen returns null when no survey — auto-advance
-    if (!feedbackEl) {
-      setPhase("done");
-      return null;
-    }
-    return feedbackEl;
   }
 
   if (phase === "confirm" && selected) {

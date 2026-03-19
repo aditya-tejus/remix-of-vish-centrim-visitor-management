@@ -56,9 +56,15 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
   }, [activeSurvey, questions, ratings, comments, visitorId, visitorName, visitorType, submitFeedback, onComplete, toast]);
 
   // No active survey — skip immediately
-  if (!activeSurvey) {
-    return null;
-  }
+  useEffect(() => {
+    if (!activeSurvey && surveys.length >= 0) {
+      // Wait for query to settle
+      const timer = setTimeout(() => {
+        if (!activeSurvey) onComplete();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [activeSurvey, onComplete, surveys.length]);
 
   // External survey — show link card
   if (activeSurvey.source === "centrim_compliance" && activeSurvey.external_url) {
