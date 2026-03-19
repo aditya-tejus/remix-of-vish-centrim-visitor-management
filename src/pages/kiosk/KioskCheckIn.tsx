@@ -288,38 +288,112 @@ export default function KioskCheckIn() {
 
             {visitingMode && (
               <>
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <Input
-                    value={visitingSearch}
-                    onChange={(e) => setVisitingSearch(e.target.value)}
-                    placeholder={visitingMode === "resident" ? "Search by name or room..." : "Search by name..."}
-                    className="pl-12 h-14 text-lg"
-                    autoFocus
-                  />
-                </div>
-                <div className="space-y-2 max-h-[40vh] overflow-y-auto">
-                  {filteredVisiting.length === 0 ? (
-                    <p className="text-center py-8 text-muted-foreground">No {visitingMode}s found</p>
-                  ) : (
-                    filteredVisiting.map((person: any) => (
-                      <KioskPersonCard
-                        key={person.id}
-                        name={person.name}
-                        subtitle={
-                          visitingMode === "resident"
-                            ? `${person.room || "—"} ${person.wing ? `• ${person.wing}` : ""}`
-                            : `${person.role} ${person.department ? `• ${person.department}` : ""}`
-                        }
-                        accentColor="primary"
+                {/* Free-text mode for staff */}
+                {visitingMode === "staff" && flow.staffLookupMode === "free_text" ? (
+                  <div className="space-y-3">
+                    <Input
+                      value={staffFreeText}
+                      onChange={(e) => setStaffFreeText(e.target.value)}
+                      placeholder="Type the name of the person you're visiting..."
+                      className="h-14 text-lg"
+                      autoFocus
+                    />
+                    {staffFreeText.trim() && (
+                      <Button
+                        className="w-full h-14 text-base"
                         onClick={() => {
-                          flow.updateField("whomToVisit", person.name);
+                          flow.updateField("whomToVisit", staffFreeText.trim());
                           goNext();
                         }}
+                      >
+                        Continue with "{staffFreeText.trim()}"
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div className="relative">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                      <Input
+                        value={visitingSearch}
+                        onChange={(e) => setVisitingSearch(e.target.value)}
+                        placeholder={
+                          visitingMode === "resident"
+                            ? flow.residentLookupMode === "search_first"
+                              ? "Type at least 3 characters (name or room)..."
+                              : "Search by name or room..."
+                            : "Search by name or department..."
+                        }
+                        className="pl-12 h-14 text-lg"
+                        autoFocus
                       />
-                    ))
-                  )}
-                </div>
+                    </div>
+
+                    {/* Hint for search-first mode */}
+                    {visitingMode === "resident" && flow.residentLookupMode === "search_first" && visitingSearch.length > 0 && visitingSearch.length < 3 && (
+                      <p className="text-center text-sm text-muted-foreground">Type at least 3 characters to search</p>
+                    )}
+
+                    {/* Group by department for staff */}
+                    {visitingMode === "staff" && flow.staffLookupMode === "by_department" && !visitingSearch ? (
+                      <div className="space-y-4 max-h-[40vh] overflow-y-auto">
+                        {Object.entries(
+                          flow.staff.reduce((acc: Record<string, typeof flow.staff>, s) => {
+                            const dept = s.department || "Other";
+                            if (!acc[dept]) acc[dept] = [];
+                            acc[dept].push(s);
+                            return acc;
+                          }, {})
+                        ).sort(([a], [b]) => a.localeCompare(b)).map(([dept, members]) => (
+                          <div key={dept}>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 px-1">{dept}</p>
+                            <div className="space-y-1">
+                              {members.map((person: any) => (
+                                <KioskPersonCard
+                                  key={person.id}
+                                  name={person.name}
+                                  subtitle={person.role}
+                                  accentColor="primary"
+                                  onClick={() => {
+                                    flow.updateField("whomToVisit", person.name);
+                                    goNext();
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-[40vh] overflow-y-auto">
+                        {filteredVisiting.length === 0 ? (
+                          <p className="text-center py-8 text-muted-foreground">
+                            {visitingMode === "resident" && flow.residentLookupMode === "search_first" && visitingSearch.length < 3
+                              ? "Start typing to search for a resident"
+                              : `No ${visitingMode}s found`}
+                          </p>
+                        ) : (
+                          filteredVisiting.map((person: any) => (
+                            <KioskPersonCard
+                              key={person.id}
+                              name={person.name}
+                              subtitle={
+                                visitingMode === "resident"
+                                  ? `${person.room || "—"} ${person.wing ? `• ${person.wing}` : ""}`
+                                  : `${person.role} ${person.department ? `• ${person.department}` : ""}`
+                              }
+                              accentColor="primary"
+                              onClick={() => {
+                                flow.updateField("whomToVisit", person.name);
+                                goNext();
+                              }}
+                            />
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
               </>
             )}
 

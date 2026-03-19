@@ -98,6 +98,75 @@ export function ResidentLeaveSettingsTab() {
         </CardContent>
       </Card>
 
+      {/* Kiosk Lookup Settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Search className="h-4 w-4 text-primary" /> Kiosk Lookup Settings
+          </CardTitle>
+          <CardDescription className="text-xs">Configure how visitors find residents and staff on the self-service kiosk.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-lg border border-border p-4 space-y-2">
+            <p className="text-sm font-medium text-foreground">Resident Lookup Mode</p>
+            <p className="text-xs text-muted-foreground">How residents are displayed when a visitor selects "Resident" on the kiosk check-in.</p>
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => setResidentLookupMode("show_all")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  residentLookupMode === "show_all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-primary/10"
+                }`}
+              >
+                Show All
+              </button>
+              <button
+                onClick={() => setResidentLookupMode("search_first")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  residentLookupMode === "search_first" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-primary/10"
+                }`}
+              >
+                Search First (3+ chars)
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border p-4 space-y-2">
+            <p className="text-sm font-medium text-foreground">Staff Lookup Mode</p>
+            <p className="text-xs text-muted-foreground">How staff members are displayed when a visitor selects "Staff" on the kiosk check-in.</p>
+            <div className="flex gap-2 pt-1 flex-wrap">
+              <button
+                onClick={() => setStaffLookupMode("search_first")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  staffLookupMode === "search_first" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-primary/10"
+                }`}
+              >
+                Search First
+              </button>
+              <button
+                onClick={() => setStaffLookupMode("by_department")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  staffLookupMode === "by_department" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-primary/10"
+                }`}
+              >
+                Group by Department
+              </button>
+              <button
+                onClick={() => setStaffLookupMode("free_text")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  staffLookupMode === "free_text" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-primary/10"
+                }`}
+              >
+                Free Text Only
+              </button>
+            </div>
+          </div>
+
+          <Button onClick={save} disabled={saving} className="gap-1.5">
+            <Save className="h-3.5 w-3.5" /> {saving ? "Saving..." : "Save Changes"}
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Leave Types management */}
       <LeaveTypesTab />
     </div>
