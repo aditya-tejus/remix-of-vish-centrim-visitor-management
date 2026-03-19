@@ -99,12 +99,6 @@ function getSections(type: string): SectionConfig[] {
     );
   }
 
-  // Feedback for visitor-facing types
-  if (["visitor", "contractor", "volunteer"].includes(type)) {
-    sections.push(
-      { id: "feedback", label: "Feedback Questions", icon: MessageSquare, component: <FeedbackSettingsPerType personType={type} /> },
-    );
-  }
 
   return sections;
 }
