@@ -278,7 +278,7 @@ export function useCheckInFlow(open: boolean) {
 
     // Privacy
     privacyAcknowledged, setPrivacyAcknowledged,
-    branchTcUrl, branchPrivacyUrl,
+    branchTcUrl, branchPrivacyUrl, tcContent,
 
     // Resident/staff items for "visiting" dropdown
     residentItems, staffItems,
