@@ -80,12 +80,10 @@ function getSections(type: string): SectionConfig[] {
     { id: "photo", label: "Photo & Signature", icon: Camera, component: <PhotoSignatureSettings personType={type} /> },
   );
 
-  // T&C for non-resident, non-staff
-  if (["visitor", "contractor", "volunteer"].includes(type)) {
-    sections.push(
-      { id: "terms", label: "Terms & Conditions", icon: ScrollText, component: <TermsSettingsPerType personType={type} /> },
-    );
-  }
+  // T&C for all person types
+  sections.push(
+    { id: "terms", label: "Terms & Conditions", icon: ScrollText, component: <TermsSettingsPerType personType={type} /> },
+  );
 
   // Alerts for most
   if (type !== "staff") {
