@@ -14,6 +14,8 @@ import AuditLogPage from "./pages/AuditLog";
 import PublicCheckIn from "./pages/PublicCheckIn";
 import Evacuation from "./pages/Evacuation";
 import Feedback from "./pages/Feedback";
+import FeedbackResponses from "./pages/FeedbackResponses";
+import FeedbackAnalytics from "./pages/FeedbackAnalytics";
 import VisitorAnalytics from "./pages/VisitorAnalytics";
 import LeaveRequests from "./pages/LeaveRequests";
 import NotFound from "./pages/NotFound";
