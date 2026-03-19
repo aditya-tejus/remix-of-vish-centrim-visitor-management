@@ -13,6 +13,7 @@ interface StepConfirmProps {
   setPrivacyAcknowledged: (val: boolean) => void;
   branchTcUrl: string | null;
   branchPrivacyUrl: string | null;
+  tcContent?: string | null;
 }
 
 const TYPE_BADGES: Record<string, { label: string; emoji: string; className: string }> = {
