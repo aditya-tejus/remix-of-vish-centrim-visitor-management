@@ -180,6 +180,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
                   setPrivacyAcknowledged={flow.setPrivacyAcknowledged}
                   branchTcUrl={flow.branchTcUrl}
                   branchPrivacyUrl={flow.branchPrivacyUrl}
+                  tcContent={flow.tcContent}
                 />
               )}
             </div>
