@@ -75,12 +75,17 @@ export default function KioskCheckIn() {
   const filteredVisiting = useMemo(() => {
     const q = visitingSearch.toLowerCase();
     if (visitingMode === "staff") {
-      return flow.staff.filter((s) => s.name.toLowerCase().includes(q));
+      if (flow.staffLookupMode === "free_text") return [];
+      if (!q) return flow.staffLookupMode === "by_department" ? flow.staff : [];
+      return flow.staff.filter((s) => s.name.toLowerCase().includes(q) || s.department?.toLowerCase().includes(q));
     }
+    // Resident mode
+    if (flow.residentLookupMode === "show_all" && !q) return flow.residents;
+    if (flow.residentLookupMode === "search_first" && q.length < 3) return [];
     return flow.residents.filter((r) =>
       r.name.toLowerCase().includes(q) || r.room?.toLowerCase().includes(q)
     );
-  }, [visitingSearch, visitingMode, flow.residents, flow.staff]);
+  }, [visitingSearch, visitingMode, flow.residents, flow.staff, flow.residentLookupMode, flow.staffLookupMode]);
 
   const doCheckIn = useCallback(() => {
     const allHealthClear = Object.values(flow.healthAnswers).every((v) => v === false);
