@@ -131,6 +131,9 @@ export function useVisitors() {
         leave_type: visitor.leaveType ?? null,
         accompanied_by: visitor.accompaniedBy ?? null,
         accompanied_by_name: visitor.accompaniedByName ?? null,
+        health_answers: (visitor.healthAnswers || {}) as any,
+        contractor_screening: (visitor.contractorScreening || {}) as any,
+        supplier_id: visitor.supplierId ?? null,
       })
       .select()
       .single()
