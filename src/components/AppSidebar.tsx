@@ -1,8 +1,7 @@
 import centrimLogo from "@/assets/centrim-life-logo.png";
 import {
-  Users, Settings, ClipboardList, UserPlus, BarChart3,
-  Shield, Calendar, MessageSquare, AlertTriangle, LineChart,
-  ChevronDown, DoorOpen, QrCode, Layers, CheckSquare,
+  Users, Settings, BarChart3,
+  ChevronDown, Layers,
   type LucideIcon,
 } from "lucide-react";
 import {
