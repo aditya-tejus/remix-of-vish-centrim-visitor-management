@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useFeedbackQuestions, useFeedbackMutations } from "@/hooks/useFeedback";
+import { useFeedbackSurveys, useFeedbackQuestions, useFeedbackMutations, FeedbackSurvey } from "@/hooks/useFeedback";
 import { useToast } from "@/hooks/use-toast";
-import { Star, MessageSquare, Send } from "lucide-react";
+import { MessageSquare, Send, ExternalLink } from "lucide-react";
 
 interface FeedbackDialogProps {
   open: boolean;
@@ -18,12 +18,39 @@ const emojis = ["😞", "😕", "😐", "🙂", "😊"];
 const labels = ["Poor", "Fair", "Okay", "Good", "Excellent"];
 
 export function FeedbackDialog({ open, onOpenChange, visitorId, visitorName, visitorType }: FeedbackDialogProps) {
-  const { data: questions = [] } = useFeedbackQuestions(true);
-  const { submitFeedback } = useFeedbackMutations();
+  const { data: surveys = [] } = useFeedbackSurveys(true);
   const { toast } = useToast();
   const [ratings, setRatings] = useState<Record<string, number>>({});
   const [comments, setComments] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
+
+  // Find the active survey for this visitor type with checkout trigger
+  const activeSurvey = useMemo<FeedbackSurvey | null>(() => {
+    return surveys.find((s) =>
+      s.is_active &&
+      s.trigger_point === "checkout" &&
+      s.assigned_types.includes(visitorType)
+    ) || null;
+  }, [surveys, visitorType]);
+
+  const { data: questions = [] } = useFeedbackQuestions(true, activeSurvey?.id);
+  const { submitFeedback } = useFeedbackMutations();
+
+  // Reset state when dialog opens with new visitor
+  useEffect(() => {
+    if (open) {
+      setRatings({});
+      setComments({});
+      setSubmitted(false);
+    }
+  }, [open, visitorId]);
+
+  // If no survey or no questions, auto-close
+  useEffect(() => {
+    if (open && activeSurvey === null) {
+      onOpenChange(false);
+    }
+  }, [open, activeSurvey, onOpenChange]);
 
   const handleSubmit = async () => {
     const responses = questions
@@ -35,6 +62,7 @@ export function FeedbackDialog({ open, onOpenChange, visitorId, visitorName, vis
         question_id: q.id,
         rating: ratings[q.id],
         comment: comments[q.id] || "",
+        survey_id: activeSurvey?.id,
       }));
 
     if (responses.length === 0) {
@@ -47,15 +75,14 @@ export function FeedbackDialog({ open, onOpenChange, visitorId, visitorName, vis
       setSubmitted(true);
       toast({ title: "Thank you for your feedback!" });
       setTimeout(() => {
-        setSubmitted(false);
-        setRatings({});
-        setComments({});
         onOpenChange(false);
       }, 2000);
     } catch {
       toast({ title: "Error submitting feedback", variant: "destructive" });
     }
   };
+
+  if (!activeSurvey) return null;
 
   if (submitted) {
     return (
@@ -71,16 +98,52 @@ export function FeedbackDialog({ open, onOpenChange, visitorId, visitorName, vis
     );
   }
 
+  // Centrim Life external survey
+  if (activeSurvey.source === "centrim_compliance") {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[420px] p-0 gap-0">
+          <div className="p-8 text-center space-y-5">
+            <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+              <MessageSquare className="h-8 w-8 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-lg font-bold text-foreground">We'd Love Your Feedback</h2>
+              <p className="text-sm text-muted-foreground">
+                {activeSurvey.description || "Help us improve by sharing your experience."}
+              </p>
+            </div>
+            {activeSurvey.external_url && (
+              <Button
+                className="gap-2 w-full h-12 text-base"
+                onClick={() => window.open(activeSurvey.external_url, "_blank")}
+              >
+                <ExternalLink className="h-4 w-4" />
+                Open Feedback Form
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="text-muted-foreground">
+              Skip
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Built-in survey with questions
+  if (questions.length === 0) return null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[520px] p-0 gap-0 max-h-[85vh] flex flex-col">
         <DialogHeader className="px-6 pt-6 pb-3 shrink-0">
           <DialogTitle className="text-base font-semibold text-foreground flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-primary" />
-            Visit Feedback
+            {activeSurvey.title || "Visit Feedback"}
           </DialogTitle>
           <p className="text-xs text-muted-foreground mt-1">
-            Your feedback helps us provide the best possible care. All responses are anonymous and confidential.
+            {activeSurvey.description || "Your feedback helps us provide the best possible care. All responses are confidential."}
           </p>
         </DialogHeader>
 
@@ -88,8 +151,6 @@ export function FeedbackDialog({ open, onOpenChange, visitorId, visitorName, vis
           {questions.map((q) => (
             <div key={q.id} className="space-y-2.5">
               <p className="text-sm font-medium text-foreground">{q.question}</p>
-
-              {/* Emoji rating row */}
               <div className="flex gap-2 justify-center">
                 {emojis.map((emoji, i) => {
                   const rating = i + 1;
@@ -110,8 +171,6 @@ export function FeedbackDialog({ open, onOpenChange, visitorId, visitorName, vis
                   );
                 })}
               </div>
-
-              {/* Optional comment */}
               {ratings[q.id] && (
                 <Textarea
                   value={comments[q.id] || ""}
@@ -122,10 +181,6 @@ export function FeedbackDialog({ open, onOpenChange, visitorId, visitorName, vis
               )}
             </div>
           ))}
-
-          {questions.length === 0 && (
-            <div className="py-8 text-center text-sm text-muted-foreground">No feedback questions configured.</div>
-          )}
         </div>
 
         <div className="shrink-0 px-6 py-3 border-t border-border flex items-center justify-between">

@@ -61,6 +61,7 @@ export function useCheckInFlow(open: boolean) {
   const [jurisdiction, setJurisdiction] = useState<"AU" | "UK">("AU");
   const [branchTcUrl, setBranchTcUrl] = useState<string | null>(null);
   const [branchPrivacyUrl, setBranchPrivacyUrl] = useState<string | null>(null);
+  const [tcContent, setTcContent] = useState<string | null>(null);
 
   // Dynamic settings-driven fields
   const { data: dbQuestions = [] } = useActiveHealthQuestions(selectedType as any);
@@ -100,12 +101,15 @@ export function useCheckInFlow(open: boolean) {
   const isFirstStep = currentStepIndex === 0;
   const isLastStep = currentStepIndex === totalSteps - 1;
 
-  // Load settings
+  // Load settings (including dynamic T&C content per type)
   useEffect(() => {
     supabase
       .from("settings")
       .select("key, value")
-      .in("key", ["branch_tc_url", "branch_privacy_url", "show_branch_docs_in_form", "jurisdiction"])
+      .in("key", [
+        "branch_tc_url", "branch_privacy_url", "show_branch_docs_in_form", "jurisdiction",
+        `tc_content_${selectedType}`,
+      ])
       .then(({ data }) => {
         if (data) {
           const map: Record<string, string> = {};
@@ -113,10 +117,11 @@ export function useCheckInFlow(open: boolean) {
           const showDocs = map.show_branch_docs_in_form !== "false";
           setBranchTcUrl(showDocs && map.branch_tc_url ? map.branch_tc_url : null);
           setBranchPrivacyUrl(showDocs && map.branch_privacy_url ? map.branch_privacy_url : null);
+          setTcContent(map[`tc_content_${selectedType}`] || null);
           if (map.jurisdiction === "UK" || map.jurisdiction === "AU") setJurisdiction(map.jurisdiction);
         }
       });
-  }, []);
+  }, [selectedType]);
 
   // Fetch previous visitors
   useEffect(() => {
@@ -273,7 +278,7 @@ export function useCheckInFlow(open: boolean) {
 
     // Privacy
     privacyAcknowledged, setPrivacyAcknowledged,
-    branchTcUrl, branchPrivacyUrl,
+    branchTcUrl, branchPrivacyUrl, tcContent,
 
     // Resident/staff items for "visiting" dropdown
     residentItems, staffItems,
