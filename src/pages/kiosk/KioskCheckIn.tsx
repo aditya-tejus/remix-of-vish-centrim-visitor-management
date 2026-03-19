@@ -95,11 +95,13 @@ export default function KioskCheckIn() {
       address: flow.formValues.address || "",
       status: "checked-in",
       healthDeclaration: allHealthClear,
-      healthAnswers: flow.healthAnswers,
+      healthAnswers: { ...flow.healthAnswers, ...flow.contractorAnswers },
       additionalVisitors: 0,
       comments: flow.formValues.comments || "",
       retentionExpiry: new Date(Date.now() + 86400000 * 60),
       acknowledgedPrivacy: flow.privacyAcknowledged,
+      contractorScreening: flow.selectedType === "contractor" ? flow.contractorAnswers : undefined,
+      supplierId: flow.selectedSupplier?.id || undefined,
     });
     setSubmitted(true);
     toast({ title: "Checked In", description: `Welcome, ${flow.formValues.firstName}!` });
@@ -425,6 +427,26 @@ export default function KioskCheckIn() {
                   </div>
                 );
               })}
+
+              {/* Vaccination fields */}
+              {flow.vaccinationFields.length > 0 && (
+                <div className="pt-3 mt-2 border-t border-border space-y-3">
+                  <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Vaccination Records</p>
+                  {flow.vaccinationFields.map((vf) => (
+                    <div key={vf.id} className="rounded-2xl border-2 border-border bg-card p-5">
+                      <label className="text-base text-foreground font-medium block mb-2">
+                        {vf.label}{vf.required && <span className="text-destructive ml-0.5">*</span>}
+                      </label>
+                      <Input
+                        type={vf.field_type === "date" ? "date" : "text"}
+                        value={flow.healthAnswers[`vacc_${vf.name}`] || ""}
+                        onChange={(e) => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [`vacc_${vf.name}`]: e.target.value }))}
+                        className="h-14 text-lg rounded-xl"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {flow.hasYesFlags && (
@@ -510,6 +532,12 @@ export default function KioskCheckIn() {
                 </div>
               )}
 
+              {flow.selectedType === "contractor" && flow.selectedSupplier && (
+                <div className="pt-3 mt-3 border-t border-border">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Supplier</span><span className="font-medium">{flow.selectedSupplier.name}</span></div>
+                </div>
+              )}
+
               {flow.tcContent && (
                 <div className="pt-3 mt-3 border-t border-border">
                   <div className="flex items-center justify-between">
@@ -521,13 +549,31 @@ export default function KioskCheckIn() {
                 </div>
               )}
             </div>
+
+            {/* Privacy acknowledgment fallback when no T&C content exists */}
+            {!flow.tcContent && (
+              <div className="rounded-2xl border-2 border-border bg-card p-5">
+                <div
+                  className={`flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-all ${
+                    flow.privacyAcknowledged ? "bg-success/5 border-2 border-success/30" : "bg-muted/30 border-2 border-border hover:border-primary/30"
+                  }`}
+                  onClick={() => flow.setPrivacyAcknowledged(!flow.privacyAcknowledged)}
+                >
+                  <Checkbox checked={flow.privacyAcknowledged} className="h-7 w-7" onCheckedChange={(c) => flow.setPrivacyAcknowledged(c === true)} />
+                  <span className="text-base text-foreground font-medium">
+                    I acknowledge that my data will be processed in accordance with data protection regulations and consent to this visit being recorded.
+                  </span>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-3 pt-2">
               <Button variant="outline" onClick={goBack} className="flex-1 h-14 text-base gap-2">
                 <ArrowLeft className="h-5 w-5" /> Back
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={flow.tcContent ? !flow.privacyAcknowledged : false}
+                disabled={!flow.privacyAcknowledged}
                 className="flex-1 h-14 text-base gap-2 bg-success hover:bg-success/90 text-success-foreground"
               >
                 ✓ Complete Check In
