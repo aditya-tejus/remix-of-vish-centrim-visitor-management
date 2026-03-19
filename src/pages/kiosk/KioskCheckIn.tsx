@@ -95,11 +95,13 @@ export default function KioskCheckIn() {
       address: flow.formValues.address || "",
       status: "checked-in",
       healthDeclaration: allHealthClear,
-      healthAnswers: flow.healthAnswers,
+      healthAnswers: { ...flow.healthAnswers, ...flow.contractorAnswers },
       additionalVisitors: 0,
       comments: flow.formValues.comments || "",
       retentionExpiry: new Date(Date.now() + 86400000 * 60),
       acknowledgedPrivacy: flow.privacyAcknowledged,
+      contractorScreening: flow.selectedType === "contractor" ? flow.contractorAnswers : undefined,
+      supplierId: flow.selectedSupplier?.id || undefined,
     });
     setSubmitted(true);
     toast({ title: "Checked In", description: `Welcome, ${flow.formValues.firstName}!` });
