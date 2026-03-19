@@ -42,6 +42,8 @@ export function ResidentLeaveSettingsTab() {
       { key: "leave_global_name_search", value: globalNameSearchEnabled ? "true" : "false" },
       { key: "leave_require_approval", value: requireApproval ? "true" : "false" },
       { key: "leave_default_return_hours", value: defaultReturnHours },
+      { key: "kiosk_resident_lookup_mode", value: residentLookupMode },
+      { key: "kiosk_staff_lookup_mode", value: staffLookupMode },
     ];
     for (const s of settings) {
       await supabase.from("settings").upsert(s, { onConflict: "key" });
