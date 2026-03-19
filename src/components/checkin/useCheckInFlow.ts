@@ -61,6 +61,7 @@ export function useCheckInFlow(open: boolean) {
   const [jurisdiction, setJurisdiction] = useState<"AU" | "UK">("AU");
   const [branchTcUrl, setBranchTcUrl] = useState<string | null>(null);
   const [branchPrivacyUrl, setBranchPrivacyUrl] = useState<string | null>(null);
+  const [tcContent, setTcContent] = useState<string | null>(null);
 
   // Dynamic settings-driven fields
   const { data: dbQuestions = [] } = useActiveHealthQuestions(selectedType as any);
