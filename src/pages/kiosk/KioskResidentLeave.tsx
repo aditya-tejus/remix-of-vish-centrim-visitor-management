@@ -17,7 +17,7 @@ export default function KioskResidentLeave() {
   const navigate = useNavigate();
   const { residents } = useResidents();
   const { visitors, checkOutVisitor, checkInReturn } = useVisitors();
-  const { leaveTypes } = useLeaveTypes();
+  const { data: leaveTypes = [] } = useActiveLeaveTypes();
   const { toast } = useToast();
 
   const [mode, setMode] = useState<Mode>("select");

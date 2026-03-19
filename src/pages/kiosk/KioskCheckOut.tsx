@@ -65,17 +65,20 @@ export default function KioskCheckOut() {
   }
 
   if (phase === "feedback" && selected) {
-    return (
+    const feedbackEl = (
       <KioskFeedbackScreen
         visitorId={selected.id}
         visitorName={`${selected.firstName} ${selected.surname}`}
         visitorType={selected.type}
         onComplete={handleFeedbackComplete}
       />
-    ) || (
-      // If KioskFeedbackScreen returns null (no survey), skip to done
-      (() => { setPhase("done"); return null; })()
     );
+    // KioskFeedbackScreen returns null when no survey — auto-advance
+    if (!feedbackEl) {
+      setPhase("done");
+      return null;
+    }
+    return feedbackEl;
   }
 
   if (phase === "confirm" && selected) {
