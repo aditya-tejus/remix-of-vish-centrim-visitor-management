@@ -75,25 +75,22 @@ export function AppSidebar() {
       ],
     },
     {
-      label: "Safety & Compliance",
-      icon: Shield,
-      iconColor: "text-amber-400",
-      collapsible: true,
-      items: [
-        { title: "GDPR & Privacy", path: "/gdpr", indent: true },
-        { title: "Audit Trail", path: "/audit-log", indent: true },
-        { title: "Coverage Checklist", path: "/coverage", indent: true },
-      ],
-    },
-    {
-      label: "Insights",
+      label: "Reports",
       icon: BarChart3,
       iconColor: "text-violet-400",
       collapsible: true,
       items: [
-        { title: "Reports", path: "/reports", indent: true },
-        { title: "Visitor Analytics", path: "/visitor-analytics", indent: true },
-        { title: "Visitor Feedback", path: "/feedback", indent: true },
+        { title: "Visitor Reports", path: "/reports", indent: true },
+        { title: "Safety & Compliance", path: "/gdpr", indent: true },
+      ],
+    },
+    {
+      label: "Settings",
+      icon: Settings,
+      iconColor: "text-gray-400",
+      collapsible: true,
+      items: [
+        { title: "Visitor Settings", path: "/settings", indent: true },
       ],
     },
   ];
