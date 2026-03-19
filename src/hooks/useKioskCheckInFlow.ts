@@ -21,6 +21,8 @@ export function useKioskCheckInFlow() {
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [tcContent, setTcContent] = useState<string | null>(null);
   const [jurisdiction, setJurisdiction] = useState<"AU" | "UK">("UK");
+  const [residentLookupMode, setResidentLookupMode] = useState<"show_all" | "search_first">("search_first");
+  const [staffLookupMode, setStaffLookupMode] = useState<"search_first" | "by_department" | "free_text">("search_first");
   const [contractorAnswers, setContractorAnswers] = useState<Record<string, any>>({});
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [returningVisitor, setReturningVisitor] = useState<any>(null);
