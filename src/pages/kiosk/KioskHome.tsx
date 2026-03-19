@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { UserPlus, LogOut, DoorOpen, QrCode } from "lucide-react";
+import { UserPlus, LogOut, DoorOpen } from "lucide-react";
 import { motion } from "framer-motion";
 
 const KIOSK_TILES = [
@@ -18,14 +18,6 @@ const KIOSK_TILES = [
     path: "/kiosk/checkout",
     idle: "bg-warning/10 text-warning border-warning/20",
     hover: "hover:bg-warning hover:text-warning-foreground hover:border-warning hover:shadow-lg",
-  },
-  {
-    label: "QR Code",
-    description: "I have a QR code",
-    icon: QrCode,
-    path: "/kiosk/qr",
-    idle: "bg-success/10 text-success border-success/20",
-    hover: "hover:bg-success hover:text-success-foreground hover:border-success hover:shadow-lg",
   },
   {
     label: "Resident Leave",
@@ -50,7 +42,7 @@ export default function KioskHome() {
   const navigate = useNavigate();
 
   return (
-    <div className="w-full max-w-xl space-y-8 px-2">
+    <div className="w-full max-w-2xl space-y-8 px-2">
       <motion.div
         className="text-center"
         initial={{ opacity: 0, y: -12 }}
@@ -61,7 +53,7 @@ export default function KioskHome() {
         <p className="text-lg text-muted-foreground mt-2">How can we help you today?</p>
       </motion.div>
 
-      <div className="grid grid-cols-2 gap-4 sm:gap-5">
+      <div className="grid grid-cols-3 gap-4 sm:gap-5">
         {KIOSK_TILES.map((tile, i) => (
           <motion.button
             key={tile.path}
