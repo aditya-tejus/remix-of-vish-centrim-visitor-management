@@ -142,11 +142,17 @@ export function StepConfirm({
           </div>
           <h4 className="text-[14px] font-bold text-foreground">Terms & Privacy</h4>
         </div>
-        <div className="max-h-[100px] overflow-y-auto rounded-xl bg-muted/30 p-4 text-[12px] text-muted-foreground leading-relaxed space-y-1.5 border border-border">
-          <p>1. I agree to follow all care home policies during my visit.</p>
-          <p>2. I agree to sign out upon leaving the premises.</p>
-          <p>3. I confirm that all information provided is accurate.</p>
-          <p>4. My visit data will be processed per applicable data protection regulations.</p>
+        <div className="max-h-[100px] overflow-y-auto rounded-xl bg-muted/30 p-4 text-[12px] text-muted-foreground leading-relaxed space-y-1.5 border border-border whitespace-pre-line">
+          {tcContent ? (
+            tcContent
+          ) : (
+            <>
+              <p>1. I agree to follow all care home policies during my visit.</p>
+              <p>2. I agree to sign out upon leaving the premises.</p>
+              <p>3. I confirm that all information provided is accurate.</p>
+              <p>4. My visit data will be processed per applicable data protection regulations.</p>
+            </>
+          )}
         </div>
         {(branchTcUrl || branchPrivacyUrl) && (
           <div className="flex flex-wrap gap-4">
