@@ -33,6 +33,7 @@ export function StepConfirm({
   setPrivacyAcknowledged,
   branchTcUrl,
   branchPrivacyUrl,
+  tcContent,
 }: StepConfirmProps) {
   const typeBadge = TYPE_BADGES[selectedType] || TYPE_BADGES.visitor;
   const hasHealthFlags = Object.values(healthAnswers).some((v) => v === true);
