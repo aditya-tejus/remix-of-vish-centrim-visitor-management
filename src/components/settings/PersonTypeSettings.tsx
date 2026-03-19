@@ -10,7 +10,7 @@ import { PhotoSignatureSettings } from "@/components/settings/PhotoSignatureSett
 import { TermsSettingsPerType } from "@/components/settings/TermsSettingsPerType";
 import { AlertSettingsPerType } from "@/components/settings/AlertSettingsPerType";
 import { AutomationSettingsPerType } from "@/components/settings/AutomationSettingsPerType";
-import { FeedbackSettingsPerType } from "@/components/settings/FeedbackSettingsPerType";
+
 import { ResidentLeaveSettingsTab } from "@/components/settings/ResidentLeaveSettingsTab";
 import { ReturnNotificationSettingsTab } from "@/components/settings/ReturnNotificationSettingsTab";
 import type { VisitorType } from "@/hooks/useHealthQuestions";
