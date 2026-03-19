@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
 
 interface KioskSuccessScreenProps {
@@ -86,29 +87,23 @@ export function KioskSuccessScreen({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
-        className="flex flex-col items-center gap-2 mt-4"
+        className="flex flex-col items-center gap-3 mt-4"
       >
         <svg width="72" height="72" viewBox="0 0 72 72" className="-rotate-90">
+          <circle cx="36" cy="36" r={radius} fill="none" stroke="hsl(var(--border))" strokeWidth="4" />
           <circle
-            cx="36" cy="36" r={radius}
-            fill="none"
-            stroke="hsl(var(--border))"
-            strokeWidth="4"
-          />
-          <circle
-            cx="36" cy="36" r={radius}
-            fill="none"
+            cx="36" cy="36" r={radius} fill="none"
             className={strokeColorMap[accentColor]}
-            strokeWidth="4"
-            strokeLinecap="round"
+            strokeWidth="4" strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={circumference * (1 - progress)}
             style={{ transition: "stroke-dashoffset 1s linear" }}
           />
         </svg>
-        <span className="text-sm text-muted-foreground">
-          Returning home in {remaining}s
-        </span>
+        <span className="text-sm text-muted-foreground">Returning home in {remaining}s</span>
+        <Button variant="ghost" size="sm" onClick={onComplete} className="text-muted-foreground mt-1">
+          Done — go now
+        </Button>
       </motion.div>
     </div>
   );
