@@ -427,6 +427,26 @@ export default function KioskCheckIn() {
                   </div>
                 );
               })}
+
+              {/* Vaccination fields */}
+              {flow.vaccinationFields.length > 0 && (
+                <div className="pt-3 mt-2 border-t border-border space-y-3">
+                  <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Vaccination Records</p>
+                  {flow.vaccinationFields.map((vf) => (
+                    <div key={vf.id} className="rounded-2xl border-2 border-border bg-card p-5">
+                      <label className="text-base text-foreground font-medium block mb-2">
+                        {vf.label}{vf.required && <span className="text-destructive ml-0.5">*</span>}
+                      </label>
+                      <Input
+                        type={vf.field_type === "date" ? "date" : "text"}
+                        value={flow.healthAnswers[`vacc_${vf.name}`] || ""}
+                        onChange={(e) => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [`vacc_${vf.name}`]: e.target.value }))}
+                        className="h-14 text-lg rounded-xl"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {flow.hasYesFlags && (
