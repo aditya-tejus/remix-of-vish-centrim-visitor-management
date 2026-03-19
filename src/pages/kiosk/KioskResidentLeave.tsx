@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useResidents } from "@/hooks/useResidents";
 import { useVisitors } from "@/hooks/useVisitors";
-import { useLeaveTypes } from "@/hooks/useLeaveTypes";
+import { useActiveLeaveTypes } from "@/hooks/useLeaveTypes";
 import { useToast } from "@/hooks/use-toast";
 import { DoorOpen, Search, Home, ArrowLeft, ArrowRight, Calendar, RotateCcw } from "lucide-react";
 import { motion } from "framer-motion";
