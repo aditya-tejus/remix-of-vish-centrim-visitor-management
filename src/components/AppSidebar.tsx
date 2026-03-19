@@ -187,27 +187,6 @@ export function AppSidebar() {
             </SidebarMenuItem>
           </SidebarMenu>
         </div>
-
-        {/* Settings */}
-        <div className="mt-1">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={() => navigate("/settings")}
-                isActive={location.pathname === "/settings"}
-                tooltip="Settings"
-                className={`rounded-lg h-9 text-[13px] font-medium gap-3 px-3 transition-all duration-150
-                  ${location.pathname === "/settings"
-                    ? "bg-sidebar-accent text-sidebar-foreground"
-                    : "text-sidebar-muted hover:bg-[rgba(255,255,255,0.05)] hover:text-sidebar-foreground"
-                  }`}
-              >
-                <Settings className="h-4 w-4 shrink-0 text-gray-400" />
-                <span>Settings</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </div>
       </SidebarContent>
 
       <SidebarFooter className="px-3 pb-4">
