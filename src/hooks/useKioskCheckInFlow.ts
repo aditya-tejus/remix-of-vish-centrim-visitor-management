@@ -167,5 +167,7 @@ export function useKioskCheckInFlow() {
     detailsValid,
     hasYesFlags,
     reset,
+    residentLookupMode,
+    staffLookupMode,
   };
 }

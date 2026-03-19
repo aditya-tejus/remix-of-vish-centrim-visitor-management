@@ -37,6 +37,7 @@ export default function KioskCheckIn() {
   const [watchlistOpen, setWatchlistOpen] = useState(false);
   const [visitingSearch, setVisitingSearch] = useState("");
   const [visitingMode, setVisitingMode] = useState<"resident" | "staff" | null>(null);
+  const [staffFreeText, setStaffFreeText] = useState("");
   const [returningChecked, setReturningChecked] = useState(false);
 
   const currentIdx = flow.steps.findIndex((s) => s.id === step);
