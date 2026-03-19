@@ -256,6 +256,7 @@ export type Database = {
           is_active: boolean
           question: string
           sort_order: number
+          survey_id: string | null
           updated_at: string
           visitor_type: string
         }
@@ -266,6 +267,7 @@ export type Database = {
           is_active?: boolean
           question: string
           sort_order?: number
+          survey_id?: string | null
           updated_at?: string
           visitor_type?: string
         }
@@ -276,10 +278,19 @@ export type Database = {
           is_active?: boolean
           question?: string
           sort_order?: number
+          survey_id?: string | null
           updated_at?: string
           visitor_type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "feedback_questions_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "feedback_surveys"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       feedback_responses: {
         Row: {
@@ -288,6 +299,7 @@ export type Database = {
           id: string
           question_id: string
           rating: number
+          survey_id: string | null
           visitor_id: string | null
           visitor_name: string
           visitor_type: string
@@ -298,6 +310,7 @@ export type Database = {
           id?: string
           question_id: string
           rating: number
+          survey_id?: string | null
           visitor_id?: string | null
           visitor_name?: string
           visitor_type?: string
@@ -308,6 +321,7 @@ export type Database = {
           id?: string
           question_id?: string
           rating?: number
+          survey_id?: string | null
           visitor_id?: string | null
           visitor_name?: string
           visitor_type?: string
@@ -321,6 +335,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "feedback_responses_survey_id_fkey"
+            columns: ["survey_id"]
+            isOneToOne: false
+            referencedRelation: "feedback_surveys"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "feedback_responses_visitor_id_fkey"
             columns: ["visitor_id"]
             isOneToOne: false
@@ -328,6 +349,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      feedback_surveys: {
+        Row: {
+          assigned_types: string[]
+          created_at: string
+          description: string | null
+          external_url: string | null
+          id: string
+          is_active: boolean
+          sort_order: number
+          source: string
+          title: string
+          trigger_point: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_types?: string[]
+          created_at?: string
+          description?: string | null
+          external_url?: string | null
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          source?: string
+          title: string
+          trigger_point?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_types?: string[]
+          created_at?: string
+          description?: string | null
+          external_url?: string | null
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          source?: string
+          title?: string
+          trigger_point?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       form_fields: {
         Row: {
