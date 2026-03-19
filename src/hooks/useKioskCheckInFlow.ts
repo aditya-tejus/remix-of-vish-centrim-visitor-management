@@ -21,6 +21,8 @@ export function useKioskCheckInFlow() {
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [tcContent, setTcContent] = useState<string | null>(null);
   const [jurisdiction, setJurisdiction] = useState<"AU" | "UK">("UK");
+  const [residentLookupMode, setResidentLookupMode] = useState<"show_all" | "search_first">("search_first");
+  const [staffLookupMode, setStaffLookupMode] = useState<"search_first" | "by_department" | "free_text">("search_first");
   const [contractorAnswers, setContractorAnswers] = useState<Record<string, any>>({});
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [returningVisitor, setReturningVisitor] = useState<any>(null);
@@ -50,12 +52,16 @@ export function useKioskCheckInFlow() {
     supabase
       .from("settings")
       .select("key, value")
-      .in("key", [`tc_content_${selectedType}`, "jurisdiction"])
+      .in("key", [`tc_content_${selectedType}`, "jurisdiction", "kiosk_resident_lookup_mode", "kiosk_staff_lookup_mode"])
       .then(({ data }) => {
         const tc = data?.find((d) => d.key === `tc_content_${selectedType}`);
         const jur = data?.find((d) => d.key === "jurisdiction");
+        const rlm = data?.find((d) => d.key === "kiosk_resident_lookup_mode");
+        const slm = data?.find((d) => d.key === "kiosk_staff_lookup_mode");
         setTcContent(tc?.value || null);
         if (jur?.value === "AU" || jur?.value === "UK") setJurisdiction(jur.value);
+        if (rlm?.value === "show_all" || rlm?.value === "search_first") setResidentLookupMode(rlm.value);
+        if (slm?.value === "search_first" || slm?.value === "by_department" || slm?.value === "free_text") setStaffLookupMode(slm.value);
       });
   }, [selectedType]);
 
@@ -161,5 +167,7 @@ export function useKioskCheckInFlow() {
     detailsValid,
     hasYesFlags,
     reset,
+    residentLookupMode,
+    staffLookupMode,
   };
 }
