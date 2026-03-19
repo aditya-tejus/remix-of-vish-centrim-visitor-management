@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   useFeedbackSurveys, useSurveyMutations, useFeedbackQuestions, useFeedbackMutations,
   FeedbackSurvey, FeedbackQuestion,
@@ -16,6 +15,7 @@ import {
   Plus, Trash2, Pencil, Save, X, GripVertical, ChevronDown, ChevronRight,
   ClipboardList, ExternalLink, Users, HardHat, Home, UserCog, Heart,
 } from "lucide-react";
+import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 
 const PERSON_TYPES = [
   { value: "visitor", label: "Visitors", icon: Users },
@@ -39,7 +39,6 @@ export function SurveyBuilder() {
   const [newTrigger, setNewTrigger] = useState("checkout");
   const [newSource, setNewSource] = useState("built_in");
   const [newExternalUrl, setNewExternalUrl] = useState("");
-
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const toggleType = (type: string) => {
@@ -59,11 +58,7 @@ export function SurveyBuilder() {
         source: newSource,
         external_url: newExternalUrl,
       });
-      setNewTitle("");
-      setNewDesc("");
-      setNewTypes(["visitor"]);
-      setNewSource("built_in");
-      setNewExternalUrl("");
+      setNewTitle(""); setNewDesc(""); setNewTypes(["visitor"]); setNewSource("built_in"); setNewExternalUrl("");
       setShowCreate(false);
       toast({ title: "Survey created" });
     } catch {
@@ -73,7 +68,6 @@ export function SurveyBuilder() {
 
   return (
     <div className="space-y-4">
-      {/* Create button */}
       {!showCreate ? (
         <Button onClick={() => setShowCreate(true)} className="gap-1.5">
           <Plus className="h-4 w-4" /> Create Survey
@@ -101,21 +95,16 @@ export function SurveyBuilder() {
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Description</label>
-              <Textarea value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="Brief description of this survey..." className="min-h-[60px] resize-none" />
+              <Textarea value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="Brief description..." className="min-h-[60px] resize-none" />
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Assign to Person Types</label>
               <div className="flex flex-wrap gap-2">
                 {PERSON_TYPES.map(({ value, label, icon: Icon }) => (
-                  <button
-                    key={value}
-                    onClick={() => toggleType(value)}
+                  <button key={value} onClick={() => toggleType(value)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
-                      newTypes.includes(value)
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-background text-muted-foreground hover:border-primary/30"
-                    }`}
-                  >
+                      newTypes.includes(value) ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground hover:border-primary/30"
+                    }`}>
                     <Icon className="h-3.5 w-3.5" /> {label}
                   </button>
                 ))}
@@ -147,17 +136,11 @@ export function SurveyBuilder() {
         </Card>
       )}
 
-      {/* Survey list */}
       <div className="space-y-3">
         {surveys.map((s) => (
-          <SurveyCard
-            key={s.id}
-            survey={s}
-            expanded={expandedId === s.id}
+          <SurveyCard key={s.id} survey={s} expanded={expandedId === s.id}
             onToggle={() => setExpandedId(expandedId === s.id ? null : s.id)}
-            onUpdate={updateSurvey.mutateAsync}
-            onDelete={deleteSurvey.mutateAsync}
-          />
+            onUpdate={updateSurvey.mutateAsync} onDelete={deleteSurvey.mutateAsync} />
         ))}
         {surveys.length === 0 && !showCreate && (
           <div className="py-12 text-center text-sm text-muted-foreground">
@@ -170,27 +153,28 @@ export function SurveyBuilder() {
   );
 }
 
-// ─── Survey Card ───
+// ─── Survey Card with DnD ───
 
-function SurveyCard({
-  survey, expanded, onToggle, onUpdate, onDelete,
-}: {
-  survey: FeedbackSurvey;
-  expanded: boolean;
-  onToggle: () => void;
+function SurveyCard({ survey, expanded, onToggle, onUpdate, onDelete }: {
+  survey: FeedbackSurvey; expanded: boolean; onToggle: () => void;
   onUpdate: (s: Partial<FeedbackSurvey> & { id: string }) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }) {
   const { toast } = useToast();
   const { data: questions = [] } = useFeedbackQuestions(false, expanded ? survey.id : undefined);
-  const { addQuestion, updateQuestion, deleteQuestion } = useFeedbackMutations();
+  const { addQuestion, updateQuestion } = useFeedbackMutations();
   const [newQ, setNewQ] = useState("");
   const [newCat, setNewCat] = useState("general");
+
+  const sorted = [...questions].sort((a, b) => a.sort_order - b.sort_order);
 
   const handleAddQ = async () => {
     if (!newQ.trim()) return;
     try {
-      await addQuestion.mutateAsync({ question: newQ.trim(), category: newCat, survey_id: survey.id, visitor_type: survey.assigned_types[0] || "visitor" });
+      await addQuestion.mutateAsync({
+        question: newQ.trim(), category: newCat, survey_id: survey.id,
+        visitor_type: survey.assigned_types[0] || "visitor",
+      });
       setNewQ("");
       toast({ title: "Question added" });
     } catch {
@@ -198,18 +182,34 @@ function SurveyCard({
     }
   };
 
+  const handleDragEnd = useCallback(async (result: DropResult) => {
+    if (!result.destination || result.source.index === result.destination.index) return;
+
+    const reordered = [...sorted];
+    const [moved] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, moved);
+
+    // Batch update sort_order
+    try {
+      await Promise.all(
+        reordered.map((q, idx) =>
+          q.sort_order !== idx ? updateQuestion.mutateAsync({ id: q.id, sort_order: idx }) : Promise.resolve()
+        )
+      );
+    } catch {
+      toast({ title: "Error reordering", variant: "destructive" });
+    }
+  }, [sorted, updateQuestion, toast]);
+
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
-      {/* Header */}
       <div className="px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-muted/30 transition-colors" onClick={onToggle}>
         {expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold text-foreground">{survey.title}</h3>
             {survey.source === "centrim_compliance" && (
-              <Badge variant="outline" className="text-[10px] gap-1">
-                <ExternalLink className="h-2.5 w-2.5" /> Centrim Life
-              </Badge>
+              <Badge variant="outline" className="text-[10px] gap-1"><ExternalLink className="h-2.5 w-2.5" /> Centrim Life</Badge>
             )}
             <Badge variant={survey.is_active ? "default" : "secondary"} className="text-[10px]">
               {survey.is_active ? "Active" : "Inactive"}
@@ -219,22 +219,19 @@ function SurveyCard({
             {survey.assigned_types.map((t) => (
               <Badge key={t} variant="outline" className="text-[9px] capitalize">{t}</Badge>
             ))}
-            <span className="text-[10px] text-muted-foreground">· {survey.trigger_point === "checkout" ? "At Check-Out" : survey.trigger_point === "post_visit" ? "Post-Visit" : "Manual"}</span>
+            <span className="text-[10px] text-muted-foreground">
+              · {survey.trigger_point === "checkout" ? "At Check-Out" : survey.trigger_point === "post_visit" ? "Post-Visit" : "Manual"}
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
-          <Switch
-            checked={survey.is_active}
-            onCheckedChange={(v) => onUpdate({ id: survey.id, is_active: v })}
-            className="scale-75"
-          />
+          <Switch checked={survey.is_active} onCheckedChange={(v) => onUpdate({ id: survey.id, is_active: v })} className="scale-75" />
           <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => onDelete(survey.id)}>
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>
 
-      {/* Expanded: questions */}
       {expanded && (
         <div className="border-t border-border">
           {survey.source === "centrim_compliance" ? (
@@ -242,9 +239,7 @@ function SurveyCard({
               <ExternalLink className="h-8 w-8 mx-auto text-muted-foreground/40" />
               <p>This survey uses the <strong>Centrim Life Compliance Module</strong>.</p>
               {survey.external_url && (
-                <a href={survey.external_url} target="_blank" rel="noopener noreferrer" className="text-primary underline text-xs">
-                  Open Module →
-                </a>
+                <a href={survey.external_url} target="_blank" rel="noopener noreferrer" className="text-primary underline text-xs">Open Module →</a>
               )}
             </div>
           ) : (
@@ -266,15 +261,41 @@ function SurveyCard({
                 </Button>
               </div>
 
-              {/* Question list */}
-              <div className="divide-y divide-border rounded-lg border border-border overflow-hidden">
-                {questions.sort((a, b) => a.sort_order - b.sort_order).map((q) => (
-                  <QuestionRow key={q.id} question={q} onUpdate={updateQuestion.mutateAsync} onDelete={deleteQuestion.mutateAsync} />
-                ))}
-                {questions.length === 0 && (
-                  <div className="py-6 text-center text-xs text-muted-foreground">No questions yet. Add one above.</div>
-                )}
-              </div>
+              {/* DnD question list */}
+              <DragDropContext onDragEnd={handleDragEnd}>
+                <Droppable droppableId={`survey-${survey.id}`}>
+                  {(provided) => (
+                    <div ref={provided.innerRef} {...provided.droppableProps}
+                      className="divide-y divide-border rounded-lg border border-border overflow-hidden">
+                      {sorted.map((q, idx) => (
+                        <Draggable key={q.id} draggableId={q.id} index={idx}>
+                          {(dragProvided, snapshot) => (
+                            <div
+                              ref={dragProvided.innerRef}
+                              {...dragProvided.draggableProps}
+                              className={`bg-card transition-shadow ${snapshot.isDragging ? "shadow-lg ring-2 ring-primary/20 rounded-lg z-10" : ""}`}
+                            >
+                              <QuestionRow
+                                question={q}
+                                onUpdate={updateQuestion.mutateAsync}
+                                onDelete={async (id) => {
+                                  const { deleteQuestion } = useFeedbackMutations();
+                                  // handled inline
+                                }}
+                                dragHandleProps={dragProvided.dragHandleProps}
+                              />
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                      {sorted.length === 0 && (
+                        <div className="py-6 text-center text-xs text-muted-foreground">No questions yet. Add one above.</div>
+                      )}
+                    </div>
+                  )}
+                </Droppable>
+              </DragDropContext>
             </div>
           )}
         </div>
@@ -285,13 +306,13 @@ function SurveyCard({
 
 // ─── Question Row ───
 
-function QuestionRow({
-  question: q, onUpdate, onDelete,
-}: {
+function QuestionRow({ question: q, onUpdate, onDelete, dragHandleProps }: {
   question: FeedbackQuestion;
   onUpdate: (data: Partial<FeedbackQuestion> & { id: string }) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  dragHandleProps?: any;
 }) {
+  const { deleteQuestion } = useFeedbackMutations();
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(q.question);
   const [editCat, setEditCat] = useState(q.category);
@@ -304,11 +325,14 @@ function QuestionRow({
 
   return (
     <div className="px-3 py-2.5 flex items-center gap-2">
-      <GripVertical className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+      <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing p-1 -m-1 rounded hover:bg-muted/50 transition-colors">
+        <GripVertical className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+      </div>
       <div className="flex-1 min-w-0">
         {editing ? (
           <div className="flex items-center gap-2">
-            <Input value={editText} onChange={(e) => setEditText(e.target.value)} className="h-7 text-xs flex-1" autoFocus onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }} />
+            <Input value={editText} onChange={(e) => setEditText(e.target.value)} className="h-7 text-xs flex-1" autoFocus
+              onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }} />
             <Select value={editCat} onValueChange={setEditCat}>
               <SelectTrigger className="w-[100px] h-7 text-[10px]"><SelectValue /></SelectTrigger>
               <SelectContent>{CATEGORIES.map((c) => <SelectItem key={c} value={c} className="capitalize text-xs">{c}</SelectItem>)}</SelectContent>
@@ -328,7 +352,7 @@ function QuestionRow({
       </div>
       <div className="flex items-center gap-2 shrink-0">
         <Switch checked={q.is_active} onCheckedChange={(v) => onUpdate({ id: q.id, is_active: v })} className="scale-75" />
-        <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive" onClick={() => onDelete(q.id)}>
+        <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive" onClick={() => deleteQuestion.mutateAsync(q.id)}>
           <Trash2 className="h-3 w-3" />
         </Button>
       </div>
