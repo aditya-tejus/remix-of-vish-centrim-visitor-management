@@ -44,6 +44,7 @@ export default function SettingsPage() {
               {/* Content */}
               <div className="flex-1 min-w-0 max-w-3xl">
                 {isPersonType && <PersonTypeSettings type={active} />}
+                {active === "feedback" && <SurveyBuilder />}
                 {active === "presence" && <PresenceTab />}
                 {active === "printing" && <PrintingTab />}
                 {active === "compliance" && <ComplianceTab />}

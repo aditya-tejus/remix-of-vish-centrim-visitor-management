@@ -62,9 +62,11 @@ const App = () => (
           <Route path="/reports/evacuation" element={<EvacuationReport />} />
           <Route path="/reports/presence" element={<PresenceLog />} />
           <Route path="/reports/trends" element={<VisitTrends />} />
+          <Route path="/reports/feedback-responses" element={<FeedbackResponses />} />
+          <Route path="/reports/feedback-reports" element={<FeedbackAnalytics />} />
           <Route path="/audit-log" element={<AuditLogPage />} />
           <Route path="/evacuation" element={<Evacuation />} />
-          <Route path="/feedback" element={<Feedback />} />
+          <Route path="/feedback" element={<Navigate to="/reports/feedback-responses" replace />} />
           <Route path="/visitor-analytics" element={<Navigate to="/reports/analytics" replace />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/leave-requests" element={<Navigate to="/residents" replace />} />

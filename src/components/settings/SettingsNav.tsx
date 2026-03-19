@@ -22,6 +22,7 @@ const personTypes: PersonType[] = [
 ];
 
 const globalSections: PersonType[] = [
+  { id: "feedback", label: "Feedback Surveys", icon: MessageSquare, color: "bg-muted-foreground" },
   { id: "presence", label: "Presence", icon: Globe, color: "bg-muted-foreground" },
   { id: "printing", label: "Printing", icon: Printer, color: "bg-muted-foreground" },
   { id: "compliance", label: "GDPR", icon: Shield, color: "bg-muted-foreground" },
