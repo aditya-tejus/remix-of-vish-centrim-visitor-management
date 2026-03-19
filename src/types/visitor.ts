@@ -40,6 +40,8 @@ export interface Visitor {
   accompaniedBy?: string;
   accompaniedByName?: string;
   healthAnswers?: Record<string, any>;
+  contractorScreening?: Record<string, any>;
+  supplierId?: string;
 }
 
 export interface RetentionSettings {
