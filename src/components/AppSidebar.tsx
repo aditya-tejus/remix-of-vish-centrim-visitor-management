@@ -1,8 +1,7 @@
 import centrimLogo from "@/assets/centrim-life-logo.png";
 import {
-  Users, Settings, ClipboardList, UserPlus, BarChart3,
-  Shield, Calendar, MessageSquare, AlertTriangle, LineChart,
-  ChevronDown, DoorOpen, QrCode, Layers, CheckSquare,
+  Users, Settings, BarChart3,
+  ChevronDown, Layers,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -75,25 +74,22 @@ export function AppSidebar() {
       ],
     },
     {
-      label: "Safety & Compliance",
-      icon: Shield,
-      iconColor: "text-amber-400",
-      collapsible: true,
-      items: [
-        { title: "GDPR & Privacy", path: "/gdpr", indent: true },
-        { title: "Audit Trail", path: "/audit-log", indent: true },
-        { title: "Coverage Checklist", path: "/coverage", indent: true },
-      ],
-    },
-    {
-      label: "Insights",
+      label: "Reports",
       icon: BarChart3,
       iconColor: "text-violet-400",
       collapsible: true,
       items: [
-        { title: "Reports", path: "/reports", indent: true },
-        { title: "Visitor Analytics", path: "/visitor-analytics", indent: true },
-        { title: "Visitor Feedback", path: "/feedback", indent: true },
+        { title: "Visitor Reports", path: "/reports", indent: true },
+        { title: "Safety & Compliance", path: "/gdpr", indent: true },
+      ],
+    },
+    {
+      label: "Settings",
+      icon: Settings,
+      iconColor: "text-gray-400",
+      collapsible: true,
+      items: [
+        { title: "Visitor Settings", path: "/settings", indent: true },
       ],
     },
   ];
@@ -186,27 +182,6 @@ export function AppSidebar() {
               >
                 <Layers className="h-4 w-4 shrink-0 text-cyan-400" />
                 <span>Kiosk Mode</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </div>
-
-        {/* Settings */}
-        <div className="mt-1">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={() => navigate("/settings")}
-                isActive={location.pathname === "/settings"}
-                tooltip="Settings"
-                className={`rounded-lg h-9 text-[13px] font-medium gap-3 px-3 transition-all duration-150
-                  ${location.pathname === "/settings"
-                    ? "bg-sidebar-accent text-sidebar-foreground"
-                    : "text-sidebar-muted hover:bg-[rgba(255,255,255,0.05)] hover:text-sidebar-foreground"
-                  }`}
-              >
-                <Settings className="h-4 w-4 shrink-0 text-gray-400" />
-                <span>Settings</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
