@@ -1,10 +1,10 @@
 import { cn } from "@/lib/utils";
-import { Users, HardHat, Home, UserCog, Heart, Globe, Printer, Shield, Link2, ClipboardList, Lock } from "lucide-react";
+import { Users, HardHat, Home, UserCog, Heart, Globe, Printer, Shield, Link2, ClipboardList, Lock, MessageSquare } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 export type SettingsSection =
   | "visitor" | "contractor" | "resident" | "staff" | "volunteer"
-  | "presence" | "printing" | "compliance" | "integration" | "audit" | "governance";
+  | "presence" | "printing" | "compliance" | "integration" | "audit" | "governance" | "feedback";
 
 interface PersonType {
   id: SettingsSection;
@@ -22,6 +22,7 @@ const personTypes: PersonType[] = [
 ];
 
 const globalSections: PersonType[] = [
+  { id: "feedback", label: "Feedback Surveys", icon: MessageSquare, color: "bg-muted-foreground" },
   { id: "presence", label: "Presence", icon: Globe, color: "bg-muted-foreground" },
   { id: "printing", label: "Printing", icon: Printer, color: "bg-muted-foreground" },
   { id: "compliance", label: "GDPR", icon: Shield, color: "bg-muted-foreground" },

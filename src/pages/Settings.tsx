@@ -10,6 +10,7 @@ import { ComplianceTab } from "@/components/settings/ComplianceTab";
 import { IntegrationTab } from "@/components/settings/IntegrationTab";
 import { AuditTrailTab } from "@/components/settings/AuditTrailTab";
 import { LockGovernanceTab } from "@/components/settings/LockGovernanceTab";
+import { SurveyBuilder } from "@/components/feedback/SurveyBuilder";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const personTypes: SettingsSection[] = ["visitor", "contractor", "resident", "staff", "volunteer"];
@@ -43,6 +44,7 @@ export default function SettingsPage() {
               {/* Content */}
               <div className="flex-1 min-w-0 max-w-3xl">
                 {isPersonType && <PersonTypeSettings type={active} />}
+                {active === "feedback" && <SurveyBuilder />}
                 {active === "presence" && <PresenceTab />}
                 {active === "printing" && <PrintingTab />}
                 {active === "compliance" && <ComplianceTab />}

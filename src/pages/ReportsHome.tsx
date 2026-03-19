@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { Shield, ClipboardList, TrendingUp, BarChart3, ArrowRight } from "lucide-react";
+import { Shield, ClipboardList, TrendingUp, BarChart3, ArrowRight, MessageSquare } from "lucide-react";
 
 const REPORT_CARDS = [
   {
@@ -31,6 +31,20 @@ const REPORT_CARDS = [
     icon: BarChart3,
     path: "/reports/analytics",
     color: "text-warning bg-warning/10",
+  },
+  {
+    title: "Feedback Responses",
+    description: "Browse all feedback submitted by visitors and residents",
+    icon: MessageSquare,
+    path: "/reports/feedback-responses",
+    color: "text-primary bg-primary/10",
+  },
+  {
+    title: "Feedback Reports",
+    description: "Analytics dashboard with rating trends and survey breakdowns",
+    icon: BarChart3,
+    path: "/reports/feedback-reports",
+    color: "text-violet-500 bg-violet-500/10",
   },
 ];
 

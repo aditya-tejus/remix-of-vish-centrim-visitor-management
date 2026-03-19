@@ -80,6 +80,8 @@ export function AppSidebar() {
       collapsible: true,
       items: [
         { title: "Visitor Reports", path: "/reports", indent: true },
+        { title: "Feedback Responses", path: "/reports/feedback-responses", indent: true },
+        { title: "Feedback Reports", path: "/reports/feedback-reports", indent: true },
         { title: "Safety & Compliance", path: "/gdpr", indent: true },
       ],
     },
