@@ -65,13 +65,13 @@ export function useVisitors() {
   const [loading, setLoading] = useState(true);
 
   const fetchVisitors = useCallback(async () => {
-    // Only fetch today's visitors + any still checked-in (no date limit for active visitors)
+    // Fetch today's visitors + any still checked-in + any checked-out residents (for away/leave tracking)
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const { data, error } = await supabase
       .from("visitors")
       .select("*")
-      .or(`check_in_time.gte.${todayStart.toISOString()},status.eq.checked-in`)
+      .or(`check_in_time.gte.${todayStart.toISOString()},status.eq.checked-in,and(type.eq.resident,status.eq.checked-out)`)
       .order("check_in_time", { ascending: false })
       .limit(500);
     if (!error && data) {
