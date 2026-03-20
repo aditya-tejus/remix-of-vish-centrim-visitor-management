@@ -145,7 +145,7 @@ export default function KioskCheckIn() {
   const anim = { initial: { opacity: 0, x: 40 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -40 }, transition: { duration: 0.25 } };
 
   return (
-    <div className="w-full max-w-2xl space-y-6 px-2">
+    <div className="w-full space-y-6">
       <KioskProgressStepper steps={flow.steps} currentIndex={currentIdx} accentColor="primary" />
 
       <AnimatePresence mode="wait">
