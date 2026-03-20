@@ -3,7 +3,8 @@ import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { RotateCcw } from "lucide-react";
 import centrimLogo from "@/assets/centrim-life-logo.png";
 import kioskBg from "@/assets/kiosk-bg.jpg";
-import { useIdleTimer } from "@/hooks/useIdleTimer";
+import { useIdleTimerWithWarning } from "@/hooks/useIdleTimer";
+import { KioskIdleWarning } from "@/components/kiosk/KioskIdleWarning";
 
 export default function KioskLayout() {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ export default function KioskLayout() {
     navigate("/kiosk");
   }, [navigate, location.pathname]);
 
-  useIdleTimer(handleIdle, 90000);
+  const { showWarning, dismissWarning } = useIdleTimerWithWarning(handleIdle, 60000, 90000);
 
   if (isAttract) {
     return <Outlet />;
@@ -30,6 +31,12 @@ export default function KioskLayout() {
         <main className="flex-1">
           <Outlet />
         </main>
+        <KioskIdleWarning
+          open={showWarning}
+          countdownSeconds={30}
+          onContinue={dismissWarning}
+          onTimeout={handleIdle}
+        />
       </div>
     );
   }
@@ -64,6 +71,13 @@ export default function KioskLayout() {
       <footer className="relative z-10 text-center py-2 text-xs text-muted-foreground/40">
         Powered by Centrim Life
       </footer>
+
+      <KioskIdleWarning
+        open={showWarning}
+        countdownSeconds={30}
+        onContinue={dismissWarning}
+        onTimeout={handleIdle}
+      />
     </div>
   );
 }
