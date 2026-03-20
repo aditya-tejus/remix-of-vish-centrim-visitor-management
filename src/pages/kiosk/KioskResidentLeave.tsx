@@ -111,7 +111,7 @@ export default function KioskResidentLeave() {
                   key={lt.id}
                   onClick={() => setSelectedLeaveType(lt.name)}
                   className={`p-4 rounded-xl border-2 text-left transition-all active:scale-[0.97] ${
-                    selectedLeaveType === lt.name ? "border-warning bg-warning/5" : "border-border hover:border-warning/50"
+                    selectedLeaveType === lt.name ? "border-warning bg-warning/10 shadow-sm" : "border-border bg-secondary/50"
                   }`}
                 >
                   <span className="text-lg mr-2">{lt.emoji}</span>
