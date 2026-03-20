@@ -401,7 +401,7 @@ export default function KioskCheckIn() {
               <Button variant="outline" onClick={goBack} className="flex-1 h-14 text-base gap-2">
                 <ArrowLeft className="h-5 w-5" /> Back
               </Button>
-              <Button variant="ghost" onClick={goNext} className="flex-1 h-14 text-base gap-2 text-muted-foreground">
+              <Button variant="outline" onClick={goNext} className="flex-1 h-14 text-base gap-2">
                 Skip <ArrowRight className="h-5 w-5" />
               </Button>
             </div>
