@@ -58,11 +58,8 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
   // No active survey — skip immediately
   useEffect(() => {
     if (!activeSurvey && surveys.length >= 0) {
-      // Wait for query to settle
-      const timer = setTimeout(() => {
-        if (!activeSurvey) onComplete();
-      }, 300);
-      return () => clearTimeout(timer);
+      // No survey configured — skip instantly
+      onComplete();
     }
   }, [activeSurvey, onComplete, surveys.length]);
 
