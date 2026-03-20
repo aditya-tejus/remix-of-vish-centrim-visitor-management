@@ -193,20 +193,20 @@ export default function KioskCheckIn() {
             )}
 
             <div className="grid grid-cols-2 gap-3">
-              <Input
-                placeholder="First Name *"
+              <KioskInput
+                label="First Name"
+                required
                 value={flow.formValues.firstName || ""}
                 onChange={(e) => flow.updateField("firstName", e.target.value)}
                 onBlur={handleNameBlur}
-                className="h-14 text-lg"
                 autoFocus
               />
-              <Input
-                placeholder="Surname *"
+              <KioskInput
+                label="Surname"
+                required
                 value={flow.formValues.surname || ""}
                 onChange={(e) => flow.updateField("surname", e.target.value)}
                 onBlur={handleNameBlur}
-                className="h-14 text-lg"
               />
             </div>
 
@@ -230,17 +230,18 @@ export default function KioskCheckIn() {
                         <SelectValue placeholder={`${field.label}${field.required ? " *" : ""}`} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="option1">Option 1</SelectItem>
+                        {/* Dynamic options would come from field config; fallback to text input */}
+                        <SelectItem value="__none" disabled>No options configured</SelectItem>
                       </SelectContent>
                     </Select>
                   ) : (
-                    <Input
-                      placeholder={`${field.label}${field.required ? " *" : ""}`}
+                    <KioskInput
+                      label={field.label}
+                      required={field.required}
                       value={flow.formValues[field.field_key] || ""}
                       onChange={(e) => flow.updateField(field.field_key, e.target.value)}
                       type={field.field_type === "email" ? "email" : field.field_type === "tel" ? "tel" : "text"}
                       inputMode={field.field_type === "email" ? "email" : field.field_type === "tel" ? "tel" : undefined}
-                      className="h-14 text-lg"
                     />
                   )}
                 </div>
@@ -249,8 +250,8 @@ export default function KioskCheckIn() {
 
             {flow.activeFormFields.length === 0 && (
               <>
-                <Input placeholder="Email" value={flow.formValues.email || ""} onChange={(e) => flow.updateField("email", e.target.value)} inputMode="email" className="h-14 text-lg" />
-                <Input placeholder="Mobile" value={flow.formValues.mobile || ""} onChange={(e) => flow.updateField("mobile", e.target.value)} inputMode="tel" className="h-14 text-lg" />
+                <KioskInput label="Email" value={flow.formValues.email || ""} onChange={(e) => flow.updateField("email", e.target.value)} inputMode="email" type="email" />
+                <KioskInput label="Mobile" value={flow.formValues.mobile || ""} onChange={(e) => flow.updateField("mobile", e.target.value)} inputMode="tel" type="tel" />
               </>
             )}
 
