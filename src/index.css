@@ -216,4 +216,10 @@
   .animate-draft-dismiss {
     animation: draft-dismiss 300ms ease forwards;
   }
+
+  /* Kiosk scroll fade */
+  .kiosk-scroll-fade {
+    mask-image: linear-gradient(to bottom, black calc(100% - 48px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 48px), transparent 100%);
+  }
 }

@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { UserRoundPlus, LogOut, DoorOpen } from "lucide-react";
+import { UserRoundPlus, LogOut, DoorOpen, QrCode } from "lucide-react";
 import { motion } from "framer-motion";
 import kioskBg from "@/assets/kiosk-bg.jpg";
 
@@ -36,6 +36,17 @@ const KIOSK_TILES = [
     iconColor: "text-info",
     idle: "bg-info/10 border-info/20",
     hover: "hover:bg-info hover:text-info-foreground hover:border-info hover:shadow-xl",
+  },
+  {
+    label: "Scan QR",
+    description: "Use your visitor card",
+    icon: QrCode,
+    path: "/kiosk/qr-scan",
+    hero: false,
+    iconBg: "bg-accent",
+    iconColor: "text-foreground",
+    idle: "bg-accent border-border",
+    hover: "hover:bg-foreground hover:text-background hover:border-foreground hover:shadow-xl",
   },
 ];
 
@@ -110,7 +121,7 @@ export default function KioskHome() {
           </motion.button>
 
           {/* Secondary tiles — Check Out & Resident Leave */}
-          <div className="grid grid-cols-2 gap-4 sm:gap-5">
+          <div className="grid grid-cols-3 gap-4 sm:gap-5">
             {secondaryTiles.map((tile, i) => (
               <motion.button
                 key={tile.path}

@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
+import { KioskInput } from "@/components/kiosk/KioskInput";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,7 +16,7 @@ import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
 import { useKioskCheckInFlow, KioskStepId } from "@/hooks/useKioskCheckInFlow";
 import {
   UserRound, Truck, Heart, ArrowLeft, ArrowRight, Shield, ScrollText,
-  AlertTriangle, Search, RotateCcw, UserSearch
+  AlertTriangle, Search, RotateCcw, UserSearch, QrCode
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -145,7 +146,7 @@ export default function KioskCheckIn() {
   const anim = { initial: { opacity: 0, x: 40 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -40 }, transition: { duration: 0.25 } };
 
   return (
-    <div className="w-full max-w-2xl space-y-6 px-2">
+    <div className="w-full space-y-6">
       <KioskProgressStepper steps={flow.steps} currentIndex={currentIdx} accentColor="primary" />
 
       <AnimatePresence mode="wait">
@@ -159,7 +160,7 @@ export default function KioskCheckIn() {
                   key={t.type}
                   onClick={() => { flow.setSelectedType(t.type); goNext(); }}
                   className={`flex flex-col items-center gap-4 p-6 rounded-2xl border-2 transition-all duration-150 min-h-[180px] active:scale-[0.96] group
-                    ${flow.selectedType === t.type ? "border-primary bg-primary/5 shadow-md" : "border-border bg-card/80 backdrop-blur-sm hover:border-primary/50"}`}
+                    ${flow.selectedType === t.type ? "border-primary bg-primary/5 shadow-md" : "border-border bg-card hover:border-primary/50"}`}
                 >
                   <div className={`h-16 w-16 rounded-2xl flex items-center justify-center ${t.iconBg} transition-colors`}>
                     <t.icon className={`h-8 w-8 ${t.iconColor}`} strokeWidth={2.25} />
@@ -170,6 +171,11 @@ export default function KioskCheckIn() {
                   </div>
                 </button>
               ))}
+            </div>
+            <div className="text-center pt-2">
+              <Button variant="outline" onClick={() => navigate("/kiosk/qr-scan?mode=checkin")} className="h-12 gap-2 text-base">
+                <QrCode className="h-5 w-5" /> I have a QR code / visitor card
+              </Button>
             </div>
           </motion.div>
         )}
@@ -187,20 +193,20 @@ export default function KioskCheckIn() {
             )}
 
             <div className="grid grid-cols-2 gap-3">
-              <Input
-                placeholder="First Name *"
+              <KioskInput
+                label="First Name"
+                required
                 value={flow.formValues.firstName || ""}
                 onChange={(e) => flow.updateField("firstName", e.target.value)}
                 onBlur={handleNameBlur}
-                className="h-14 text-lg"
                 autoFocus
               />
-              <Input
-                placeholder="Surname *"
+              <KioskInput
+                label="Surname"
+                required
                 value={flow.formValues.surname || ""}
                 onChange={(e) => flow.updateField("surname", e.target.value)}
                 onBlur={handleNameBlur}
-                className="h-14 text-lg"
               />
             </div>
 
@@ -224,17 +230,18 @@ export default function KioskCheckIn() {
                         <SelectValue placeholder={`${field.label}${field.required ? " *" : ""}`} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="option1">Option 1</SelectItem>
+                        {/* Dynamic options would come from field config; fallback to text input */}
+                        <SelectItem value="__none" disabled>No options configured</SelectItem>
                       </SelectContent>
                     </Select>
                   ) : (
-                    <Input
-                      placeholder={`${field.label}${field.required ? " *" : ""}`}
+                    <KioskInput
+                      label={field.label}
+                      required={field.required}
                       value={flow.formValues[field.field_key] || ""}
                       onChange={(e) => flow.updateField(field.field_key, e.target.value)}
                       type={field.field_type === "email" ? "email" : field.field_type === "tel" ? "tel" : "text"}
                       inputMode={field.field_type === "email" ? "email" : field.field_type === "tel" ? "tel" : undefined}
-                      className="h-14 text-lg"
                     />
                   )}
                 </div>
@@ -243,8 +250,8 @@ export default function KioskCheckIn() {
 
             {flow.activeFormFields.length === 0 && (
               <>
-                <Input placeholder="Email" value={flow.formValues.email || ""} onChange={(e) => flow.updateField("email", e.target.value)} inputMode="email" className="h-14 text-lg" />
-                <Input placeholder="Mobile" value={flow.formValues.mobile || ""} onChange={(e) => flow.updateField("mobile", e.target.value)} inputMode="tel" className="h-14 text-lg" />
+                <KioskInput label="Email" value={flow.formValues.email || ""} onChange={(e) => flow.updateField("email", e.target.value)} inputMode="email" type="email" />
+                <KioskInput label="Mobile" value={flow.formValues.mobile || ""} onChange={(e) => flow.updateField("mobile", e.target.value)} inputMode="tel" type="tel" />
               </>
             )}
 
@@ -401,7 +408,7 @@ export default function KioskCheckIn() {
               <Button variant="outline" onClick={goBack} className="flex-1 h-14 text-base gap-2">
                 <ArrowLeft className="h-5 w-5" /> Back
               </Button>
-              <Button variant="ghost" onClick={goNext} className="flex-1 h-14 text-base gap-2 text-muted-foreground">
+              <Button variant="outline" onClick={goNext} className="flex-1 h-14 text-base gap-2">
                 Skip <ArrowRight className="h-5 w-5" />
               </Button>
             </div>
@@ -464,9 +471,13 @@ export default function KioskCheckIn() {
                       {q.type === "yesno" && (
                         <div className="flex gap-3">
                           <button onClick={() => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [q.id]: false }))}
-                            className={`flex-1 py-4 rounded-xl text-base font-bold transition-all ${answer === false ? "bg-success text-success-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-success/20"}`}>No</button>
+                            className={`flex-1 py-4 rounded-xl text-base font-bold transition-all flex items-center justify-center gap-2 min-h-[52px] ${answer === false ? "bg-success text-success-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-success/20"}`}>
+                            ✓ No
+                          </button>
                           <button onClick={() => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [q.id]: true }))}
-                            className={`flex-1 py-4 rounded-xl text-base font-bold transition-all ${answer === true ? "bg-destructive text-destructive-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-destructive/20"}`}>Yes</button>
+                            className={`flex-1 py-4 rounded-xl text-base font-bold transition-all flex items-center justify-center gap-2 min-h-[52px] ${answer === true ? "bg-destructive text-destructive-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-destructive/20"}`}>
+                            ✗ Yes
+                          </button>
                         </div>
                       )}
                       {q.type === "text" && (
@@ -656,7 +667,7 @@ export default function KioskCheckIn() {
 
       {step !== "type" && (
         <div className="text-center pt-2">
-          <Button variant="ghost" size="sm" onClick={handleStartOver} className="text-muted-foreground gap-2">
+          <Button variant="outline" size="sm" onClick={handleStartOver} className="gap-2">
             <RotateCcw className="h-4 w-4" /> Start Over
           </Button>
         </div>

@@ -58,18 +58,15 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
   // No active survey — skip immediately
   useEffect(() => {
     if (!activeSurvey && surveys.length >= 0) {
-      // Wait for query to settle
-      const timer = setTimeout(() => {
-        if (!activeSurvey) onComplete();
-      }, 300);
-      return () => clearTimeout(timer);
+      // No survey configured — skip instantly
+      onComplete();
     }
   }, [activeSurvey, onComplete, surveys.length]);
 
   // External survey — show link card
   if (activeSurvey?.source === "centrim_compliance" && activeSurvey.external_url) {
     return (
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-2xl space-y-6">
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-6">
         <div className="text-center space-y-2">
           <MessageSquare className="h-12 w-12 text-primary mx-auto" />
           <h2 className="text-3xl font-bold text-foreground">We'd Love Your Feedback</h2>
@@ -84,7 +81,7 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
             <ExternalLink className="h-5 w-5" /> Open Feedback Form
           </Button>
         </div>
-        <Button variant="ghost" onClick={onComplete} className="w-full h-14 text-base text-muted-foreground gap-2">
+        <Button variant="outline" onClick={onComplete} className="w-full h-14 text-base gap-2">
           <SkipForward className="h-5 w-5" /> Skip
         </Button>
       </motion.div>
@@ -93,7 +90,7 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
 
   // Built-in feedback with large touch targets
   return (
-    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-2xl space-y-6">
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-6">
       <div className="text-center space-y-1">
         <h2 className="text-3xl font-bold text-foreground">How Was Your Visit?</h2>
         <p className="text-base text-muted-foreground">Tap to rate each area</p>
@@ -108,14 +105,14 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
                 <button
                   key={e.value}
                   onClick={() => setRatings((prev) => ({ ...prev, [q.id]: e.value }))}
-                  className={`flex-1 flex flex-col items-center gap-1 py-3 rounded-xl transition-all ${
+                  className={`flex-1 flex flex-col items-center gap-1.5 py-3 min-h-[56px] min-w-[56px] rounded-xl transition-all ${
                     ratings[q.id] === e.value
                       ? "bg-primary/10 border-2 border-primary scale-105"
-                      : "border-2 border-transparent hover:bg-muted"
+                      : "border-2 border-border hover:bg-muted"
                   }`}
                 >
-                  <span className="text-2xl">{e.emoji}</span>
-                  <span className="text-[10px] text-muted-foreground font-medium">{e.label}</span>
+                  <span className="text-3xl">{e.emoji}</span>
+                  <span className="text-xs text-muted-foreground font-medium">{e.label}</span>
                 </button>
               ))}
             </div>
@@ -132,7 +129,7 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
       </div>
 
       <div className="flex gap-3">
-        <Button variant="ghost" onClick={onComplete} className="flex-1 h-14 text-base text-muted-foreground gap-2">
+        <Button variant="outline" onClick={onComplete} className="flex-1 h-14 text-base gap-2">
           <SkipForward className="h-5 w-5" /> Skip
         </Button>
         <Button

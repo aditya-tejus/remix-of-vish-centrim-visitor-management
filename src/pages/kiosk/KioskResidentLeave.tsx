@@ -91,7 +91,7 @@ export default function KioskResidentLeave() {
   if (mode === "leaving-confirm" && selectedResident) {
     const name = `${selectedResident.firstName} ${selectedResident.surname}`;
     return (
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-2xl space-y-6">
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-6">
         <h2 className="text-3xl font-bold text-foreground text-center">Confirm Departure</h2>
         <div className="rounded-2xl border-2 border-border bg-card p-8 flex flex-col items-center gap-4">
           <div className="h-16 w-16 rounded-full bg-warning/10 text-warning flex items-center justify-center text-xl font-bold">
@@ -151,7 +151,7 @@ export default function KioskResidentLeave() {
   if (mode === "returning-confirm" && selectedResident) {
     const name = `${selectedResident.firstName} ${selectedResident.surname}`;
     return (
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-2xl space-y-6">
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-6">
         <h2 className="text-3xl font-bold text-foreground text-center">Confirm Return</h2>
         <div className="rounded-2xl border-2 border-border bg-card p-8 flex flex-col items-center gap-4">
           <div className="h-16 w-16 rounded-full bg-success/10 text-success flex items-center justify-center text-xl font-bold">
@@ -175,7 +175,7 @@ export default function KioskResidentLeave() {
   // Mode select
   if (mode === "select") {
     return (
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-2xl space-y-6">
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-6">
         <div className="text-center">
           <h2 className="text-3xl font-bold text-foreground">Resident Leave</h2>
           <p className="text-base text-muted-foreground mt-1">Are you leaving or returning?</p>
@@ -213,9 +213,9 @@ export default function KioskResidentLeave() {
   // Returning list with search
   if (mode === "returning") {
     return (
-      <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} className="w-full max-w-2xl space-y-6">
+      <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} className="w-full space-y-6">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" onClick={() => setMode("select")} className="h-12 gap-2">
+          <Button variant="outline" onClick={() => setMode("select")} className="h-14 gap-2 min-h-[48px]">
             <ArrowLeft className="h-5 w-5" /> Back
           </Button>
           <h2 className="text-2xl font-bold text-foreground">Welcome Back</h2>
@@ -226,7 +226,10 @@ export default function KioskResidentLeave() {
         </div>
         <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto">
           {filteredAway.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground text-lg">No residents currently away</div>
+            <div className="text-center py-12 space-y-3">
+              <Home className="h-12 w-12 text-muted-foreground/40 mx-auto" />
+              <p className="text-muted-foreground text-lg">No residents currently away</p>
+            </div>
           ) : (
             filteredAway.map((v) => (
               <KioskPersonCard
@@ -246,10 +249,10 @@ export default function KioskResidentLeave() {
 
   // Leaving mode — room-first display
   return (
-    <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} className="w-full max-w-2xl space-y-6">
+    <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} className="w-full space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" onClick={() => setMode("select")} className="h-12 gap-2">
-          <ArrowLeft className="h-5 w-5" /> Back
+          <Button variant="outline" onClick={() => setMode("select")} className="h-14 gap-2 min-h-[48px]">
+            <ArrowLeft className="h-5 w-5" /> Back
         </Button>
         <h2 className="text-2xl font-bold text-foreground">Find Your Room</h2>
       </div>
@@ -259,7 +262,10 @@ export default function KioskResidentLeave() {
       </div>
       <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto">
         {filteredResidents.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground text-lg">No residents found</div>
+            <div className="text-center py-12 space-y-3">
+              <Search className="h-12 w-12 text-muted-foreground/40 mx-auto" />
+              <p className="text-muted-foreground text-lg">No residents found</p>
+            </div>
         ) : (
           filteredResidents.map((r) => (
             <KioskPersonCard
