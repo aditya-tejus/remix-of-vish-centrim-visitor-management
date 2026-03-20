@@ -84,7 +84,7 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
             <ExternalLink className="h-5 w-5" /> Open Feedback Form
           </Button>
         </div>
-        <Button variant="ghost" onClick={onComplete} className="w-full h-14 text-base text-muted-foreground gap-2">
+        <Button variant="outline" onClick={onComplete} className="w-full h-14 text-base gap-2">
           <SkipForward className="h-5 w-5" /> Skip
         </Button>
       </motion.div>
