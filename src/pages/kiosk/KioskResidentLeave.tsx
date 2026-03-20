@@ -161,7 +161,7 @@ export default function KioskResidentLeave() {
           <p className="text-base text-muted-foreground">Marking as returned</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={() => setMode("returning")} className="flex-1 h-14 text-base gap-2">
+          <Button variant="secondary" onClick={() => setMode("returning")} className="flex-1 h-14 text-base gap-2 border border-border">
             <ArrowLeft className="h-5 w-5" /> Back
           </Button>
           <Button onClick={handleConfirmReturn} className="flex-1 h-14 text-base gap-2 bg-success hover:bg-success/90 text-success-foreground">
