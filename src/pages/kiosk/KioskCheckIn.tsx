@@ -159,7 +159,7 @@ export default function KioskCheckIn() {
                   key={t.type}
                   onClick={() => { flow.setSelectedType(t.type); goNext(); }}
                   className={`flex flex-col items-center gap-4 p-6 rounded-2xl border-2 transition-all duration-150 min-h-[180px] active:scale-[0.96] group
-                    ${flow.selectedType === t.type ? "border-primary bg-primary/5 shadow-md" : "border-border bg-card/80 backdrop-blur-sm hover:border-primary/50"}`}
+                    ${flow.selectedType === t.type ? "border-primary bg-primary/5 shadow-md" : "border-border bg-card hover:border-primary/50"}`}
                 >
                   <div className={`h-16 w-16 rounded-2xl flex items-center justify-center ${t.iconBg} transition-colors`}>
                     <t.icon className={`h-8 w-8 ${t.iconColor}`} strokeWidth={2.25} />
@@ -170,6 +170,11 @@ export default function KioskCheckIn() {
                   </div>
                 </button>
               ))}
+            </div>
+            <div className="text-center pt-2">
+              <Button variant="outline" onClick={() => navigate("/kiosk/qr-scan?mode=checkin")} className="h-12 gap-2 text-base">
+                <QrCode className="h-5 w-5" /> I have a QR code / visitor card
+              </Button>
             </div>
           </motion.div>
         )}
