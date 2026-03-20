@@ -69,7 +69,7 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
   // External survey — show link card
   if (activeSurvey?.source === "centrim_compliance" && activeSurvey.external_url) {
     return (
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-2xl space-y-6">
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-6">
         <div className="text-center space-y-2">
           <MessageSquare className="h-12 w-12 text-primary mx-auto" />
           <h2 className="text-3xl font-bold text-foreground">We'd Love Your Feedback</h2>
