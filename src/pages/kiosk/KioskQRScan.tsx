@@ -13,7 +13,7 @@ type ScanResult = { type: "checkin" | "checkout" | "already-out" | "notfound"; v
 export default function KioskQRScan() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const mode = searchParams.get("mode"); // "checkin" | "checkout" | null (auto-detect)
+  const mode = searchParams.get("mode");
   const { visitors, addVisitor, checkOutVisitor } = useVisitors();
   const { toast } = useToast();
 
@@ -43,7 +43,6 @@ export default function KioskQRScan() {
         setResult({ type: "checkin", visitor: match });
         toast({ title: "Already checked in", description: `${match.firstName} is already here.` });
       } else {
-        // Auto-detect or checkout mode: offer checkout
         checkOutVisitor(match.id);
         setResult({ type: "checkout", visitor: match });
         toast({ title: "Checked Out", description: `${match.firstName} ${match.surname} checked out via QR.` });
@@ -52,7 +51,6 @@ export default function KioskQRScan() {
       if (mode === "checkout") {
         setResult({ type: "already-out", visitor: match });
       } else {
-        // Re-check-in
         addVisitor({
           firstName: match.firstName,
           surname: match.surname,
@@ -76,7 +74,6 @@ export default function KioskQRScan() {
     }
   }, [visitors, mode, addVisitor, checkOutVisitor, toast]);
 
-  // Camera scanner
   useEffect(() => {
     if (inputMode !== "camera" || result) return;
 
@@ -92,7 +89,7 @@ export default function KioskQRScan() {
             lookupAndAct(decodedText);
             scanner?.stop().catch(() => {});
           },
-          () => {} // ignore scan failures
+          () => {}
         );
         setCameraActive(true);
         setCameraError(false);
@@ -125,7 +122,6 @@ export default function KioskQRScan() {
   // Result screen
   if (result) {
     const v = result.visitor;
-    const name = v ? `${v.firstName} ${v.surname}` : "";
     return (
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full space-y-6 text-center">
         {result.type === "checkin" && (
@@ -151,7 +147,7 @@ export default function KioskQRScan() {
             <div className="h-20 w-20 rounded-full bg-info/10 text-info flex items-center justify-center mx-auto">
               <AlertTriangle className="h-12 w-12" />
             </div>
-            <h2 className="text-3xl font-bold text-foreground">{name}</h2>
+            <h2 className="text-3xl font-bold text-foreground">{v ? `${v.firstName} ${v.surname}` : ""}</h2>
             <p className="text-lg text-muted-foreground">This person is not currently checked in.</p>
           </>
         )}
@@ -165,7 +161,7 @@ export default function KioskQRScan() {
           </>
         )}
         <div className="flex gap-3 pt-4">
-          <Button variant="outline" onClick={handleReset} className="flex-1 h-14 text-base gap-2">
+          <Button variant="secondary" onClick={handleReset} className="flex-1 h-14 text-base gap-2 border border-border">
             <QrCode className="h-5 w-5" /> Scan Another
           </Button>
           <Button onClick={() => navigate("/kiosk/home")} className="flex-1 h-14 text-base gap-2">
@@ -173,7 +169,7 @@ export default function KioskQRScan() {
           </Button>
         </div>
         {result.type === "notfound" && (
-          <Button variant="outline" onClick={() => navigate("/kiosk/checkin")} className="w-full h-14 text-base gap-2">
+          <Button variant="secondary" onClick={() => navigate("/kiosk/checkin")} className="w-full h-14 text-base gap-2 border border-border">
             <UserRoundPlus className="h-5 w-5" /> Check In Manually
           </Button>
         )}
@@ -185,7 +181,7 @@ export default function KioskQRScan() {
     <div className="w-full space-y-6">
       <div className="text-center">
         <h2 className="text-3xl font-bold text-foreground">Scan QR Code</h2>
-        <p className="text-base text-muted-foreground mt-1">
+        <p className="text-lg text-muted-foreground mt-1">
           {mode === "checkin" ? "Scan your visitor card to check in" : mode === "checkout" ? "Scan your visitor card to check out" : "Scan your visitor card or QR code"}
         </p>
       </div>
@@ -195,7 +191,7 @@ export default function KioskQRScan() {
         <button
           onClick={() => setInputMode("camera")}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-[48px] ${
-            inputMode === "camera" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground border border-border hover:bg-primary/10"
+            inputMode === "camera" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground border border-border active:bg-accent"
           }`}
         >
           <Camera className="h-5 w-5" /> Camera
@@ -203,7 +199,7 @@ export default function KioskQRScan() {
         <button
           onClick={() => { setInputMode("manual"); scannerRef.current?.stop().catch(() => {}); }}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-[48px] ${
-            inputMode === "manual" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground border border-border hover:bg-primary/10"
+            inputMode === "manual" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground border border-border active:bg-accent"
           }`}
         >
           <Keyboard className="h-5 w-5" /> Type Code
@@ -221,7 +217,7 @@ export default function KioskQRScan() {
             <div className="rounded-xl border-2 border-destructive/20 bg-destructive/5 p-4 text-center space-y-2">
               <CameraOff className="h-8 w-8 text-destructive mx-auto" />
               <p className="text-sm text-destructive font-medium">Camera not available</p>
-              <p className="text-xs text-muted-foreground">Please use the manual code entry instead.</p>
+              <p className="text-sm text-muted-foreground">Please use the manual code entry instead.</p>
             </div>
           )}
           {cameraActive && (
@@ -252,7 +248,7 @@ export default function KioskQRScan() {
         </div>
       )}
 
-      <Button variant="outline" onClick={() => navigate("/kiosk/home")} className="w-full h-14 text-base gap-2">
+      <Button variant="secondary" onClick={() => navigate("/kiosk/home")} className="w-full h-14 text-base gap-2 border border-border">
         <ArrowLeft className="h-5 w-5" /> Back to Home
       </Button>
     </div>

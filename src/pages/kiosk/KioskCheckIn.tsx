@@ -160,14 +160,14 @@ export default function KioskCheckIn() {
                   key={t.type}
                   onClick={() => { flow.setSelectedType(t.type); goNext(); }}
                   className={`flex flex-col items-center gap-4 p-6 rounded-2xl border-2 transition-all duration-150 min-h-[180px] active:scale-[0.96] group
-                    ${flow.selectedType === t.type ? "border-primary bg-primary/5 shadow-md" : "border-border bg-card hover:border-primary/50"}`}
+                    ${flow.selectedType === t.type ? "border-primary bg-primary/10 shadow-md" : "border-border bg-card/80 shadow-sm active:border-primary/50"}`}
                 >
                   <div className={`h-16 w-16 rounded-2xl flex items-center justify-center ${t.iconBg} transition-colors`}>
                     <t.icon className={`h-8 w-8 ${t.iconColor}`} strokeWidth={2.25} />
                   </div>
                   <div className="text-center">
                     <span className="text-lg font-bold block text-foreground">{t.label}</span>
-                    <span className="text-xs text-muted-foreground mt-1 block">{t.description}</span>
+                    <span className="text-sm text-muted-foreground mt-1 block">{t.description}</span>
                   </div>
                 </button>
               ))}
@@ -274,16 +274,16 @@ export default function KioskCheckIn() {
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => { setVisitingMode("resident"); setVisitingSearch(""); }}
-                className={`px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-[48px] ${
-                  visitingMode === "resident" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-primary/10"
+                className={`px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-[48px] active:scale-[0.97] ${
+                  visitingMode === "resident" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground border border-border"
                 }`}
               >
                 Resident
               </button>
               <button
                 onClick={() => { setVisitingMode("staff"); setVisitingSearch(""); }}
-                className={`px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-[48px] ${
-                  visitingMode === "staff" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-primary/10"
+                className={`px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-[48px] active:scale-[0.97] ${
+                  visitingMode === "staff" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground border border-border"
                 }`}
               >
                 Staff Member
@@ -571,10 +571,13 @@ export default function KioskCheckIn() {
                 {flow.tcContent}
               </div>
               <div
-                className={`flex items-center gap-4 p-5 rounded-xl cursor-pointer transition-all ${
-                  flow.privacyAcknowledged ? "bg-success/5 border-2 border-success/30" : "bg-muted/30 border-2 border-border hover:border-primary/30"
+                className={`flex items-center gap-4 p-5 rounded-xl cursor-pointer transition-all active:scale-[0.98] ${
+                  flow.privacyAcknowledged ? "bg-success/5 border-2 border-success/30" : "bg-secondary/50 border-2 border-border"
                 }`}
                 onClick={() => flow.setPrivacyAcknowledged(!flow.privacyAcknowledged)}
+                role="button"
+                tabIndex={0}
+                aria-pressed={flow.privacyAcknowledged}
               >
                 <Checkbox checked={flow.privacyAcknowledged} className="h-7 w-7" onCheckedChange={(c) => flow.setPrivacyAcknowledged(c === true)} />
                 <span className="text-base text-foreground font-medium">
@@ -636,10 +639,13 @@ export default function KioskCheckIn() {
             {!flow.tcContent && (
               <div className="rounded-2xl border-2 border-border bg-card p-5">
                 <div
-                  className={`flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-all ${
-                    flow.privacyAcknowledged ? "bg-success/5 border-2 border-success/30" : "bg-muted/30 border-2 border-border hover:border-primary/30"
+                  className={`flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-all active:scale-[0.98] ${
+                    flow.privacyAcknowledged ? "bg-success/5 border-2 border-success/30" : "bg-secondary/50 border-2 border-border"
                   }`}
                   onClick={() => flow.setPrivacyAcknowledged(!flow.privacyAcknowledged)}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={flow.privacyAcknowledged}
                 >
                   <Checkbox checked={flow.privacyAcknowledged} className="h-7 w-7" onCheckedChange={(c) => flow.setPrivacyAcknowledged(c === true)} />
                   <span className="text-base text-foreground font-medium">

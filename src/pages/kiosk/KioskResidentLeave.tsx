@@ -111,7 +111,7 @@ export default function KioskResidentLeave() {
                   key={lt.id}
                   onClick={() => setSelectedLeaveType(lt.name)}
                   className={`p-4 rounded-xl border-2 text-left transition-all active:scale-[0.97] ${
-                    selectedLeaveType === lt.name ? "border-warning bg-warning/5" : "border-border hover:border-warning/50"
+                    selectedLeaveType === lt.name ? "border-warning bg-warning/10 shadow-sm" : "border-border bg-secondary/50"
                   }`}
                 >
                   <span className="text-lg mr-2">{lt.emoji}</span>
@@ -183,9 +183,9 @@ export default function KioskResidentLeave() {
         <div className="grid grid-cols-2 gap-4">
           <button
             onClick={() => setMode("leaving")}
-            className="flex flex-col items-center gap-4 p-8 rounded-2xl border-2 border-warning/20 bg-warning/10 text-warning hover:bg-warning hover:text-warning-foreground transition-all duration-200 min-h-[200px] active:scale-[0.96] group"
+            className="flex flex-col items-center gap-4 p-8 rounded-2xl border-2 border-warning/30 bg-warning/10 text-warning transition-all duration-200 min-h-[200px] active:scale-[0.96] active:bg-warning active:text-warning-foreground group"
           >
-            <div className="h-16 w-16 rounded-2xl bg-warning/15 flex items-center justify-center group-hover:bg-warning-foreground/20 transition-colors">
+            <div className="h-16 w-16 rounded-2xl bg-warning/20 flex items-center justify-center transition-colors">
               <DoorOpen className="h-9 w-9" strokeWidth={2.25} />
             </div>
             <div className="text-center">
@@ -195,9 +195,9 @@ export default function KioskResidentLeave() {
           </button>
           <button
             onClick={() => setMode("returning")}
-            className="flex flex-col items-center gap-4 p-8 rounded-2xl border-2 border-success/20 bg-success/10 text-success hover:bg-success hover:text-success-foreground transition-all duration-200 min-h-[200px] active:scale-[0.96] group"
+            className="flex flex-col items-center gap-4 p-8 rounded-2xl border-2 border-success/30 bg-success/10 text-success transition-all duration-200 min-h-[200px] active:scale-[0.96] active:bg-success active:text-success-foreground group"
           >
-            <div className="h-16 w-16 rounded-2xl bg-success/15 flex items-center justify-center group-hover:bg-success-foreground/20 transition-colors">
+            <div className="h-16 w-16 rounded-2xl bg-success/20 flex items-center justify-center transition-colors">
               <Home className="h-9 w-9" strokeWidth={2.25} />
             </div>
             <div className="text-center">
@@ -218,7 +218,7 @@ export default function KioskResidentLeave() {
           <Button variant="secondary" onClick={() => setMode("select")} className="h-14 gap-2 min-h-[48px] border border-border">
             <ArrowLeft className="h-5 w-5" /> Back
           </Button>
-          <h2 className="text-2xl font-bold text-foreground">Welcome Back</h2>
+          <h2 className="text-3xl font-bold text-foreground">Welcome Back</h2>
         </div>
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -254,7 +254,7 @@ export default function KioskResidentLeave() {
           <Button variant="secondary" onClick={() => setMode("select")} className="h-14 gap-2 min-h-[48px] border border-border">
             <ArrowLeft className="h-5 w-5" /> Back
         </Button>
-        <h2 className="text-2xl font-bold text-foreground">Find Your Room</h2>
+        <h2 className="text-3xl font-bold text-foreground">Find Your Room</h2>
       </div>
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />

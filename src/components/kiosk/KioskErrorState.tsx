@@ -16,12 +16,12 @@ export function KioskErrorState({
         <AlertCircle className="h-8 w-8 text-destructive" />
       </div>
       <div>
-        <p className="text-lg font-semibold text-foreground">Oops!</p>
-        <p className="text-base text-muted-foreground mt-1">{message}</p>
+        <p className="text-xl font-semibold text-foreground">Oops!</p>
+        <p className="text-lg text-muted-foreground mt-1">{message}</p>
       </div>
       {onRetry && (
-        <Button onClick={onRetry} variant="outline" className="h-12 px-6 text-base gap-2">
-          <RefreshCw className="h-4 w-4" /> Try Again
+        <Button onClick={onRetry} variant="secondary" className="h-14 px-6 text-base gap-2 border border-border">
+          <RefreshCw className="h-5 w-5" /> Try Again
         </Button>
       )}
     </div>

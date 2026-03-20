@@ -58,7 +58,6 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
   // No active survey — skip immediately
   useEffect(() => {
     if (!activeSurvey && surveys.length >= 0) {
-      // No survey configured — skip instantly
       onComplete();
     }
   }, [activeSurvey, onComplete, surveys.length]);
@@ -70,7 +69,7 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
         <div className="text-center space-y-2">
           <MessageSquare className="h-12 w-12 text-primary mx-auto" />
           <h2 className="text-3xl font-bold text-foreground">We'd Love Your Feedback</h2>
-          <p className="text-base text-muted-foreground">{activeSurvey.description || "Please take a moment to share your experience."}</p>
+          <p className="text-lg text-muted-foreground">{activeSurvey.description || "Please take a moment to share your experience."}</p>
         </div>
         <div className="rounded-2xl border-2 border-primary/20 bg-primary/5 p-8 text-center space-y-4">
           <Button
@@ -81,7 +80,7 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
             <ExternalLink className="h-5 w-5" /> Open Feedback Form
           </Button>
         </div>
-        <Button variant="outline" onClick={onComplete} className="w-full h-14 text-base gap-2">
+        <Button variant="secondary" onClick={onComplete} className="w-full h-14 text-base gap-2 border border-border">
           <SkipForward className="h-5 w-5" /> Skip
         </Button>
       </motion.div>
@@ -93,26 +92,27 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-6">
       <div className="text-center space-y-1">
         <h2 className="text-3xl font-bold text-foreground">How Was Your Visit?</h2>
-        <p className="text-base text-muted-foreground">Tap to rate each area</p>
+        <p className="text-lg text-muted-foreground">Tap to rate each area</p>
       </div>
 
       <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
         {questions.map((q) => (
           <div key={q.id} className="rounded-2xl border-2 border-border bg-card p-5 space-y-3">
-            <p className="text-base font-semibold text-foreground">{q.question}</p>
+            <p className="text-lg font-semibold text-foreground">{q.question}</p>
             <div className="flex justify-between gap-2">
               {EMOJI_SCALE.map((e) => (
                 <button
                   key={e.value}
                   onClick={() => setRatings((prev) => ({ ...prev, [q.id]: e.value }))}
-                  className={`flex-1 flex flex-col items-center gap-1.5 py-3 min-h-[56px] min-w-[56px] rounded-xl transition-all ${
+                  aria-label={`Rate ${e.label}`}
+                  className={`flex-1 flex flex-col items-center gap-1.5 py-3 min-h-[64px] min-w-[56px] rounded-xl transition-all active:scale-95 ${
                     ratings[q.id] === e.value
                       ? "bg-primary/10 border-2 border-primary scale-105"
-                      : "border-2 border-border hover:bg-muted"
+                      : "border-2 border-border bg-secondary/50"
                   }`}
                 >
                   <span className="text-3xl">{e.emoji}</span>
-                  <span className="text-xs text-muted-foreground font-medium">{e.label}</span>
+                  <span className="text-sm text-muted-foreground font-medium">{e.label}</span>
                 </button>
               ))}
             </div>
@@ -129,7 +129,7 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
       </div>
 
       <div className="flex gap-3">
-        <Button variant="outline" onClick={onComplete} className="flex-1 h-14 text-base gap-2">
+        <Button variant="secondary" onClick={onComplete} className="flex-1 h-14 text-base gap-2 border border-border">
           <SkipForward className="h-5 w-5" /> Skip
         </Button>
         <Button
