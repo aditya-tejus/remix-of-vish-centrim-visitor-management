@@ -96,8 +96,9 @@ export default function KioskLayout() {
         </div>
       </main>
 
-      <footer className="relative z-10 text-center py-2 text-xs text-muted-foreground/60">
-        Powered by Centrim Life
+      <footer className="relative z-10 flex items-center justify-center gap-1.5 py-2 text-[11px] text-muted-foreground/40 tracking-wide">
+        Powered by
+        <img src={centrimLogo} alt="Centrim Life" className="h-3.5 object-contain opacity-40" />
       </footer>
 
       {/* Help Dialog */}
