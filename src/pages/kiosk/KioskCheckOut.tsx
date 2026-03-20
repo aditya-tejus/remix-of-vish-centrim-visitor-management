@@ -6,10 +6,12 @@ import { useVisitors } from "@/hooks/useVisitors";
 import { useToast } from "@/hooks/use-toast";
 import { Search, LogOut, ArrowLeft, Clock } from "lucide-react";
 import { format } from "date-fns";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
 import { KioskSuccessScreen } from "@/components/kiosk/KioskSuccessScreen";
 import { KioskFeedbackScreen } from "@/components/kiosk/KioskFeedbackScreen";
+import { KioskSkeletonList } from "@/components/kiosk/KioskSkeleton";
+import { KioskErrorState } from "@/components/kiosk/KioskErrorState";
 
 type Phase = "search" | "confirm" | "feedback" | "done";
 
@@ -17,7 +19,7 @@ const OVERSTAY_MS = 8 * 3600000;
 
 export default function KioskCheckOut() {
   const navigate = useNavigate();
-  const { visitors, checkOutVisitor } = useVisitors();
+  const { visitors, checkOutVisitor, isLoading, error } = useVisitors();
   const { toast } = useToast();
   const [phase, setPhase] = useState<Phase>("search");
   const [search, setSearch] = useState("");
@@ -45,7 +47,6 @@ export default function KioskCheckOut() {
     const name = `${selected.firstName} ${selected.surname}`;
     await checkOutVisitor(selected.id);
     setDoneName(name);
-    // Go to feedback phase — KioskFeedbackScreen will handle skip if no survey
     setPhase("feedback");
     toast({ title: "Checked Out", description: `${name} has been checked out.` });
   };
@@ -86,10 +87,10 @@ export default function KioskCheckOut() {
     const isOverstay = ms > OVERSTAY_MS;
 
     return (
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-2xl space-y-6">
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-2xl space-y-6" role="region" aria-label="Confirm check out">
         <h2 className="text-3xl font-bold text-foreground text-center">Confirm Check Out</h2>
         <div className="rounded-2xl border-2 border-border bg-card p-8 flex flex-col items-center gap-4">
-          <div className="h-16 w-16 rounded-full bg-warning/10 text-warning flex items-center justify-center text-xl font-bold">
+          <div className="h-16 w-16 rounded-full bg-warning/10 text-warning flex items-center justify-center text-xl font-bold" aria-hidden="true">
             {initials}
           </div>
           <div className="text-center">
@@ -104,7 +105,7 @@ export default function KioskCheckOut() {
             <div className="flex justify-between">
               <span className="text-muted-foreground">Duration</span>
               <span className={`font-medium flex items-center gap-1.5 ${isOverstay ? "text-warning" : "text-foreground"}`}>
-                {isOverstay && <Clock className="h-4 w-4 text-warning animate-pulse" />}
+                {isOverstay && <Clock className="h-4 w-4 text-warning animate-pulse" aria-hidden="true" />}
                 {duration}
                 {isOverstay && <span className="text-xs text-warning font-bold ml-1">OVERSTAY</span>}
               </span>
@@ -118,10 +119,10 @@ export default function KioskCheckOut() {
           </div>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={() => setPhase("search")} className="flex-1 h-14 text-base gap-2">
+          <Button variant="outline" onClick={() => setPhase("search")} className="flex-1 h-14 text-base gap-2" aria-label="Cancel and go back">
             <ArrowLeft className="h-5 w-5" /> Cancel
           </Button>
-          <Button onClick={handleConfirm} className="flex-1 h-14 text-base gap-2 bg-warning hover:bg-warning/90 text-warning-foreground">
+          <Button onClick={handleConfirm} className="flex-1 h-14 text-base gap-2 bg-warning hover:bg-warning/90 text-warning-foreground" aria-label={`Check out ${name}`}>
             <LogOut className="h-5 w-5" /> Yes, Check Out
           </Button>
         </div>
@@ -131,17 +132,21 @@ export default function KioskCheckOut() {
 
   // Search phase
   return (
-    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-2xl space-y-6">
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-2xl space-y-6" role="region" aria-label="Check out search">
       <div className="text-center">
         <h2 className="text-3xl font-bold text-foreground">Check Out</h2>
         <p className="text-base text-muted-foreground mt-1">Find your name below</p>
       </div>
       <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search your name..." className="pl-12 h-14 text-lg" autoFocus />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" aria-hidden="true" />
+        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search your name..." className="pl-12 h-14 text-lg" autoFocus aria-label="Search visitors" />
       </div>
-      <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto">
-        {filtered.length === 0 ? (
+      <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto" role="list" aria-label="Checked in visitors">
+        {isLoading ? (
+          <KioskSkeletonList count={4} />
+        ) : error ? (
+          <KioskErrorState message="Could not load visitors. Please try again." onRetry={() => window.location.reload()} />
+        ) : filtered.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground text-lg">No visitors currently checked in</div>
         ) : (
           filtered.map((v) => {
@@ -152,8 +157,8 @@ export default function KioskCheckOut() {
                 key={v.id}
                 name={`${v.firstName} ${v.surname}`}
                 subtitle={`${v.type} • In since ${format(new Date(v.checkInTime), "h:mm a")}${isOverstay ? " • ⚠ Overstay" : ""}`}
-                accentColor={isOverstay ? "warning" : "warning"}
-                rightIcon={<LogOut className="h-5 w-5 text-warning shrink-0" />}
+                accentColor="warning"
+                rightIcon={<LogOut className="h-5 w-5 text-warning shrink-0" aria-hidden="true" />}
                 onClick={() => handleSelect(v)}
               />
             );
