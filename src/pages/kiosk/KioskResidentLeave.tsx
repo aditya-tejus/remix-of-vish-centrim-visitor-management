@@ -254,7 +254,7 @@ export default function KioskResidentLeave() {
           <Button variant="secondary" onClick={() => setMode("select")} className="h-14 gap-2 min-h-[48px] border border-border">
             <ArrowLeft className="h-5 w-5" /> Back
         </Button>
-        <h2 className="text-2xl font-bold text-foreground">Find Your Room</h2>
+        <h2 className="text-3xl font-bold text-foreground">Find Your Room</h2>
       </div>
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
