@@ -274,8 +274,8 @@ export default function KioskCheckIn() {
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => { setVisitingMode("resident"); setVisitingSearch(""); }}
-                className={`px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-[48px] ${
-                  visitingMode === "resident" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-primary/10"
+                className={`px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-[48px] active:scale-[0.97] ${
+                  visitingMode === "resident" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground border border-border"
                 }`}
               >
                 Resident
