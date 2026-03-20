@@ -142,9 +142,9 @@ export default function KioskCheckOut() {
         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search your name..." className="pl-12 h-14 text-lg" autoFocus aria-label="Search visitors" />
       </div>
       <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto" role="list" aria-label="Checked in visitors">
-        {isLoading ? (
+        {loading ? (
           <KioskSkeletonList count={4} />
-        ) : error ? (
+        ) : filtered.length === 0 ? (
           <KioskErrorState message="Could not load visitors. Please try again." onRetry={() => window.location.reload()} />
         ) : filtered.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground text-lg">No visitors currently checked in</div>
