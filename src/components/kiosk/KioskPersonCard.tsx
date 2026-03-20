@@ -4,16 +4,17 @@ interface KioskPersonCardProps {
   name: string;
   subtitle?: string;
   initials?: string;
+  photoUrl?: string;
   rightIcon?: React.ReactNode;
   accentColor?: "primary" | "warning" | "success" | "info";
   onClick?: () => void;
 }
 
 const accentBorderMap = {
-  primary: "hover:border-l-primary",
-  warning: "hover:border-l-warning",
-  success: "hover:border-l-success",
-  info: "hover:border-l-info",
+  primary: "border-l-primary",
+  warning: "border-l-warning",
+  success: "border-l-success",
+  info: "border-l-info",
 };
 const accentBgMap = {
   primary: "bg-primary/10 text-primary",
@@ -26,6 +27,7 @@ export function KioskPersonCard({
   name,
   subtitle,
   initials,
+  photoUrl,
   rightIcon,
   accentColor = "primary",
   onClick,
@@ -40,11 +42,15 @@ export function KioskPersonCard({
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-4 min-h-[72px] p-5 rounded-xl border-2 border-border border-l-4 border-l-transparent bg-card transition-all duration-150 text-left active:scale-[0.98] ${accentBorderMap[accentColor]}`}
+      className={`w-full flex items-center gap-4 min-h-[72px] p-5 rounded-xl border-2 border-border border-l-4 ${accentBorderMap[accentColor]} bg-card transition-all duration-150 text-left active:scale-[0.98] hover:shadow-md`}
     >
-      <div className={`h-11 w-11 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${accentBgMap[accentColor]}`}>
-        {initials || fallbackInitials}
-      </div>
+      {photoUrl ? (
+        <img src={photoUrl} alt={name} className="h-11 w-11 rounded-full object-cover shrink-0" />
+      ) : (
+        <div className={`h-11 w-11 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${accentBgMap[accentColor]}`}>
+          {initials || fallbackInitials}
+        </div>
+      )}
       <div className="flex-1 min-w-0">
         <p className="text-lg font-semibold text-foreground truncate">{name}</p>
         {subtitle && <p className="text-sm text-muted-foreground truncate">{subtitle}</p>}

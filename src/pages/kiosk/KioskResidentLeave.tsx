@@ -6,7 +6,7 @@ import { useResidents } from "@/hooks/useResidents";
 import { useVisitors } from "@/hooks/useVisitors";
 import { useActiveLeaveTypes } from "@/hooks/useLeaveTypes";
 import { useToast } from "@/hooks/use-toast";
-import { DoorOpen, Search, Home, ArrowLeft, ArrowRight, Calendar, RotateCcw } from "lucide-react";
+import { DoorOpen, Search, Home, ArrowLeft, ArrowRight, Calendar } from "lucide-react";
 import { motion } from "framer-motion";
 import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
 import { KioskSuccessScreen } from "@/components/kiosk/KioskSuccessScreen";
