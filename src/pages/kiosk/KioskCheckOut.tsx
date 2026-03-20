@@ -145,8 +145,6 @@ export default function KioskCheckOut() {
         {loading ? (
           <KioskSkeletonList count={4} />
         ) : filtered.length === 0 ? (
-          <KioskErrorState message="Could not load visitors. Please try again." onRetry={() => window.location.reload()} />
-        ) : filtered.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground text-lg">No visitors currently checked in</div>
         ) : (
           filtered.map((v) => {
