@@ -173,7 +173,7 @@ export default function KioskCheckIn() {
               ))}
             </div>
             <div className="text-center pt-2">
-              <Button variant="outline" onClick={() => navigate("/kiosk/qr-scan?mode=checkin")} className="h-12 gap-2 text-base">
+              <Button variant="secondary" onClick={() => navigate("/kiosk/qr-scan?mode=checkin")} className="h-12 gap-2 text-base border border-border">
                 <QrCode className="h-5 w-5" /> I have a QR code / visitor card
               </Button>
             </div>
