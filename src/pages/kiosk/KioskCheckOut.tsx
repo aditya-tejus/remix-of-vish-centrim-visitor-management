@@ -19,7 +19,7 @@ const OVERSTAY_MS = 8 * 3600000;
 
 export default function KioskCheckOut() {
   const navigate = useNavigate();
-  const { visitors, checkOutVisitor, isLoading, error } = useVisitors();
+  const { visitors, checkOutVisitor, loading } = useVisitors();
   const { toast } = useToast();
   const [phase, setPhase] = useState<Phase>("search");
   const [search, setSearch] = useState("");
