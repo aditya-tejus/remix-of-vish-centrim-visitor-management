@@ -282,8 +282,8 @@ export default function KioskCheckIn() {
               </button>
               <button
                 onClick={() => { setVisitingMode("staff"); setVisitingSearch(""); }}
-                className={`px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-[48px] ${
-                  visitingMode === "staff" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-primary/10"
+                className={`px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-[48px] active:scale-[0.97] ${
+                  visitingMode === "staff" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground border border-border"
                 }`}
               >
                 Staff Member
