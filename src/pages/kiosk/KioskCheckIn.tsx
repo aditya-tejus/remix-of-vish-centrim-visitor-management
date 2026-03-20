@@ -571,10 +571,13 @@ export default function KioskCheckIn() {
                 {flow.tcContent}
               </div>
               <div
-                className={`flex items-center gap-4 p-5 rounded-xl cursor-pointer transition-all ${
-                  flow.privacyAcknowledged ? "bg-success/5 border-2 border-success/30" : "bg-muted/30 border-2 border-border hover:border-primary/30"
+                className={`flex items-center gap-4 p-5 rounded-xl cursor-pointer transition-all active:scale-[0.98] ${
+                  flow.privacyAcknowledged ? "bg-success/5 border-2 border-success/30" : "bg-secondary/50 border-2 border-border"
                 }`}
                 onClick={() => flow.setPrivacyAcknowledged(!flow.privacyAcknowledged)}
+                role="button"
+                tabIndex={0}
+                aria-pressed={flow.privacyAcknowledged}
               >
                 <Checkbox checked={flow.privacyAcknowledged} className="h-7 w-7" onCheckedChange={(c) => flow.setPrivacyAcknowledged(c === true)} />
                 <span className="text-base text-foreground font-medium">
