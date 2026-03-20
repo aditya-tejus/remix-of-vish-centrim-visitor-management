@@ -108,14 +108,14 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
                 <button
                   key={e.value}
                   onClick={() => setRatings((prev) => ({ ...prev, [q.id]: e.value }))}
-                  className={`flex-1 flex flex-col items-center gap-1 py-3 rounded-xl transition-all ${
+                  className={`flex-1 flex flex-col items-center gap-1.5 py-3 min-h-[56px] min-w-[56px] rounded-xl transition-all ${
                     ratings[q.id] === e.value
                       ? "bg-primary/10 border-2 border-primary scale-105"
-                      : "border-2 border-transparent hover:bg-muted"
+                      : "border-2 border-border hover:bg-muted"
                   }`}
                 >
-                  <span className="text-2xl">{e.emoji}</span>
-                  <span className="text-[10px] text-muted-foreground font-medium">{e.label}</span>
+                  <span className="text-3xl">{e.emoji}</span>
+                  <span className="text-xs text-muted-foreground font-medium">{e.label}</span>
                 </button>
               ))}
             </div>
