@@ -215,7 +215,7 @@ export default function KioskResidentLeave() {
     return (
       <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} className="w-full space-y-6">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" onClick={() => setMode("select")} className="h-12 gap-2">
+          <Button variant="outline" onClick={() => setMode("select")} className="h-14 gap-2 min-h-[48px]">
             <ArrowLeft className="h-5 w-5" /> Back
           </Button>
           <h2 className="text-2xl font-bold text-foreground">Welcome Back</h2>
