@@ -197,7 +197,7 @@ export default function KioskResidentLeave() {
             onClick={() => setMode("returning")}
             className="flex flex-col items-center gap-4 p-8 rounded-2xl border-2 border-success/30 bg-success/10 text-success transition-all duration-200 min-h-[200px] active:scale-[0.96] active:bg-success active:text-success-foreground group"
           >
-            <div className="h-16 w-16 rounded-2xl bg-success/15 flex items-center justify-center group-hover:bg-success-foreground/20 transition-colors">
+            <div className="h-16 w-16 rounded-2xl bg-success/20 flex items-center justify-center transition-colors">
               <Home className="h-9 w-9" strokeWidth={2.25} />
             </div>
             <div className="text-center">
