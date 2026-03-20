@@ -75,14 +75,14 @@ export default function KioskLayout() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setHelpOpen(true)}
-            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-muted text-muted-foreground hover:bg-accent hover:text-foreground transition-colors text-sm font-medium min-h-[48px]"
+            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-secondary text-secondary-foreground transition-colors text-sm font-medium min-h-[48px] border border-border active:bg-accent"
             aria-label="Need help"
           >
             <HelpCircle className="h-5 w-5" />
           </button>
           <button
             onClick={() => navigate("/kiosk/home")}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors text-base font-medium min-h-[48px] border border-border"
+            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground transition-colors text-base font-medium min-h-[48px] active:bg-primary/80"
           >
             <RotateCcw className="h-5 w-5" /> Start Over
           </button>
