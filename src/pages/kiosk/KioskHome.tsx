@@ -121,7 +121,7 @@ export default function KioskHome() {
           </motion.button>
 
           {/* Secondary tiles — Check Out & Resident Leave */}
-          <div className="grid grid-cols-2 gap-4 sm:gap-5">
+          <div className="grid grid-cols-3 gap-4 sm:gap-5">
             {secondaryTiles.map((tile, i) => (
               <motion.button
                 key={tile.path}
