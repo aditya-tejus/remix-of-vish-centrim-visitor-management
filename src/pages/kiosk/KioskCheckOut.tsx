@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useVisitors } from "@/hooks/useVisitors";
 import { useToast } from "@/hooks/use-toast";
-import { Search, LogOut, ArrowLeft, Clock } from "lucide-react";
+import { Search, LogOut, ArrowLeft, Clock, QrCode } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
