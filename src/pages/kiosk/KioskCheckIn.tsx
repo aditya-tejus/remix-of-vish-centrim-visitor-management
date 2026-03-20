@@ -15,7 +15,7 @@ import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
 import { useKioskCheckInFlow, KioskStepId } from "@/hooks/useKioskCheckInFlow";
 import {
   UserRound, Truck, Heart, ArrowLeft, ArrowRight, Shield, ScrollText,
-  AlertTriangle, Search, RotateCcw, UserSearch
+  AlertTriangle, Search, RotateCcw, UserSearch, QrCode
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
