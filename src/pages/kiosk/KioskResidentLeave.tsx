@@ -6,7 +6,7 @@ import { useResidents } from "@/hooks/useResidents";
 import { useVisitors } from "@/hooks/useVisitors";
 import { useActiveLeaveTypes } from "@/hooks/useLeaveTypes";
 import { useToast } from "@/hooks/use-toast";
-import { DoorOpen, Search, Home, ArrowLeft, ArrowRight, Calendar, RotateCcw } from "lucide-react";
+import { DoorOpen, Search, Home, ArrowLeft, ArrowRight, Calendar } from "lucide-react";
 import { motion } from "framer-motion";
 import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
 import { KioskSuccessScreen } from "@/components/kiosk/KioskSuccessScreen";
@@ -183,9 +183,11 @@ export default function KioskResidentLeave() {
         <div className="grid grid-cols-2 gap-4">
           <button
             onClick={() => setMode("leaving")}
-            className="flex flex-col items-center gap-4 p-8 rounded-2xl border-2 border-warning/20 bg-warning/10 text-warning hover:bg-warning hover:text-warning-foreground transition-all duration-200 min-h-[200px] active:scale-[0.96]"
+            className="flex flex-col items-center gap-4 p-8 rounded-2xl border-2 border-warning/20 bg-warning/10 text-warning hover:bg-warning hover:text-warning-foreground transition-all duration-200 min-h-[200px] active:scale-[0.96] group"
           >
-            <DoorOpen className="h-12 w-12" />
+            <div className="h-16 w-16 rounded-2xl bg-warning/15 flex items-center justify-center group-hover:bg-warning-foreground/20 transition-colors">
+              <DoorOpen className="h-9 w-9" strokeWidth={2.25} />
+            </div>
             <div className="text-center">
               <span className="text-xl font-bold block">Leaving</span>
               <span className="text-sm opacity-80 mt-1 block">Record departure</span>
@@ -193,9 +195,11 @@ export default function KioskResidentLeave() {
           </button>
           <button
             onClick={() => setMode("returning")}
-            className="flex flex-col items-center gap-4 p-8 rounded-2xl border-2 border-success/20 bg-success/10 text-success hover:bg-success hover:text-success-foreground transition-all duration-200 min-h-[200px] active:scale-[0.96]"
+            className="flex flex-col items-center gap-4 p-8 rounded-2xl border-2 border-success/20 bg-success/10 text-success hover:bg-success hover:text-success-foreground transition-all duration-200 min-h-[200px] active:scale-[0.96] group"
           >
-            <Home className="h-12 w-12" />
+            <div className="h-16 w-16 rounded-2xl bg-success/15 flex items-center justify-center group-hover:bg-success-foreground/20 transition-colors">
+              <Home className="h-9 w-9" strokeWidth={2.25} />
+            </div>
             <div className="text-center">
               <span className="text-xl font-bold block">Returning</span>
               <span className="text-sm opacity-80 mt-1 block">{awayResidents.length} away</span>

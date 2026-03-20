@@ -14,15 +14,15 @@ import { KioskSuccessScreen } from "@/components/kiosk/KioskSuccessScreen";
 import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
 import { useKioskCheckInFlow, KioskStepId } from "@/hooks/useKioskCheckInFlow";
 import {
-  User, Truck, Heart, ArrowLeft, ArrowRight, Shield, ScrollText,
+  UserRound, Truck, Heart, ArrowLeft, ArrowRight, Shield, ScrollText,
   AlertTriangle, Search, RotateCcw, UserSearch
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const TYPES = [
-  { type: "visitor" as const, label: "Visitor", icon: User, description: "Family, friend, or guest" },
-  { type: "contractor" as const, label: "Contractor", icon: Truck, description: "Tradesperson or supplier" },
-  { type: "volunteer" as const, label: "Volunteer", icon: Heart, description: "Volunteer or helper" },
+  { type: "visitor" as const, label: "Visitor", icon: UserRound, description: "Family, friend, or guest", iconBg: "bg-primary/15", iconColor: "text-primary" },
+  { type: "contractor" as const, label: "Contractor", icon: Truck, description: "Tradesperson or supplier", iconBg: "bg-warning/15", iconColor: "text-warning" },
+  { type: "volunteer" as const, label: "Volunteer", icon: Heart, description: "Volunteer or helper", iconBg: "bg-success/15", iconColor: "text-success" },
 ];
 
 export default function KioskCheckIn() {
@@ -61,7 +61,6 @@ export default function KioskCheckIn() {
     const prev = await flow.searchReturningVisitor(firstName, surname);
     if (prev) {
       flow.setReturningVisitor(prev);
-      // Auto-fill empty fields
       flow.setFormValues((fv: Record<string, string>) => ({
         ...fv,
         email: fv.email || prev.email,
@@ -79,7 +78,6 @@ export default function KioskCheckIn() {
       if (!q) return flow.staffLookupMode === "by_department" ? flow.staff : [];
       return flow.staff.filter((s) => s.name.toLowerCase().includes(q) || s.department?.toLowerCase().includes(q));
     }
-    // Resident mode
     if (flow.residentLookupMode === "show_all" && !q) return flow.residents;
     if (flow.residentLookupMode === "search_first" && q.length < 3) return [];
     return flow.residents.filter((r) =>
@@ -154,18 +152,20 @@ export default function KioskCheckIn() {
         {/* Step: Type Selection */}
         {step === "type" && (
           <motion.div key="type" {...anim} className="space-y-5">
-            <h2 className="text-3xl font-bold text-foreground text-center">I am a...</h2>
+            <h2 className="text-3xl font-bold text-foreground text-center">What brings you here today?</h2>
             <div className="grid grid-cols-3 gap-4">
               {TYPES.map((t) => (
                 <button
                   key={t.type}
                   onClick={() => { flow.setSelectedType(t.type); goNext(); }}
-                  className={`flex flex-col items-center gap-3 p-6 rounded-2xl border-2 transition-all duration-150 min-h-[160px] active:scale-[0.96]
-                    ${flow.selectedType === t.type ? "border-primary bg-primary/5 shadow-md" : "border-border hover:border-primary/50"}`}
+                  className={`flex flex-col items-center gap-4 p-6 rounded-2xl border-2 transition-all duration-150 min-h-[180px] active:scale-[0.96] group
+                    ${flow.selectedType === t.type ? "border-primary bg-primary/5 shadow-md" : "border-border bg-card/80 backdrop-blur-sm hover:border-primary/50"}`}
                 >
-                  <t.icon className="h-10 w-10 text-primary" />
+                  <div className={`h-16 w-16 rounded-2xl flex items-center justify-center ${t.iconBg} transition-colors`}>
+                    <t.icon className={`h-8 w-8 ${t.iconColor}`} strokeWidth={2.25} />
+                  </div>
                   <div className="text-center">
-                    <span className="text-lg font-bold block">{t.label}</span>
+                    <span className="text-lg font-bold block text-foreground">{t.label}</span>
                     <span className="text-xs text-muted-foreground mt-1 block">{t.description}</span>
                   </div>
                 </button>
@@ -174,7 +174,7 @@ export default function KioskCheckIn() {
           </motion.div>
         )}
 
-        {/* Step: Details — Dynamic from form_fields */}
+        {/* Step: Details */}
         {step === "details" && (
           <motion.div key="details" {...anim} className="space-y-4">
             <h2 className="text-3xl font-bold text-foreground text-center">Your Details</h2>
@@ -186,7 +186,6 @@ export default function KioskCheckIn() {
               </div>
             )}
 
-            {/* Core fields: always first name + surname */}
             <div className="grid grid-cols-2 gap-3">
               <Input
                 placeholder="First Name *"
@@ -205,7 +204,6 @@ export default function KioskCheckIn() {
               />
             </div>
 
-            {/* Dynamic form fields */}
             {flow.activeFormFields.map((field) => {
               if (field.field_key === "firstName" || field.field_key === "surname") return null;
               return (
@@ -235,6 +233,7 @@ export default function KioskCheckIn() {
                       value={flow.formValues[field.field_key] || ""}
                       onChange={(e) => flow.updateField(field.field_key, e.target.value)}
                       type={field.field_type === "email" ? "email" : field.field_type === "tel" ? "tel" : "text"}
+                      inputMode={field.field_type === "email" ? "email" : field.field_type === "tel" ? "tel" : undefined}
                       className="h-14 text-lg"
                     />
                   )}
@@ -242,11 +241,10 @@ export default function KioskCheckIn() {
               );
             })}
 
-            {/* Fallback: if no form fields configured, show email + mobile */}
             {flow.activeFormFields.length === 0 && (
               <>
-                <Input placeholder="Email" value={flow.formValues.email || ""} onChange={(e) => flow.updateField("email", e.target.value)} className="h-14 text-lg" />
-                <Input placeholder="Mobile" value={flow.formValues.mobile || ""} onChange={(e) => flow.updateField("mobile", e.target.value)} className="h-14 text-lg" />
+                <Input placeholder="Email" value={flow.formValues.email || ""} onChange={(e) => flow.updateField("email", e.target.value)} inputMode="email" className="h-14 text-lg" />
+                <Input placeholder="Mobile" value={flow.formValues.mobile || ""} onChange={(e) => flow.updateField("mobile", e.target.value)} inputMode="tel" className="h-14 text-lg" />
               </>
             )}
 
@@ -261,16 +259,15 @@ export default function KioskCheckIn() {
           </motion.div>
         )}
 
-        {/* Step: Who are you visiting — Structured picker */}
+        {/* Step: Who are you visiting */}
         {step === "visiting" && (
           <motion.div key="visiting" {...anim} className="space-y-4">
             <h2 className="text-3xl font-bold text-foreground text-center">Who Are You Visiting?</h2>
 
-            {/* Mode toggle: Resident vs Staff */}
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => { setVisitingMode("resident"); setVisitingSearch(""); }}
-                className={`px-6 py-3 rounded-xl text-base font-semibold transition-all ${
+                className={`px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-[48px] ${
                   visitingMode === "resident" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-primary/10"
                 }`}
               >
@@ -278,7 +275,7 @@ export default function KioskCheckIn() {
               </button>
               <button
                 onClick={() => { setVisitingMode("staff"); setVisitingSearch(""); }}
-                className={`px-6 py-3 rounded-xl text-base font-semibold transition-all ${
+                className={`px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-[48px] ${
                   visitingMode === "staff" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-primary/10"
                 }`}
               >
@@ -288,7 +285,6 @@ export default function KioskCheckIn() {
 
             {visitingMode && (
               <>
-                {/* Free-text mode for staff */}
                 {visitingMode === "staff" && flow.staffLookupMode === "free_text" ? (
                   <div className="space-y-3">
                     <Input
@@ -329,12 +325,10 @@ export default function KioskCheckIn() {
                       />
                     </div>
 
-                    {/* Hint for search-first mode */}
                     {visitingMode === "resident" && flow.residentLookupMode === "search_first" && visitingSearch.length > 0 && visitingSearch.length < 3 && (
                       <p className="text-center text-sm text-muted-foreground">Type at least 3 characters to search</p>
                     )}
 
-                    {/* Group by department for staff */}
                     {visitingMode === "staff" && flow.staffLookupMode === "by_department" && !visitingSearch ? (
                       <div className="space-y-4 max-h-[40vh] overflow-y-auto">
                         {Object.entries(
@@ -397,7 +391,6 @@ export default function KioskCheckIn() {
               </>
             )}
 
-            {/* Allow skip / manual entry */}
             {flow.formValues.whomToVisit && (
               <div className="rounded-xl border-2 border-success/20 bg-success/5 p-3 text-center text-sm text-success font-medium">
                 Visiting: {flow.formValues.whomToVisit}
@@ -508,7 +501,6 @@ export default function KioskCheckIn() {
                 );
               })}
 
-              {/* Vaccination fields */}
               {flow.vaccinationFields.length > 0 && (
                 <div className="pt-3 mt-2 border-t border-border space-y-3">
                   <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Vaccination Records</p>
@@ -630,7 +622,6 @@ export default function KioskCheckIn() {
               )}
             </div>
 
-            {/* Privacy acknowledgment fallback when no T&C content exists */}
             {!flow.tcContent && (
               <div className="rounded-2xl border-2 border-border bg-card p-5">
                 <div
@@ -663,7 +654,6 @@ export default function KioskCheckIn() {
         )}
       </AnimatePresence>
 
-      {/* Start Over button */}
       {step !== "type" && (
         <div className="text-center pt-2">
           <Button variant="ghost" size="sm" onClick={handleStartOver} className="text-muted-foreground gap-2">
