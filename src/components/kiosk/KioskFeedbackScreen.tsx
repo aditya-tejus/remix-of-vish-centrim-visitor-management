@@ -132,7 +132,7 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
       </div>
 
       <div className="flex gap-3">
-        <Button variant="ghost" onClick={onComplete} className="flex-1 h-14 text-base text-muted-foreground gap-2">
+        <Button variant="outline" onClick={onComplete} className="flex-1 h-14 text-base gap-2">
           <SkipForward className="h-5 w-5" /> Skip
         </Button>
         <Button

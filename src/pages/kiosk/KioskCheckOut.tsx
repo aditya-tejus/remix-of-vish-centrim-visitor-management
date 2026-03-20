@@ -132,7 +132,7 @@ export default function KioskCheckOut() {
 
   // Search phase
   return (
-    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-2xl space-y-6" role="region" aria-label="Check out search">
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-6" role="region" aria-label="Check out search">
       <div className="text-center">
         <h2 className="text-3xl font-bold text-foreground">Check Out</h2>
         <p className="text-base text-muted-foreground mt-1">Find your name below</p>

@@ -656,7 +656,7 @@ export default function KioskCheckIn() {
 
       {step !== "type" && (
         <div className="text-center pt-2">
-          <Button variant="ghost" size="sm" onClick={handleStartOver} className="text-muted-foreground gap-2">
+          <Button variant="outline" size="sm" onClick={handleStartOver} className="gap-2">
             <RotateCcw className="h-4 w-4" /> Start Over
           </Button>
         </div>

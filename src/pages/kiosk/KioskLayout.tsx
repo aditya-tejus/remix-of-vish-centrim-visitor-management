@@ -50,25 +50,27 @@ export default function KioskLayout() {
       />
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
 
-      {/* Header */}
-      <header className="relative z-20 flex items-center justify-between px-6 sm:px-8 py-3 border-b border-border/50 bg-card/90 backdrop-blur-md">
+      {/* Header — fully opaque */}
+      <header className="relative z-20 flex items-center justify-between px-6 sm:px-8 py-3 border-b border-border bg-card shadow-sm">
         <img src={centrimLogo} alt="Centrim Life" className="h-9 object-contain" />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => navigate("/kiosk/home")}
-            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-muted/80 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors text-base font-medium min-h-[48px]"
+            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors text-base font-medium min-h-[48px] border border-border"
           >
             <RotateCcw className="h-5 w-5" /> Start Over
           </button>
         </div>
       </header>
 
-      {/* Content */}
-      <main className="relative z-10 flex-1 flex items-center justify-center p-6 sm:p-8">
-        <Outlet />
+      {/* Content — frosted glass panel */}
+      <main className="relative z-10 flex-1 flex items-center justify-center p-4 sm:p-8">
+        <div className="w-full max-w-2xl bg-card/95 backdrop-blur-xl rounded-3xl border border-border shadow-2xl p-6 sm:p-8">
+          <Outlet />
+        </div>
       </main>
 
-      <footer className="relative z-10 text-center py-2 text-xs text-muted-foreground/40">
+      <footer className="relative z-10 text-center py-2 text-xs text-muted-foreground/60">
         Powered by Centrim Life
       </footer>
 

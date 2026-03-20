@@ -100,9 +100,9 @@ export function KioskSuccessScreen({
             style={{ transition: "stroke-dashoffset 1s linear" }}
           />
         </svg>
-        <span className="text-sm text-muted-foreground">Returning home in {remaining}s</span>
-        <Button variant="ghost" size="sm" onClick={onComplete} className="text-muted-foreground mt-1">
-          Return to Home
+        <span className="text-sm text-muted-foreground">Returning to start screen in {remaining}s</span>
+        <Button variant="outline" size="sm" onClick={onComplete} className="mt-1">
+          Return to Start
         </Button>
       </motion.div>
     </div>
