@@ -136,7 +136,7 @@ export default function KioskResidentLeave() {
         </div>
 
         <div className="flex gap-3">
-          <Button variant="outline" onClick={() => setMode("leaving")} className="flex-1 h-14 text-base gap-2">
+          <Button variant="secondary" onClick={() => setMode("leaving")} className="flex-1 h-14 text-base gap-2 border border-border">
             <ArrowLeft className="h-5 w-5" /> Back
           </Button>
           <Button onClick={handleConfirmLeave} className="flex-1 h-14 text-base gap-2 bg-warning hover:bg-warning/90 text-warning-foreground">
@@ -161,7 +161,7 @@ export default function KioskResidentLeave() {
           <p className="text-base text-muted-foreground">Marking as returned</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={() => setMode("returning")} className="flex-1 h-14 text-base gap-2">
+          <Button variant="secondary" onClick={() => setMode("returning")} className="flex-1 h-14 text-base gap-2 border border-border">
             <ArrowLeft className="h-5 w-5" /> Back
           </Button>
           <Button onClick={handleConfirmReturn} className="flex-1 h-14 text-base gap-2 bg-success hover:bg-success/90 text-success-foreground">
@@ -215,7 +215,7 @@ export default function KioskResidentLeave() {
     return (
       <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} className="w-full space-y-6">
         <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={() => setMode("select")} className="h-14 gap-2 min-h-[48px]">
+          <Button variant="secondary" onClick={() => setMode("select")} className="h-14 gap-2 min-h-[48px] border border-border">
             <ArrowLeft className="h-5 w-5" /> Back
           </Button>
           <h2 className="text-2xl font-bold text-foreground">Welcome Back</h2>
@@ -251,7 +251,7 @@ export default function KioskResidentLeave() {
   return (
     <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} className="w-full space-y-6">
       <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={() => setMode("select")} className="h-14 gap-2 min-h-[48px]">
+          <Button variant="secondary" onClick={() => setMode("select")} className="h-14 gap-2 min-h-[48px] border border-border">
             <ArrowLeft className="h-5 w-5" /> Back
         </Button>
         <h2 className="text-2xl font-bold text-foreground">Find Your Room</h2>
