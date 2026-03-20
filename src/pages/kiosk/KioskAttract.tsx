@@ -3,13 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import QRCode from "react-qr-code";
 import centrimLogo from "@/assets/centrim-life-logo.png";
+import kioskBg from "@/assets/kiosk-bg.jpg";
 
 export default function KioskAttract() {
   const navigate = useNavigate();
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
-    const interval = setInterval(() => setTime(new Date()), 30000);
+    const interval = setInterval(() => setTime(new Date()), 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -19,21 +20,23 @@ export default function KioskAttract() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background cursor-pointer select-none"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center cursor-pointer select-none"
       onClick={handleStart}
       onTouchStart={handleStart}
     >
-      {/* Subtle radial glow */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsl(var(--primary)/0.04)_0%,transparent_70%)]" />
+      {/* Background image */}
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: `url(${kioskBg})` }}
+      />
+      <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" />
 
       <div className="relative z-10 flex flex-col items-center gap-8 px-6 max-w-md w-full">
-        {/* Logo */}
-        <motion.img
+        {/* Logo — stable, no flickering */}
+        <img
           src={centrimLogo}
           alt="Centrim Life"
           className="h-12 object-contain"
-          animate={{ opacity: [0.85, 1, 0.85] }}
-          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
         />
 
         {/* Clock */}
@@ -46,27 +49,27 @@ export default function KioskAttract() {
           </p>
         </div>
 
-        {/* Touch to Begin */}
+        {/* Bold CTA */}
         <motion.div
-          animate={{ opacity: [0.6, 1, 0.6] }}
+          animate={{ scale: [1, 1.03, 1] }}
           transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
           className="mt-4"
         >
-          <div className="px-12 py-5 rounded-full border-2 border-primary/30 bg-primary/5 text-primary text-xl font-semibold">
+          <div className="px-12 py-5 rounded-full bg-primary text-primary-foreground text-xl font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-shadow">
             Touch to Begin
           </div>
         </motion.div>
 
         {/* Divider */}
-        <div className="w-full flex items-center gap-4 mt-6 opacity-60">
-          <div className="flex-1 h-px bg-border" />
+        <div className="w-full flex items-center gap-4 mt-6">
+          <div className="flex-1 h-px bg-border/60" />
           <span className="text-xs text-muted-foreground uppercase tracking-widest">or</span>
-          <div className="flex-1 h-px bg-border" />
+          <div className="flex-1 h-px bg-border/60" />
         </div>
 
         {/* QR Code section */}
         <div
-          className="flex items-center gap-5 opacity-70"
+          className="flex items-center gap-5"
           onClick={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
         >
@@ -76,7 +79,8 @@ export default function KioskAttract() {
               size={100}
               level="M"
               bgColor="transparent"
-              fgColor="hsl(222, 47%, 11%)"
+              fgColor="currentColor"
+              className="text-foreground"
             />
           </div>
           <div className="text-left">
