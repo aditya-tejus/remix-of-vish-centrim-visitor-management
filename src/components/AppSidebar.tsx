@@ -36,7 +36,7 @@ interface NavGroup {
 export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { visitors, overstayedCount } = useVisitors();
+  const { visitors } = useVisitors();
   const [pendingCheckoutRequests, setPendingCheckoutRequests] = useState(0);
 
   useEffect(() => {
