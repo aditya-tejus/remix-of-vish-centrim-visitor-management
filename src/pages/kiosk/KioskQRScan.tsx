@@ -30,7 +30,7 @@ export default function KioskQRScan() {
     if (!trimmed) return;
 
     const match = visitors.find(
-      (v) => v.id === trimmed || v.qrCode === trimmed || `${v.firstName} ${v.surname}`.toLowerCase() === trimmed.toLowerCase()
+      (v) => v.id === trimmed || `${v.firstName} ${v.surname}`.toLowerCase() === trimmed.toLowerCase()
     );
 
     if (!match) {

@@ -81,6 +81,7 @@ const App = () => (
             <Route path="checkin" element={<KioskCheckIn />} />
             <Route path="checkout" element={<KioskCheckOut />} />
             <Route path="resident-leave" element={<KioskResidentLeave />} />
+            <Route path="qr-scan" element={<KioskQRScan />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
