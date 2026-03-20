@@ -246,7 +246,7 @@ export default function KioskResidentLeave() {
 
   // Leaving mode — room-first display
   return (
-    <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} className="w-full max-w-2xl space-y-6">
+    <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} className="w-full space-y-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" onClick={() => setMode("select")} className="h-12 gap-2">
           <ArrowLeft className="h-5 w-5" /> Back
