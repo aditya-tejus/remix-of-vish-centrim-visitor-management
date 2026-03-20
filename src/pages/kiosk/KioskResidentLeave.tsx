@@ -185,7 +185,7 @@ export default function KioskResidentLeave() {
             onClick={() => setMode("leaving")}
             className="flex flex-col items-center gap-4 p-8 rounded-2xl border-2 border-warning/30 bg-warning/10 text-warning transition-all duration-200 min-h-[200px] active:scale-[0.96] active:bg-warning active:text-warning-foreground group"
           >
-            <div className="h-16 w-16 rounded-2xl bg-warning/15 flex items-center justify-center group-hover:bg-warning-foreground/20 transition-colors">
+            <div className="h-16 w-16 rounded-2xl bg-warning/20 flex items-center justify-center transition-colors">
               <DoorOpen className="h-9 w-9" strokeWidth={2.25} />
             </div>
             <div className="text-center">
