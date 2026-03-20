@@ -119,7 +119,7 @@ export default function KioskCheckOut() {
           </div>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={() => setPhase("search")} className="flex-1 h-14 text-base gap-2" aria-label="Cancel and go back">
+          <Button variant="secondary" onClick={() => setPhase("search")} className="flex-1 h-14 text-base gap-2 border border-border" aria-label="Cancel and go back">
             <ArrowLeft className="h-5 w-5" /> Cancel
           </Button>
           <Button onClick={handleConfirm} className="flex-1 h-14 text-base gap-2 bg-warning hover:bg-warning/90 text-warning-foreground" aria-label={`Check out ${name}`}>
