@@ -137,7 +137,7 @@ export default function KioskCheckOut() {
         <h2 className="text-3xl font-bold text-foreground">Check Out</h2>
         <p className="text-base text-muted-foreground mt-1">Find your name below</p>
       </div>
-      <Button variant="outline" onClick={() => navigate("/kiosk/qr-scan?mode=checkout")} className="w-full h-12 text-base gap-2">
+      <Button variant="secondary" onClick={() => navigate("/kiosk/qr-scan?mode=checkout")} className="w-full h-12 text-base gap-2 border border-border">
         <QrCode className="h-5 w-5" /> Scan QR Code Instead
       </Button>
       <div className="relative">
