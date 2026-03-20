@@ -53,7 +53,7 @@ export function KioskSuccessScreen({
   };
 
   return (
-    <div className={`flex flex-col items-center justify-center text-center gap-6 w-full min-h-[60vh] px-6 rounded-3xl ${colorMap[accentColor]}`}>
+    <div className={`flex flex-col items-center justify-center text-center gap-6 w-full min-h-[50vh] px-6 rounded-3xl ${colorMap[accentColor]}`}>
       <motion.div
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -101,7 +101,7 @@ export function KioskSuccessScreen({
           />
         </svg>
         <span className="text-sm text-muted-foreground">Returning to start screen in {remaining}s</span>
-        <Button variant="outline" size="sm" onClick={onComplete} className="mt-1">
+        <Button variant="secondary" size="sm" onClick={onComplete} className="mt-1 border border-border">
           Return to Start
         </Button>
       </motion.div>
