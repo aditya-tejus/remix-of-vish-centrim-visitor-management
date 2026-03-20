@@ -136,7 +136,7 @@ export default function KioskResidentLeave() {
         </div>
 
         <div className="flex gap-3">
-          <Button variant="outline" onClick={() => setMode("leaving")} className="flex-1 h-14 text-base gap-2">
+          <Button variant="secondary" onClick={() => setMode("leaving")} className="flex-1 h-14 text-base gap-2 border border-border">
             <ArrowLeft className="h-5 w-5" /> Back
           </Button>
           <Button onClick={handleConfirmLeave} className="flex-1 h-14 text-base gap-2 bg-warning hover:bg-warning/90 text-warning-foreground">
