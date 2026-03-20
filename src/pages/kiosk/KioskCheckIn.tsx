@@ -167,7 +167,7 @@ export default function KioskCheckIn() {
                   </div>
                   <div className="text-center">
                     <span className="text-lg font-bold block text-foreground">{t.label}</span>
-                    <span className="text-xs text-muted-foreground mt-1 block">{t.description}</span>
+                    <span className="text-sm text-muted-foreground mt-1 block">{t.description}</span>
                   </div>
                 </button>
               ))}
