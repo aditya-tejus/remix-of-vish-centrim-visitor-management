@@ -36,7 +36,7 @@ interface NavGroup {
 export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { visitors, overstayedCount } = useVisitors();
+  const { visitors } = useVisitors();
   const [pendingCheckoutRequests, setPendingCheckoutRequests] = useState(0);
 
   useEffect(() => {
@@ -50,15 +50,26 @@ export function AppSidebar() {
     fetchPending();
   }, []);
 
-  const activeVisitorCount = visitors.filter(
-    (v) => v.status === "checked-in" && v.type !== "resident"
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const todayNonResidents = visitors.filter(
+    (v) => v.type !== "resident" && v.checkInTime >= todayStart
+  );
+
+  const activeVisitorCount = todayNonResidents.filter(
+    (v) => v.status === "checked-in"
+  ).length;
+
+  const todayOverstayed = todayNonResidents.filter(
+    (v) => v.status === "checked-in" && Date.now() - v.checkInTime.getTime() > 8 * 3600000
   ).length;
 
   const residentsAwayCount = visitors.filter(
     (v) => v.type === "resident" && v.status !== "checked-in"
   ).length;
 
-  const totalVisitorBadge = overstayedCount > 0 ? overstayedCount : null;
+  const totalVisitorBadge = todayOverstayed > 0 ? todayOverstayed : null;
 
   const navGroups: NavGroup[] = [
     {
