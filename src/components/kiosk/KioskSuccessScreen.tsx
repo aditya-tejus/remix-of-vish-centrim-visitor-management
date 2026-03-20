@@ -14,7 +14,7 @@ interface KioskSuccessScreenProps {
 export function KioskSuccessScreen({
   title,
   subtitle,
-  countdownSeconds = 5,
+  countdownSeconds = 8,
   onComplete,
   accentColor = "success",
 }: KioskSuccessScreenProps) {
