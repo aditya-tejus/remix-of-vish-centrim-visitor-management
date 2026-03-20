@@ -102,7 +102,7 @@ export function KioskSuccessScreen({
         </svg>
         <span className="text-sm text-muted-foreground">Returning home in {remaining}s</span>
         <Button variant="ghost" size="sm" onClick={onComplete} className="text-muted-foreground mt-1">
-          Done — go now
+          Return to Home
         </Button>
       </motion.div>
     </div>
