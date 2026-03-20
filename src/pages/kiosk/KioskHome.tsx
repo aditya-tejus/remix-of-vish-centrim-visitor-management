@@ -37,6 +37,17 @@ const KIOSK_TILES = [
     idle: "bg-info/10 border-info/20",
     hover: "hover:bg-info hover:text-info-foreground hover:border-info hover:shadow-xl",
   },
+  {
+    label: "Scan QR",
+    description: "Use your visitor card",
+    icon: QrCode,
+    path: "/kiosk/qr-scan",
+    hero: false,
+    iconBg: "bg-accent",
+    iconColor: "text-foreground",
+    idle: "bg-accent border-border",
+    hover: "hover:bg-foreground hover:text-background hover:border-foreground hover:shadow-xl",
+  },
 ];
 
 const tileVariants = {
