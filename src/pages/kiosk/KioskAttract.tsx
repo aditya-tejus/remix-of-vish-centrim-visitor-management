@@ -14,7 +14,7 @@ export default function KioskAttract() {
     return () => clearInterval(interval);
   }, []);
 
-  const publicCheckinUrl = `${window.location.origin}/public-checkin`;
+  const publicCheckinUrl = `${window.location.origin}/kiosk/checkin`;
 
   const handleStart = () => navigate("/kiosk/home");
 
