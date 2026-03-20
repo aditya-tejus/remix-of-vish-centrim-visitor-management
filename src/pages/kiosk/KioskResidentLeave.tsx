@@ -262,7 +262,10 @@ export default function KioskResidentLeave() {
       </div>
       <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto">
         {filteredResidents.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground text-lg">No residents found</div>
+            <div className="text-center py-12 space-y-3">
+              <Search className="h-12 w-12 text-muted-foreground/40 mx-auto" />
+              <p className="text-muted-foreground text-lg">No residents found</p>
+            </div>
         ) : (
           filteredResidents.map((r) => (
             <KioskPersonCard

@@ -148,7 +148,10 @@ export default function KioskCheckOut() {
         {loading ? (
           <KioskSkeletonList count={4} />
         ) : filtered.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground text-lg">No visitors currently checked in</div>
+          <div className="text-center py-12 space-y-3">
+            <LogOut className="h-12 w-12 text-muted-foreground/40 mx-auto" />
+            <p className="text-muted-foreground text-lg">No visitors currently checked in</p>
+          </div>
         ) : (
           filtered.map((v) => {
             const ms = Date.now() - new Date(v.checkInTime).getTime();
