@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { UserRoundPlus, LogOut, DoorOpen } from "lucide-react";
+import { UserRoundPlus, LogOut, DoorOpen, QrCode } from "lucide-react";
 import { motion } from "framer-motion";
 import kioskBg from "@/assets/kiosk-bg.jpg";
 
