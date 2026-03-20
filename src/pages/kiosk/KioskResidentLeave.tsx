@@ -175,7 +175,7 @@ export default function KioskResidentLeave() {
   // Mode select
   if (mode === "select") {
     return (
-      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-2xl space-y-6">
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-6">
         <div className="text-center">
           <h2 className="text-3xl font-bold text-foreground">Resident Leave</h2>
           <p className="text-base text-muted-foreground mt-1">Are you leaving or returning?</p>
