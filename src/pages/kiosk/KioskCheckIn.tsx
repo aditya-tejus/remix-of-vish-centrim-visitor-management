@@ -471,9 +471,13 @@ export default function KioskCheckIn() {
                       {q.type === "yesno" && (
                         <div className="flex gap-3">
                           <button onClick={() => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [q.id]: false }))}
-                            className={`flex-1 py-4 rounded-xl text-base font-bold transition-all ${answer === false ? "bg-success text-success-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-success/20"}`}>No</button>
+                            className={`flex-1 py-4 rounded-xl text-base font-bold transition-all flex items-center justify-center gap-2 min-h-[52px] ${answer === false ? "bg-success text-success-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-success/20"}`}>
+                            ✓ No
+                          </button>
                           <button onClick={() => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [q.id]: true }))}
-                            className={`flex-1 py-4 rounded-xl text-base font-bold transition-all ${answer === true ? "bg-destructive text-destructive-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-destructive/20"}`}>Yes</button>
+                            className={`flex-1 py-4 rounded-xl text-base font-bold transition-all flex items-center justify-center gap-2 min-h-[52px] ${answer === true ? "bg-destructive text-destructive-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-destructive/20"}`}>
+                            ✗ Yes
+                          </button>
                         </div>
                       )}
                       {q.type === "text" && (
