@@ -98,6 +98,8 @@ export function useKioskCheckInFlow() {
     if (selectedType !== "contractor") {
       pipeline.push({ id: "visiting", label: "Visiting" });
     }
+    // Companions step (always after visiting/contractor)
+    pipeline.push({ id: "companions", label: "Companions" });
     // Contractor screening
     if (selectedType === "contractor") {
       pipeline.push({ id: "contractor", label: "Screening" });
