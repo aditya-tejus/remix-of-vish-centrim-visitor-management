@@ -208,13 +208,14 @@ export function useVisitors() {
     await supabase.from("visitors").update(updateData).eq("id", visitorId);
   };
 
-  const checkOutVisitor = async (id: string, reason?: string) => {
+  const checkOutVisitor = async (id: string, reason?: string, timeOverride?: string) => {
+    const checkOutTime = timeOverride ? (() => { const now = new Date(); const [h, m] = timeOverride.split(":").map(Number); now.setHours(h, m, 0, 0); return now; })() : new Date();
     setVisitors((prev) =>
       prev.map((v) =>
-        v.id === id ? { ...v, checkOutTime: new Date(), status: "checked-out" as const, checkoutReason: reason || null } : v
+        v.id === id ? { ...v, checkOutTime, status: "checked-out" as const, checkoutReason: reason || null } : v
       )
     );
-    const updateData: Record<string, unknown> = { check_out_time: new Date().toISOString(), status: "checked-out" };
+    const updateData: Record<string, unknown> = { check_out_time: checkOutTime.toISOString(), status: "checked-out" };
     if (reason) updateData.checkout_reason = reason;
     await supabase
       .from("visitors")
