@@ -164,6 +164,7 @@ export default function KioskCheckIn() {
     setReturningChecked(false);
     setVisitingSearch("");
     setVisitingMode(null);
+    setCheckedInQrCode(null);
   };
 
   if (submitted) {
