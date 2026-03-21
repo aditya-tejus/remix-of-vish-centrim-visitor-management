@@ -106,7 +106,7 @@ export function CheckOutSheet({
     setCheckingOut(selectedVisitor.id);
     const name = `${selectedVisitor.firstName} ${selectedVisitor.surname}`;
     const dur = getDuration(selectedVisitor.checkInTime);
-    await onCheckOut(selectedVisitor.id, checkoutReason || undefined);
+    await onCheckOut(selectedVisitor.id, checkoutReason || undefined, timeOverride || undefined);
     setCheckingOut(null);
     setSuccessName(name);
     setSuccessDuration(dur);
