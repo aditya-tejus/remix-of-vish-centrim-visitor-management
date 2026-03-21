@@ -10,28 +10,31 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { LogIn, Loader2 } from "lucide-react";
+import { TimeOverride } from "@/components/TimeOverride";
 
 interface CheckInReturnDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   visitorName: string;
-  onConfirm: (comment: string) => Promise<void>;
+  onConfirm: (comment: string, timeOverride?: string) => Promise<void>;
 }
 
 export function CheckInReturnDialog({ open, onOpenChange, visitorName, onConfirm }: CheckInReturnDialogProps) {
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
+  const [timeOverride, setTimeOverride] = useState<string | null>(null);
 
   const handleConfirm = async () => {
     setLoading(true);
-    await onConfirm(comment.trim());
+    await onConfirm(comment.trim(), timeOverride || undefined);
     setLoading(false);
     setComment("");
+    setTimeOverride(null);
     onOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) setComment(""); onOpenChange(o); }}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { setComment(""); setTimeOverride(null); } onOpenChange(o); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -53,6 +56,11 @@ export function CheckInReturnDialog({ open, onOpenChange, visitorName, onConfirm
               rows={3}
             />
           </div>
+          <TimeOverride
+            value={timeOverride}
+            onChange={setTimeOverride}
+            label="Adjust return time"
+          />
           <div className="flex gap-2 justify-end">
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Cancel
