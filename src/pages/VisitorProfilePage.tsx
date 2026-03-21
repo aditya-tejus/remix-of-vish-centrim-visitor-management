@@ -160,6 +160,8 @@ export default function VisitorProfilePage() {
                     <LogOut className="h-3.5 w-3.5" /> Quick Check-Out
                   </Button>
                 )}
+                {/* Print Badge */}
+                <VisitorBadge visitor={visitor} variant="print" />
                 {isAdmin && (
                   <>
                     <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
