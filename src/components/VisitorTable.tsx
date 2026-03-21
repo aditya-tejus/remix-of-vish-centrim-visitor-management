@@ -343,8 +343,8 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
           open={!!returnVisitor}
           onOpenChange={(o) => { if (!o) setReturnVisitor(null); }}
           visitorName={`${returnVisitor.firstName} ${returnVisitor.surname}`}
-          onConfirm={async (comment) => {
-            await onCheckInReturn?.(returnVisitor.id, comment);
+          onConfirm={async (comment, timeOverride) => {
+            await onCheckInReturn?.(returnVisitor.id, comment, timeOverride);
             setReturnVisitor(null);
           }}
         />

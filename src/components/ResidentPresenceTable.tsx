@@ -263,8 +263,8 @@ export function ResidentPresenceTable({
           open={!!returnResident}
           onOpenChange={o => { if (!o) setReturnResident(null); }}
           visitorName={returnResident.name}
-          onConfirm={async (comment) => {
-            await onCheckInReturn?.(returnResident.id, comment);
+          onConfirm={async (comment, timeOverride) => {
+            await onCheckInReturn?.(returnResident.id, comment, timeOverride);
             setReturnResident(null);
           }}
         />
