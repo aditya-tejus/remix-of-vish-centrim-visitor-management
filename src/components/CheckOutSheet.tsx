@@ -99,6 +99,7 @@ export function CheckOutSheet({
   const handleSelectVisitor = (visitor: Visitor) => {
     setSelectedVisitor(visitor);
     setCheckoutReason("");
+    setTimeOverride(null);
   };
 
   const handleConfirmCheckOut = async () => {
