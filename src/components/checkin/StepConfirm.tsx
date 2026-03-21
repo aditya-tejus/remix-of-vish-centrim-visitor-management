@@ -37,6 +37,8 @@ export function StepConfirm({
   branchTcUrl,
   branchPrivacyUrl,
   tcContent,
+  checkInTimeOverride,
+  setCheckInTimeOverride,
 }: StepConfirmProps) {
   const typeBadge = TYPE_BADGES[selectedType] || TYPE_BADGES.visitor;
   const hasHealthFlags = Object.values(healthAnswers).some((v) => v === true);
