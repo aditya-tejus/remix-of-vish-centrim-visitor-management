@@ -28,7 +28,6 @@ export function useKioskCheckInFlow() {
   const [returningVisitor, setReturningVisitor] = useState<any>(null);
   const [companions, setCompanions] = useState<Array<{ id: string; firstName: string; surname: string; email: string; mobile: string }>>([]);
   const [hasCompanions, setHasCompanions] = useState<boolean | null>(null);
-  const [returningVisitor, setReturningVisitor] = useState<any>(null);
 
   // Dynamic form fields
   const { data: formFields = [] } = useFormFields(selectedType as any);
