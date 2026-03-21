@@ -42,6 +42,8 @@ export interface Visitor {
   healthAnswers?: Record<string, any>;
   contractorScreening?: Record<string, any>;
   supplierId?: string;
+  qrCode?: string;
+  groupId?: string;
 }
 
 export interface RetentionSettings {

@@ -28,6 +28,8 @@ interface DbVisitor {
   leave_type: string | null;
   accompanied_by: string | null;
   accompanied_by_name: string | null;
+  qr_code: string | null;
+  group_id: string | null;
 }
 
 function dbToVisitor(row: DbVisitor): Visitor {
