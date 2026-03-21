@@ -54,15 +54,18 @@ export function useKioskCheckInFlow() {
     supabase
       .from("settings")
       .select("key, value")
-      .in("key", [`tc_content_${selectedType}`, "jurisdiction", "kiosk_resident_lookup_mode", "kiosk_staff_lookup_mode"])
+      .in("key", [`tc_content_${selectedType}`, "jurisdiction", "kiosk_resident_lookup_mode", `kiosk_resident_lookup_mode_${selectedType}`, "kiosk_staff_lookup_mode"])
       .then(({ data }) => {
         const tc = data?.find((d) => d.key === `tc_content_${selectedType}`);
         const jur = data?.find((d) => d.key === "jurisdiction");
-        const rlm = data?.find((d) => d.key === "kiosk_resident_lookup_mode");
+        // Prefer type-specific resident lookup mode, fall back to global
+        const rlmSpecific = data?.find((d) => d.key === `kiosk_resident_lookup_mode_${selectedType}`);
+        const rlmGlobal = data?.find((d) => d.key === "kiosk_resident_lookup_mode");
+        const rlmValue = rlmSpecific?.value || rlmGlobal?.value;
         const slm = data?.find((d) => d.key === "kiosk_staff_lookup_mode");
         setTcContent(tc?.value || null);
         if (jur?.value === "AU" || jur?.value === "UK") setJurisdiction(jur.value);
-        if (rlm?.value === "show_all" || rlm?.value === "search_first") setResidentLookupMode(rlm.value);
+        if (rlmValue === "show_all" || rlmValue === "search_first") setResidentLookupMode(rlmValue);
         if (slm?.value === "search_first" || slm?.value === "by_department" || slm?.value === "free_text") setStaffLookupMode(slm.value);
       });
   }, [selectedType]);
