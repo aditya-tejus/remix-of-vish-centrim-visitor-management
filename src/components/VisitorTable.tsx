@@ -21,7 +21,7 @@ import { TabContextStats } from "@/components/TabContextStats";
 interface VisitorTableProps {
   visitors: Visitor[];
   onCheckOut: (id: string) => void;
-  onCheckInReturn?: (id: string, comment?: string) => Promise<void>;
+  onCheckInReturn?: (id: string, comment?: string, timeOverride?: string) => Promise<void>;
   onDelete: (id: string) => void;
   onFeedback?: (visitor: Visitor) => void;
   activeTab?: string;
