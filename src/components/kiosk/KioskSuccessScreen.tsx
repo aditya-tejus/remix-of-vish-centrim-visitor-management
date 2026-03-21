@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
+import QRCode from "react-qr-code";
 
 interface KioskSuccessScreenProps {
   title: string;
@@ -9,6 +10,8 @@ interface KioskSuccessScreenProps {
   countdownSeconds?: number;
   onComplete: () => void;
   accentColor?: "success" | "warning" | "info" | "primary";
+  qrCode?: string;
+  companionCount?: number;
 }
 
 export function KioskSuccessScreen({
@@ -17,6 +20,8 @@ export function KioskSuccessScreen({
   countdownSeconds = 8,
   onComplete,
   accentColor = "success",
+  qrCode,
+  companionCount,
 }: KioskSuccessScreenProps) {
   const [remaining, setRemaining] = useState(countdownSeconds);
 
@@ -53,14 +58,14 @@ export function KioskSuccessScreen({
   };
 
   return (
-    <div className={`flex flex-col items-center justify-center text-center gap-6 w-full min-h-[50vh] px-6 rounded-3xl ${colorMap[accentColor]}`}>
+    <div className={`flex flex-col items-center justify-center text-center gap-5 w-full min-h-[50vh] px-6 rounded-3xl ${colorMap[accentColor]}`}>
       <motion.div
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 12 }}
-        className={`h-24 w-24 rounded-full flex items-center justify-center ${iconColorMap[accentColor]}`}
+        className={`h-20 w-20 rounded-full flex items-center justify-center ${iconColorMap[accentColor]}`}
       >
-        <CheckCircle2 className="h-14 w-14" />
+        <CheckCircle2 className="h-12 w-12" />
       </motion.div>
 
       <motion.h2
@@ -83,11 +88,37 @@ export function KioskSuccessScreen({
         </motion.p>
       )}
 
+      {companionCount != null && companionCount > 0 && (
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="text-sm text-muted-foreground"
+        >
+          + {companionCount} companion{companionCount > 1 ? "s" : ""} also checked in
+        </motion.p>
+      )}
+
+      {/* QR Code for checkout */}
+      {qrCode && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.45, duration: 0.4 }}
+          className="flex flex-col items-center gap-2"
+        >
+          <div className="p-3 rounded-xl bg-white border border-border shadow-sm">
+            <QRCode value={qrCode} size={140} level="H" style={{ height: "auto", maxWidth: "100%", width: "100%" }} />
+          </div>
+          <p className="text-xs text-muted-foreground">Show this QR code for quick check-out</p>
+        </motion.div>
+      )}
+
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
-        className="flex flex-col items-center gap-3 mt-4"
+        className="flex flex-col items-center gap-3 mt-2"
       >
         <svg width="72" height="72" viewBox="0 0 72 72" className="-rotate-90">
           <circle cx="36" cy="36" r={radius} fill="none" stroke="hsl(var(--border))" strokeWidth="4" />
