@@ -176,5 +176,9 @@ export function useKioskCheckInFlow() {
     reset,
     residentLookupMode,
     staffLookupMode,
+    companions,
+    setCompanions,
+    hasCompanions,
+    setHasCompanions,
   };
 }
