@@ -223,13 +223,14 @@ export function useVisitors() {
       .eq("id", id);
   };
 
-  const checkInReturn = async (id: string, returnComment?: string) => {
+  const checkInReturn = async (id: string, returnComment?: string, timeOverride?: string) => {
+    const checkInTime = timeOverride ? (() => { const now = new Date(); const [h, m] = timeOverride.split(":").map(Number); now.setHours(h, m, 0, 0); return now; })() : new Date();
     setVisitors((prev) =>
       prev.map((v) =>
-        v.id === id ? { ...v, checkInTime: new Date(), status: "checked-in" as const, comments: returnComment ? `${v.comments ? v.comments + "\n" : ""}Return: ${returnComment}` : v.comments } : v
+        v.id === id ? { ...v, checkInTime, status: "checked-in" as const, comments: returnComment ? `${v.comments ? v.comments + "\n" : ""}Return: ${returnComment}` : v.comments } : v
       )
     );
-    const updateData: Record<string, unknown> = { check_in_time: new Date().toISOString(), status: "checked-in" };
+    const updateData: Record<string, unknown> = { check_in_time: checkInTime.toISOString(), status: "checked-in" };
     if (returnComment) {
       const { data: current } = await supabase.from("visitors").select("comments").eq("id", id).single();
       const existing = (current?.comments as string) || "";
