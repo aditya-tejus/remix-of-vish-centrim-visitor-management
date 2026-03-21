@@ -139,6 +139,13 @@ export function StepConfirm({
         )}
       </div>
 
+      {/* Time override */}
+      <TimeOverride
+        value={checkInTimeOverride}
+        onChange={setCheckInTimeOverride}
+        label="Adjust check-in time"
+      />
+
       {/* Terms & Privacy */}
       <div className="rounded-2xl border-2 border-border bg-card p-5 space-y-4">
         <div className="flex items-center gap-2.5">
