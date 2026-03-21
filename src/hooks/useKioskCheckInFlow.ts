@@ -7,7 +7,7 @@ import { useStaffMembers } from "@/hooks/useStaffMembers";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import type { VisitorType } from "@/types/visitor";
 
-export type KioskStepId = "type" | "details" | "visiting" | "screening" | "contractor" | "terms" | "confirm";
+export type KioskStepId = "type" | "details" | "visiting" | "companions" | "screening" | "contractor" | "terms" | "confirm";
 
 export interface KioskStep {
   id: KioskStepId;
