@@ -138,6 +138,8 @@ export function useVisitors() {
         health_answers: (visitor.healthAnswers || {}) as any,
         contractor_screening: (visitor.contractorScreening || {}) as any,
         supplier_id: visitor.supplierId ?? null,
+        qr_code: visitor.qrCode ?? null,
+        group_id: visitor.groupId ?? null,
       })
       .select()
       .single()
