@@ -40,7 +40,7 @@ interface LeaveRequest {
 
 interface ResidentLeaveTableProps {
   residents: Visitor[];
-  onCheckInReturn?: (id: string, comment?: string) => Promise<void>;
+  onCheckInReturn?: (id: string, comment?: string, timeOverride?: string) => Promise<void>;
   onDelete: (id: string) => void;
 }
 

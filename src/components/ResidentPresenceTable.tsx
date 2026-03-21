@@ -15,7 +15,7 @@ interface ResidentPresenceTableProps {
   residentVisitors: Visitor[];
   detailsMap: Map<string, ResidentDetail>;
   wingMap: Map<string, Wing>;
-  onCheckInReturn?: (id: string, comment?: string) => Promise<void>;
+  onCheckInReturn?: (id: string, comment?: string, timeOverride?: string) => Promise<void>;
   onQuickAway?: (resident: Resident) => void;
   statusFilter?: string | null;
   totalResidentCount?: number;
