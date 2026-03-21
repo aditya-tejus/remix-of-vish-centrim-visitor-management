@@ -289,25 +289,18 @@ export function CheckOutSheet({
                 </button>
 
                 {/* Visitor summary card */}
-                <div className="rounded-2xl border border-border bg-muted/30 p-5 shadow-sm space-y-4">
-                  <div className="flex items-center gap-4">
-                    <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-[18px] font-bold text-primary shrink-0">
+                <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">
                       {selectedVisitor.firstName[0]}{selectedVisitor.surname[0]}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[16px] font-bold text-foreground">
+                      <p className="text-base font-bold text-foreground">
                         {selectedVisitor.firstName} {selectedVisitor.surname}
                       </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        {(() => {
-                          const tb = TYPE_BADGES[selectedVisitor.type] || TYPE_BADGES.visitor;
-                          return (
-                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md border ${tb.className}`}>
-                              {tb.emoji} {tb.label}
-                            </span>
-                          );
-                        })()}
-                      </div>
+                      <span className={`text-[10px] font-medium px-1.5 py-px rounded ${(TYPE_BADGES[selectedVisitor.type] || TYPE_BADGES.visitor).className}`}>
+                        {(TYPE_BADGES[selectedVisitor.type] || TYPE_BADGES.visitor).label}
+                      </span>
                     </div>
                   </div>
 
