@@ -2,6 +2,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollText, Shield, FileText, Users, Phone, Mail, Check, MapPin, Thermometer } from "lucide-react";
 import { CompanionDetail, VisitorType } from "@/types/visitor";
 import { CheckInFormData } from "./useCheckInFlow";
+import { TimeOverride } from "@/components/TimeOverride";
 
 interface StepConfirmProps {
   formData: CheckInFormData;
@@ -14,6 +15,8 @@ interface StepConfirmProps {
   branchTcUrl: string | null;
   branchPrivacyUrl: string | null;
   tcContent?: string | null;
+  checkInTimeOverride: string | null;
+  setCheckInTimeOverride: (val: string | null) => void;
 }
 
 const TYPE_BADGES: Record<string, { label: string; emoji: string; className: string }> = {
@@ -34,6 +37,8 @@ export function StepConfirm({
   branchTcUrl,
   branchPrivacyUrl,
   tcContent,
+  checkInTimeOverride,
+  setCheckInTimeOverride,
 }: StepConfirmProps) {
   const typeBadge = TYPE_BADGES[selectedType] || TYPE_BADGES.visitor;
   const hasHealthFlags = Object.values(healthAnswers).some((v) => v === true);
@@ -133,6 +138,13 @@ export function StepConfirm({
           </div>
         )}
       </div>
+
+      {/* Time override */}
+      <TimeOverride
+        value={checkInTimeOverride}
+        onChange={setCheckInTimeOverride}
+        label="Adjust check-in time"
+      />
 
       {/* Terms & Privacy */}
       <div className="rounded-2xl border-2 border-border bg-card p-5 space-y-4">

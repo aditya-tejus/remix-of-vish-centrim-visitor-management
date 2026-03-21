@@ -14,6 +14,7 @@ import {
 import { Visitor, CompanionDetail } from "@/types/visitor";
 import { format } from "date-fns";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
+import { TimeOverride } from "@/components/TimeOverride";
 
 const OVERSTAY_THRESHOLD_MS = 8 * 3600000; // 8 hours
 
@@ -35,7 +36,7 @@ interface CheckOutSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   visitors: Visitor[];
-  onCheckOut: (id: string, reason?: string) => void;
+  onCheckOut: (id: string, reason?: string, timeOverride?: string) => void;
   /** Pre-select a specific visitor (from table row action) */
   preSelectedVisitorId?: string | null;
   onPreSelectedClear?: () => void;
@@ -50,6 +51,7 @@ export function CheckOutSheet({
   const [feedbackVisitor, setFeedbackVisitor] = useState<Visitor | null>(null);
   const [selectedVisitor, setSelectedVisitor] = useState<Visitor | null>(null);
   const [checkoutReason, setCheckoutReason] = useState<string>("");
+  const [timeOverride, setTimeOverride] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successName, setSuccessName] = useState("");
   const [successDuration, setSuccessDuration] = useState("");
@@ -97,6 +99,7 @@ export function CheckOutSheet({
   const handleSelectVisitor = (visitor: Visitor) => {
     setSelectedVisitor(visitor);
     setCheckoutReason("");
+    setTimeOverride(null);
   };
 
   const handleConfirmCheckOut = async () => {
@@ -104,7 +107,7 @@ export function CheckOutSheet({
     setCheckingOut(selectedVisitor.id);
     const name = `${selectedVisitor.firstName} ${selectedVisitor.surname}`;
     const dur = getDuration(selectedVisitor.checkInTime);
-    await onCheckOut(selectedVisitor.id, checkoutReason || undefined);
+    await onCheckOut(selectedVisitor.id, checkoutReason || undefined, timeOverride || undefined);
     setCheckingOut(null);
     setSuccessName(name);
     setSuccessDuration(dur);
@@ -121,6 +124,7 @@ export function CheckOutSheet({
   const handleBack = () => {
     setSelectedVisitor(null);
     setCheckoutReason("");
+    setTimeOverride(null);
     onPreSelectedClear?.();
   };
 
@@ -129,6 +133,7 @@ export function CheckOutSheet({
       setSearch("");
       setSelectedVisitor(null);
       setCheckoutReason("");
+      setTimeOverride(null);
       setShowSuccess(false);
       onPreSelectedClear?.();
     }
@@ -367,6 +372,13 @@ export function CheckOutSheet({
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Time override */}
+                <TimeOverride
+                  value={timeOverride}
+                  onChange={setTimeOverride}
+                  label="Adjust check-out time"
+                />
 
                 {/* Companions */}
                 {companions.length > 0 && (

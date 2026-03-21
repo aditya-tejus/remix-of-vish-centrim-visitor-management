@@ -56,6 +56,7 @@ export function useCheckInFlow(open: boolean) {
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [companions, setCompanions] = useState<CompanionDetail[]>([]);
   const [photo, setPhoto] = useState<string | null>(null);
+  const [checkInTimeOverride, setCheckInTimeOverride] = useState<string | null>(null);
   const [contractorScreeningAnswers, setContractorScreeningAnswers] = useState<Record<string, any>>({});
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [jurisdiction, setJurisdiction] = useState<"AU" | "UK">("AU");
@@ -205,6 +206,7 @@ export function useCheckInFlow(open: boolean) {
     setPrivacyAcknowledged(false);
     setCompanions([]);
     setPhoto(null);
+    setCheckInTimeOverride(null);
     setContractorScreeningAnswers({});
     setSelectedSupplier(null);
   };
@@ -232,7 +234,7 @@ export function useCheckInFlow(open: boolean) {
       email: formData.email,
       mobile: formData.mobile,
       type: selectedType,
-      checkInTime: new Date(),
+      checkInTime: checkInTimeOverride ? (() => { const now = new Date(); const [h, m] = checkInTimeOverride.split(":").map(Number); now.setHours(h, m, 0, 0); return now; })() : new Date(),
       checkOutTime: null,
       whomToVisit: formData.selectPerson,
       address: formData.address,
@@ -279,6 +281,9 @@ export function useCheckInFlow(open: boolean) {
     // Privacy
     privacyAcknowledged, setPrivacyAcknowledged,
     branchTcUrl, branchPrivacyUrl, tcContent,
+
+    // Time override
+    checkInTimeOverride, setCheckInTimeOverride,
 
     // Resident/staff items for "visiting" dropdown
     residentItems, staffItems,

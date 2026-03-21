@@ -21,7 +21,7 @@ import { TabContextStats } from "@/components/TabContextStats";
 interface VisitorTableProps {
   visitors: Visitor[];
   onCheckOut: (id: string) => void;
-  onCheckInReturn?: (id: string, comment?: string) => Promise<void>;
+  onCheckInReturn?: (id: string, comment?: string, timeOverride?: string) => Promise<void>;
   onDelete: (id: string) => void;
   onFeedback?: (visitor: Visitor) => void;
   activeTab?: string;
@@ -343,8 +343,8 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
           open={!!returnVisitor}
           onOpenChange={(o) => { if (!o) setReturnVisitor(null); }}
           visitorName={`${returnVisitor.firstName} ${returnVisitor.surname}`}
-          onConfirm={async (comment) => {
-            await onCheckInReturn?.(returnVisitor.id, comment);
+          onConfirm={async (comment, timeOverride) => {
+            await onCheckInReturn?.(returnVisitor.id, comment, timeOverride);
             setReturnVisitor(null);
           }}
         />
