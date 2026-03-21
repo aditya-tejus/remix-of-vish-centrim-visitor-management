@@ -24,11 +24,11 @@ const CHECKOUT_REASONS_BY_TYPE: Record<string, string[]> = {
   staff: ["Shift ended", "Break", "Emergency", "Other"],
 };
 
-const TYPE_BADGES: Record<string, { label: string; emoji: string; className: string }> = {
-  visitor: { label: "Visitor", emoji: "👋", className: "bg-primary/10 text-primary border-primary/20" },
-  contractor: { label: "Contractor", emoji: "🔧", className: "bg-warning/10 text-warning border-warning/20" },
-  volunteer: { label: "Volunteer", emoji: "🤝", className: "bg-success/10 text-success border-success/20" },
-  staff: { label: "Staff", emoji: "💼", className: "bg-muted text-muted-foreground border-border" },
+const TYPE_BADGES: Record<string, { label: string; className: string }> = {
+  visitor: { label: "Visitor", className: "bg-primary/10 text-primary" },
+  contractor: { label: "Contractor", className: "bg-warning/10 text-warning" },
+  volunteer: { label: "Volunteer", className: "bg-success/10 text-success" },
+  staff: { label: "Staff", className: "bg-muted text-muted-foreground" },
 };
 
 interface CheckOutSheetProps {
