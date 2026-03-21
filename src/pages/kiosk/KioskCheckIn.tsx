@@ -754,6 +754,18 @@ export default function KioskCheckIn() {
               {flow.formValues.mobile && <div className="flex justify-between"><span className="text-muted-foreground">Mobile</span><span className="font-medium">{flow.formValues.mobile}</span></div>}
               {flow.formValues.whomToVisit && <div className="flex justify-between"><span className="text-muted-foreground">Visiting</span><span className="font-medium">{flow.formValues.whomToVisit}</span></div>}
 
+              {flow.companions.length > 0 && (
+                <div className="pt-3 mt-3 border-t border-border">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-muted-foreground flex items-center gap-2"><Users className="h-4 w-4" /> Companions</span>
+                    <span className="font-bold text-sm px-2.5 py-1 rounded-lg bg-primary/10 text-primary">{flow.companions.length}</span>
+                  </div>
+                  {flow.companions.map((c, i) => (
+                    <p key={c.id} className="text-sm text-foreground ml-6">{c.firstName} {c.surname}</p>
+                  ))}
+                </div>
+              )}
+
               {flow.healthQuestions.length > 0 && (
                 <div className="pt-3 mt-3 border-t border-border">
                   <div className="flex items-center justify-between">
