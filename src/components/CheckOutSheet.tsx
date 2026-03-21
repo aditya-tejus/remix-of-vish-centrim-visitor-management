@@ -132,6 +132,7 @@ export function CheckOutSheet({
       setSearch("");
       setSelectedVisitor(null);
       setCheckoutReason("");
+      setTimeOverride(null);
       setShowSuccess(false);
       onPreSelectedClear?.();
     }
