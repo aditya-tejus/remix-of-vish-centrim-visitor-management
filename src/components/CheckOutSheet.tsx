@@ -36,7 +36,7 @@ interface CheckOutSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   visitors: Visitor[];
-  onCheckOut: (id: string, reason?: string) => void;
+  onCheckOut: (id: string, reason?: string, timeOverride?: string) => void;
   /** Pre-select a specific visitor (from table row action) */
   preSelectedVisitorId?: string | null;
   onPreSelectedClear?: () => void;
