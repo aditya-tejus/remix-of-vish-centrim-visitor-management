@@ -280,6 +280,9 @@ export function useCheckInFlow(open: boolean) {
     privacyAcknowledged, setPrivacyAcknowledged,
     branchTcUrl, branchPrivacyUrl, tcContent,
 
+    // Time override
+    checkInTimeOverride, setCheckInTimeOverride,
+
     // Resident/staff items for "visiting" dropdown
     residentItems, staffItems,
 
