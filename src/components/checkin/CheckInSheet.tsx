@@ -181,6 +181,8 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
                   branchTcUrl={flow.branchTcUrl}
                   branchPrivacyUrl={flow.branchPrivacyUrl}
                   tcContent={flow.tcContent}
+                  checkInTimeOverride={flow.checkInTimeOverride}
+                  setCheckInTimeOverride={flow.setCheckInTimeOverride}
                 />
               )}
             </div>
