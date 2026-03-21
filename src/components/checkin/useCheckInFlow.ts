@@ -206,6 +206,7 @@ export function useCheckInFlow(open: boolean) {
     setPrivacyAcknowledged(false);
     setCompanions([]);
     setPhoto(null);
+    setCheckInTimeOverride(null);
     setContractorScreeningAnswers({});
     setSelectedSupplier(null);
   };
