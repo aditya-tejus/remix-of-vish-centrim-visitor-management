@@ -86,8 +86,14 @@ export default function KioskCheckIn() {
     );
   }, [visitingSearch, visitingMode, flow.residents, flow.staff, flow.residentLookupMode, flow.staffLookupMode]);
 
+  const [checkedInQrCode, setCheckedInQrCode] = useState<string | null>(null);
+
   const doCheckIn = useCallback(() => {
     const allHealthClear = Object.values(flow.healthAnswers).every((v) => v === false);
+    const groupId = flow.companions.length > 0 ? crypto.randomUUID() : undefined;
+    const primaryQr = crypto.randomUUID().slice(0, 12).toUpperCase();
+
+    // Add primary visitor
     addVisitor({
       firstName: flow.formValues.firstName || "",
       surname: flow.formValues.surname || "",
@@ -101,15 +107,43 @@ export default function KioskCheckIn() {
       status: "checked-in",
       healthDeclaration: allHealthClear,
       healthAnswers: { ...flow.healthAnswers, ...flow.contractorAnswers },
-      additionalVisitors: 0,
+      additionalVisitors: flow.companions.length,
       comments: flow.formValues.comments || "",
       retentionExpiry: new Date(Date.now() + 86400000 * 60),
       acknowledgedPrivacy: flow.privacyAcknowledged,
       contractorScreening: flow.selectedType === "contractor" ? flow.contractorAnswers : undefined,
       supplierId: flow.selectedSupplier?.id || undefined,
+      qrCode: primaryQr,
+      groupId,
     });
+
+    // Add companion visitors as independent records
+    flow.companions.forEach((comp) => {
+      const compQr = crypto.randomUUID().slice(0, 12).toUpperCase();
+      addVisitor({
+        firstName: comp.firstName,
+        surname: comp.surname,
+        email: comp.email || "",
+        mobile: comp.mobile || "",
+        type: flow.selectedType,
+        checkInTime: new Date(),
+        checkOutTime: null,
+        whomToVisit: flow.formValues.whomToVisit || "",
+        address: "",
+        status: "checked-in",
+        healthDeclaration: allHealthClear,
+        additionalVisitors: 0,
+        comments: `Companion of ${flow.formValues.firstName} ${flow.formValues.surname}`,
+        retentionExpiry: new Date(Date.now() + 86400000 * 60),
+        acknowledgedPrivacy: flow.privacyAcknowledged,
+        qrCode: compQr,
+        groupId,
+      });
+    });
+
+    setCheckedInQrCode(primaryQr);
     setSubmitted(true);
-    toast({ title: "Checked In", description: `Welcome, ${flow.formValues.firstName}!` });
+    toast({ title: "Checked In", description: `Welcome, ${flow.formValues.firstName}!${flow.companions.length > 0 ? ` (+${flow.companions.length} companion${flow.companions.length > 1 ? "s" : ""})` : ""}` });
   }, [flow, addVisitor, toast]);
 
   const handleSubmit = () => {
