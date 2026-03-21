@@ -15,6 +15,8 @@ interface StepConfirmProps {
   branchTcUrl: string | null;
   branchPrivacyUrl: string | null;
   tcContent?: string | null;
+  checkInTimeOverride: string | null;
+  setCheckInTimeOverride: (val: string | null) => void;
 }
 
 const TYPE_BADGES: Record<string, { label: string; emoji: string; className: string }> = {
