@@ -232,7 +232,7 @@ export function useCheckInFlow(open: boolean) {
       email: formData.email,
       mobile: formData.mobile,
       type: selectedType,
-      checkInTime: new Date(),
+      checkInTime: checkInTimeOverride ? (() => { const now = new Date(); const [h, m] = checkInTimeOverride.split(":").map(Number); now.setHours(h, m, 0, 0); return now; })() : new Date(),
       checkOutTime: null,
       whomToVisit: formData.selectPerson,
       address: formData.address,
