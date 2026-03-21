@@ -373,6 +373,13 @@ export function CheckOutSheet({
                   </Select>
                 </div>
 
+                {/* Time override */}
+                <TimeOverride
+                  value={timeOverride}
+                  onChange={setTimeOverride}
+                  label="Adjust check-out time"
+                />
+
                 {/* Companions */}
                 {companions.length > 0 && (
                   <div className="space-y-2">
