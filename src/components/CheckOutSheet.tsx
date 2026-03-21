@@ -14,6 +14,7 @@ import {
 import { Visitor, CompanionDetail } from "@/types/visitor";
 import { format } from "date-fns";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
+import { TimeOverride } from "@/components/TimeOverride";
 
 const OVERSTAY_THRESHOLD_MS = 8 * 3600000; // 8 hours
 
