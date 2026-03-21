@@ -222,64 +222,54 @@ export function CheckOutSheet({
                             key={v.id}
                             type="button"
                             onClick={() => handleSelectVisitor(v)}
-                            className={`w-full text-left p-3.5 rounded-xl border-2 transition-all duration-150 hover:shadow-sm group ${
+                            className={`w-full text-left px-3 py-2.5 rounded-xl border transition-all duration-150 hover:shadow-sm group ${
                               overstayed
-                                ? "border-l-[4px] border-l-warning border-t-border border-r-border border-b-border hover:border-warning/40"
-                                : "border-border hover:border-checkout/30"
+                                ? "border-warning/40 bg-warning/5 hover:bg-warning/10"
+                                : "border-border hover:border-checkout/30 hover:bg-muted/30"
                             }`}
                           >
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2.5">
                               {/* Avatar */}
-                              <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center text-[13px] font-bold text-primary shrink-0">
+                              <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0">
                                 {v.firstName[0]}{v.surname[0]}
                               </div>
 
                               {/* Info */}
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-0.5">
-                                  <p className="text-[14px] font-semibold text-foreground truncate">
+                                <div className="flex items-center gap-1.5">
+                                  <p className="text-sm font-semibold text-foreground truncate">
                                     {v.firstName} {v.surname}
                                   </p>
-                                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md border shrink-0 ${typeBadge.className}`}>
-                                    {typeBadge.emoji} {typeBadge.label}
+                                  <span className={`text-[10px] font-medium px-1.5 py-px rounded shrink-0 ${typeBadge.className}`}>
+                                    {typeBadge.label}
                                   </span>
                                 </div>
-
-                                {/* Visiting */}
-                                {v.whomToVisit && (
-                                  <p className="text-[12px] text-muted-foreground flex items-center gap-1 mb-0.5">
-                                    <MapPin className="h-3 w-3 shrink-0" />
-                                    Visiting: {v.whomToVisit}
-                                  </p>
-                                )}
-
-                                {/* Time & duration */}
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                                    <Clock className="h-3 w-3" />
-                                    In: {format(v.checkInTime, "HH:mm")}
-                                  </span>
-                                  <span className="text-[11px] text-muted-foreground">•</span>
-                                  <span className={`text-[11px] font-medium ${
-                                    overstayed ? "text-warning font-semibold" : "text-muted-foreground"
-                                  }`}>
+                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                                  {v.whomToVisit && (
+                                    <>
+                                      <span className="truncate max-w-[140px]">{v.whomToVisit}</span>
+                                      <span>·</span>
+                                    </>
+                                  )}
+                                  <span>{format(v.checkInTime, "HH:mm")}</span>
+                                  <span>·</span>
+                                  <span className={overstayed ? "text-warning font-semibold" : ""}>
                                     {getDuration(v.checkInTime)}
-                                    {overstayed && " ⚠️"}
                                   </span>
+                                  {v.additionalVisitors > 0 && (
+                                    <>
+                                      <span>·</span>
+                                      <span className="flex items-center gap-0.5">
+                                        <Users className="h-3 w-3" />+{v.additionalVisitors}
+                                      </span>
+                                    </>
+                                  )}
                                 </div>
                               </div>
 
                               {/* Checkout arrow */}
-                              <LogOut className="h-4 w-4 text-muted-foreground/40 group-hover:text-checkout shrink-0 transition-colors" />
+                              <LogOut className="h-4 w-4 text-muted-foreground/30 group-hover:text-checkout shrink-0 transition-colors" />
                             </div>
-
-                            {/* Companions indicator */}
-                            {v.additionalVisitors > 0 && (
-                              <div className="mt-2 pt-2 border-t border-border flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                                <Users className="h-3 w-3" />
-                                {v.additionalVisitors} companion{v.additionalVisitors !== 1 ? "s" : ""}
-                              </div>
-                            )}
                           </button>
                         );
                       })}
