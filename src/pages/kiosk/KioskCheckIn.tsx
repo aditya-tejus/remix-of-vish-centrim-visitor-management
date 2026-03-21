@@ -174,6 +174,8 @@ export default function KioskCheckIn() {
         subtitle="You have been checked in successfully."
         accentColor="primary"
         onComplete={handleComplete}
+        qrCode={checkedInQrCode || undefined}
+        companionCount={flow.companions.length}
       />
     );
   }
