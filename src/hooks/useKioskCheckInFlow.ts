@@ -128,6 +128,8 @@ export function useKioskCheckInFlow() {
     setSelectedSupplier(null);
     setReturningVisitor(null);
     setSelectedType("visitor");
+    setCompanions([]);
+    setHasCompanions(null);
   };
 
   // Check if details step has required fields filled
