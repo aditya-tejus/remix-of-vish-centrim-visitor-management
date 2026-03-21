@@ -123,6 +123,7 @@ export function CheckOutSheet({
   const handleBack = () => {
     setSelectedVisitor(null);
     setCheckoutReason("");
+    setTimeOverride(null);
     onPreSelectedClear?.();
   };
 
