@@ -51,6 +51,7 @@ export function CheckOutSheet({
   const [feedbackVisitor, setFeedbackVisitor] = useState<Visitor | null>(null);
   const [selectedVisitor, setSelectedVisitor] = useState<Visitor | null>(null);
   const [checkoutReason, setCheckoutReason] = useState<string>("");
+  const [timeOverride, setTimeOverride] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successName, setSuccessName] = useState("");
   const [successDuration, setSuccessDuration] = useState("");
