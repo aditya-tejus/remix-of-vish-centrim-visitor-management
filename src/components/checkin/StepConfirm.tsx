@@ -2,6 +2,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollText, Shield, FileText, Users, Phone, Mail, Check, MapPin, Thermometer } from "lucide-react";
 import { CompanionDetail, VisitorType } from "@/types/visitor";
 import { CheckInFormData } from "./useCheckInFlow";
+import { TimeOverride } from "@/components/TimeOverride";
 
 interface StepConfirmProps {
   formData: CheckInFormData;
