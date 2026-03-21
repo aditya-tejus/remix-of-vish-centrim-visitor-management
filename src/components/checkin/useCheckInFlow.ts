@@ -56,6 +56,7 @@ export function useCheckInFlow(open: boolean) {
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [companions, setCompanions] = useState<CompanionDetail[]>([]);
   const [photo, setPhoto] = useState<string | null>(null);
+  const [checkInTimeOverride, setCheckInTimeOverride] = useState<string | null>(null);
   const [contractorScreeningAnswers, setContractorScreeningAnswers] = useState<Record<string, any>>({});
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [jurisdiction, setJurisdiction] = useState<"AU" | "UK">("AU");
