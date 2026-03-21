@@ -59,6 +59,8 @@ function dbToVisitor(row: DbVisitor): Visitor {
     accompaniedBy: row.accompanied_by ?? undefined,
     accompaniedByName: row.accompanied_by_name ?? undefined,
     healthAnswers: row.health_answers ?? undefined,
+    qrCode: row.qr_code ?? undefined,
+    groupId: row.group_id ?? undefined,
   };
 }
 
