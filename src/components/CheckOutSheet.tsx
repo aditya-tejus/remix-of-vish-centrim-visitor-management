@@ -305,34 +305,34 @@ export function CheckOutSheet({
                   </div>
 
                   {/* Info grid */}
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-2 gap-2">
                     {selectedVisitor.whomToVisit && (
-                      <div className="rounded-xl bg-card p-3 border border-border">
-                        <p className="text-[11px] text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" /> Visiting</p>
-                        <p className="text-[13px] font-semibold text-foreground mt-0.5">{selectedVisitor.whomToVisit}</p>
+                      <div className="rounded-lg bg-card p-2.5 border border-border">
+                        <p className="text-[10px] text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" /> Visiting</p>
+                        <p className="text-xs font-semibold text-foreground mt-0.5">{selectedVisitor.whomToVisit}</p>
                       </div>
                     )}
-                    <div className="rounded-xl bg-card p-3 border border-border">
-                      <p className="text-[11px] text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> Duration</p>
-                      <p className={`text-[13px] font-semibold mt-0.5 ${
+                    <div className="rounded-lg bg-card p-2.5 border border-border">
+                      <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> Duration</p>
+                      <p className={`text-xs font-semibold mt-0.5 ${
                         isOverstayed(selectedVisitor) ? "text-warning" : "text-foreground"
                       }`}>
                         {getDuration(selectedVisitor.checkInTime)}
                       </p>
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-[10px] text-muted-foreground">
                         {format(selectedVisitor.checkInTime, "HH:mm")} → now
                       </p>
                     </div>
                     {selectedVisitor.mobile && (
-                      <div className="rounded-xl bg-card p-3 border border-border">
-                        <p className="text-[11px] text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> Phone</p>
-                        <p className="text-[13px] font-semibold text-foreground mt-0.5">{selectedVisitor.mobile}</p>
+                      <div className="rounded-lg bg-card p-2.5 border border-border">
+                        <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> Phone</p>
+                        <p className="text-xs font-semibold text-foreground mt-0.5">{selectedVisitor.mobile}</p>
                       </div>
                     )}
                     {selectedVisitor.email && (
-                      <div className="rounded-xl bg-card p-3 border border-border">
-                        <p className="text-[11px] text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" /> Email</p>
-                        <p className="text-[13px] font-semibold text-foreground mt-0.5 truncate">{selectedVisitor.email}</p>
+                      <div className="rounded-lg bg-card p-2.5 border border-border">
+                        <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" /> Email</p>
+                        <p className="text-xs font-semibold text-foreground mt-0.5 truncate">{selectedVisitor.email}</p>
                       </div>
                     )}
                   </div>
