@@ -16,7 +16,7 @@ import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
 import { useKioskCheckInFlow, KioskStepId } from "@/hooks/useKioskCheckInFlow";
 import {
   UserRound, Truck, Heart, ArrowLeft, ArrowRight, Shield, ScrollText,
-  AlertTriangle, Search, RotateCcw, UserSearch, QrCode
+  AlertTriangle, Search, RotateCcw, UserSearch, QrCode, UserPlus, X, Users
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -86,8 +86,14 @@ export default function KioskCheckIn() {
     );
   }, [visitingSearch, visitingMode, flow.residents, flow.staff, flow.residentLookupMode, flow.staffLookupMode]);
 
+  const [checkedInQrCode, setCheckedInQrCode] = useState<string | null>(null);
+
   const doCheckIn = useCallback(() => {
     const allHealthClear = Object.values(flow.healthAnswers).every((v) => v === false);
+    const groupId = flow.companions.length > 0 ? crypto.randomUUID() : undefined;
+    const primaryQr = crypto.randomUUID().slice(0, 12).toUpperCase();
+
+    // Add primary visitor
     addVisitor({
       firstName: flow.formValues.firstName || "",
       surname: flow.formValues.surname || "",
@@ -101,15 +107,43 @@ export default function KioskCheckIn() {
       status: "checked-in",
       healthDeclaration: allHealthClear,
       healthAnswers: { ...flow.healthAnswers, ...flow.contractorAnswers },
-      additionalVisitors: 0,
+      additionalVisitors: flow.companions.length,
       comments: flow.formValues.comments || "",
       retentionExpiry: new Date(Date.now() + 86400000 * 60),
       acknowledgedPrivacy: flow.privacyAcknowledged,
       contractorScreening: flow.selectedType === "contractor" ? flow.contractorAnswers : undefined,
       supplierId: flow.selectedSupplier?.id || undefined,
+      qrCode: primaryQr,
+      groupId,
     });
+
+    // Add companion visitors as independent records
+    flow.companions.forEach((comp) => {
+      const compQr = crypto.randomUUID().slice(0, 12).toUpperCase();
+      addVisitor({
+        firstName: comp.firstName,
+        surname: comp.surname,
+        email: comp.email || "",
+        mobile: comp.mobile || "",
+        type: flow.selectedType,
+        checkInTime: new Date(),
+        checkOutTime: null,
+        whomToVisit: flow.formValues.whomToVisit || "",
+        address: "",
+        status: "checked-in",
+        healthDeclaration: allHealthClear,
+        additionalVisitors: 0,
+        comments: `Companion of ${flow.formValues.firstName} ${flow.formValues.surname}`,
+        retentionExpiry: new Date(Date.now() + 86400000 * 60),
+        acknowledgedPrivacy: flow.privacyAcknowledged,
+        qrCode: compQr,
+        groupId,
+      });
+    });
+
+    setCheckedInQrCode(primaryQr);
     setSubmitted(true);
-    toast({ title: "Checked In", description: `Welcome, ${flow.formValues.firstName}!` });
+    toast({ title: "Checked In", description: `Welcome, ${flow.formValues.firstName}!${flow.companions.length > 0 ? ` (+${flow.companions.length} companion${flow.companions.length > 1 ? "s" : ""})` : ""}` });
   }, [flow, addVisitor, toast]);
 
   const handleSubmit = () => {
@@ -130,6 +164,7 @@ export default function KioskCheckIn() {
     setReturningChecked(false);
     setVisitingSearch("");
     setVisitingMode(null);
+    setCheckedInQrCode(null);
   };
 
   if (submitted) {
@@ -139,6 +174,8 @@ export default function KioskCheckIn() {
         subtitle="You have been checked in successfully."
         accentColor="primary"
         onComplete={handleComplete}
+        qrCode={checkedInQrCode || undefined}
+        companionCount={flow.companions.length}
       />
     );
   }
@@ -415,7 +452,117 @@ export default function KioskCheckIn() {
           </motion.div>
         )}
 
-        {/* Step: Contractor Screening */}
+        {/* Step: Companions */}
+        {step === "companions" && (
+          <motion.div key="companions" {...anim} className="space-y-4">
+            <h2 className="text-3xl font-bold text-foreground text-center">Anyone Accompanying You?</h2>
+            <p className="text-base text-muted-foreground text-center">Are there additional visitors in your group?</p>
+
+            {flow.hasCompanions === null && (
+              <div className="flex gap-4 justify-center pt-2">
+                <button
+                  onClick={() => flow.setHasCompanions(true)}
+                  className="flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-border bg-card/80 shadow-sm active:scale-[0.96] active:border-primary/50 transition-all min-w-[140px]"
+                >
+                  <div className="h-14 w-14 rounded-2xl bg-primary/15 flex items-center justify-center">
+                    <Users className="h-7 w-7 text-primary" />
+                  </div>
+                  <span className="text-lg font-bold text-foreground">Yes</span>
+                </button>
+                <button
+                  onClick={() => { flow.setHasCompanions(false); goNext(); }}
+                  className="flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-border bg-card/80 shadow-sm active:scale-[0.96] active:border-primary/50 transition-all min-w-[140px]"
+                >
+                  <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center">
+                    <UserRound className="h-7 w-7 text-muted-foreground" />
+                  </div>
+                  <span className="text-lg font-bold text-foreground">No, just me</span>
+                </button>
+              </div>
+            )}
+
+            {flow.hasCompanions && (
+              <div className="space-y-3">
+                {flow.companions.map((comp, idx) => (
+                  <div key={comp.id} className="rounded-2xl border-2 border-border bg-card p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-muted-foreground">Companion {idx + 1}</span>
+                      <button
+                        onClick={() => flow.setCompanions((prev) => prev.filter((c) => c.id !== comp.id))}
+                        className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <KioskInput
+                        label="First Name"
+                        required
+                        value={comp.firstName}
+                        onChange={(e) => flow.setCompanions((prev) =>
+                          prev.map((c) => c.id === comp.id ? { ...c, firstName: e.target.value } : c)
+                        )}
+                      />
+                      <KioskInput
+                        label="Surname"
+                        required
+                        value={comp.surname}
+                        onChange={(e) => flow.setCompanions((prev) =>
+                          prev.map((c) => c.id === comp.id ? { ...c, surname: e.target.value } : c)
+                        )}
+                      />
+                    </div>
+                    <KioskInput
+                      label="Email"
+                      value={comp.email}
+                      onChange={(e) => flow.setCompanions((prev) =>
+                        prev.map((c) => c.id === comp.id ? { ...c, email: e.target.value } : c)
+                      )}
+                      type="email"
+                      inputMode="email"
+                    />
+                    <KioskInput
+                      label="Mobile"
+                      value={comp.mobile}
+                      onChange={(e) => flow.setCompanions((prev) =>
+                        prev.map((c) => c.id === comp.id ? { ...c, mobile: e.target.value } : c)
+                      )}
+                      type="tel"
+                      inputMode="tel"
+                    />
+                  </div>
+                ))}
+                <Button
+                  variant="secondary"
+                  onClick={() => flow.setCompanions((prev) => [
+                    ...prev,
+                    { id: crypto.randomUUID(), firstName: "", surname: "", email: "", mobile: "" }
+                  ])}
+                  className="w-full h-12 text-base gap-2 border border-border"
+                >
+                  <UserPlus className="h-5 w-5" /> Add Companion
+                </Button>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <Button variant="secondary" onClick={() => { if (flow.hasCompanions !== null && flow.companions.length === 0) { flow.setHasCompanions(null); } else { goBack(); } }} className="flex-1 h-14 text-base gap-2 border border-border">
+                <ArrowLeft className="h-5 w-5" /> Back
+              </Button>
+              {flow.hasCompanions && (
+                <Button
+                  onClick={goNext}
+                  disabled={flow.companions.length > 0 && flow.companions.some((c) => !c.firstName.trim() || !c.surname.trim())}
+                  className="flex-1 h-14 text-base gap-2"
+                >
+                  {flow.companions.length === 0 ? "Skip" : "Next"} <ArrowRight className="h-5 w-5" />
+                </Button>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+
         {step === "contractor" && (
           <motion.div key="contractor" {...anim} className="space-y-4">
             <h2 className="text-3xl font-bold text-foreground text-center">Contractor Screening</h2>
@@ -606,6 +753,18 @@ export default function KioskCheckIn() {
               {flow.formValues.email && <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span className="font-medium">{flow.formValues.email}</span></div>}
               {flow.formValues.mobile && <div className="flex justify-between"><span className="text-muted-foreground">Mobile</span><span className="font-medium">{flow.formValues.mobile}</span></div>}
               {flow.formValues.whomToVisit && <div className="flex justify-between"><span className="text-muted-foreground">Visiting</span><span className="font-medium">{flow.formValues.whomToVisit}</span></div>}
+
+              {flow.companions.length > 0 && (
+                <div className="pt-3 mt-3 border-t border-border">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-muted-foreground flex items-center gap-2"><Users className="h-4 w-4" /> Companions</span>
+                    <span className="font-bold text-sm px-2.5 py-1 rounded-lg bg-primary/10 text-primary">{flow.companions.length}</span>
+                  </div>
+                  {flow.companions.map((c, i) => (
+                    <p key={c.id} className="text-sm text-foreground ml-6">{c.firstName} {c.surname}</p>
+                  ))}
+                </div>
+              )}
 
               {flow.healthQuestions.length > 0 && (
                 <div className="pt-3 mt-3 border-t border-border">

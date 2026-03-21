@@ -7,7 +7,7 @@ import { useStaffMembers } from "@/hooks/useStaffMembers";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import type { VisitorType } from "@/types/visitor";
 
-export type KioskStepId = "type" | "details" | "visiting" | "screening" | "contractor" | "terms" | "confirm";
+export type KioskStepId = "type" | "details" | "visiting" | "companions" | "screening" | "contractor" | "terms" | "confirm";
 
 export interface KioskStep {
   id: KioskStepId;
@@ -26,6 +26,8 @@ export function useKioskCheckInFlow() {
   const [contractorAnswers, setContractorAnswers] = useState<Record<string, any>>({});
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [returningVisitor, setReturningVisitor] = useState<any>(null);
+  const [companions, setCompanions] = useState<Array<{ id: string; firstName: string; surname: string; email: string; mobile: string }>>([]);
+  const [hasCompanions, setHasCompanions] = useState<boolean | null>(null);
 
   // Dynamic form fields
   const { data: formFields = [] } = useFormFields(selectedType as any);
@@ -95,6 +97,8 @@ export function useKioskCheckInFlow() {
     if (selectedType !== "contractor") {
       pipeline.push({ id: "visiting", label: "Visiting" });
     }
+    // Companions step (always after visiting/contractor)
+    pipeline.push({ id: "companions", label: "Companions" });
     // Contractor screening
     if (selectedType === "contractor") {
       pipeline.push({ id: "contractor", label: "Screening" });
@@ -123,6 +127,8 @@ export function useKioskCheckInFlow() {
     setSelectedSupplier(null);
     setReturningVisitor(null);
     setSelectedType("visitor");
+    setCompanions([]);
+    setHasCompanions(null);
   };
 
   // Check if details step has required fields filled
@@ -169,5 +175,9 @@ export function useKioskCheckInFlow() {
     reset,
     residentLookupMode,
     staffLookupMode,
+    companions,
+    setCompanions,
+    hasCompanions,
+    setHasCompanions,
   };
 }

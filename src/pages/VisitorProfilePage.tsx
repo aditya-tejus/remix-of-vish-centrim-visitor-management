@@ -28,6 +28,7 @@ import { exportVisitorsToCSV, exportVisitorToPDF } from "@/lib/exportVisitors";
 import { EditVisitorDialog } from "@/components/EditVisitorDialog";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { AddVisitDialog } from "@/components/AddVisitDialog";
+import { VisitorBadge } from "@/components/VisitorBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Visitor } from "@/types/visitor";
@@ -156,6 +157,8 @@ export default function VisitorProfilePage() {
                     <LogOut className="h-3.5 w-3.5" /> Quick Check-Out
                   </Button>
                 )}
+                {/* Print Badge */}
+                <VisitorBadge visitor={visitor} variant="print" />
                 {isAdmin && (
                   <>
                     <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>

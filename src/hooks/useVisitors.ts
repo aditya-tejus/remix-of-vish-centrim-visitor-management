@@ -28,6 +28,8 @@ interface DbVisitor {
   leave_type: string | null;
   accompanied_by: string | null;
   accompanied_by_name: string | null;
+  qr_code: string | null;
+  group_id: string | null;
 }
 
 function dbToVisitor(row: DbVisitor): Visitor {
@@ -57,6 +59,8 @@ function dbToVisitor(row: DbVisitor): Visitor {
     accompaniedBy: row.accompanied_by ?? undefined,
     accompaniedByName: row.accompanied_by_name ?? undefined,
     healthAnswers: row.health_answers ?? undefined,
+    qrCode: row.qr_code ?? undefined,
+    groupId: row.group_id ?? undefined,
   };
 }
 
@@ -134,6 +138,8 @@ export function useVisitors() {
         health_answers: (visitor.healthAnswers || {}) as any,
         contractor_screening: (visitor.contractorScreening || {}) as any,
         supplier_id: visitor.supplierId ?? null,
+        qr_code: visitor.qrCode ?? null,
+        group_id: visitor.groupId ?? null,
       })
       .select()
       .single()

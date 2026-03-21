@@ -29,8 +29,11 @@ export default function KioskQRScan() {
     const trimmed = code.trim();
     if (!trimmed) return;
 
+    // Match by id, qr_code, or full name
     const match = visitors.find(
-      (v) => v.id === trimmed || `${v.firstName} ${v.surname}`.toLowerCase() === trimmed.toLowerCase()
+      (v) => v.id === trimmed ||
+        v.qrCode === trimmed ||
+        `${v.firstName} ${v.surname}`.toLowerCase() === trimmed.toLowerCase()
     );
 
     if (!match) {
