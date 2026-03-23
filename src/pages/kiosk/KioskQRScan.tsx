@@ -141,7 +141,7 @@ export default function KioskQRScan() {
             <div className="h-20 w-20 rounded-full bg-warning/10 text-warning flex items-center justify-center mx-auto">
               <LogOut className="h-12 w-12" />
             </div>
-            <h2 className="text-3xl font-bold text-foreground">Goodbye, {v?.firstName}!</h2>
+            <h2 className="text-2xl font-bold text-foreground">Goodbye, {v?.firstName}!</h2>
             <p className="text-lg text-muted-foreground">You have been checked out.</p>
           </>
         )}
