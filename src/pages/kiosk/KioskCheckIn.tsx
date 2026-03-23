@@ -596,7 +596,7 @@ export default function KioskCheckIn() {
                 {Object.keys(flow.healthAnswers).length} of {flow.healthQuestions.length} answered
               </p>
             </div>
-            <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1 kiosk-scroll-fade">
               {flow.healthQuestions.map((q, idx) => {
                 const answer = flow.healthAnswers[q.id];
                 const isYesNo = q.type === "yesno";
