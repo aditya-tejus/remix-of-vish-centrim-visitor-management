@@ -52,6 +52,7 @@ function getSections(type: string): SectionConfig[] {
   // Type-specific sections first
   if (type === "resident") {
     sections.push(
+      { id: "resident-privacy", label: "Directory Display", icon: ShieldCheck, component: <ResidentPrivacyTab personType={type} /> },
       { id: "leave", label: "Leave Configuration", icon: DoorOpen, component: <ResidentLeaveSettingsTab /> },
       { id: "returns", label: "Return Notifications", icon: CalendarClock, component: <ReturnNotificationSettingsTab /> },
     );
