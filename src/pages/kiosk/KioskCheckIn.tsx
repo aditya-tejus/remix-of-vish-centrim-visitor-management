@@ -591,7 +591,7 @@ export default function KioskCheckIn() {
         {step === "screening" && (
           <motion.div key="screening" {...anim} className="space-y-4">
             <div className="text-center space-y-1">
-              <h2 className="text-3xl font-bold text-foreground">Health Screening</h2>
+              <h2 className="text-2xl font-bold text-foreground">Health Screening</h2>
               <p className="text-sm text-muted-foreground">
                 {Object.keys(flow.healthAnswers).length} of {flow.healthQuestions.length} answered
               </p>
