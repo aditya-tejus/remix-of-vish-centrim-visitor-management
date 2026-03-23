@@ -455,7 +455,7 @@ export default function KioskCheckIn() {
         {/* Step: Companions */}
         {step === "companions" && (
           <motion.div key="companions" {...anim} className="space-y-4">
-            <h2 className="text-3xl font-bold text-foreground text-center">Anyone Accompanying You?</h2>
+            <h2 className="text-2xl font-bold text-foreground text-center">Anyone Accompanying You?</h2>
             <p className="text-base text-muted-foreground text-center">Are there additional visitors in your group?</p>
 
             {flow.hasCompanions === null && (
