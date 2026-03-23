@@ -13,6 +13,7 @@ import { AutomationSettingsPerType } from "@/components/settings/AutomationSetti
 
 import { ResidentLeaveSettingsTab } from "@/components/settings/ResidentLeaveSettingsTab";
 import { ResidentPrivacyTab } from "@/components/settings/ResidentPrivacyTab";
+import { StaffPrivacyTab } from "@/components/settings/StaffPrivacyTab";
 import { ReturnNotificationSettingsTab } from "@/components/settings/ReturnNotificationSettingsTab";
 import type { VisitorType } from "@/hooks/useHealthQuestions";
 import type { SettingsSection } from "./SettingsNav";
