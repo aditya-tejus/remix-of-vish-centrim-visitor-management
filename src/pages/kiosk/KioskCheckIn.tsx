@@ -190,7 +190,7 @@ export default function KioskCheckIn() {
         {/* Step: Type Selection */}
         {step === "type" && (
           <motion.div key="type" {...anim} className="space-y-5">
-            <h2 className="text-3xl font-bold text-foreground text-center">What brings you here today?</h2>
+            <h2 className="text-2xl font-bold text-foreground text-center">What brings you here today?</h2>
             <div className="grid grid-cols-3 gap-4">
               {TYPES.map((t) => (
                 <button
