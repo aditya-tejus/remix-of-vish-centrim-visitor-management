@@ -1,7 +1,7 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Users, HardHat, Home, UserCog, Heart, ClipboardList, Users2, Stethoscope, Syringe, Camera, ScrollText, Bell, Zap, DoorOpen, CalendarClock, Search, Building2, ShieldCheck } from "lucide-react";
+import { Users, HardHat, Home, UserCog, Heart, ClipboardList, Users2, Stethoscope, Syringe, Camera, ScrollText, Bell, Zap, DoorOpen, CalendarClock, Search, Building2, ShieldCheck, UserSearch } from "lucide-react";
 import { FormFieldsManager } from "@/components/settings/FormFieldsManager";
 import { CompanionFieldsManager } from "@/components/settings/CompanionFieldsManager";
 import { HealthQuestionsManager } from "@/components/settings/HealthQuestionsManager";
