@@ -704,7 +704,7 @@ export default function KioskCheckIn() {
         {step === "terms" && flow.tcContent && (
           <motion.div key="terms" {...anim} className="space-y-4">
             <div className="text-center space-y-1">
-              <h2 className="text-3xl font-bold text-foreground">Terms & Conditions</h2>
+              <h2 className="text-2xl font-bold text-foreground">Terms & Conditions</h2>
               <p className="text-base text-muted-foreground">Please read and accept before continuing</p>
             </div>
             <div className="rounded-2xl border-2 border-border bg-card p-6 space-y-4">
