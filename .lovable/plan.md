@@ -2,50 +2,36 @@
 
 ## Analysis
 
-### Current State
-- A `kiosk_resident_lookup_mode` setting exists (`show_all` | `search_first`) and is stored in the `settings` table.
-- The kiosk check-in flow (`KioskCheckIn.tsx` line 82-86) already respects this setting -- if `search_first`, residents only appear after typing 3+ characters.
-- This setting is currently located under **Resident Leave Settings** (the wrong place). It should be under **Visitor** and **Volunteer** person-type settings since it controls what happens when those personas check in and select "who are you visiting."
+### Current Problem
+The **Kiosk Lookup Settings** card (Resident Lookup Mode + Staff Lookup Mode) sits inside `ResidentLeaveSettingsTab.tsx` under **Resident Settings → Leave Configuration**. These settings control how **visitors and volunteers** find residents/staff during kiosk check-in — they have nothing to do with resident leave configuration.
 
-### What Needs to Change
+### What already exists in the right place
+- `ResidentPrivacyTab.tsx` — per-type resident lookup mode toggle, already wired into Visitor and Volunteer settings via `PersonTypeSettings.tsx`. This **correctly handles** resident lookup mode per persona.
 
-#### 1. Move/duplicate the privacy setting to Visitor and Volunteer settings
-Add a "Resident Privacy" card inside the Visitor and Volunteer `PersonTypeSettings` accordion sections. This card will contain:
-- **Resident Lookup Mode**: "Show All Residents" vs "Search First (3+ chars)" toggle
-- Clear privacy-focused description explaining why a care home might want this off
+### What's missing
+- **Staff Lookup Mode** has no per-type equivalent yet. It's only managed globally from the misplaced card in Resident Leave settings.
+- The hook (`useKioskCheckInFlow.ts` line 57) loads `kiosk_staff_lookup_mode` globally but doesn't check for a type-specific override like it does for resident lookup mode.
 
-The setting key will follow the existing prefixing convention: `kiosk_resident_lookup_mode_visitor` and `kiosk_resident_lookup_mode_volunteer`, falling back to the global `kiosk_resident_lookup_mode` if no per-type override exists.
+### Plan
 
-#### 2. Update the kiosk check-in hook to use per-type settings
-In `useKioskCheckInFlow.ts`, after the `selectedType` is known, load the type-specific setting (e.g., `kiosk_resident_lookup_mode_visitor`) and fall back to the global setting.
+#### 1. Remove Kiosk Lookup Settings from Resident Leave Settings
+Strip lines 101–168 from `ResidentLeaveSettingsTab.tsx` (the entire second `<Card>`). Also remove the `residentLookupMode` and `staffLookupMode` state variables and their save keys — leave settings should only save leave-related keys.
 
-#### 3. Verify kiosk front-end behaviour
-The existing filtering logic in `KioskCheckIn.tsx` (lines 74-87) already handles both modes correctly. No changes needed there -- it reads `flow.residentLookupMode` which will now be type-aware.
+#### 2. Create `StaffPrivacyTab.tsx`
+Mirror the `ResidentPrivacyTab` pattern. Offers three modes: "Search First", "Group by Department", "Free Text Only". Uses key `kiosk_staff_lookup_mode_{personType}` with fallback to global `kiosk_staff_lookup_mode`.
 
-### Files to Edit
+#### 3. Add Staff Privacy section to Visitor & Volunteer settings
+In `PersonTypeSettings.tsx`, add a "Staff Lookup on Kiosk" accordion section (using `Users` icon) for visitor and volunteer types, right after the existing "Resident Privacy on Kiosk" section.
+
+#### 4. Update `useKioskCheckInFlow.ts` for per-type staff lookup
+Add `kiosk_staff_lookup_mode_${selectedType}` to the settings query. Prefer type-specific, fall back to global — same pattern already used for resident lookup mode.
+
+### Files
 
 | File | Change |
 |------|--------|
-| `src/components/settings/PersonTypeSettings.tsx` | Add a "Resident Privacy on Kiosk" section for visitor and volunteer types |
-| New: `src/components/settings/ResidentPrivacyTab.tsx` | Small component with the lookup mode toggle + save button |
-| `src/hooks/useKioskCheckInFlow.ts` | Load type-specific `kiosk_resident_lookup_mode_{type}` setting, fall back to global |
-
-### Technical Detail
-
-**Settings key convention:**
-- `kiosk_resident_lookup_mode` (global fallback, already exists)
-- `kiosk_resident_lookup_mode_visitor` (per-type override)
-- `kiosk_resident_lookup_mode_volunteer` (per-type override)
-
-**Hook change in `useKioskCheckInFlow.ts`:**
-```typescript
-// Add type-specific key to settings query
-.in("key", [..., `kiosk_resident_lookup_mode_${selectedType}`])
-// Prefer type-specific, fall back to global
-const typeSpecific = data?.find(d => d.key === `kiosk_resident_lookup_mode_${selectedType}`);
-const global = data?.find(d => d.key === "kiosk_resident_lookup_mode");
-const mode = typeSpecific?.value || global?.value || "search_first";
-```
-
-**No database migration needed** -- the `settings` table already supports arbitrary key-value pairs with upsert on conflict.
+| `src/components/settings/ResidentLeaveSettingsTab.tsx` | Remove Kiosk Lookup Settings card + related state/save logic |
+| New: `src/components/settings/StaffPrivacyTab.tsx` | Staff lookup mode selector per person type |
+| `src/components/settings/PersonTypeSettings.tsx` | Add "Staff Lookup on Kiosk" section for visitor/volunteer |
+| `src/hooks/useKioskCheckInFlow.ts` | Add type-specific staff lookup key to query + fallback logic |
 
