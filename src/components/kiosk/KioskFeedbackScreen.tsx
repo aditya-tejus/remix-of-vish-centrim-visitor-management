@@ -91,7 +91,7 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-6">
       <div className="text-center space-y-1">
-        <h2 className="text-3xl font-bold text-foreground">How Was Your Visit?</h2>
+        <h2 className="text-2xl font-bold text-foreground">How Was Your Visit?</h2>
         <p className="text-lg text-muted-foreground">Tap to rate each area</p>
       </div>
 
