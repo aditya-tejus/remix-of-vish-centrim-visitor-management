@@ -88,8 +88,8 @@ export default function KioskCheckOut() {
 
     return (
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-6" role="region" aria-label="Confirm check out">
-        <h2 className="text-3xl font-bold text-foreground text-center">Confirm Check Out</h2>
-        <div className="rounded-2xl border-2 border-border bg-card p-8 flex flex-col items-center gap-4">
+        <h2 className="text-2xl font-bold text-foreground text-center">Confirm Check Out</h2>
+        <div className="rounded-2xl border-2 border-warning/20 bg-card p-8 flex flex-col items-center gap-4">
           <div className="h-16 w-16 rounded-full bg-warning/10 text-warning flex items-center justify-center text-xl font-bold" aria-hidden="true">
             {initials}
           </div>
@@ -134,8 +134,8 @@ export default function KioskCheckOut() {
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-6" role="region" aria-label="Check out search">
       <div className="text-center">
-        <h2 className="text-3xl font-bold text-foreground">Check Out</h2>
-        <p className="text-base text-muted-foreground mt-1">Find your name below</p>
+        <h2 className="text-2xl font-bold text-foreground">Check Out</h2>
+        <p className="text-sm text-muted-foreground mt-1">Find your name below</p>
       </div>
       <Button variant="secondary" onClick={() => navigate("/kiosk/qr-scan?mode=checkout")} className="w-full h-12 text-base gap-2 border border-border">
         <QrCode className="h-5 w-5" /> Scan QR Code Instead
@@ -144,7 +144,7 @@ export default function KioskCheckOut() {
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" aria-hidden="true" />
         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search your name..." className="pl-12 h-14 text-lg" autoFocus aria-label="Search visitors" />
       </div>
-      <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto" role="list" aria-label="Checked in visitors">
+      <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto kiosk-scroll-fade" role="list" aria-label="Checked in visitors">
         {loading ? (
           <KioskSkeletonList count={4} />
         ) : filtered.length === 0 ? (

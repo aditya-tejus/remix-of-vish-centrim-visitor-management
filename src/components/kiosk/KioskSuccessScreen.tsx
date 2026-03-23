@@ -34,10 +34,6 @@ export function KioskSuccessScreen({
     return () => clearTimeout(t);
   }, [remaining, onComplete]);
 
-  const radius = 28;
-  const circumference = 2 * Math.PI * radius;
-  const progress = remaining / countdownSeconds;
-
   const colorMap = {
     success: "text-success bg-success/5",
     warning: "text-warning bg-warning/5",
@@ -50,12 +46,6 @@ export function KioskSuccessScreen({
     info: "bg-info/10 text-info",
     primary: "bg-primary/10 text-primary",
   };
-  const strokeColorMap = {
-    success: "stroke-success",
-    warning: "stroke-warning",
-    info: "stroke-info",
-    primary: "stroke-primary",
-  };
 
   return (
     <div className={`flex flex-col items-center justify-center text-center gap-5 w-full min-h-[50vh] px-6 rounded-3xl ${colorMap[accentColor]}`}>
@@ -63,16 +53,16 @@ export function KioskSuccessScreen({
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 12 }}
-        className={`h-20 w-20 rounded-full flex items-center justify-center ${iconColorMap[accentColor]}`}
+        className={`h-16 w-16 rounded-full flex items-center justify-center ${iconColorMap[accentColor]}`}
       >
-        <CheckCircle2 className="h-12 w-12" />
+        <CheckCircle2 className="h-10 w-10" />
       </motion.div>
 
       <motion.h2
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.4 }}
-        className="text-3xl font-bold text-foreground"
+        className="text-2xl font-bold text-foreground"
       >
         {title}
       </motion.h2>
@@ -82,7 +72,7 @@ export function KioskSuccessScreen({
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35, duration: 0.4 }}
-          className="text-lg text-muted-foreground max-w-sm"
+          className="text-base text-muted-foreground max-w-sm"
         >
           {subtitle}
         </motion.p>
@@ -108,7 +98,7 @@ export function KioskSuccessScreen({
           className="flex flex-col items-center gap-2"
         >
           <div className="p-3 rounded-xl bg-white border border-border shadow-sm">
-            <QRCode value={qrCode} size={140} level="H" style={{ height: "auto", maxWidth: "100%", width: "100%" }} />
+            <QRCode value={qrCode} size={120} level="H" style={{ height: "auto", maxWidth: "100%", width: "100%" }} />
           </div>
           <p className="text-xs text-muted-foreground">Show this QR code for quick check-out</p>
         </motion.div>
@@ -118,22 +108,10 @@ export function KioskSuccessScreen({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
-        className="flex flex-col items-center gap-3 mt-2"
+        className="flex flex-col items-center gap-2 mt-2"
       >
-        <svg width="72" height="72" viewBox="0 0 72 72" className="-rotate-90">
-          <circle cx="36" cy="36" r={radius} fill="none" stroke="hsl(var(--border))" strokeWidth="4" />
-          <circle
-            cx="36" cy="36" r={radius} fill="none"
-            className={strokeColorMap[accentColor]}
-            strokeWidth="4" strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={circumference * (1 - progress)}
-            style={{ transition: "stroke-dashoffset 1s linear" }}
-          />
-        </svg>
-        <span className="text-sm text-muted-foreground">Returning to start screen in {remaining}s</span>
-        <Button variant="secondary" size="sm" onClick={onComplete} className="mt-1 border border-border">
-          Return to Start
+        <Button variant="secondary" size="sm" onClick={onComplete} className="gap-2 border border-border text-sm">
+          Return to Start · {remaining}s
         </Button>
       </motion.div>
     </div>

@@ -92,7 +92,7 @@ export default function KioskResidentLeave() {
     const name = `${selectedResident.firstName} ${selectedResident.surname}`;
     return (
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-6">
-        <h2 className="text-3xl font-bold text-foreground text-center">Confirm Departure</h2>
+        <h2 className="text-2xl font-bold text-foreground text-center">Confirm Departure</h2>
         <div className="rounded-2xl border-2 border-border bg-card p-8 flex flex-col items-center gap-4">
           <div className="h-16 w-16 rounded-full bg-warning/10 text-warning flex items-center justify-center text-xl font-bold">
             {`${selectedResident.firstName[0]}${selectedResident.surname[0]}`.toUpperCase()}
@@ -152,8 +152,8 @@ export default function KioskResidentLeave() {
     const name = `${selectedResident.firstName} ${selectedResident.surname}`;
     return (
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-6">
-        <h2 className="text-3xl font-bold text-foreground text-center">Confirm Return</h2>
-        <div className="rounded-2xl border-2 border-border bg-card p-8 flex flex-col items-center gap-4">
+        <h2 className="text-2xl font-bold text-foreground text-center">Confirm Return</h2>
+        <div className="rounded-2xl border-2 border-success/20 bg-card p-8 flex flex-col items-center gap-4">
           <div className="h-16 w-16 rounded-full bg-success/10 text-success flex items-center justify-center text-xl font-bold">
             {`${selectedResident.firstName[0]}${selectedResident.surname[0]}`.toUpperCase()}
           </div>
@@ -177,8 +177,8 @@ export default function KioskResidentLeave() {
     return (
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-6">
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-foreground">Resident Leave</h2>
-          <p className="text-base text-muted-foreground mt-1">Are you leaving or returning?</p>
+          <h2 className="text-2xl font-bold text-foreground">Resident Leave</h2>
+          <p className="text-sm text-muted-foreground mt-1">Are you leaving or returning?</p>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <button
@@ -218,13 +218,13 @@ export default function KioskResidentLeave() {
           <Button variant="secondary" onClick={() => setMode("select")} className="h-14 gap-2 min-h-[48px] border border-border">
             <ArrowLeft className="h-5 w-5" /> Back
           </Button>
-          <h2 className="text-3xl font-bold text-foreground">Welcome Back</h2>
+          <h2 className="text-2xl font-bold text-foreground">Welcome Back</h2>
         </div>
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input value={returnSearch} onChange={(e) => setReturnSearch(e.target.value)} placeholder="Search by name..." className="pl-12 h-14 text-lg" autoFocus />
         </div>
-        <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto">
+        <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto kiosk-scroll-fade">
           {filteredAway.length === 0 ? (
             <div className="text-center py-12 space-y-3">
               <Home className="h-12 w-12 text-muted-foreground/40 mx-auto" />
@@ -254,13 +254,13 @@ export default function KioskResidentLeave() {
           <Button variant="secondary" onClick={() => setMode("select")} className="h-14 gap-2 min-h-[48px] border border-border">
             <ArrowLeft className="h-5 w-5" /> Back
         </Button>
-        <h2 className="text-3xl font-bold text-foreground">Find Your Room</h2>
+        <h2 className="text-2xl font-bold text-foreground">Find Your Room</h2>
       </div>
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         <Input value={room} onChange={(e) => setRoom(e.target.value)} placeholder="Room number or name..." className="pl-12 h-14 text-lg" autoFocus />
       </div>
-      <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto">
+      <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto kiosk-scroll-fade">
         {filteredResidents.length === 0 ? (
             <div className="text-center py-12 space-y-3">
               <Search className="h-12 w-12 text-muted-foreground/40 mx-auto" />

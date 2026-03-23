@@ -190,7 +190,7 @@ export default function KioskCheckIn() {
         {/* Step: Type Selection */}
         {step === "type" && (
           <motion.div key="type" {...anim} className="space-y-5">
-            <h2 className="text-3xl font-bold text-foreground text-center">What brings you here today?</h2>
+            <h2 className="text-2xl font-bold text-foreground text-center">What brings you here today?</h2>
             <div className="grid grid-cols-3 gap-4">
               {TYPES.map((t) => (
                 <button
@@ -220,7 +220,7 @@ export default function KioskCheckIn() {
         {/* Step: Details */}
         {step === "details" && (
           <motion.div key="details" {...anim} className="space-y-4">
-            <h2 className="text-3xl font-bold text-foreground text-center">Your Details</h2>
+            <h2 className="text-2xl font-bold text-foreground text-center">Your Details</h2>
 
             {flow.returningVisitor && (
               <div className="rounded-xl border-2 border-success/20 bg-success/5 p-3 flex items-center gap-2 text-sm text-success">
@@ -306,7 +306,7 @@ export default function KioskCheckIn() {
         {/* Step: Who are you visiting */}
         {step === "visiting" && (
           <motion.div key="visiting" {...anim} className="space-y-4">
-            <h2 className="text-3xl font-bold text-foreground text-center">Who Are You Visiting?</h2>
+            <h2 className="text-2xl font-bold text-foreground text-center">Who Are You Visiting?</h2>
 
             <div className="flex gap-3 justify-center">
               <button
@@ -455,7 +455,7 @@ export default function KioskCheckIn() {
         {/* Step: Companions */}
         {step === "companions" && (
           <motion.div key="companions" {...anim} className="space-y-4">
-            <h2 className="text-3xl font-bold text-foreground text-center">Anyone Accompanying You?</h2>
+            <h2 className="text-2xl font-bold text-foreground text-center">Anyone Accompanying You?</h2>
             <p className="text-base text-muted-foreground text-center">Are there additional visitors in your group?</p>
 
             {flow.hasCompanions === null && (
@@ -565,7 +565,7 @@ export default function KioskCheckIn() {
 
         {step === "contractor" && (
           <motion.div key="contractor" {...anim} className="space-y-4">
-            <h2 className="text-3xl font-bold text-foreground text-center">Contractor Screening</h2>
+            <h2 className="text-2xl font-bold text-foreground text-center">Contractor Screening</h2>
             <div className="max-h-[55vh] overflow-y-auto pr-1">
               <ContractorScreening
                 jurisdiction={flow.jurisdiction}
@@ -591,12 +591,12 @@ export default function KioskCheckIn() {
         {step === "screening" && (
           <motion.div key="screening" {...anim} className="space-y-4">
             <div className="text-center space-y-1">
-              <h2 className="text-3xl font-bold text-foreground">Health Screening</h2>
+              <h2 className="text-2xl font-bold text-foreground">Health Screening</h2>
               <p className="text-sm text-muted-foreground">
                 {Object.keys(flow.healthAnswers).length} of {flow.healthQuestions.length} answered
               </p>
             </div>
-            <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1 kiosk-scroll-fade">
               {flow.healthQuestions.map((q, idx) => {
                 const answer = flow.healthAnswers[q.id];
                 const isYesNo = q.type === "yesno";
@@ -704,7 +704,7 @@ export default function KioskCheckIn() {
         {step === "terms" && flow.tcContent && (
           <motion.div key="terms" {...anim} className="space-y-4">
             <div className="text-center space-y-1">
-              <h2 className="text-3xl font-bold text-foreground">Terms & Conditions</h2>
+              <h2 className="text-2xl font-bold text-foreground">Terms & Conditions</h2>
               <p className="text-base text-muted-foreground">Please read and accept before continuing</p>
             </div>
             <div className="rounded-2xl border-2 border-border bg-card p-6 space-y-4">
@@ -746,54 +746,61 @@ export default function KioskCheckIn() {
         {/* Step: Review & Confirm */}
         {step === "confirm" && (
           <motion.div key="confirm" {...anim} className="space-y-4">
-            <h2 className="text-3xl font-bold text-foreground text-center">Review & Confirm</h2>
-            <div className="rounded-2xl border-2 border-border bg-card p-6 space-y-3 text-base">
-              <div className="flex justify-between"><span className="text-muted-foreground">Name</span><span className="font-medium">{flow.formValues.firstName} {flow.formValues.surname}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Type</span><span className="font-medium capitalize">{flow.selectedType}</span></div>
-              {flow.formValues.email && <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span className="font-medium">{flow.formValues.email}</span></div>}
-              {flow.formValues.mobile && <div className="flex justify-between"><span className="text-muted-foreground">Mobile</span><span className="font-medium">{flow.formValues.mobile}</span></div>}
-              {flow.formValues.whomToVisit && <div className="flex justify-between"><span className="text-muted-foreground">Visiting</span><span className="font-medium">{flow.formValues.whomToVisit}</span></div>}
+            <h2 className="text-2xl font-bold text-foreground text-center">Review & Confirm</h2>
 
-              {flow.companions.length > 0 && (
-                <div className="pt-3 mt-3 border-t border-border">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-muted-foreground flex items-center gap-2"><Users className="h-4 w-4" /> Companions</span>
-                    <span className="font-bold text-sm px-2.5 py-1 rounded-lg bg-primary/10 text-primary">{flow.companions.length}</span>
+            {/* Personal Details Section */}
+            <div className="rounded-2xl border border-border bg-card p-5 space-y-2.5 text-sm">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5"><UserRound className="h-3.5 w-3.5" /> Personal</p>
+              <div className="flex justify-between"><span className="text-muted-foreground">Name</span><span className="font-medium text-foreground">{flow.formValues.firstName} {flow.formValues.surname}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Type</span><span className="font-medium text-foreground capitalize">{flow.selectedType}</span></div>
+              {flow.formValues.email && <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span className="font-medium text-foreground">{flow.formValues.email}</span></div>}
+              {flow.formValues.mobile && <div className="flex justify-between"><span className="text-muted-foreground">Mobile</span><span className="font-medium text-foreground">{flow.formValues.mobile}</span></div>}
+            </div>
+
+            {/* Visit Details Section */}
+            {(flow.formValues.whomToVisit || flow.companions.length > 0 || (flow.selectedType === "contractor" && flow.selectedSupplier)) && (
+              <div className="rounded-2xl border border-border bg-card p-5 space-y-2.5 text-sm">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5"><Heart className="h-3.5 w-3.5" /> Visit</p>
+                {flow.formValues.whomToVisit && <div className="flex justify-between"><span className="text-muted-foreground">Visiting</span><span className="font-medium text-foreground">{flow.formValues.whomToVisit}</span></div>}
+                {flow.selectedType === "contractor" && flow.selectedSupplier && (
+                  <div className="flex justify-between"><span className="text-muted-foreground">Supplier</span><span className="font-medium text-foreground">{flow.selectedSupplier.name}</span></div>
+                )}
+                {flow.companions.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-muted-foreground flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> Companions</span>
+                      <span className="font-bold text-xs px-2 py-0.5 rounded-md bg-primary/10 text-primary">{flow.companions.length}</span>
+                    </div>
+                    {flow.companions.map((c) => (
+                      <p key={c.id} className="text-sm text-foreground ml-5">{c.firstName} {c.surname}</p>
+                    ))}
                   </div>
-                  {flow.companions.map((c, i) => (
-                    <p key={c.id} className="text-sm text-foreground ml-6">{c.firstName} {c.surname}</p>
-                  ))}
-                </div>
-              )}
+                )}
+              </div>
+            )}
 
-              {flow.healthQuestions.length > 0 && (
-                <div className="pt-3 mt-3 border-t border-border">
+            {/* Compliance Section */}
+            {(flow.healthQuestions.length > 0 || flow.tcContent) && (
+              <div className="rounded-2xl border border-border bg-card p-5 space-y-2.5 text-sm">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5"><Shield className="h-3.5 w-3.5" /> Compliance</p>
+                {flow.healthQuestions.length > 0 && (
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground flex items-center gap-2"><Shield className="h-4 w-4" /> Screening</span>
-                    <span className={`font-bold text-sm px-2.5 py-1 rounded-lg ${flow.hasYesFlags ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"}`}>
+                    <span className="text-muted-foreground">Screening</span>
+                    <span className={`font-bold text-xs px-2 py-0.5 rounded-md ${flow.hasYesFlags ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"}`}>
                       {flow.hasYesFlags ? "⚠ Flagged" : "✓ Clear"}
                     </span>
                   </div>
-                </div>
-              )}
-
-              {flow.selectedType === "contractor" && flow.selectedSupplier && (
-                <div className="pt-3 mt-3 border-t border-border">
-                  <div className="flex justify-between"><span className="text-muted-foreground">Supplier</span><span className="font-medium">{flow.selectedSupplier.name}</span></div>
-                </div>
-              )}
-
-              {flow.tcContent && (
-                <div className="pt-3 mt-3 border-t border-border">
+                )}
+                {flow.tcContent && (
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground flex items-center gap-2"><ScrollText className="h-4 w-4" /> Terms</span>
-                    <span className={`font-bold text-sm px-2.5 py-1 rounded-lg ${flow.privacyAcknowledged ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+                    <span className="text-muted-foreground">Terms</span>
+                    <span className={`font-bold text-xs px-2 py-0.5 rounded-md ${flow.privacyAcknowledged ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
                       {flow.privacyAcknowledged ? "✓ Accepted" : "✗ Not accepted"}
                     </span>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             {!flow.tcContent && (
               <div className="rounded-2xl border-2 border-border bg-card p-5">
@@ -830,13 +837,7 @@ export default function KioskCheckIn() {
         )}
       </AnimatePresence>
 
-      {step !== "type" && (
-        <div className="text-center pt-2">
-          <Button variant="secondary" size="sm" onClick={handleStartOver} className="gap-2 border border-border">
-            <RotateCcw className="h-4 w-4" /> Start Over
-          </Button>
-        </div>
-      )}
+      {/* Start Over button removed — available in sticky header */}
 
       {watchlistEntry && (
         <WatchlistAlertDialog

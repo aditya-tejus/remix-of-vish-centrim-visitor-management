@@ -68,7 +68,7 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-6">
         <div className="text-center space-y-2">
           <MessageSquare className="h-12 w-12 text-primary mx-auto" />
-          <h2 className="text-3xl font-bold text-foreground">We'd Love Your Feedback</h2>
+          <h2 className="text-2xl font-bold text-foreground">We'd Love Your Feedback</h2>
           <p className="text-lg text-muted-foreground">{activeSurvey.description || "Please take a moment to share your experience."}</p>
         </div>
         <div className="rounded-2xl border-2 border-primary/20 bg-primary/5 p-8 text-center space-y-4">
@@ -91,11 +91,11 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-6">
       <div className="text-center space-y-1">
-        <h2 className="text-3xl font-bold text-foreground">How Was Your Visit?</h2>
+        <h2 className="text-2xl font-bold text-foreground">How Was Your Visit?</h2>
         <p className="text-lg text-muted-foreground">Tap to rate each area</p>
       </div>
 
-      <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
+      <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1 kiosk-scroll-fade">
         {questions.map((q) => (
           <div key={q.id} className="rounded-2xl border-2 border-border bg-card p-5 space-y-3">
             <p className="text-lg font-semibold text-foreground">{q.question}</p>
