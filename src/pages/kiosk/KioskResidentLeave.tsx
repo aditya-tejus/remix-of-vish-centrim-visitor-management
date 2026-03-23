@@ -224,7 +224,7 @@ export default function KioskResidentLeave() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input value={returnSearch} onChange={(e) => setReturnSearch(e.target.value)} placeholder="Search by name..." className="pl-12 h-14 text-lg" autoFocus />
         </div>
-        <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto">
+        <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto kiosk-scroll-fade">
           {filteredAway.length === 0 ? (
             <div className="text-center py-12 space-y-3">
               <Home className="h-12 w-12 text-muted-foreground/40 mx-auto" />
