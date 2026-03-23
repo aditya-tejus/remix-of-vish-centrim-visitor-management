@@ -837,13 +837,7 @@ export default function KioskCheckIn() {
         )}
       </AnimatePresence>
 
-      {step !== "type" && (
-        <div className="text-center pt-2">
-          <Button variant="secondary" size="sm" onClick={handleStartOver} className="gap-2 border border-border">
-            <RotateCcw className="h-4 w-4" /> Start Over
-          </Button>
-        </div>
-      )}
+      {/* Start Over button removed — available in sticky header */}
 
       {watchlistEntry && (
         <WatchlistAlertDialog
