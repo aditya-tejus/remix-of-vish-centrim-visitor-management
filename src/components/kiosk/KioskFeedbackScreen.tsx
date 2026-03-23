@@ -95,7 +95,7 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
         <p className="text-lg text-muted-foreground">Tap to rate each area</p>
       </div>
 
-      <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
+      <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1 kiosk-scroll-fade">
         {questions.map((q) => (
           <div key={q.id} className="rounded-2xl border-2 border-border bg-card p-5 space-y-3">
             <p className="text-lg font-semibold text-foreground">{q.question}</p>

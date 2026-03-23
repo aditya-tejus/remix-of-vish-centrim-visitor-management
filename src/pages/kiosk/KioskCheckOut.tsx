@@ -144,7 +144,7 @@ export default function KioskCheckOut() {
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" aria-hidden="true" />
         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search your name..." className="pl-12 h-14 text-lg" autoFocus aria-label="Search visitors" />
       </div>
-      <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto" role="list" aria-label="Checked in visitors">
+      <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto kiosk-scroll-fade" role="list" aria-label="Checked in visitors">
         {loading ? (
           <KioskSkeletonList count={4} />
         ) : filtered.length === 0 ? (

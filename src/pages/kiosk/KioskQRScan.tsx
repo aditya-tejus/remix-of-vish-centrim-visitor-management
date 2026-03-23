@@ -183,7 +183,7 @@ export default function KioskQRScan() {
   return (
     <div className="w-full space-y-6">
       <div className="text-center">
-        <h2 className="text-3xl font-bold text-foreground">Scan QR Code</h2>
+        <h2 className="text-2xl font-bold text-foreground">Scan QR Code</h2>
         <p className="text-lg text-muted-foreground mt-1">
           {mode === "checkin" ? "Scan your visitor card to check in" : mode === "checkout" ? "Scan your visitor card to check out" : "Scan your visitor card or QR code"}
         </p>
