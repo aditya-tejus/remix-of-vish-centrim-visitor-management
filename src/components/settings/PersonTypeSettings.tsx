@@ -57,10 +57,11 @@ function getSections(type: string): SectionConfig[] {
     );
   }
 
-  // Resident privacy for visitor & volunteer
+  // Resident & staff privacy for visitor & volunteer
   if (["visitor", "volunteer"].includes(type)) {
     sections.push(
       { id: "resident-privacy", label: "Resident Privacy on Kiosk", icon: ShieldCheck, component: <ResidentPrivacyTab personType={type} /> },
+      { id: "staff-privacy", label: "Staff Lookup on Kiosk", icon: UserSearch, component: <StaffPrivacyTab personType={type} /> },
     );
   }
 
