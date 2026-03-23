@@ -152,7 +152,7 @@ export default function KioskResidentLeave() {
     const name = `${selectedResident.firstName} ${selectedResident.surname}`;
     return (
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-6">
-        <h2 className="text-3xl font-bold text-foreground text-center">Confirm Return</h2>
+        <h2 className="text-2xl font-bold text-foreground text-center">Confirm Return</h2>
         <div className="rounded-2xl border-2 border-border bg-card p-8 flex flex-col items-center gap-4">
           <div className="h-16 w-16 rounded-full bg-success/10 text-success flex items-center justify-center text-xl font-bold">
             {`${selectedResident.firstName[0]}${selectedResident.surname[0]}`.toUpperCase()}
