@@ -1,7 +1,7 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Users, HardHat, Home, UserCog, Heart, ClipboardList, Users2, Stethoscope, Syringe, Camera, ScrollText, Bell, Zap, DoorOpen, CalendarClock, Search, Building2, ShieldCheck } from "lucide-react";
+import { Users, HardHat, Home, UserCog, Heart, ClipboardList, Users2, Stethoscope, Syringe, Camera, ScrollText, Bell, Zap, DoorOpen, CalendarClock, Search, Building2, ShieldCheck, UserSearch } from "lucide-react";
 import { FormFieldsManager } from "@/components/settings/FormFieldsManager";
 import { CompanionFieldsManager } from "@/components/settings/CompanionFieldsManager";
 import { HealthQuestionsManager } from "@/components/settings/HealthQuestionsManager";
@@ -13,6 +13,7 @@ import { AutomationSettingsPerType } from "@/components/settings/AutomationSetti
 
 import { ResidentLeaveSettingsTab } from "@/components/settings/ResidentLeaveSettingsTab";
 import { ResidentPrivacyTab } from "@/components/settings/ResidentPrivacyTab";
+import { StaffPrivacyTab } from "@/components/settings/StaffPrivacyTab";
 import { ReturnNotificationSettingsTab } from "@/components/settings/ReturnNotificationSettingsTab";
 import type { VisitorType } from "@/hooks/useHealthQuestions";
 import type { SettingsSection } from "./SettingsNav";
@@ -56,10 +57,11 @@ function getSections(type: string): SectionConfig[] {
     );
   }
 
-  // Resident privacy for visitor & volunteer
+  // Resident & staff privacy for visitor & volunteer
   if (["visitor", "volunteer"].includes(type)) {
     sections.push(
       { id: "resident-privacy", label: "Resident Privacy on Kiosk", icon: ShieldCheck, component: <ResidentPrivacyTab personType={type} /> },
+      { id: "staff-privacy", label: "Staff Lookup on Kiosk", icon: UserSearch, component: <StaffPrivacyTab personType={type} /> },
     );
   }
 
