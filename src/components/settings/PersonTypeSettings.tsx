@@ -96,15 +96,15 @@ function getSections(type: string): SectionConfig[] {
     { id: "terms", label: "Terms & Conditions", icon: ScrollText, component: <TermsSettingsPerType personType={type} /> },
   );
 
-  // Alerts for most
-  if (type !== "staff") {
+  // Alerts for all except resident (residents use leave-based alerts)
+  if (type !== "resident") {
     sections.push(
       { id: "alerts", label: "Alerts & Thresholds", icon: Bell, component: <AlertSettingsPerType personType={type} /> },
     );
   }
 
-  // Automation for most
-  if (type !== "staff") {
+  // Automation for all except resident
+  if (type !== "resident") {
     sections.push(
       { id: "automation", label: "Automation", icon: Zap, component: <AutomationSettingsPerType personType={type} /> },
     );
