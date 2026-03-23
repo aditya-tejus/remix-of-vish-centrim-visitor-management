@@ -89,7 +89,7 @@ export default function KioskCheckOut() {
     return (
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-6" role="region" aria-label="Confirm check out">
         <h2 className="text-2xl font-bold text-foreground text-center">Confirm Check Out</h2>
-        <div className="rounded-2xl border-2 border-border bg-card p-8 flex flex-col items-center gap-4">
+        <div className="rounded-2xl border-2 border-warning/20 bg-card p-8 flex flex-col items-center gap-4">
           <div className="h-16 w-16 rounded-full bg-warning/10 text-warning flex items-center justify-center text-xl font-bold" aria-hidden="true">
             {initials}
           </div>
