@@ -220,7 +220,7 @@ export default function KioskCheckIn() {
         {/* Step: Details */}
         {step === "details" && (
           <motion.div key="details" {...anim} className="space-y-4">
-            <h2 className="text-3xl font-bold text-foreground text-center">Your Details</h2>
+            <h2 className="text-2xl font-bold text-foreground text-center">Your Details</h2>
 
             {flow.returningVisitor && (
               <div className="rounded-xl border-2 border-success/20 bg-success/5 p-3 flex items-center gap-2 text-sm text-success">
