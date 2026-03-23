@@ -565,7 +565,7 @@ export default function KioskCheckIn() {
 
         {step === "contractor" && (
           <motion.div key="contractor" {...anim} className="space-y-4">
-            <h2 className="text-3xl font-bold text-foreground text-center">Contractor Screening</h2>
+            <h2 className="text-2xl font-bold text-foreground text-center">Contractor Screening</h2>
             <div className="max-h-[55vh] overflow-y-auto pr-1">
               <ContractorScreening
                 jurisdiction={flow.jurisdiction}
