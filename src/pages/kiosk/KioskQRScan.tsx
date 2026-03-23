@@ -159,7 +159,7 @@ export default function KioskQRScan() {
             <div className="h-20 w-20 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
               <AlertTriangle className="h-12 w-12" />
             </div>
-            <h2 className="text-3xl font-bold text-foreground">Not Found</h2>
+            <h2 className="text-2xl font-bold text-foreground">Not Found</h2>
             <p className="text-lg text-muted-foreground">No visitor found with this code.</p>
           </>
         )}
