@@ -306,7 +306,7 @@ export default function KioskCheckIn() {
         {/* Step: Who are you visiting */}
         {step === "visiting" && (
           <motion.div key="visiting" {...anim} className="space-y-4">
-            <h2 className="text-3xl font-bold text-foreground text-center">Who Are You Visiting?</h2>
+            <h2 className="text-2xl font-bold text-foreground text-center">Who Are You Visiting?</h2>
 
             <div className="flex gap-3 justify-center">
               <button
