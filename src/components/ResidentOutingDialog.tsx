@@ -12,15 +12,17 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Switch } from "@/components/ui/switch";
 import { CompanionDetail } from "@/types/visitor";
 import {
   Search, ArrowLeft, ArrowRight, Check, Clock, CalendarDays,
-  Users, Plus, Trash2, ScrollText, MapPin, DoorOpen, ShieldAlert, AlertTriangle,
+  Users, Plus, Trash2, ScrollText, MapPin, DoorOpen, ShieldAlert, AlertTriangle, ClipboardCheck,
 } from "lucide-react";
 import { useActiveLeaveTypes } from "@/hooks/useLeaveTypes";
 import { useCompanionFields } from "@/hooks/useFormFields";
 import { useResidents } from "@/hooks/useResidents";
 import { useStaffMembers } from "@/hooks/useStaffMembers";
+import { useActiveHealthQuestions } from "@/hooks/useHealthQuestions";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 
@@ -77,7 +79,10 @@ export function ResidentOutingDialog({
   const { data: leaveTypesData = [] } = useActiveLeaveTypes();
   const { data: companionFieldsConfig = [] } = useCompanionFields("resident");
   const activeCompanionFields = companionFieldsConfig.filter(f => f.is_active).sort((a, b) => a.sort_order - b.sort_order);
+  const { data: healthQuestions = [] } = useActiveHealthQuestions("resident");
 
+  // Health question answers
+  const [healthAnswers, setHealthAnswers] = useState<Record<string, string>>({});
   // Shared state
   const [mode, setMode] = useState<OutingMode>(defaultMode);
   const [searchQuery, setSearchQuery] = useState("");
@@ -146,9 +151,21 @@ export function ResidentOutingDialog({
     setCompanions([]);
     setPrivacyAcknowledged(false);
     setReturnNotificationOptIn(false);
+    setHealthAnswers({});
   };
 
   const handleClose = () => { resetForm(); onOpenChange(false); };
+
+  // Build health answers string for payload
+  const buildHealthAnswersString = () => {
+    if (healthQuestions.length === 0) return "";
+    const parts: string[] = [];
+    for (const q of healthQuestions) {
+      const ans = healthAnswers[q.id];
+      if (ans !== undefined && ans !== "") parts.push(`${q.question}: ${ans}`);
+    }
+    return parts.join(" | ");
+  };
 
   // ── Short outing submit ──
   const handleShortSubmit = () => {
@@ -158,13 +175,16 @@ export function ResidentOutingDialog({
       ? customDestination
       : destinationCategories.find(d => d.value === destination)?.label || destination;
 
+    const healthStr = buildHealthAnswersString();
+    const commentParts = [shortNotes, escortName ? `Escort: ${escortName}${escortPhone ? ` (${escortPhone})` : ""}` : "", escortPhone ? `Escort phone: ${escortPhone}` : "", healthStr].filter(Boolean);
+
     onMarkAway(selectedResident.id, {
       expectedReturnDate: returnDate,
       checkoutReason: destLabel || undefined,
       leaveType: "Away",
       accompaniedBy: escortType || undefined,
       accompaniedByName: escortName || undefined,
-      comments: [shortNotes, escortName ? `Escort: ${escortName}${escortPhone ? ` (${escortPhone})` : ""}` : "", escortPhone ? `Escort phone: ${escortPhone}` : ""].filter(Boolean).join("\n") || undefined,
+      comments: commentParts.join("\n") || undefined,
       returnNotificationOptIn: true,
     });
     resetForm();
@@ -181,6 +201,8 @@ export function ResidentOutingDialog({
       combinedReturnDate.setHours(h, m, 0, 0);
     }
     const reason = checkoutReason || customReason;
+    const healthStr = buildHealthAnswersString();
+    const finalComments = [comments, healthStr].filter(Boolean).join("\n");
 
     onMarkAway(selectedResident.id, {
       expectedReturnDate: combinedReturnDate,
@@ -188,7 +210,7 @@ export function ResidentOutingDialog({
       leaveType: reason || undefined,
       accompaniedBy: accompaniedBy || undefined,
       accompaniedByName: accompaniedByName || undefined,
-      comments: comments || undefined,
+      comments: finalComments || undefined,
       returnNotificationOptIn,
       companionDetails: companions.length > 0 ? companions : undefined,
     });
@@ -436,6 +458,44 @@ export function ResidentOutingDialog({
                       </div>
                     )}
                   </div>
+
+                  {/* Pre-Departure Questions */}
+                  {healthQuestions.length > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-border">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <ClipboardCheck className="h-3 w-3" /> Pre-Departure Questions
+                      </p>
+                      {healthQuestions.map(q => (
+                        <div key={q.id} className="space-y-1">
+                          <Label className="text-[11px]">{q.question} {q.required && <span className="text-destructive">*</span>}</Label>
+                          {q.type === "yesno" ? (
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={healthAnswers[q.id] === "true"}
+                                onCheckedChange={c => setHealthAnswers(prev => ({ ...prev, [q.id]: c ? "true" : "false" }))}
+                              />
+                              <span className="text-xs text-muted-foreground">{healthAnswers[q.id] === "true" ? "Yes" : "No"}</span>
+                            </div>
+                          ) : q.type === "textarea" ? (
+                            <Textarea
+                              value={healthAnswers[q.id] || ""}
+                              onChange={e => setHealthAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                              placeholder={q.placeholder || ""}
+                              rows={2}
+                              className="text-sm resize-none rounded-lg"
+                            />
+                          ) : (
+                            <Input
+                              value={healthAnswers[q.id] || ""}
+                              onChange={e => setHealthAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                              placeholder={q.placeholder || ""}
+                              className="rounded-lg h-9 text-sm"
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Notes */}
                   <div className="space-y-1">
@@ -695,6 +755,44 @@ export function ResidentOutingDialog({
                           })()}
                         </div>
                       </div>
+
+                      {/* Pre-Departure Questions */}
+                      {healthQuestions.length > 0 && (
+                        <div className="space-y-2 pt-2 border-t border-border">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                            <ClipboardCheck className="h-3 w-3" /> Pre-Departure Questions
+                          </p>
+                          {healthQuestions.map(q => (
+                            <div key={q.id} className="space-y-1">
+                              <Label className="text-[11px]">{q.question} {q.required && <span className="text-destructive">*</span>}</Label>
+                              {q.type === "yesno" ? (
+                                <div className="flex items-center gap-2">
+                                  <Switch
+                                    checked={healthAnswers[q.id] === "true"}
+                                    onCheckedChange={c => setHealthAnswers(prev => ({ ...prev, [q.id]: c ? "true" : "false" }))}
+                                  />
+                                  <span className="text-xs text-muted-foreground">{healthAnswers[q.id] === "true" ? "Yes" : "No"}</span>
+                                </div>
+                              ) : q.type === "textarea" ? (
+                                <Textarea
+                                  value={healthAnswers[q.id] || ""}
+                                  onChange={e => setHealthAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                                  placeholder={q.placeholder || ""}
+                                  rows={2}
+                                  className="text-sm resize-none rounded-lg"
+                                />
+                              ) : (
+                                <Input
+                                  value={healthAnswers[q.id] || ""}
+                                  onChange={e => setHealthAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                                  placeholder={q.placeholder || ""}
+                                  className="rounded-lg h-9 text-sm"
+                                />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
                       {/* Terms */}
                       <div className="rounded-xl border border-border p-3 space-y-3">
