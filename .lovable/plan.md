@@ -1,57 +1,47 @@
 
 
-# Resident Leave: Settings + Kiosk Parity
+# Preload Resident Leave Form Fields + Sync Web Dialogs
 
-## Problem
+## Overview
 
-1. **Settings gap**: Resident settings exclude "Check-In Form Fields" and "Check-in Questions" (health/compliance). These sections are currently restricted to non-resident types. But when a resident goes on an outing, care homes need configurable pre-departure questions (e.g., "Do you have your medication?", "Do you have your mobile phone?", "Emergency contact confirmed?").
+Insert 5 default form fields into `form_fields` table for `visitor_type = 'resident'`, then update the two web app dialogs (`ResidentOutingDialog` and `ResidentLeaveDialog`) to fetch and render any active health/compliance questions configured in Settings. No seed health questions per your request.
 
-2. **Kiosk gap**: The web app (`ResidentOutingDialog`) collects destination, escort details, companion info, and notes. The kiosk (`KioskResidentLeave`) only asks for leave type and expected return — no configurable questions, no escort/companion capture, no T&C acknowledgment.
+## Step 1 — Insert seed form fields (database insert, not migration)
 
-## Plan
+Insert 5 rows into `form_fields` with `visitor_type = 'resident'`:
 
-### Step 1 — Add settings sections for Residents
+| field_key | label | field_type | required | sort_order |
+|-----------|-------|------------|----------|------------|
+| `leave_mode` | Short Outing or Leave | `select` | true | 1 |
+| `destination` | Where are they going? | `text` | true | 2 |
+| `expected_return` | Expected return date & time | `text` | false | 3 |
+| `accompanied_by` | Who are they going out with? | `select` | true | 4 |
+| `comments` | Comments | `textarea` | false | 5 |
 
-In `PersonTypeSettings.tsx`, add two new accordion sections for the `resident` type:
+## Step 2 — Update ResidentOutingDialog
 
-- **"Leave Form Fields"** — reuses `FormFieldsManager` with `visitorType="resident"`. Admins can configure fields like "Destination", "Escort Name", "Contact Phone" that appear during resident departure.
-- **"Leave Questions"** — reuses `HealthQuestionsManager` with `visitorType="resident"`. Admins can add yes/no or text questions like "Medication taken?", "Mobile phone charged?", "Key worker informed?".
+- Import `useActiveHealthQuestions` from `useHealthQuestions`
+- Fetch active health questions for `visitor_type = 'resident'`
+- Add state for `healthAnswers: Record<string, string>`
+- If questions exist, render them in a collapsible section before the submit button (both short-outing and planned-leave modes)
+- Include answers in the `comments` or `details` payload passed to `onMarkAway`
 
-These use the existing `form_fields` and `health_questions` tables with `visitor_type = 'resident'`, so no database changes needed.
+## Step 3 — Update ResidentLeaveDialog
 
-**File**: `src/components/settings/PersonTypeSettings.tsx`
-- Remove the `type !== "resident"` guard from form fields
-- Remove the exclusion of `resident` from health questions
-- Relabel them contextually: "Leave Form Fields" and "Leave Compliance Questions" when type is resident
+- Import `useActiveHealthQuestions`
+- Fetch active health questions for `visitor_type = 'resident'`
+- Add state for `healthAnswers`
+- Insert a "Pre-Departure" step between "Companions" (step 4) and "Confirm" (step 5), making steps: Resident → Schedule → Reason → Companions → Pre-Departure → Confirm
+- Only show the step if there are active questions; skip it automatically if none configured
+- Include answers in the `comments` field of the submitted visitor object
 
-### Step 2 — Add questions to Kiosk Resident Leave flow
-
-In `KioskResidentLeave.tsx`, after the resident selects leave type and before the confirm screen:
-
-- Fetch active `form_fields` and `health_questions` for `visitor_type = 'resident'` using existing hooks
-- If any are configured, insert a new step in the leaving flow that renders them (kiosk-sized inputs)
-- Store answers and pass them through to the checkout call
-
-**File**: `src/pages/kiosk/KioskResidentLeave.tsx`
-- Import `useFormFields` and `useActiveHealthQuestions` hooks
-- Add a `"questions"` mode between `"leaving-confirm"` step's leave-type selection and the actual confirm action
-- Render form fields and health questions using kiosk-appropriate large inputs
-- Include answers in the checkout reason/details
-
-### Step 3 — Relabel for clarity
-
-In the settings accordion, when rendering for residents:
-- "Check-In Form Fields" → "Leave Form Fields"
-- "Check-in Questions" → "Pre-Departure Questions"
-
-This makes it clear these apply to the resident departure workflow, not a check-in.
-
-## Summary of changes
+## Files changed
 
 | File | Change |
 |------|--------|
-| `PersonTypeSettings.tsx` | Add form fields + health questions sections for resident type with contextual labels |
-| `KioskResidentLeave.tsx` | Add configurable questions step between leave-type selection and confirm |
+| Database (insert tool) | 5 rows into `form_fields` |
+| `src/components/ResidentOutingDialog.tsx` | Add health questions section |
+| `src/components/ResidentLeaveDialog.tsx` | Add pre-departure questions step |
 
-No database migrations needed — the existing `form_fields` and `health_questions` tables already support `visitor_type = 'resident'`.
+No migrations needed. Settings and Kiosk already consume these hooks — no changes required there.
 
