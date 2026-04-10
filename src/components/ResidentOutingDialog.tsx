@@ -79,7 +79,10 @@ export function ResidentOutingDialog({
   const { data: leaveTypesData = [] } = useActiveLeaveTypes();
   const { data: companionFieldsConfig = [] } = useCompanionFields("resident");
   const activeCompanionFields = companionFieldsConfig.filter(f => f.is_active).sort((a, b) => a.sort_order - b.sort_order);
+  const { data: healthQuestions = [] } = useActiveHealthQuestions("resident");
 
+  // Health question answers
+  const [healthAnswers, setHealthAnswers] = useState<Record<string, string>>({});
   // Shared state
   const [mode, setMode] = useState<OutingMode>(defaultMode);
   const [searchQuery, setSearchQuery] = useState("");

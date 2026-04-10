@@ -49,7 +49,9 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
   const { data: leaveTypesData = [] } = useActiveLeaveTypes();
   const { data: companionFieldsConfig = [] } = useCompanionFields("resident");
   const activeCompanionFields = companionFieldsConfig.filter((f) => f.is_active).sort((a, b) => a.sort_order - b.sort_order);
+  const { data: healthQuestions = [] } = useActiveHealthQuestions("resident");
 
+  const [healthAnswers, setHealthAnswers] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedResident, setSelectedResident] = useState<{ id: string; name: string; room: string; wing: string } | null>(null);
   const [expectedReturnDate, setExpectedReturnDate] = useState<Date | undefined>(undefined);
