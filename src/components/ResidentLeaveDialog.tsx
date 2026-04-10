@@ -38,7 +38,8 @@ const escortOptions = [
   { value: "group", label: "Group Outing (Staff-led)", emoji: "👥" },
 ];
 
-const steps = ["Resident", "Schedule", "Reason", "Companions", "Confirm"];
+const baseSteps = ["Resident", "Schedule", "Reason", "Companions", "Confirm"];
+const stepsWithQuestions = ["Resident", "Schedule", "Reason", "Companions", "Pre-Departure", "Confirm"];
 
 export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLeaveDialogProps) {
   const { residents: dbResidents } = useResidents();
