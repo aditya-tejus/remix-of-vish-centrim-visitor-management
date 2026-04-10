@@ -151,7 +151,9 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
     if (step === 2) return !!expectedReturnDate;
     if (step === 3) return !!checkoutReason;
     if (step === 4) return !!accompaniedBy;
-    return privacyAcknowledged;
+    if (step === preDepartureStep) return true; // pre-departure questions are optional to proceed
+    if (step === confirmStep) return privacyAcknowledged;
+    return true;
   };
 
   const selectedEscort = escortOptions.find(o => o.value === accompaniedBy);
