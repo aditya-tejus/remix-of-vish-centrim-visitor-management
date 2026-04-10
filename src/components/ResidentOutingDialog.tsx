@@ -151,9 +151,21 @@ export function ResidentOutingDialog({
     setCompanions([]);
     setPrivacyAcknowledged(false);
     setReturnNotificationOptIn(false);
+    setHealthAnswers({});
   };
 
   const handleClose = () => { resetForm(); onOpenChange(false); };
+
+  // Build health answers string for payload
+  const buildHealthAnswersString = () => {
+    if (healthQuestions.length === 0) return "";
+    const parts: string[] = [];
+    for (const q of healthQuestions) {
+      const ans = healthAnswers[q.id];
+      if (ans !== undefined && ans !== "") parts.push(`${q.question}: ${ans}`);
+    }
+    return parts.join(" | ");
+  };
 
   // ── Short outing submit ──
   const handleShortSubmit = () => {
