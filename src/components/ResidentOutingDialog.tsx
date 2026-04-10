@@ -175,13 +175,16 @@ export function ResidentOutingDialog({
       ? customDestination
       : destinationCategories.find(d => d.value === destination)?.label || destination;
 
+    const healthStr = buildHealthAnswersString();
+    const commentParts = [shortNotes, escortName ? `Escort: ${escortName}${escortPhone ? ` (${escortPhone})` : ""}` : "", escortPhone ? `Escort phone: ${escortPhone}` : "", healthStr].filter(Boolean);
+
     onMarkAway(selectedResident.id, {
       expectedReturnDate: returnDate,
       checkoutReason: destLabel || undefined,
       leaveType: "Away",
       accompaniedBy: escortType || undefined,
       accompaniedByName: escortName || undefined,
-      comments: [shortNotes, escortName ? `Escort: ${escortName}${escortPhone ? ` (${escortPhone})` : ""}` : "", escortPhone ? `Escort phone: ${escortPhone}` : ""].filter(Boolean).join("\n") || undefined,
+      comments: commentParts.join("\n") || undefined,
       returnNotificationOptIn: true,
     });
     resetForm();
@@ -198,6 +201,8 @@ export function ResidentOutingDialog({
       combinedReturnDate.setHours(h, m, 0, 0);
     }
     const reason = checkoutReason || customReason;
+    const healthStr = buildHealthAnswersString();
+    const finalComments = [comments, healthStr].filter(Boolean).join("\n");
 
     onMarkAway(selectedResident.id, {
       expectedReturnDate: combinedReturnDate,
@@ -205,7 +210,7 @@ export function ResidentOutingDialog({
       leaveType: reason || undefined,
       accompaniedBy: accompaniedBy || undefined,
       accompaniedByName: accompaniedByName || undefined,
-      comments: comments || undefined,
+      comments: finalComments || undefined,
       returnNotificationOptIn,
       companionDetails: companions.length > 0 ? companions : undefined,
     });
