@@ -5,19 +5,25 @@ import { Button } from "@/components/ui/button";
 import { useResidents } from "@/hooks/useResidents";
 import { useVisitors } from "@/hooks/useVisitors";
 import { useActiveLeaveTypes } from "@/hooks/useLeaveTypes";
+import { useFormFields } from "@/hooks/useFormFields";
+import { useActiveHealthQuestions } from "@/hooks/useHealthQuestions";
 import { useToast } from "@/hooks/use-toast";
-import { DoorOpen, Search, Home, ArrowLeft, ArrowRight, Calendar } from "lucide-react";
+import { DoorOpen, Search, Home, ArrowLeft, ArrowRight, Calendar, ClipboardList } from "lucide-react";
 import { motion } from "framer-motion";
 import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
 import { KioskSuccessScreen } from "@/components/kiosk/KioskSuccessScreen";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 
-type Mode = "select" | "leaving" | "leaving-confirm" | "returning" | "returning-confirm";
+type Mode = "select" | "leaving" | "leaving-confirm" | "leaving-questions" | "returning" | "returning-confirm";
 
 export default function KioskResidentLeave() {
   const navigate = useNavigate();
   const { residents } = useResidents();
   const { visitors, checkOutVisitor, checkInReturn } = useVisitors();
   const { data: leaveTypes = [] } = useActiveLeaveTypes();
+  const { data: formFields = [] } = useFormFields("resident");
+  const { data: healthQuestions = [] } = useActiveHealthQuestions("resident");
   const { toast } = useToast();
 
   const [mode, setMode] = useState<Mode>("select");
@@ -27,6 +33,15 @@ export default function KioskResidentLeave() {
   const [selectedLeaveType, setSelectedLeaveType] = useState<string>("");
   const [expectedReturn, setExpectedReturn] = useState("");
   const [doneMessage, setDoneMessage] = useState<{ title: string; subtitle: string } | null>(null);
+  const [formAnswers, setFormAnswers] = useState<Record<string, string>>({});
+  const [healthAnswers, setHealthAnswers] = useState<Record<string, string | boolean>>({});
+
+  const activeFormFields = useMemo(
+    () => formFields.filter((f) => f.is_active).sort((a, b) => a.sort_order - b.sort_order),
+    [formFields]
+  );
+
+  const hasQuestions = activeFormFields.length > 0 || healthQuestions.length > 0;
 
   const awayResidents = useMemo(
     () => visitors.filter((v) => v.type === "resident" && v.status === "checked-out"),
@@ -52,11 +67,40 @@ export default function KioskResidentLeave() {
     setMode("leaving-confirm");
   };
 
+  const handleProceedFromConfirm = () => {
+    if (hasQuestions) {
+      setFormAnswers({});
+      setHealthAnswers({});
+      setMode("leaving-questions");
+    } else {
+      handleConfirmLeave();
+    }
+  };
+
   const handleConfirmLeave = async () => {
     if (!selectedResident) return;
     const name = `${selectedResident.firstName} ${selectedResident.surname}`;
     const roomNum = selectedResident.room || "—";
-    await checkOutVisitor(selectedResident.visitorId, `Kiosk self-service departure${selectedLeaveType ? ` — ${selectedLeaveType}` : ""}`);
+
+    // Build checkout reason with answers
+    let reason = `Kiosk self-service departure${selectedLeaveType ? ` — ${selectedLeaveType}` : ""}`;
+    const extraDetails: string[] = [];
+    for (const f of activeFormFields) {
+      if (formAnswers[f.field_key]) {
+        extraDetails.push(`${f.label}: ${formAnswers[f.field_key]}`);
+      }
+    }
+    for (const q of healthQuestions) {
+      const ans = healthAnswers[q.id];
+      if (ans !== undefined && ans !== "") {
+        extraDetails.push(`${q.question}: ${ans}`);
+      }
+    }
+    if (extraDetails.length > 0) {
+      reason += ` | ${extraDetails.join(" | ")}`;
+    }
+
+    await checkOutVisitor(selectedResident.visitorId, reason);
     setDoneMessage({ title: `${name} — have a safe trip!`, subtitle: `Room ${roomNum} departure recorded` });
     toast({ title: "Departure Recorded", description: `${name} has been marked as away.` });
   };
@@ -84,6 +128,98 @@ export default function KioskResidentLeave() {
         accentColor="info"
         onComplete={handleComplete}
       />
+    );
+  }
+
+  // Pre-departure questions step
+  if (mode === "leaving-questions" && selectedResident) {
+    const name = `${selectedResident.firstName} ${selectedResident.surname}`;
+    return (
+      <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} className="w-full space-y-6">
+        <div className="flex items-center gap-3">
+          <Button variant="secondary" onClick={() => setMode("leaving-confirm")} className="h-14 gap-2 min-h-[48px] border border-border">
+            <ArrowLeft className="h-5 w-5" /> Back
+          </Button>
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">Pre-Departure Check</h2>
+            <p className="text-sm text-muted-foreground">{name}</p>
+          </div>
+        </div>
+
+        <div className="space-y-4 max-h-[calc(100vh-320px)] overflow-y-auto kiosk-scroll-fade">
+          {/* Form fields */}
+          {activeFormFields.length > 0 && (
+            <div className="space-y-3">
+              {activeFormFields.map((f) => (
+                <div key={f.id} className="space-y-1.5">
+                  <label className="text-sm font-semibold text-muted-foreground">
+                    {f.label} {f.required && <span className="text-destructive">*</span>}
+                  </label>
+                  <Input
+                    value={formAnswers[f.field_key] || ""}
+                    onChange={(e) => setFormAnswers((prev) => ({ ...prev, [f.field_key]: e.target.value }))}
+                    placeholder={f.label}
+                    className="h-14 text-lg"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Health / compliance questions */}
+          {healthQuestions.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <ClipboardList className="h-3.5 w-3.5" /> Compliance Questions
+              </p>
+              {healthQuestions.map((q) => (
+                <div key={q.id} className="rounded-xl border border-border bg-card p-4 space-y-2">
+                  <p className="text-base font-medium text-foreground">
+                    {q.question} {q.required && <span className="text-destructive">*</span>}
+                  </p>
+                  {q.type === "yesno" ? (
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        checked={healthAnswers[q.id] === true}
+                        onCheckedChange={(checked) => setHealthAnswers((prev) => ({ ...prev, [q.id]: checked }))}
+                      />
+                      <span className="text-sm text-muted-foreground">
+                        {healthAnswers[q.id] === true ? "Yes" : healthAnswers[q.id] === false ? "No" : "—"}
+                      </span>
+                    </div>
+                  ) : q.type === "textarea" ? (
+                    <Textarea
+                      value={(healthAnswers[q.id] as string) || ""}
+                      onChange={(e) => setHealthAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
+                      placeholder={q.placeholder || ""}
+                      className="text-base min-h-[80px]"
+                    />
+                  ) : (
+                    <Input
+                      value={(healthAnswers[q.id] as string) || ""}
+                      onChange={(e) => setHealthAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
+                      placeholder={q.placeholder || ""}
+                      className="h-14 text-lg"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3">
+          <Button variant="secondary" onClick={() => setMode("leaving-confirm")} className="flex-1 h-14 text-base gap-2 border border-border">
+            <ArrowLeft className="h-5 w-5" /> Back
+          </Button>
+          <Button
+            onClick={handleConfirmLeave}
+            className="flex-1 h-14 text-base gap-2 bg-warning hover:bg-warning/90 text-warning-foreground"
+          >
+            <DoorOpen className="h-5 w-5" /> Confirm Departure
+          </Button>
+        </div>
+      </motion.div>
     );
   }
 
@@ -139,8 +275,12 @@ export default function KioskResidentLeave() {
           <Button variant="secondary" onClick={() => setMode("leaving")} className="flex-1 h-14 text-base gap-2 border border-border">
             <ArrowLeft className="h-5 w-5" /> Back
           </Button>
-          <Button onClick={handleConfirmLeave} className="flex-1 h-14 text-base gap-2 bg-warning hover:bg-warning/90 text-warning-foreground">
-            <DoorOpen className="h-5 w-5" /> Confirm Departure
+          <Button onClick={handleProceedFromConfirm} className="flex-1 h-14 text-base gap-2 bg-warning hover:bg-warning/90 text-warning-foreground">
+            {hasQuestions ? (
+              <><ArrowRight className="h-5 w-5" /> Next</>
+            ) : (
+              <><DoorOpen className="h-5 w-5" /> Confirm Departure</>
+            )}
           </Button>
         </div>
       </motion.div>
