@@ -90,7 +90,13 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
     setCompanions([]);
     setPrivacyAcknowledged(false);
     setReturnNotificationOptIn(false);
+    setHealthAnswers({});
   };
+
+  const hasQuestions = healthQuestions.length > 0;
+  const steps = hasQuestions ? stepsWithQuestions : baseSteps;
+  const confirmStep = steps.length;
+  const preDepartureStep = hasQuestions ? confirmStep - 1 : -1;
 
   const handleClose = () => { resetForm(); onOpenChange(false); };
 
@@ -103,6 +109,14 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
       combinedReturnDate = new Date(expectedReturnDate);
       combinedReturnDate.setHours(h, m, 0, 0);
     }
+    // Build health answers into comments
+    const healthParts: string[] = [];
+    for (const q of healthQuestions) {
+      const ans = healthAnswers[q.id];
+      if (ans !== undefined && ans !== "") healthParts.push(`${q.question}: ${ans}`);
+    }
+    const finalComments = [comments, ...healthParts].filter(Boolean).join(" | ");
+
     const visitor: Omit<Visitor, "id"> = {
       firstName: firstName || "",
       surname: rest.join(" ") || "",
@@ -117,7 +131,7 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
       healthDeclaration: false,
       additionalVisitors: companions.length,
       companionDetails: companions.length > 0 ? companions : undefined,
-      comments,
+      comments: finalComments || undefined,
       retentionExpiry: new Date(Date.now() + 86400000 * 60),
       acknowledgedPrivacy: privacyAcknowledged,
       expectedReturnDate: combinedReturnDate,
