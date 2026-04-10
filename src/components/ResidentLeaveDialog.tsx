@@ -12,12 +12,14 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Switch } from "@/components/ui/switch";
 import { Visitor, CompanionDetail } from "@/types/visitor";
-import { Search, ArrowLeft, ArrowRight, Check, Home, Clock, CalendarDays, Users, Plus, Trash2, ScrollText, Shield } from "lucide-react";
+import { Search, ArrowLeft, ArrowRight, Check, Home, Clock, CalendarDays, Users, Plus, Trash2, ScrollText, Shield, ClipboardCheck } from "lucide-react";
 import { useActiveLeaveTypes } from "@/hooks/useLeaveTypes";
 import { useCompanionFields } from "@/hooks/useFormFields";
 import { useResidents } from "@/hooks/useResidents";
 import { useStaffMembers } from "@/hooks/useStaffMembers";
+import { useActiveHealthQuestions } from "@/hooks/useHealthQuestions";
 import { format } from "date-fns";
 
 interface ResidentLeaveDialogProps {

@@ -12,15 +12,17 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Switch } from "@/components/ui/switch";
 import { CompanionDetail } from "@/types/visitor";
 import {
   Search, ArrowLeft, ArrowRight, Check, Clock, CalendarDays,
-  Users, Plus, Trash2, ScrollText, MapPin, DoorOpen, ShieldAlert, AlertTriangle,
+  Users, Plus, Trash2, ScrollText, MapPin, DoorOpen, ShieldAlert, AlertTriangle, ClipboardCheck,
 } from "lucide-react";
 import { useActiveLeaveTypes } from "@/hooks/useLeaveTypes";
 import { useCompanionFields } from "@/hooks/useFormFields";
 import { useResidents } from "@/hooks/useResidents";
 import { useStaffMembers } from "@/hooks/useStaffMembers";
+import { useActiveHealthQuestions } from "@/hooks/useHealthQuestions";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 
