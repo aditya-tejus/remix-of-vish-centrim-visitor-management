@@ -756,6 +756,44 @@ export function ResidentOutingDialog({
                         </div>
                       </div>
 
+                      {/* Pre-Departure Questions */}
+                      {healthQuestions.length > 0 && (
+                        <div className="space-y-2 pt-2 border-t border-border">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                            <ClipboardCheck className="h-3 w-3" /> Pre-Departure Questions
+                          </p>
+                          {healthQuestions.map(q => (
+                            <div key={q.id} className="space-y-1">
+                              <Label className="text-[11px]">{q.question} {q.required && <span className="text-destructive">*</span>}</Label>
+                              {q.type === "yesno" ? (
+                                <div className="flex items-center gap-2">
+                                  <Switch
+                                    checked={healthAnswers[q.id] === "true"}
+                                    onCheckedChange={c => setHealthAnswers(prev => ({ ...prev, [q.id]: c ? "true" : "false" }))}
+                                  />
+                                  <span className="text-xs text-muted-foreground">{healthAnswers[q.id] === "true" ? "Yes" : "No"}</span>
+                                </div>
+                              ) : q.type === "textarea" ? (
+                                <Textarea
+                                  value={healthAnswers[q.id] || ""}
+                                  onChange={e => setHealthAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                                  placeholder={q.placeholder || ""}
+                                  rows={2}
+                                  className="text-sm resize-none rounded-lg"
+                                />
+                              ) : (
+                                <Input
+                                  value={healthAnswers[q.id] || ""}
+                                  onChange={e => setHealthAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                                  placeholder={q.placeholder || ""}
+                                  className="rounded-lg h-9 text-sm"
+                                />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                       {/* Terms */}
                       <div className="rounded-xl border border-border p-3 space-y-3">
                         <div className="flex items-center gap-2">
