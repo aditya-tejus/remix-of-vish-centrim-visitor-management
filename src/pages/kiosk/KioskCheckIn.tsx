@@ -591,102 +591,29 @@ export default function KioskCheckIn() {
         {/* Step: Health Screening */}
         {step === "screening" && (
           <motion.div key="screening" {...anim} className="space-y-4">
-            <div className="text-center space-y-1">
-              <h2 className="text-2xl font-bold text-foreground">Health Screening</h2>
-              <p className="text-sm text-muted-foreground">
-                {Object.keys(flow.healthAnswers).length} of {flow.healthQuestions.length} answered
-              </p>
-            </div>
-            <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1 kiosk-scroll-fade">
-              {flow.healthQuestions.map((q, idx) => {
-                const answer = flow.healthAnswers[q.id];
-                const isYesNo = q.type === "yesno";
-                const hasYes = isYesNo && answer === true;
-                const hasNo = isYesNo && answer === false;
-                return (
-                  <div key={q.id} className={`rounded-2xl border-2 p-5 transition-all ${
-                    hasNo ? "border-success/30 bg-success/5" : hasYes ? "border-destructive/30 bg-destructive/5" : "border-border bg-card"
-                  }`}>
-                    <div className="flex items-start gap-3 mb-3">
-                      <span className={`text-sm font-bold shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${
-                        hasNo ? "bg-success text-success-foreground" : hasYes ? "bg-destructive text-destructive-foreground" : "bg-muted text-muted-foreground"
-                      }`}>{hasNo ? "✓" : hasYes ? "✗" : idx + 1}</span>
-                      <p className="text-base text-foreground font-medium leading-relaxed">
-                        {q.question}{q.required && <span className="text-destructive ml-0.5">*</span>}
-                      </p>
-                    </div>
-                    <div className="ml-11">
-                      {q.type === "yesno" && (
-                        <div className="flex gap-3">
-                          <button onClick={() => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [q.id]: false }))}
-                            className={`flex-1 py-4 rounded-xl text-base font-bold transition-all flex items-center justify-center gap-2 min-h-[52px] ${answer === false ? "bg-success text-success-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-success/20"}`}>
-                            ✓ No
-                          </button>
-                          <button onClick={() => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [q.id]: true }))}
-                            className={`flex-1 py-4 rounded-xl text-base font-bold transition-all flex items-center justify-center gap-2 min-h-[52px] ${answer === true ? "bg-destructive text-destructive-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-destructive/20"}`}>
-                            ✗ Yes
-                          </button>
-                        </div>
-                      )}
-                      {q.type === "text" && (
-                        <Input value={answer || ""} onChange={(e) => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [q.id]: e.target.value }))}
-                          placeholder={q.placeholder || "Enter response..."} className="h-14 text-lg rounded-xl" />
-                      )}
-                      {q.type === "textarea" && (
-                        <Textarea value={answer || ""} onChange={(e) => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [q.id]: e.target.value }))}
-                          placeholder={q.placeholder || "Enter details..."} className="min-h-[80px] text-base rounded-xl resize-none" />
-                      )}
-                      {q.type === "select" && q.options && (
-                        <Select value={answer || ""} onValueChange={(val) => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [q.id]: val }))}>
-                          <SelectTrigger className="h-14 text-base rounded-xl"><SelectValue placeholder="Select..." /></SelectTrigger>
-                          <SelectContent>{(q.options as string[]).map((opt) => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
-                        </Select>
-                      )}
-                      {q.type === "checkbox" && (
-                        <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 cursor-pointer"
-                          onClick={() => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [q.id]: !prev[q.id] }))}>
-                          <Checkbox checked={!!answer} className="h-6 w-6" />
-                          <span className="text-base text-foreground font-medium">Yes, I confirm</span>
-                        </div>
-                      )}
-                      {hasYes && (
-                        <div className="mt-3 rounded-xl bg-destructive/10 border border-destructive/20 p-3 flex items-center gap-2">
-                          <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
-                          <p className="text-sm text-destructive font-medium">This may require staff review.</p>
-                        </div>
-                      )}
-                    </div>
+            <KioskDynamicQuestions
+              title="Health Screening"
+              healthQuestions={flow.healthQuestions}
+              healthAnswers={flow.healthAnswers}
+              onHealthAnswerChange={(id, value) => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [id]: value }))}
+            />
+
+            {flow.vaccinationFields.length > 0 && (
+              <div className="pt-3 mt-2 border-t border-border space-y-3">
+                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Vaccination Records</p>
+                {flow.vaccinationFields.map((vf) => (
+                  <div key={vf.id} className="rounded-2xl border-2 border-border bg-card p-5">
+                    <label className="text-base text-foreground font-medium block mb-2">
+                      {vf.label}{vf.required && <span className="text-destructive ml-0.5">*</span>}
+                    </label>
+                    <Input
+                      type={vf.field_type === "date" ? "date" : "text"}
+                      value={flow.healthAnswers[`vacc_${vf.name}`] || ""}
+                      onChange={(e) => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [`vacc_${vf.name}`]: e.target.value }))}
+                      className="h-14 text-lg rounded-xl"
+                    />
                   </div>
-                );
-              })}
-
-              {flow.vaccinationFields.length > 0 && (
-                <div className="pt-3 mt-2 border-t border-border space-y-3">
-                  <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Vaccination Records</p>
-                  {flow.vaccinationFields.map((vf) => (
-                    <div key={vf.id} className="rounded-2xl border-2 border-border bg-card p-5">
-                      <label className="text-base text-foreground font-medium block mb-2">
-                        {vf.label}{vf.required && <span className="text-destructive ml-0.5">*</span>}
-                      </label>
-                      <Input
-                        type={vf.field_type === "date" ? "date" : "text"}
-                        value={flow.healthAnswers[`vacc_${vf.name}`] || ""}
-                        onChange={(e) => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [`vacc_${vf.name}`]: e.target.value }))}
-                        className="h-14 text-lg rounded-xl"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {flow.hasYesFlags && (
-              <div className="rounded-2xl bg-destructive/10 border-2 border-destructive/20 p-4 flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-base font-bold text-destructive">Health Concern Flagged</p>
-                  <p className="text-sm text-muted-foreground mt-0.5">Staff review may be required.</p>
-                </div>
+                ))}
               </div>
             )}
 
