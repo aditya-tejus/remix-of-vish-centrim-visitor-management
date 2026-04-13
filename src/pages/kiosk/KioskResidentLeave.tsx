@@ -12,8 +12,7 @@ import { DoorOpen, Search, Home, ArrowLeft, ArrowRight, Calendar, ClipboardList 
 import { motion } from "framer-motion";
 import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
 import { KioskSuccessScreen } from "@/components/kiosk/KioskSuccessScreen";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
+import { KioskDynamicQuestions } from "@/components/kiosk/KioskDynamicQuestions";
 
 type Mode = "select" | "leaving" | "leaving-confirm" | "leaving-questions" | "returning" | "returning-confirm";
 
@@ -136,77 +135,16 @@ export default function KioskResidentLeave() {
     const name = `${selectedResident.firstName} ${selectedResident.surname}`;
     return (
       <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} className="w-full space-y-6">
-        <div className="flex items-center gap-3">
-          <Button variant="secondary" onClick={() => setMode("leaving-confirm")} className="h-14 gap-2 min-h-[48px] border border-border">
-            <ArrowLeft className="h-5 w-5" /> Back
-          </Button>
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">Pre-Departure Check</h2>
-            <p className="text-sm text-muted-foreground">{name}</p>
-          </div>
-        </div>
-
-        <div className="space-y-4 max-h-[calc(100vh-320px)] overflow-y-auto kiosk-scroll-fade">
-          {/* Form fields */}
-          {activeFormFields.length > 0 && (
-            <div className="space-y-3">
-              {activeFormFields.map((f) => (
-                <div key={f.id} className="space-y-1.5">
-                  <label className="text-sm font-semibold text-muted-foreground">
-                    {f.label} {f.required && <span className="text-destructive">*</span>}
-                  </label>
-                  <Input
-                    value={formAnswers[f.field_key] || ""}
-                    onChange={(e) => setFormAnswers((prev) => ({ ...prev, [f.field_key]: e.target.value }))}
-                    placeholder={f.label}
-                    className="h-14 text-lg"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Health / compliance questions */}
-          {healthQuestions.length > 0 && (
-            <div className="space-y-3">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <ClipboardList className="h-3.5 w-3.5" /> Compliance Questions
-              </p>
-              {healthQuestions.map((q) => (
-                <div key={q.id} className="rounded-xl border border-border bg-card p-4 space-y-2">
-                  <p className="text-base font-medium text-foreground">
-                    {q.question} {q.required && <span className="text-destructive">*</span>}
-                  </p>
-                  {q.type === "yesno" ? (
-                    <div className="flex items-center gap-3">
-                      <Switch
-                        checked={healthAnswers[q.id] === true}
-                        onCheckedChange={(checked) => setHealthAnswers((prev) => ({ ...prev, [q.id]: checked }))}
-                      />
-                      <span className="text-sm text-muted-foreground">
-                        {healthAnswers[q.id] === true ? "Yes" : healthAnswers[q.id] === false ? "No" : "—"}
-                      </span>
-                    </div>
-                  ) : q.type === "textarea" ? (
-                    <Textarea
-                      value={(healthAnswers[q.id] as string) || ""}
-                      onChange={(e) => setHealthAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
-                      placeholder={q.placeholder || ""}
-                      className="text-base min-h-[80px]"
-                    />
-                  ) : (
-                    <Input
-                      value={(healthAnswers[q.id] as string) || ""}
-                      onChange={(e) => setHealthAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
-                      placeholder={q.placeholder || ""}
-                      className="h-14 text-lg"
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <KioskDynamicQuestions
+          title="Pre-Departure Check"
+          subtitle={name}
+          formFields={activeFormFields}
+          formAnswers={formAnswers}
+          onFormAnswerChange={(key, value) => setFormAnswers((prev) => ({ ...prev, [key]: value }))}
+          healthQuestions={healthQuestions}
+          healthAnswers={healthAnswers}
+          onHealthAnswerChange={(id, value) => setHealthAnswers((prev) => ({ ...prev, [id]: value }))}
+        />
 
         <div className="flex gap-3">
           <Button variant="secondary" onClick={() => setMode("leaving-confirm")} className="flex-1 h-14 text-base gap-2 border border-border">
