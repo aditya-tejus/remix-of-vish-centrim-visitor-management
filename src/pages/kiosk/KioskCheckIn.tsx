@@ -13,6 +13,7 @@ import { ContractorScreening } from "@/components/ContractorScreening";
 import { KioskProgressStepper } from "@/components/kiosk/KioskProgressStepper";
 import { KioskSuccessScreen } from "@/components/kiosk/KioskSuccessScreen";
 import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
+import { KioskDynamicQuestions } from "@/components/kiosk/KioskDynamicQuestions";
 import { useKioskCheckInFlow, KioskStepId } from "@/hooks/useKioskCheckInFlow";
 import {
   UserRound, Truck, Heart, ArrowLeft, ArrowRight, Shield, ScrollText,
