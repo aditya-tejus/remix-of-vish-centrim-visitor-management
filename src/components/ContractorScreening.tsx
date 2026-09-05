@@ -6,10 +6,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useSuppliers, Supplier } from "@/hooks/useSuppliers";
-import { Search, Check, Building2, Shield, HardHat, FileCheck, AlertTriangle, Syringe } from "lucide-react";
+import { Search, Check, Building2, Shield, HardHat, FileCheck, AlertTriangle, Syringe, ShieldAlert, CalendarClock, Loader2 } from "lucide-react";
+import { getSupplierCredentials, isContractorBlocked } from "@/lib/contractorCredentials";
+import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 // AU screening template
 const auScreeningQuestions = [
+  { id: "acws_check", label: "Aged Care Worker Screening clearance current?", type: "yesno" as const, required: true, icon: Shield },
   { id: "swms", label: "Safe Work Method Statement (SWMS) provided?", type: "yesno" as const, required: true, icon: FileCheck },
   { id: "ppe", label: "Wearing appropriate PPE (hard hat, hi-vis, steel caps)?", type: "yesno" as const, required: true, icon: HardHat },
   { id: "permits", label: "Holds current work permits / licences?", type: "yesno" as const, required: true, icon: Shield },
@@ -38,6 +42,8 @@ interface ContractorScreeningProps {
   selectedSupplier: Supplier | null;
   onSupplierChange: (supplier: Supplier | null) => void;
   compact?: boolean;
+  /** Reports whether the highest-risk credential blocks check-in */
+  onBlockedChange?: (blocked: boolean, reason: string | null) => void;
 }
 
 export function ContractorScreening({
@@ -47,8 +53,11 @@ export function ContractorScreening({
   selectedSupplier,
   onSupplierChange,
   compact = true,
+  onBlockedChange,
 }: ContractorScreeningProps) {
-  const { suppliers } = useSuppliers();
+  const { suppliers, updateCredential } = useSuppliers();
+  const { toast } = useToast();
+  const [savingCredential, setSavingCredential] = useState<string | null>(null);
   const [supplierSearch, setSupplierSearch] = useState("");
   const [showSupplierList, setShowSupplierList] = useState(false);
 
@@ -77,6 +86,39 @@ export function ContractorScreening({
   const failedChecks = questions.filter(
     (q) => q.type === "yesno" && answers[q.id] === false
   );
+
+  const credentials = getSupplierCredentials(jurisdiction, selectedSupplier);
+  const gate = isContractorBlocked(jurisdiction, selectedSupplier);
+
+  useEffect(() => {
+    onBlockedChange?.(gate.blocked, gate.reason);
+  }, [gate.blocked, gate.reason, onBlockedChange]);
+
+  const saveCredential = async (field: string, value: string) => {
+    if (!selectedSupplier) return;
+    setSavingCredential(field);
+    try {
+      const updated = await updateCredential(selectedSupplier.id, { [field]: value || null } as any);
+      onSupplierChange(updated);
+    } catch {
+      toast({ title: "Could not save", description: "The credential details were not saved.", variant: "destructive" });
+    } finally {
+      setSavingCredential(null);
+    }
+  };
+
+  const stateStyles: Record<string, string> = {
+    valid: "border-success/30 bg-success/5",
+    expiring: "border-warning/40 bg-warning/5",
+    expired: "border-destructive/40 bg-destructive/5",
+    missing: "border-destructive/40 bg-destructive/5",
+  };
+  const stateLabel: Record<string, string> = {
+    valid: "Verified",
+    expiring: "Expiring soon",
+    expired: "Expired",
+    missing: "Not recorded",
+  };
 
   return (
     <div className="space-y-4">
@@ -154,6 +196,63 @@ export function ContractorScreening({
         )}
       </div>
 
+      {/* Credential verification — expiry + document reference held on the supplier record */}
+      {selectedSupplier && (
+        <div className="space-y-2">
+          <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <CalendarClock className="h-3.5 w-3.5" />
+            Credential Verification
+          </Label>
+          {credentials.map((c) => (
+            <div key={c.expiryField} className={`rounded-xl border-2 p-3 space-y-2 ${stateStyles[c.state]}`}>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[12px] font-semibold text-foreground">
+                  {c.label}
+                  {c.blocking && <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wider text-destructive">Required</span>}
+                </p>
+                <Badge variant="outline" className="text-[10px] font-bold shrink-0">
+                  {stateLabel[c.state]}
+                  {c.state === "expiring" && c.daysToExpiry !== null && ` · ${c.daysToExpiry}d`}
+                </Badge>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">Expiry date</Label>
+                  <Input
+                    type="date"
+                    defaultValue={c.expiry || ""}
+                    onBlur={(e) => e.target.value !== (c.expiry || "") && saveCredential(c.expiryField, e.target.value)}
+                    className="rounded-lg h-9 text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">Document reference</Label>
+                  <Input
+                    defaultValue={c.reference || ""}
+                    placeholder="Certificate / clearance no."
+                    onBlur={(e) => e.target.value !== (c.reference || "") && saveCredential(c.referenceField, e.target.value)}
+                    className="rounded-lg h-9 text-sm"
+                  />
+                </div>
+              </div>
+              {savingCredential === c.expiryField || savingCredential === c.referenceField ? (
+                <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Saving…</p>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {gate.blocked && gate.reason && (
+        <div className="rounded-xl border-2 border-destructive/40 bg-destructive/5 p-3 flex items-start gap-2">
+          <ShieldAlert className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+          <div>
+            <p className="text-[12px] font-bold text-destructive">Check-in blocked</p>
+            <p className="text-[11px] text-destructive/80">{gate.reason}</p>
+          </div>
+        </div>
+      )}
+
       {/* Jurisdiction badge */}
       <div className="flex items-center gap-2">
         <Badge variant="outline" className="text-[10px] font-bold">
@@ -172,10 +271,10 @@ export function ContractorScreening({
         </Label>
 
         {failedChecks.length > 0 && (
-          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3 flex items-start gap-2">
+          <div className="rounded-xl border border-warning/40 bg-warning/5 p-3 flex items-start gap-2">
             <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
             <div>
-              <p className="text-[12px] font-semibold text-destructive">Failed checks detected</p>
+              <p className="text-[12px] font-semibold text-destructive">Staff review required (not blocking)</p>
               <p className="text-[11px] text-destructive/80">
                 {failedChecks.map((q) => q.label.split("?")[0]).join("; ")}
               </p>
@@ -260,7 +359,7 @@ export function ContractorScreening({
       </div>
 
       {/* Completion indicator */}
-      {allRequiredAnswered && failedChecks.length === 0 && (
+      {allRequiredAnswered && failedChecks.length === 0 && !gate.blocked && (
         <div className="rounded-xl border border-success/30 bg-success/5 p-3 flex items-center gap-2">
           <Check className="h-4 w-4 text-success" />
           <p className="text-[12px] font-semibold text-success">All screening checks passed</p>

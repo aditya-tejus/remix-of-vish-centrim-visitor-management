@@ -5,6 +5,7 @@ import { useCompanionFields } from "@/hooks/useFormFields";
 import { useResidents } from "@/hooks/useResidents";
 import { useStaffMembers } from "@/hooks/useStaffMembers";
 import { supabase } from "@/integrations/supabase/client";
+import { isContractorBlocked } from "@/lib/contractorCredentials";
 import { Supplier } from "@/hooks/useSuppliers";
 
 export type StepId = "identify" | "details" | "screening" | "confirm";
@@ -219,6 +220,11 @@ export function useCheckInFlow(open: boolean) {
   const screeningFlagged = hasSymptomFlag || hasHighTemperature;
   const overrideValid = overrideReason.trim().length >= 3;
 
+  const contractorGate = selectedType === "contractor"
+    ? isContractorBlocked(jurisdiction as "AU" | "UK", selectedSupplier)
+    : { blocked: false, reason: null };
+  const contractorBlocked = contractorGate.blocked;
+
   const canProceed = useMemo(() => {
     switch (step) {
       case "identify":
@@ -226,13 +232,14 @@ export function useCheckInFlow(open: boolean) {
       case "details":
         return !!(formData.firstName && formData.surname);
       case "screening":
-        return true; // Flagged answers are handled with a staff override at confirm
+        // Contractors are blocked when the highest-risk credential is missing/expired
+        return !contractorBlocked;
       case "confirm":
-        return privacyAcknowledged && (!screeningFlagged || overrideValid);
+        return privacyAcknowledged && !contractorBlocked && (!screeningFlagged || overrideValid);
       default:
         return true;
     }
-  }, [step, formData, privacyAcknowledged, screeningFlagged, overrideValid]);
+  }, [step, formData, privacyAcknowledged, screeningFlagged, overrideValid, contractorBlocked]);
 
 
   const buildVisitor = (): Omit<Visitor, "id"> => {
@@ -280,6 +287,7 @@ export function useCheckInFlow(open: boolean) {
     healthQuestions, healthAnswers, setHealthAnswers,
     dbVaccFields, contractorScreeningAnswers, setContractorScreeningAnswers,
     selectedSupplier, setSelectedSupplier, jurisdiction,
+    contractorBlocked, contractorBlockReason: contractorGate.reason,
 
     // Companions
     companions, setCompanions, activeCompanionFields,

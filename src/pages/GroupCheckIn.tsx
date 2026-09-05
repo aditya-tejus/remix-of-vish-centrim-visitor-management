@@ -30,6 +30,7 @@ export default function GroupCheckIn() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [watchlistEntry, setWatchlistEntry] = useState<any>(null);
+  const [watchlistMatchType, setWatchlistMatchType] = useState<"confirmed" | "near">("confirmed");
   const [watchlistOpen, setWatchlistOpen] = useState(false);
   const [blockedMember, setBlockedMember] = useState<string>("");
 
@@ -54,10 +55,11 @@ export default function GroupCheckIn() {
     for (const m of valid) {
       const match = checkVisitor(m.firstName, m.surname);
       if (match) {
-        setWatchlistEntry(match);
+        setWatchlistEntry(match.entry);
+        setWatchlistMatchType(match.matchType);
         setBlockedMember(`${m.firstName} ${m.surname}`);
         setWatchlistOpen(true);
-        if (match.alert_type === "hard") return;
+        if (match.matchType === "near" || match.entry.alert_type === "hard") return;
       }
     }
 
@@ -184,6 +186,7 @@ export default function GroupCheckIn() {
           open={watchlistOpen}
           onOpenChange={setWatchlistOpen}
           entry={watchlistEntry}
+          matchType={watchlistMatchType}
           onProceed={() => {}}
           onDeny={() => toast({ title: "Entry Denied", description: `${blockedMember} is on the watchlist and cannot be checked in.`, variant: "destructive" })}
         />

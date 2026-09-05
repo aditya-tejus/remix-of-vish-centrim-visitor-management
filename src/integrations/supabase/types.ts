@@ -709,6 +709,68 @@ export type Database = {
           },
         ]
       }
+      resident_incidents: {
+        Row: {
+          created_at: string
+          description: string
+          expected_return_date: string | null
+          id: string
+          incident_type: string
+          priority: string
+          reported_at: string
+          reported_by: string
+          reported_by_user_id: string | null
+          resident_name: string
+          resolution_notes: string | null
+          resolved_at: string | null
+          status: string
+          updated_at: string
+          visitor_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          expected_return_date?: string | null
+          id?: string
+          incident_type?: string
+          priority?: string
+          reported_at?: string
+          reported_by?: string
+          reported_by_user_id?: string | null
+          resident_name: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+          visitor_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          expected_return_date?: string | null
+          id?: string
+          incident_type?: string
+          priority?: string
+          reported_at?: string
+          reported_by?: string
+          reported_by_user_id?: string | null
+          resident_name?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          status?: string
+          updated_at?: string
+          visitor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resident_incidents_visitor_id_fkey"
+            columns: ["visitor_id"]
+            isOneToOne: false
+            referencedRelation: "visitors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       settings: {
         Row: {
           id: string
@@ -783,36 +845,54 @@ export type Database = {
       suppliers_min: {
         Row: {
           abn: string | null
+          acws_expiry_date: string | null
+          acws_reference: string | null
           company_number: string | null
           contact_email: string | null
           contact_name: string | null
           contact_phone: string | null
           created_at: string
+          dbs_expiry_date: string | null
+          dbs_reference: string | null
           id: string
+          insurance_expiry_date: string | null
+          insurance_reference: string | null
           is_active: boolean
           name: string
           updated_at: string
         }
         Insert: {
           abn?: string | null
+          acws_expiry_date?: string | null
+          acws_reference?: string | null
           company_number?: string | null
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string
+          dbs_expiry_date?: string | null
+          dbs_reference?: string | null
           id?: string
+          insurance_expiry_date?: string | null
+          insurance_reference?: string | null
           is_active?: boolean
           name: string
           updated_at?: string
         }
         Update: {
           abn?: string | null
+          acws_expiry_date?: string | null
+          acws_reference?: string | null
           company_number?: string | null
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string
+          dbs_expiry_date?: string | null
+          dbs_reference?: string | null
           id?: string
+          insurance_expiry_date?: string | null
+          insurance_reference?: string | null
           is_active?: boolean
           name?: string
           updated_at?: string
@@ -885,12 +965,15 @@ export type Database = {
           alert_type: string | null
           branch_id: string | null
           created_at: string | null
+          date_of_birth: string | null
           first_name: string
           id: string
           instructions: string | null
           is_active: boolean | null
           photo_url: string | null
           reason: string
+          reason_category: string | null
+          review_date: string | null
           surname: string
           updated_at: string | null
         }
@@ -899,12 +982,15 @@ export type Database = {
           alert_type?: string | null
           branch_id?: string | null
           created_at?: string | null
+          date_of_birth?: string | null
           first_name: string
           id?: string
           instructions?: string | null
           is_active?: boolean | null
           photo_url?: string | null
           reason: string
+          reason_category?: string | null
+          review_date?: string | null
           surname: string
           updated_at?: string | null
         }
@@ -913,12 +999,15 @@ export type Database = {
           alert_type?: string | null
           branch_id?: string | null
           created_at?: string | null
+          date_of_birth?: string | null
           first_name?: string
           id?: string
           instructions?: string | null
           is_active?: boolean | null
           photo_url?: string | null
           reason?: string
+          reason_category?: string | null
+          review_date?: string | null
           surname?: string
           updated_at?: string | null
         }
@@ -955,6 +1044,7 @@ export type Database = {
           health_declaration: boolean | null
           id: string
           leave_type: string | null
+          legal_hold: boolean
           mobile: string
           print_status: string | null
           privacy_acknowledged: boolean | null
@@ -994,6 +1084,7 @@ export type Database = {
           health_declaration?: boolean | null
           id?: string
           leave_type?: string | null
+          legal_hold?: boolean
           mobile: string
           print_status?: string | null
           privacy_acknowledged?: boolean | null
@@ -1033,6 +1124,7 @@ export type Database = {
           health_declaration?: boolean | null
           id?: string
           leave_type?: string | null
+          legal_hold?: boolean
           mobile?: string
           print_status?: string | null
           privacy_acknowledged?: boolean | null

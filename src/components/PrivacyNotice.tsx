@@ -1,29 +1,34 @@
 import { Shield, ExternalLink } from "lucide-react";
+import { useJurisdiction } from "@/hooks/useJurisdiction";
 
 type VisitorTypeForPrivacy = "visitor" | "contractor" | "resident";
 
 const privacyContent: Record<VisitorTypeForPrivacy, {
   purpose: string;
   collected: string;
-  basis: string;
+  basisUK: string;
+  basisAU: string;
   retention: string;
 }> = {
   visitor: {
     purpose: "To manage visitor access, ensure safety, maintain security records, and respond to emergencies.",
     collected: "Name, contact details, check-in/out times, health declarations, companion details, and vaccination status.",
-    basis: "Legitimate Interests / Legal Obligation.",
+    basisUK: "Legitimate Interests / Legal Obligation.",
+    basisAU: "Collected for a primary purpose reasonably necessary for our functions (APP 3), and as required under the Aged Care Act 1997.",
     retention: "Default 60 days (configurable by the care home).",
   },
   contractor: {
     purpose: "To manage contractor site access, verify compliance with health & safety requirements, maintain work records, and fulfil regulatory obligations.",
     collected: "Name, company, contact details, check-in/out times, health & safety declarations, insurance/certification details, and work area access logs.",
-    basis: "Contractual Necessity / Legal Obligation / Legitimate Interests.",
+    basisUK: "Contractual Necessity / Legal Obligation / Legitimate Interests.",
+    basisAU: "Collected under APP 3 for contractor site safety, WHS obligations and worker screening requirements.",
     retention: "Default 60 days (configurable by the care home). May be retained longer for audit and insurance purposes.",
   },
   resident: {
     purpose: "To maintain resident welfare records, coordinate care visits, and ensure safeguarding compliance.",
     collected: "Name, contact details, visit records, health information, and next-of-kin details.",
-    basis: "Vital Interests / Legal Obligation / Legitimate Interests.",
+    basisUK: "Vital Interests / Legal Obligation / Legitimate Interests.",
+    basisAU: "Sensitive information collected with consent or where necessary to lessen a serious threat to life or health (APP 3.4), and under the Aged Care Act 1997.",
     retention: "Default 60 days (configurable by the care home).",
   },
 };
@@ -34,6 +39,7 @@ interface PrivacyNoticeProps {
 
 export function PrivacyNotice({ visitorType = "visitor" }: PrivacyNoticeProps) {
   const content = privacyContent[visitorType];
+  const { isUK, regimeShort, controllerTerm, regulator } = useJurisdiction();
 
   return (
     <div className="rounded-xl border border-primary/15 bg-primary/[0.03] p-4">
@@ -46,11 +52,22 @@ export function PrivacyNotice({ visitorType = "visitor" }: PrivacyNoticeProps) {
       <div className="space-y-2 text-[11px] text-muted-foreground leading-relaxed">
         <p><span className="font-semibold text-foreground">Why we collect your information:</span> {content.purpose}</p>
         <p><span className="font-semibold text-foreground">What we collect:</span> {content.collected}</p>
-        <p><span className="font-semibold text-foreground">Lawful basis:</span> {content.basis}</p>
+        <p>
+          <span className="font-semibold text-foreground">{isUK ? "Lawful basis" : "Basis for collection"}:</span>{" "}
+          {isUK ? content.basisUK : content.basisAU}
+        </p>
         <p><span className="font-semibold text-foreground">Data usage:</span> Only for {visitorType} management and safety. Never for marketing.</p>
         <p><span className="font-semibold text-foreground">Retention:</span> {content.retention}</p>
-        <p><span className="font-semibold text-foreground">Your rights:</span> Request access, correction, or deletion via the care home.</p>
-        <p><span className="font-semibold text-foreground">Data Controller:</span> The care home you are visiting. Centrim Life processes data under strict GDPR rules.</p>
+        <p>
+          <span className="font-semibold text-foreground">Your rights:</span>{" "}
+          {isUK
+            ? "Request access, correction, or deletion via the care home."
+            : "Request access to or correction of your information via the care home (APP 12 and APP 13). Complaints can be made to the OAIC."}
+        </p>
+        <p>
+          <span className="font-semibold text-foreground">{controllerTerm}:</span> The care home you are visiting.
+          Centrim Life processes this information under the {regimeShort}. Concerns can be raised with the {regulator}.
+        </p>
       </div>
       <a href="https://app.centrimlife.uk/legal" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11px] text-primary font-medium mt-3 hover:underline">
         View Full Privacy Notice

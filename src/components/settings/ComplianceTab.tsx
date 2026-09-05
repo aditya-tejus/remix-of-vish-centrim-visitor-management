@@ -6,6 +6,7 @@ import { Shield, CheckCircle, AlertTriangle, XCircle, Loader2, ChevronDown, Info
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useJurisdiction } from "@/hooks/useJurisdiction";
 
 type ReqStatus = "implemented" | "not-implemented" | "not-confirmed" | "partial";
 
@@ -78,6 +79,26 @@ const gdprRequirementDefs: GdprReqDef[] = [
     usedIn: [{ label: "Check-In Form (Step 3)", path: "/check-in" }, { label: "Settings → Forms", path: "/settings" }] },
 ];
 
+
+// Australian Privacy Principles (APP) equivalents, keyed by requirement id.
+// Used when the facility's jurisdiction is set to Australia.
+const auReferences: Record<string, { article: string; detail?: string }> = {
+  privacy_notice: { article: "APP 5", detail: "A collection notice is shown to every visitor during check-in, explaining what personal information is collected, why, and who it may be disclosed to (APP 5.1)." },
+  consent_checkbox: { article: "APP 3.3", detail: "Visitors actively consent before submitting their details. Consent is recorded with a timestamp — required where sensitive information such as health status is collected (APP 3.3)." },
+  privacy_policy_link: { article: "APP 1.4", detail: "A clearly expressed, up-to-date privacy policy is accessible from the check-in collection notice (APP 1.3 / 1.4)." },
+  data_retention: { article: "APP 11.2", detail: "Retention periods are configurable. Personal information is destroyed or de-identified once no longer needed for a permitted purpose (APP 11.2), subject to Aged Care Act 1997 record-keeping obligations." },
+  data_export_sar: { article: "APP 12", detail: "Visitor records can be exported in CSV and PDF to fulfil individual access requests within a reasonable period (APP 12.4)." },
+  data_correction: { article: "APP 13", detail: "Authorised staff can correct inaccurate, out-of-date or misleading personal information on request (APP 13.1)." },
+  right_to_erasure: { article: "APP 11.2", detail: "Records can be destroyed or de-identified on request where retention is no longer required. Verify deletion removes all associated data." },
+  automated_cleanup: { article: "APP 11.2", detail: "A daily job at 2:00 AM destroys records past the configured retention period. Records under legal hold are exempt." },
+  audit_trail: { article: "APP 11.1", detail: "Access and modifications are logged as a reasonable security step against misuse or unauthorised access (APP 11.1)." },
+  encryption_at_rest: { article: "APP 11.1", detail: "Database storage is encrypted at rest. Consider additional protection for health information, which is sensitive information under the Act." },
+  rbac: { article: "APP 11.1", detail: "Admin and staff roles restrict who can access personal and health information (APP 11.1)." },
+  dpa: { article: "APP 8", detail: "Where information is handled by service providers, contractual protections apply. Confirm any cross-border disclosure meets APP 8 requirements." },
+  health_screening: { article: "APP 3.3", detail: "Configurable check-in questions collect health information with consent, limited to what is reasonably necessary." },
+  vaccination_records: { article: "APP 3.3", detail: "Vaccination fields collect sensitive health information with consent, in line with aged care infection control obligations." },
+};
+
 const statusConfig: Record<ReqStatus, { label: string; icon: typeof CheckCircle; color: string }> = {
   implemented: { label: "Done", icon: CheckCircle, color: "text-success" },
   "not-implemented": { label: "Missing", icon: XCircle, color: "text-destructive" },
@@ -101,6 +122,7 @@ export function ComplianceTab() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { isUK, regimeName, principlesName } = useJurisdiction();
 
   useEffect(() => {
     supabase
@@ -137,7 +159,15 @@ export function ComplianceTab() {
     }
   };
 
-  const requirements = gdprRequirementDefs.map((r) => ({ ...r, status: getStatus(r.id, r.defaultStatus) }));
+  const requirements = gdprRequirementDefs.map((r) => {
+    const au = auReferences[r.id];
+    return {
+      ...r,
+      article: isUK ? r.article : au?.article || r.article,
+      detail: isUK ? r.detail : au?.detail || r.detail,
+      status: getStatus(r.id, r.defaultStatus),
+    };
+  });
   const implementedCount = requirements.filter((r) => r.status === "implemented").length;
   const compliancePercent = Math.round((implementedCount / requirements.length) * 100);
 
@@ -159,7 +189,7 @@ export function ComplianceTab() {
             </div>
             <div>
               <h2 className="font-semibold text-foreground">Compliance Score</h2>
-              <p className="text-xs text-muted-foreground">How ready is your facility for a UK GDPR audit?</p>
+              <p className="text-xs text-muted-foreground">{`How ready is your facility for a ${regimeName} audit?`}</p>
             </div>
           </div>
           <span className="text-3xl font-bold text-primary">{loadingStatuses ? "—" : `${compliancePercent}%`}</span>
@@ -183,8 +213,8 @@ export function ComplianceTab() {
       {/* Requirements List */}
       <div className="rounded-xl border border-border bg-card shadow-soft overflow-hidden">
         <div className="px-5 py-4 border-b border-border">
-          <h2 className="font-semibold text-foreground">GDPR Requirements Checklist</h2>
-          <p className="text-xs text-muted-foreground">Click to expand details. Use the status dropdown to update each requirement.</p>
+          <h2 className="font-semibold text-foreground">{isUK ? "GDPR Requirements Checklist" : "Australian Privacy Principles Checklist"}</h2>
+          <p className="text-xs text-muted-foreground">{`Mapped to ${principlesName}. Click to expand details; use the status dropdown to update each requirement.`}</p>
         </div>
         <div className="divide-y divide-border">
           {requirements.map((req) => {
