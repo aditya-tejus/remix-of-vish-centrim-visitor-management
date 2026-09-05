@@ -205,19 +205,24 @@ export default function Evacuation() {
   const awayResidentCount = awayResidents.length;
 
   const toggleSafe = (id: string) => {
-    setSafeIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
+    void setSafeFor([id], !safeIds.has(id));
   };
 
-  const markAllSafe = () => {
-    setSafeIds(new Set(checkedIn.map((v) => v.id)));
+  const markAllSafe = async () => {
+    await setSafeFor(checkedIn.map((v) => v.id), true);
     toast({ title: "All marked safe", description: `${checkedIn.length} people marked as safe.` });
   };
 
-  const resetAll = () => setSafeIds(new Set());
+  const resetAll = async () => {
+    await setSafeFor([...safeIds], false);
+  };
+
+  const finishRollCall = async () => {
+    if (!activeDrill) return;
+    await endDrill.mutateAsync({ drillId: activeDrill.id, accounted: safeIds.size });
+    toast({ title: "Roll call ended", description: `${safeIds.size} of ${checkedIn.length} accounted for.` });
+  };
+
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
