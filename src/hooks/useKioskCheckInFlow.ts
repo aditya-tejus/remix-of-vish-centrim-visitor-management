@@ -43,7 +43,7 @@ export function useKioskCheckInFlow() {
   const { data: vaccinationFields = [] } = useActiveVaccinationFields(selectedType as any);
 
   // Residents & staff for "who are you visiting" picker
-  const { residents } = useResidents();
+  const { residents } = useResidents({ publicMode: true });
   const { staff } = useStaffMembers();
 
   // Watchlist
@@ -76,15 +76,13 @@ export function useKioskCheckInFlow() {
   // Returning visitor search
   const searchReturningVisitor = useCallback(async (firstName: string, surname: string) => {
     if (!firstName.trim() || !surname.trim()) return null;
-    const { data } = await supabase
-      .from("visitors")
-      .select("first_name, surname, email, mobile, address, whom_to_visit")
-      .ilike("first_name", firstName.trim())
-      .ilike("surname", surname.trim())
-      .order("check_in_time", { ascending: false })
-      .limit(1);
-    if (data && data.length > 0) {
-      const prev = data[0];
+    // Uses a restricted database helper — the kiosk cannot read the visitor table directly
+    const { data } = await supabase.rpc("kiosk_prefill_visitor" as any, {
+      p_first: firstName.trim(),
+      p_last: surname.trim(),
+    });
+    const prev = Array.isArray(data) ? (data[0] as any) : null;
+    if (prev) {
       return {
         email: prev.email || "",
         mobile: prev.mobile || "",
@@ -94,6 +92,7 @@ export function useKioskCheckInFlow() {
     }
     return null;
   }, []);
+
 
   // Build dynamic step pipeline
   const steps = useMemo<KioskStep[]>(() => {

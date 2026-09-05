@@ -29,7 +29,7 @@ const TYPES = [
 export default function KioskCheckIn() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { addVisitor } = useVisitors();
+  const { addVisitor } = useVisitors({ publicMode: true });
   const flow = useKioskCheckInFlow();
 
   const [step, setStep] = useState<KioskStepId>("type");

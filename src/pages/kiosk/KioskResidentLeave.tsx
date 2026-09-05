@@ -15,8 +15,8 @@ type Mode = "select" | "leaving" | "leaving-confirm" | "returning" | "returning-
 
 export default function KioskResidentLeave() {
   const navigate = useNavigate();
-  const { residents } = useResidents();
-  const { visitors, checkOutVisitor, checkInReturn } = useVisitors();
+  const { residents } = useResidents({ publicMode: true });
+  const { visitors, checkOutVisitor, checkInReturn } = useVisitors({ publicMode: true });
   const { data: leaveTypes = [] } = useActiveLeaveTypes();
   const { toast } = useToast();
 

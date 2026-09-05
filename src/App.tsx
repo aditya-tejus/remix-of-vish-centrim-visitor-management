@@ -3,6 +3,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { ReactNode } from "react";
+import { AuthProvider } from "@/hooks/useAuth";
+import { RequireAuth } from "@/components/RequireAuth";
+import AuthPage from "./pages/Auth";
 import VisitList from "./pages/VisitList";
 import Settings from "./pages/Settings";
 import Visitors from "./pages/Visitors";
@@ -13,11 +17,8 @@ import GDPRPage from "./pages/GDPR";
 import AuditLogPage from "./pages/AuditLog";
 import PublicCheckIn from "./pages/PublicCheckIn";
 import Evacuation from "./pages/Evacuation";
-import Feedback from "./pages/Feedback";
 import FeedbackResponses from "./pages/FeedbackResponses";
 import FeedbackAnalytics from "./pages/FeedbackAnalytics";
-import VisitorAnalytics from "./pages/VisitorAnalytics";
-import LeaveRequests from "./pages/LeaveRequests";
 import NotFound from "./pages/NotFound";
 // Phase 6-7 new pages
 import Residents from "./pages/Residents";
@@ -38,53 +39,61 @@ import KioskQRScan from "./pages/kiosk/KioskQRScan";
 
 const queryClient = new QueryClient();
 
+const Staff = ({ children }: { children: ReactNode }) => <RequireAuth>{children}</RequireAuth>;
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<VisitList />} />
-          <Route path="/dashboard" element={<Navigate to="/" replace />} />
-          <Route path="/visit-list" element={<Navigate to="/" replace />} />
-          <Route path="/visitors" element={<Visitors />} />
-          <Route path="/visitors/:id" element={<VisitorProfilePage />} />
-          <Route path="/check-in" element={<Navigate to="/" replace />} />
-          <Route path="/person-type" element={<Navigate to="/" replace />} />
-          <Route path="/group-checkin" element={<Navigate to="/" replace />} />
-          <Route path="/qr-fast-lane" element={<Navigate to="/" replace />} />
-          <Route path="/residents" element={<Residents />} />
-          <Route path="/resident-leave" element={<Navigate to="/residents" replace />} />
-          <Route path="/calendar" element={<CalendarPage />} />
-          <Route path="/gdpr" element={<GDPRPage />} />
-          <Route path="/reports" element={<ReportsHome />} />
-          <Route path="/reports/analytics" element={<ReportsPage />} />
-          <Route path="/reports/evacuation" element={<EvacuationReport />} />
-          <Route path="/reports/presence" element={<PresenceLog />} />
-          <Route path="/reports/trends" element={<VisitTrends />} />
-          <Route path="/reports/feedback-responses" element={<FeedbackResponses />} />
-          <Route path="/reports/feedback-reports" element={<FeedbackAnalytics />} />
-          <Route path="/audit-log" element={<AuditLogPage />} />
-          <Route path="/evacuation" element={<Evacuation />} />
-          <Route path="/feedback" element={<Navigate to="/reports/feedback-responses" replace />} />
-          <Route path="/visitor-analytics" element={<Navigate to="/reports/analytics" replace />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/leave-requests" element={<Navigate to="/residents" replace />} />
-          <Route path="/checkout-requests" element={<Navigate to="/residents" replace />} />
-          <Route path="/public-checkin" element={<PublicCheckIn />} />
-          <Route path="/coverage" element={<CoverageChecklist />} />
-          {/* Kiosk routes */}
-          <Route path="/kiosk" element={<KioskLayout />}>
-            <Route index element={<KioskAttract />} />
-            <Route path="home" element={<KioskHome />} />
-            <Route path="checkin" element={<KioskCheckIn />} />
-            <Route path="checkout" element={<KioskCheckOut />} />
-            <Route path="resident-leave" element={<KioskResidentLeave />} />
-            <Route path="qr-scan" element={<KioskQRScan />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/auth" element={<AuthPage />} />
+
+            <Route path="/" element={<Staff><VisitList /></Staff>} />
+            <Route path="/dashboard" element={<Navigate to="/" replace />} />
+            <Route path="/visit-list" element={<Navigate to="/" replace />} />
+            <Route path="/visitors" element={<Staff><Visitors /></Staff>} />
+            <Route path="/visitors/:id" element={<Staff><VisitorProfilePage /></Staff>} />
+            <Route path="/check-in" element={<Navigate to="/" replace />} />
+            <Route path="/person-type" element={<Navigate to="/" replace />} />
+            <Route path="/group-checkin" element={<Navigate to="/" replace />} />
+            <Route path="/qr-fast-lane" element={<Navigate to="/" replace />} />
+            <Route path="/residents" element={<Staff><Residents /></Staff>} />
+            <Route path="/resident-leave" element={<Navigate to="/residents" replace />} />
+            <Route path="/calendar" element={<Staff><CalendarPage /></Staff>} />
+            <Route path="/gdpr" element={<Staff><GDPRPage /></Staff>} />
+            <Route path="/reports" element={<Staff><ReportsHome /></Staff>} />
+            <Route path="/reports/analytics" element={<Staff><ReportsPage /></Staff>} />
+            <Route path="/reports/evacuation" element={<Staff><EvacuationReport /></Staff>} />
+            <Route path="/reports/presence" element={<Staff><PresenceLog /></Staff>} />
+            <Route path="/reports/trends" element={<Staff><VisitTrends /></Staff>} />
+            <Route path="/reports/feedback-responses" element={<Staff><FeedbackResponses /></Staff>} />
+            <Route path="/reports/feedback-reports" element={<Staff><FeedbackAnalytics /></Staff>} />
+            <Route path="/audit-log" element={<Staff><AuditLogPage /></Staff>} />
+            <Route path="/evacuation" element={<Staff><Evacuation /></Staff>} />
+            <Route path="/feedback" element={<Navigate to="/reports/feedback-responses" replace />} />
+            <Route path="/visitor-analytics" element={<Navigate to="/reports/analytics" replace />} />
+            <Route path="/settings" element={<Staff><Settings /></Staff>} />
+            <Route path="/leave-requests" element={<Navigate to="/residents" replace />} />
+            <Route path="/checkout-requests" element={<Navigate to="/residents" replace />} />
+            <Route path="/coverage" element={<Staff><CoverageChecklist /></Staff>} />
+
+            {/* Public / kiosk routes */}
+            <Route path="/public-checkin" element={<PublicCheckIn />} />
+            <Route path="/kiosk" element={<KioskLayout />}>
+              <Route index element={<KioskAttract />} />
+              <Route path="home" element={<KioskHome />} />
+              <Route path="checkin" element={<KioskCheckIn />} />
+              <Route path="checkout" element={<KioskCheckOut />} />
+              <Route path="resident-leave" element={<KioskResidentLeave />} />
+              <Route path="qr-scan" element={<KioskQRScan />} />
+            </Route>
+
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

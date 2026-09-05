@@ -25,20 +25,28 @@ export interface Resident {
   mobile: string;
 }
 
-export function useResidents() {
+interface UseResidentsOptions {
+  /** Kiosk / unauthenticated context: never request contact details. */
+  publicMode?: boolean;
+}
+
+export function useResidents(options: UseResidentsOptions = {}) {
+  const { publicMode = false } = options;
   const [residents, setResidents] = useState<Resident[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchResidents = useCallback(async () => {
+    const contactCols = publicMode ? "" : "email, mobile,";
     const { data, error } = await supabase
       .from("visitors")
       .select(`
-        id, first_name, surname, email, mobile, address,
+        id, first_name, surname, ${contactCols}
         resident_details (
           id, room, wing_id, care_level, key_worker, photo_url,
           emergency_contact_name, emergency_contact_phone,
           mobility_level, dols_lps_flag, risk_assessment_level,
-          medication_notes, mobility_aids, notes
+          medication_notes, mobility_aids, notes,
+          wing:wings ( id, name )
         )
       `)
       .eq("type", "resident")
@@ -47,16 +55,15 @@ export function useResidents() {
     if (!error && data) {
       const mapped: Resident[] = data.map((v: any) => {
         const rd = v.resident_details;
-        const addressParts = (v.address || "").split(",").map((s: string) => s.trim());
-        const wingFromAddress = addressParts.find((p: string) => p.toLowerCase().includes("wing")) || "";
+        const wingRel = Array.isArray(rd?.wing) ? rd?.wing?.[0] : rd?.wing;
         return {
           id: rd?.id || v.id,
           visitorId: v.id,
           firstName: v.first_name,
           surname: v.surname,
           name: `${v.first_name} ${v.surname}`,
-          room: rd?.room ? `Room ${rd.room}` : addressParts[0] || "",
-          wing: wingFromAddress,
+          room: rd?.room ? `Room ${rd.room}` : "",
+          wing: wingRel?.name || "",
           wingId: rd?.wing_id || null,
           careLevel: rd?.care_level || "standard",
           keyWorker: rd?.key_worker || null,
@@ -69,14 +76,14 @@ export function useResidents() {
           medicationNotes: rd?.medication_notes || null,
           mobilityAids: rd?.mobility_aids || [],
           notes: rd?.notes || null,
-          email: v.email,
-          mobile: v.mobile,
+          email: v.email || "",
+          mobile: v.mobile || "",
         };
       });
       setResidents(mapped);
     }
     setLoading(false);
-  }, []);
+  }, [publicMode]);
 
   useEffect(() => {
     fetchResidents();

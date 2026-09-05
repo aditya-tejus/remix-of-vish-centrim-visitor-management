@@ -37,8 +37,8 @@ function dbToVisitor(row: DbVisitor): Visitor {
     id: row.id,
     firstName: row.first_name,
     surname: row.surname,
-    email: row.email,
-    mobile: row.mobile,
+    email: row.email || "",
+    mobile: row.mobile || "",
     type: row.type as Visitor["type"],
     checkInTime: new Date(row.check_in_time),
     checkOutTime: row.check_out_time ? new Date(row.check_out_time) : null,
@@ -64,7 +64,21 @@ function dbToVisitor(row: DbVisitor): Visitor {
   };
 }
 
-export function useVisitors() {
+/**
+ * Columns the unauthenticated kiosk is allowed to read.
+ * Sensitive PII (email, mobile, address, health answers, temperature, comments)
+ * is not granted to the anon role at the database level.
+ */
+const KIOSK_SAFE_COLUMNS =
+  "id, first_name, surname, type, status, check_in_time, check_out_time, whom_to_visit, qr_code, group_id, additional_visitors, expected_return_date, leave_type, accompanied_by_name, print_status, created_at";
+
+interface UseVisitorsOptions {
+  /** Kiosk / unauthenticated context: request only non-sensitive columns. */
+  publicMode?: boolean;
+}
+
+export function useVisitors(options: UseVisitorsOptions = {}) {
+  const { publicMode = false } = options;
   const [visitors, setVisitors] = useState<Visitor[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -74,7 +88,7 @@ export function useVisitors() {
     todayStart.setHours(0, 0, 0, 0);
     const { data, error } = await supabase
       .from("visitors")
-      .select("*")
+      .select(publicMode ? KIOSK_SAFE_COLUMNS : "*")
       .or(`check_in_time.gte.${todayStart.toISOString()},status.eq.checked-in,and(type.eq.resident,status.eq.checked-out)`)
       .order("check_in_time", { ascending: false })
       .limit(500);
@@ -82,7 +96,8 @@ export function useVisitors() {
       setVisitors((data as unknown as DbVisitor[]).map(dbToVisitor));
     }
     setLoading(false);
-  }, []);
+  }, [publicMode]);
+
 
   useEffect(() => {
     fetchVisitors();
@@ -110,48 +125,56 @@ export function useVisitors() {
     // Optimistic update
     setVisitors((prev) => [newVisitor, ...prev]);
 
-    // Insert into DB
-    supabase
-      .from("visitors")
-      .insert({
-        first_name: visitor.firstName,
-        surname: visitor.surname,
-        email: visitor.email,
-        mobile: visitor.mobile,
-        type: visitor.type,
-        check_in_time: visitor.checkInTime.toISOString(),
-        whom_to_visit: visitor.whomToVisit,
-        address: visitor.address,
-        status: visitor.status,
-        health_declaration: visitor.healthDeclaration,
-        additional_visitors: visitor.additionalVisitors,
-        companion_details: (visitor.companionDetails || []) as any,
-        comments: visitor.comments,
-        body_temperature: visitor.bodyTemperature ?? null,
-        privacy_acknowledged: visitor.acknowledgedPrivacy,
+    const payload: Record<string, unknown> = {
+      first_name: visitor.firstName,
+      surname: visitor.surname,
+      email: visitor.email,
+      mobile: visitor.mobile,
+      type: visitor.type,
+      check_in_time: visitor.checkInTime.toISOString(),
+      whom_to_visit: visitor.whomToVisit,
+      address: visitor.address,
+      status: visitor.status,
+      health_declaration: visitor.healthDeclaration,
+      additional_visitors: visitor.additionalVisitors,
+      companion_details: (visitor.companionDetails || []) as any,
+      comments: visitor.comments,
+      body_temperature: visitor.bodyTemperature ?? null,
+      privacy_acknowledged: visitor.acknowledgedPrivacy,
+      health_answers: (visitor.healthAnswers || {}) as any,
+      contractor_screening: (visitor.contractorScreening || {}) as any,
+      supplier_id: visitor.supplierId ?? null,
+      qr_code: visitor.qrCode ?? null,
+      group_id: visitor.groupId ?? null,
+    };
+
+    // Columns only staff (authenticated) may write
+    if (!publicMode) {
+      Object.assign(payload, {
         expected_return_date: visitor.expectedReturnDate?.toISOString() ?? null,
         checkout_reason: visitor.checkoutReason ?? null,
         return_notification_opt_in: visitor.returnNotificationOptIn ?? false,
         leave_type: visitor.leaveType ?? null,
         accompanied_by: visitor.accompaniedBy ?? null,
         accompanied_by_name: visitor.accompaniedByName ?? null,
-        health_answers: (visitor.healthAnswers || {}) as any,
-        contractor_screening: (visitor.contractorScreening || {}) as any,
-        supplier_id: visitor.supplierId ?? null,
-        qr_code: visitor.qrCode ?? null,
-        group_id: visitor.groupId ?? null,
-      })
-      .select()
+      });
+    }
+
+    // Insert into DB — only ask back for columns the caller is allowed to read
+    supabase
+      .from("visitors")
+      .insert(payload as any)
+      .select("id, qr_code")
       .single()
       .then(({ data }) => {
         if (data) {
           // Replace temp ID with real one
-          const real = dbToVisitor(data as unknown as DbVisitor);
           setVisitors((prev) =>
-            prev.map((v) => (v.id === tempId ? real : v))
+            prev.map((v) => (v.id === tempId ? { ...v, id: (data as any).id } : v))
           );
         }
       });
+
 
     return newVisitor;
   };
@@ -232,9 +255,15 @@ export function useVisitors() {
     );
     const updateData: Record<string, unknown> = { check_in_time: checkInTime.toISOString(), status: "checked-in" };
     if (returnComment) {
-      const { data: current } = await supabase.from("visitors").select("comments").eq("id", id).single();
-      const existing = (current?.comments as string) || "";
-      updateData.comments = existing ? `${existing}\nReturn: ${returnComment}` : `Return: ${returnComment}`;
+      if (publicMode) {
+        // Kiosk cannot read existing comments — append-only note
+        updateData.comments = `Return: ${returnComment}`;
+      } else {
+        const { data: current } = await supabase.from("visitors").select("comments").eq("id", id).single();
+        const existing = (current?.comments as string) || "";
+        updateData.comments = existing ? `${existing}\nReturn: ${returnComment}` : `Return: ${returnComment}`;
+      }
+
     }
     await supabase.from("visitors").update(updateData).eq("id", id);
   };
