@@ -60,7 +60,8 @@ function RetentionPicker({ settingsKey, typeLabel, extended = false }: { setting
         }
         setLoading(false);
       });
-  }, [settingsKey, allowed]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsKey, extended]);
 
   const handleSave = async () => {
     if (!allowed.includes(retentionPeriod)) return;
