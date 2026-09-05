@@ -241,16 +241,14 @@ export default function Evacuation() {
     }
   };
 
-  const markSelectedSafe = () => {
+  const markSelectedSafe = async () => {
     if (selectedIds.size === 0) return;
-    setSafeIds((prev) => {
-      const next = new Set(prev);
-      selectedIds.forEach((id) => next.add(id));
-      return next;
-    });
-    toast({ title: "Marked safe", description: `${selectedIds.size} people marked as safe.` });
+    const count = selectedIds.size;
+    await setSafeFor([...selectedIds], true);
+    toast({ title: "Marked safe", description: `${count} people marked as safe.` });
     setSelectedIds(new Set());
   };
+
 
   const selectedCount = selectedIds.size;
   const allUnaccountedSelected = filtered.filter((v) => !safeIds.has(v.id)).length > 0 &&
