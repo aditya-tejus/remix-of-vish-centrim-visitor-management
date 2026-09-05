@@ -173,7 +173,29 @@ export function useEvacuationMutations() {
     onSuccess: invalidateAll,
   });
 
+  // Adds someone who arrived after the roll call started
+  const addAttendee = useMutation({
+    mutationFn: async ({ drillId, name, type, visitorId, safe }: { drillId: string; name: string; type: string; visitorId?: string; safe?: boolean }) => {
+      const { data, error } = await supabase
+        .from("evacuation_attendance" as any)
+        .insert({
+          drill_id: drillId,
+          person_name: name,
+          person_type: type,
+          visitor_id: visitorId || null,
+          status: safe ? "safe" : "unaccounted",
+          marked_safe_at: safe ? new Date().toISOString() : null,
+        } as any)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as unknown as EvacuationAttendance;
+    },
+    onSuccess: invalidateAll,
+  });
+
   // Points mutations
+
   const addPoint = useMutation({
     mutationFn: async (point: { name: string; description?: string }) => {
       const { error } = await supabase.from("evacuation_points" as any).insert(point as any);
