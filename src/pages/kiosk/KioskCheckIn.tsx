@@ -37,6 +37,7 @@ export default function KioskCheckIn() {
   const [step, setStep] = useState<KioskStepId>("type");
   const [submitted, setSubmitted] = useState(false);
   const [watchlistEntry, setWatchlistEntry] = useState<any>(null);
+  const [watchlistMatchType, setWatchlistMatchType] = useState<"confirmed" | "near">("confirmed");
   const [watchlistOpen, setWatchlistOpen] = useState(false);
   const [visitingSearch, setVisitingSearch] = useState("");
   const [visitingMode, setVisitingMode] = useState<"resident" | "staff" | null>(null);
@@ -183,9 +184,11 @@ export default function KioskCheckIn() {
     }
     const match = flow.checkVisitor(flow.formValues.firstName || "", flow.formValues.surname || "");
     if (match) {
-      setWatchlistEntry(match);
+      setWatchlistEntry(match.entry);
+      setWatchlistMatchType(match.matchType);
       setWatchlistOpen(true);
-      if (match.alert_type === "hard") return;
+      // Unconfirmed (name-only) matches and hard blocks always pause for staff
+      if (match.matchType === "near" || match.entry.alert_type === "hard") return;
     }
     doCheckIn();
   };
@@ -886,6 +889,7 @@ export default function KioskCheckIn() {
           open={watchlistOpen}
           onOpenChange={setWatchlistOpen}
           entry={watchlistEntry}
+          matchType={watchlistMatchType}
           onProceed={doCheckIn}
           onDeny={() => {
             toast({ title: "Entry Denied", description: "This visitor has been denied entry.", variant: "destructive" });
