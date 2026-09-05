@@ -363,7 +363,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
   const screeningFlagged = !isResident && (hasSymptomFlag || hasHighTemperature);
   const overrideValid = overrideReason.trim().length >= 3;
   // Contractor credential gate: only the highest-risk credential blocks check-in
-  const contractorBlocked = visitorType === "contractor" && isContractorBlocked(jurisdiction, selectedSupplier).blocked;
+  const contractorBlocked = isContractor && isContractorBlocked(jurisdiction, selectedSupplier).blocked;
   const canSubmit = privacyAcknowledged && !contractorBlocked && (!screeningFlagged || overrideValid);
 
 

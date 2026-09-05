@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isContractorBlocked } from "@/lib/contractorCredentials";
 import { useFormFields, FormField } from "@/hooks/useFormFields";
 import { useActiveHealthQuestions, useActiveVaccinationFields } from "@/hooks/useHealthQuestions";
 import { useResidents } from "@/hooks/useResidents";
@@ -183,6 +184,8 @@ export function useKioskCheckInFlow() {
     setPrivacyAcknowledged,
     tcContent,
     jurisdiction,
+    contractorBlocked: selectedType === "contractor" && isContractorBlocked(jurisdiction, selectedSupplier).blocked,
+    contractorBlockReason: selectedType === "contractor" ? isContractorBlocked(jurisdiction, selectedSupplier).reason : null,
     contractorAnswers,
     setContractorAnswers,
     selectedSupplier,
