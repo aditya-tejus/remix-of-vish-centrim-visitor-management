@@ -149,6 +149,28 @@ export function useKioskCheckInFlow() {
 
   const hasYesFlags = healthQuestions.some((q) => q.type === "yesno" && healthAnswers[q.id] === true);
 
+  // Temperature can arrive either as a form field or as a numeric screening answer
+  const bodyTemperature = useMemo(() => {
+    const candidates: unknown[] = [
+      formValues.bodyTemperature,
+      formValues.body_temperature,
+      formValues.temperature,
+      ...Object.entries(healthAnswers)
+        .filter(([k]) => k.toLowerCase().includes("temp"))
+        .map(([, v]) => v),
+    ];
+    for (const c of candidates) {
+      const n = parseFloat(String(c ?? ""));
+      if (!Number.isNaN(n) && n > 0) return n;
+    }
+    return null;
+  }, [formValues, healthAnswers]);
+
+  const highTemperature = bodyTemperature !== null && bodyTemperature > 37.8;
+  // Unattended kiosk: a positive symptom or high temperature must stop the check-in
+  const screeningBlocked = hasYesFlags || highTemperature;
+
+
   return {
     selectedType,
     setSelectedType,
