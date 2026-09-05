@@ -55,8 +55,6 @@ function getSections(type: string): SectionConfig[] {
       { id: "resident-privacy", label: "Directory Display", icon: ShieldCheck, component: <ResidentPrivacyTab personType={type} /> },
       { id: "leave", label: "Leave Configuration", icon: DoorOpen, component: <ResidentLeaveSettingsTab /> },
       { id: "returns", label: "Return Notifications", icon: CalendarClock, component: <ReturnNotificationSettingsTab /> },
-      { id: "form-fields", label: "Leave Form Fields", icon: ClipboardList, component: <FormFieldsManager visitorType={vt} /> },
-      { id: "health", label: "Pre-Departure Questions", icon: Stethoscope, component: <HealthQuestionsManager visitorType={vt} /> },
     );
   }
 

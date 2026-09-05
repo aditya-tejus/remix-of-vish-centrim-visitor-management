@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { Bell, Clock, RefreshCw, UserX, ClipboardCheck, Check } from "lucide-react";
+import { Bell, Clock, RefreshCw, UserX, ClipboardCheck, Check, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface NotificationItem {
-  type: "overstay" | "draft" | "overdue" | "pending";
+  type: "overstay" | "draft" | "overdue" | "pending" | "health";
   icon: React.ReactNode;
   title: string;
   time: string;
@@ -15,12 +15,14 @@ interface NotificationBellProps {
   overdueCount: number;
   draftCount: number;
   pendingCount: number;
+  healthBlockCount?: number;
 }
 
-export function NotificationBell({ overstayedCount, overdueCount, draftCount, pendingCount }: NotificationBellProps) {
+export function NotificationBell({ overstayedCount, overdueCount, draftCount, pendingCount, healthBlockCount = 0 }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const totalAlerts = overstayedCount + overdueCount + draftCount + pendingCount;
+  const totalAlerts = overstayedCount + overdueCount + draftCount + pendingCount + healthBlockCount;
+
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -31,6 +33,12 @@ export function NotificationBell({ overstayedCount, overdueCount, draftCount, pe
   }, []);
 
   const items: NotificationItem[] = [];
+  if (healthBlockCount > 0) items.push({
+    type: "health", icon: <AlertTriangle className="h-4 w-4" />,
+    title: `${healthBlockCount} kiosk check-in${healthBlockCount > 1 ? "s" : ""} blocked by health screening`,
+    time: "Needs staff assistance", color: "text-destructive bg-destructive/10",
+  });
+
   if (overstayedCount > 0) items.push({
     type: "overstay", icon: <Clock className="h-4 w-4" />,
     title: `${overstayedCount} visitor${overstayedCount > 1 ? "s" : ""} overstayed`,

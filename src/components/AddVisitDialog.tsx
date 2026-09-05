@@ -97,7 +97,9 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
   const [expectedReturnDate, setExpectedReturnDate] = useState<Date | undefined>(undefined);
   const [expectedReturnTime, setExpectedReturnTime] = useState("12:00");
   const [healthAnswers, setHealthAnswers] = useState<Record<string, any>>({});
+  const [overrideReason, setOverrideReason] = useState("");
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
+
   const [branchTcUrl, setBranchTcUrl] = useState<string | null>(null);
   const [branchPrivacyUrl, setBranchPrivacyUrl] = useState<string | null>(null);
   const [returnNotificationOptIn, setReturnNotificationOptIn] = useState(false);
@@ -219,7 +221,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
       accompaniedByName: "",
     });
     setExpectedReturnDate(undefined); setExpectedReturnTime("12:00");
-    setHealthAnswers({}); setPrivacyAcknowledged(false);
+    setHealthAnswers({}); setOverrideReason(""); setPrivacyAcknowledged(false);
     setReturnNotificationOptIn(false);
     setPhoto(null); setCompanions([]); stopCamera();
     setContractorScreeningAnswers({}); setSelectedSupplier(null);
@@ -280,9 +282,35 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
       accompaniedByName: isResident ? formData.accompaniedByName || undefined : undefined,
     };
     onAdd(visitor);
+
+    // Record a staff override of a failed health screening
+    if (screeningFlagged && overrideReason.trim()) {
+      void (async () => {
+        const { data: auth } = await supabase.auth.getUser();
+        const { data: profile } = auth.user
+          ? await supabase.from("profiles").select("display_name").eq("user_id", auth.user.id).maybeSingle()
+          : { data: null as any };
+        await supabase.from("audit_log").insert({
+          action: "health_screening_override",
+          performed_by: profile?.display_name || auth.user?.email || "Unknown staff",
+          user_id: auth.user?.id ?? null,
+          change_reason: overrideReason.trim(),
+          records_affected: 1,
+          details: {
+            visitor: `${formData.firstName} ${formData.surname}`,
+            visitor_type: selectedType,
+            symptom_flag: hasSymptomFlag,
+            body_temperature: formData.bodyTemperature || null,
+            overridden_at: new Date().toISOString(),
+          } as any,
+        });
+      })();
+    }
+
     resetForm();
     onOpenChange(false);
   };
+
 
   const handleClose = () => { resetForm(); onOpenChange(false); };
   const updateField = (field: string, value: string | number | boolean) => {
@@ -327,7 +355,14 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
     formData.whomToVisit && formData.selectPerson;
   const canProceedResidentStep1 = !!selectedResident;
   const canProceedResidentStep2 = formData.email && formData.mobile;
-  const canSubmit = privacyAcknowledged;
+
+  // Health screening gate (attended desk: staff may override with a reason)
+  const hasSymptomFlag = Object.values(healthAnswers).some((v) => v === true);
+  const hasHighTemperature = !!formData.bodyTemperature && parseFloat(formData.bodyTemperature) > 37.8;
+  const screeningFlagged = !isResident && (hasSymptomFlag || hasHighTemperature);
+  const overrideValid = overrideReason.trim().length >= 3;
+  const canSubmit = privacyAcknowledged && (!screeningFlagged || overrideValid);
+
 
   // Render health questions shared component
   const renderHealthQuestions = () => (
@@ -1180,7 +1215,30 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
           )}
 
           {!isResident && step === 4 && renderReview()}
+
+          {screeningFlagged && step === totalSteps && (
+            <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-2">
+              <div className="flex items-start gap-2">
+                <Shield className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                <div className="space-y-0.5">
+                  <p className="text-sm font-semibold text-destructive">Health screening failed</p>
+                  <p className="text-xs text-muted-foreground">
+                    {hasHighTemperature ? `Temperature ${formData.bodyTemperature}°C is above 37.8°C. ` : ""}
+                    {hasSymptomFlag ? "A symptom was reported. " : ""}
+                    A staff override is required to continue, and it will be recorded in the audit trail.
+                  </p>
+                </div>
+              </div>
+              <Textarea
+                value={overrideReason}
+                onChange={(e) => setOverrideReason(e.target.value)}
+                placeholder="Reason for allowing this check-in (required)"
+                className="min-h-[64px] text-sm rounded-lg"
+              />
+            </div>
+          )}
         </div>
+
 
         {/* Footer */}
         <div className="shrink-0 flex items-center justify-between px-6 py-3 border-t border-border bg-card/80 backdrop-blur-sm">

@@ -12,14 +12,12 @@ import {
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Switch } from "@/components/ui/switch";
 import { Visitor, CompanionDetail } from "@/types/visitor";
-import { Search, ArrowLeft, ArrowRight, Check, Home, Clock, CalendarDays, Users, Plus, Trash2, ScrollText, Shield, ClipboardCheck } from "lucide-react";
+import { Search, ArrowLeft, ArrowRight, Check, Home, Clock, CalendarDays, Users, Plus, Trash2, ScrollText, Shield } from "lucide-react";
 import { useActiveLeaveTypes } from "@/hooks/useLeaveTypes";
 import { useCompanionFields } from "@/hooks/useFormFields";
 import { useResidents } from "@/hooks/useResidents";
 import { useStaffMembers } from "@/hooks/useStaffMembers";
-import { useActiveHealthQuestions } from "@/hooks/useHealthQuestions";
 import { format } from "date-fns";
 
 interface ResidentLeaveDialogProps {
@@ -38,8 +36,7 @@ const escortOptions = [
   { value: "group", label: "Group Outing (Staff-led)", emoji: "👥" },
 ];
 
-const baseSteps = ["Resident", "Schedule", "Reason", "Companions", "Confirm"];
-const stepsWithQuestions = ["Resident", "Schedule", "Reason", "Companions", "Pre-Departure", "Confirm"];
+const steps = ["Resident", "Schedule", "Reason", "Companions", "Confirm"];
 
 export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLeaveDialogProps) {
   const { residents: dbResidents } = useResidents();
@@ -50,9 +47,7 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
   const { data: leaveTypesData = [] } = useActiveLeaveTypes();
   const { data: companionFieldsConfig = [] } = useCompanionFields("resident");
   const activeCompanionFields = companionFieldsConfig.filter((f) => f.is_active).sort((a, b) => a.sort_order - b.sort_order);
-  const { data: healthQuestions = [] } = useActiveHealthQuestions("resident");
 
-  const [healthAnswers, setHealthAnswers] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedResident, setSelectedResident] = useState<{ id: string; name: string; room: string; wing: string } | null>(null);
   const [expectedReturnDate, setExpectedReturnDate] = useState<Date | undefined>(undefined);
@@ -90,13 +85,7 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
     setCompanions([]);
     setPrivacyAcknowledged(false);
     setReturnNotificationOptIn(false);
-    setHealthAnswers({});
   };
-
-  const hasQuestions = healthQuestions.length > 0;
-  const steps = hasQuestions ? stepsWithQuestions : baseSteps;
-  const confirmStep = steps.length;
-  const preDepartureStep = hasQuestions ? confirmStep - 1 : -1;
 
   const handleClose = () => { resetForm(); onOpenChange(false); };
 
@@ -109,14 +98,6 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
       combinedReturnDate = new Date(expectedReturnDate);
       combinedReturnDate.setHours(h, m, 0, 0);
     }
-    // Build health answers into comments
-    const healthParts: string[] = [];
-    for (const q of healthQuestions) {
-      const ans = healthAnswers[q.id];
-      if (ans !== undefined && ans !== "") healthParts.push(`${q.question}: ${ans}`);
-    }
-    const finalComments = [comments, ...healthParts].filter(Boolean).join(" | ");
-
     const visitor: Omit<Visitor, "id"> = {
       firstName: firstName || "",
       surname: rest.join(" ") || "",
@@ -131,7 +112,7 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
       healthDeclaration: false,
       additionalVisitors: companions.length,
       companionDetails: companions.length > 0 ? companions : undefined,
-      comments: finalComments || undefined,
+      comments,
       retentionExpiry: new Date(Date.now() + 86400000 * 60),
       acknowledgedPrivacy: privacyAcknowledged,
       expectedReturnDate: combinedReturnDate,
@@ -151,9 +132,7 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
     if (step === 2) return !!expectedReturnDate;
     if (step === 3) return !!checkoutReason;
     if (step === 4) return !!accompaniedBy;
-    if (step === preDepartureStep) return true; // pre-departure questions are optional to proceed
-    if (step === confirmStep) return privacyAcknowledged;
-    return true;
+    return privacyAcknowledged;
   };
 
   const selectedEscort = escortOptions.find(o => o.value === accompaniedBy);
@@ -422,46 +401,8 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
             </div>
           )}
 
-          {/* Pre-Departure Questions Step */}
-          {step === preDepartureStep && hasQuestions && (
-            <div className="space-y-4">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <ClipboardCheck className="h-3 w-3" /> Pre-Departure Questions
-              </p>
-              {healthQuestions.map(q => (
-                <div key={q.id} className="space-y-1">
-                  <Label className="text-[11px]">{q.question} {q.required && <span className="text-destructive">*</span>}</Label>
-                  {q.type === "yesno" ? (
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={healthAnswers[q.id] === "true"}
-                        onCheckedChange={c => setHealthAnswers(prev => ({ ...prev, [q.id]: c ? "true" : "false" }))}
-                      />
-                      <span className="text-xs text-muted-foreground">{healthAnswers[q.id] === "true" ? "Yes" : "No"}</span>
-                    </div>
-                  ) : q.type === "textarea" ? (
-                    <Textarea
-                      value={healthAnswers[q.id] || ""}
-                      onChange={e => setHealthAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
-                      placeholder={q.placeholder || ""}
-                      rows={2}
-                      className="text-sm resize-none rounded-lg"
-                    />
-                  ) : (
-                    <Input
-                      value={healthAnswers[q.id] || ""}
-                      onChange={e => setHealthAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
-                      placeholder={q.placeholder || ""}
-                      className="rounded-lg h-9 text-sm"
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Confirm Step */}
-          {step === confirmStep && (
+          {/* Step 5: Confirm */}
+          {step === 5 && (
             <div className="space-y-4">
               <div className="rounded-xl border border-border bg-muted/30 p-4">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Summary</p>
@@ -567,7 +508,7 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
                 <ArrowLeft className="h-3.5 w-3.5" /> Back
               </Button>
             )}
-            {step < confirmStep ? (
+            {step < 5 ? (
               <Button size="sm" onClick={() => setStep(step + 1)} className="gap-1 rounded-xl" disabled={!canProceed()}>
                 Next <ArrowRight className="h-3.5 w-3.5" />
               </Button>

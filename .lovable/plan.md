@@ -1,47 +1,37 @@
 
 
-# Preload Resident Leave Form Fields + Sync Web Dialogs
+## Analysis
 
-## Overview
+### Current Problem
+The **Kiosk Lookup Settings** card (Resident Lookup Mode + Staff Lookup Mode) sits inside `ResidentLeaveSettingsTab.tsx` under **Resident Settings → Leave Configuration**. These settings control how **visitors and volunteers** find residents/staff during kiosk check-in — they have nothing to do with resident leave configuration.
 
-Insert 5 default form fields into `form_fields` table for `visitor_type = 'resident'`, then update the two web app dialogs (`ResidentOutingDialog` and `ResidentLeaveDialog`) to fetch and render any active health/compliance questions configured in Settings. No seed health questions per your request.
+### What already exists in the right place
+- `ResidentPrivacyTab.tsx` — per-type resident lookup mode toggle, already wired into Visitor and Volunteer settings via `PersonTypeSettings.tsx`. This **correctly handles** resident lookup mode per persona.
 
-## Step 1 — Insert seed form fields (database insert, not migration)
+### What's missing
+- **Staff Lookup Mode** has no per-type equivalent yet. It's only managed globally from the misplaced card in Resident Leave settings.
+- The hook (`useKioskCheckInFlow.ts` line 57) loads `kiosk_staff_lookup_mode` globally but doesn't check for a type-specific override like it does for resident lookup mode.
 
-Insert 5 rows into `form_fields` with `visitor_type = 'resident'`:
+### Plan
 
-| field_key | label | field_type | required | sort_order |
-|-----------|-------|------------|----------|------------|
-| `leave_mode` | Short Outing or Leave | `select` | true | 1 |
-| `destination` | Where are they going? | `text` | true | 2 |
-| `expected_return` | Expected return date & time | `text` | false | 3 |
-| `accompanied_by` | Who are they going out with? | `select` | true | 4 |
-| `comments` | Comments | `textarea` | false | 5 |
+#### 1. Remove Kiosk Lookup Settings from Resident Leave Settings
+Strip lines 101–168 from `ResidentLeaveSettingsTab.tsx` (the entire second `<Card>`). Also remove the `residentLookupMode` and `staffLookupMode` state variables and their save keys — leave settings should only save leave-related keys.
 
-## Step 2 — Update ResidentOutingDialog
+#### 2. Create `StaffPrivacyTab.tsx`
+Mirror the `ResidentPrivacyTab` pattern. Offers three modes: "Search First", "Group by Department", "Free Text Only". Uses key `kiosk_staff_lookup_mode_{personType}` with fallback to global `kiosk_staff_lookup_mode`.
 
-- Import `useActiveHealthQuestions` from `useHealthQuestions`
-- Fetch active health questions for `visitor_type = 'resident'`
-- Add state for `healthAnswers: Record<string, string>`
-- If questions exist, render them in a collapsible section before the submit button (both short-outing and planned-leave modes)
-- Include answers in the `comments` or `details` payload passed to `onMarkAway`
+#### 3. Add Staff Privacy section to Visitor & Volunteer settings
+In `PersonTypeSettings.tsx`, add a "Staff Lookup on Kiosk" accordion section (using `Users` icon) for visitor and volunteer types, right after the existing "Resident Privacy on Kiosk" section.
 
-## Step 3 — Update ResidentLeaveDialog
+#### 4. Update `useKioskCheckInFlow.ts` for per-type staff lookup
+Add `kiosk_staff_lookup_mode_${selectedType}` to the settings query. Prefer type-specific, fall back to global — same pattern already used for resident lookup mode.
 
-- Import `useActiveHealthQuestions`
-- Fetch active health questions for `visitor_type = 'resident'`
-- Add state for `healthAnswers`
-- Insert a "Pre-Departure" step between "Companions" (step 4) and "Confirm" (step 5), making steps: Resident → Schedule → Reason → Companions → Pre-Departure → Confirm
-- Only show the step if there are active questions; skip it automatically if none configured
-- Include answers in the `comments` field of the submitted visitor object
-
-## Files changed
+### Files
 
 | File | Change |
 |------|--------|
-| Database (insert tool) | 5 rows into `form_fields` |
-| `src/components/ResidentOutingDialog.tsx` | Add health questions section |
-| `src/components/ResidentLeaveDialog.tsx` | Add pre-departure questions step |
-
-No migrations needed. Settings and Kiosk already consume these hooks — no changes required there.
+| `src/components/settings/ResidentLeaveSettingsTab.tsx` | Remove Kiosk Lookup Settings card + related state/save logic |
+| New: `src/components/settings/StaffPrivacyTab.tsx` | Staff lookup mode selector per person type |
+| `src/components/settings/PersonTypeSettings.tsx` | Add "Staff Lookup on Kiosk" section for visitor/volunteer |
+| `src/hooks/useKioskCheckInFlow.ts` | Add type-specific staff lookup key to query + fallback logic |
 

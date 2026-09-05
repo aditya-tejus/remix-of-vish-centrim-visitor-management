@@ -5,6 +5,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { useHealthAlerts } from "@/hooks/useHealthAlerts";
 
 interface AppHeaderProps {
   /** Page title shown after the sidebar trigger */
@@ -30,6 +31,8 @@ export function AppHeader({
   pendingCount = 0,
 }: AppHeaderProps) {
   const [now, setNow] = useState(new Date());
+  const { data: healthBlockCount = 0 } = useHealthAlerts();
+
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 30000);
@@ -81,7 +84,9 @@ export function AppHeader({
               overdueCount={overdueCount}
               draftCount={draftCount}
               pendingCount={pendingCount}
+              healthBlockCount={healthBlockCount}
             />
+
           </div>
 
           {/* Page-specific actions */}

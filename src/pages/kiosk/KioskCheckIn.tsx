@@ -1,4 +1,6 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { KioskInput } from "@/components/kiosk/KioskInput";
@@ -13,7 +15,6 @@ import { ContractorScreening } from "@/components/ContractorScreening";
 import { KioskProgressStepper } from "@/components/kiosk/KioskProgressStepper";
 import { KioskSuccessScreen } from "@/components/kiosk/KioskSuccessScreen";
 import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
-import { KioskDynamicQuestions } from "@/components/kiosk/KioskDynamicQuestions";
 import { useKioskCheckInFlow, KioskStepId } from "@/hooks/useKioskCheckInFlow";
 import {
   UserRound, Truck, Heart, ArrowLeft, ArrowRight, Shield, ScrollText,
@@ -30,7 +31,7 @@ const TYPES = [
 export default function KioskCheckIn() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { addVisitor } = useVisitors();
+  const { addVisitor } = useVisitors({ publicMode: true });
   const flow = useKioskCheckInFlow();
 
   const [step, setStep] = useState<KioskStepId>("type");
@@ -43,6 +44,29 @@ export default function KioskCheckIn() {
   const [returningChecked, setReturningChecked] = useState(false);
 
   const currentIdx = flow.steps.findIndex((s) => s.id === step);
+
+  // Alert reception once when a kiosk check-in is stopped by health screening
+  const alertedRef = useRef(false);
+  useEffect(() => {
+    if (!flow.screeningBlocked || alertedRef.current) return;
+    alertedRef.current = true;
+    void supabase.from("audit_log").insert({
+      action: "kiosk_health_block",
+      performed_by: "Kiosk",
+      records_affected: 1,
+      details: {
+        name: `${flow.formValues.firstName || ""} ${flow.formValues.surname || ""}`.trim() || "Unknown",
+        visitor_type: flow.selectedType,
+        symptom_flag: flow.hasYesFlags,
+        body_temperature: flow.bodyTemperature,
+        blocked_at: new Date().toISOString(),
+      } as any,
+    }).then(({ error }) => {
+      if (error) alertedRef.current = false;
+    });
+  }, [flow.screeningBlocked, flow.hasYesFlags, flow.bodyTemperature, flow.formValues, flow.selectedType]);
+
+
 
   const goNext = () => {
     const nextIdx = currentIdx + 1;
@@ -112,6 +136,7 @@ export default function KioskCheckIn() {
       comments: flow.formValues.comments || "",
       retentionExpiry: new Date(Date.now() + 86400000 * 60),
       acknowledgedPrivacy: flow.privacyAcknowledged,
+      bodyTemperature: flow.bodyTemperature ?? undefined,
       contractorScreening: flow.selectedType === "contractor" ? flow.contractorAnswers : undefined,
       supplierId: flow.selectedSupplier?.id || undefined,
       qrCode: primaryQr,
@@ -148,6 +173,14 @@ export default function KioskCheckIn() {
   }, [flow, addVisitor, toast]);
 
   const handleSubmit = () => {
+    if (flow.screeningBlocked) {
+      toast({
+        title: "Please see a staff member",
+        description: "Your health screening answers need to be reviewed before you can check in.",
+        variant: "destructive",
+      });
+      return;
+    }
     const match = flow.checkVisitor(flow.formValues.firstName || "", flow.formValues.surname || "");
     if (match) {
       setWatchlistEntry(match);
@@ -156,6 +189,7 @@ export default function KioskCheckIn() {
     }
     doCheckIn();
   };
+
 
   const handleComplete = useCallback(() => navigate("/kiosk/home"), [navigate]);
   const handleStartOver = () => {
@@ -166,6 +200,7 @@ export default function KioskCheckIn() {
     setVisitingSearch("");
     setVisitingMode(null);
     setCheckedInQrCode(null);
+    alertedRef.current = false;
   };
 
   if (submitted) {
@@ -591,29 +626,107 @@ export default function KioskCheckIn() {
         {/* Step: Health Screening */}
         {step === "screening" && (
           <motion.div key="screening" {...anim} className="space-y-4">
-            <KioskDynamicQuestions
-              title="Health Screening"
-              healthQuestions={flow.healthQuestions}
-              healthAnswers={flow.healthAnswers}
-              onHealthAnswerChange={(id, value) => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [id]: value }))}
-            />
-
-            {flow.vaccinationFields.length > 0 && (
-              <div className="pt-3 mt-2 border-t border-border space-y-3">
-                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Vaccination Records</p>
-                {flow.vaccinationFields.map((vf) => (
-                  <div key={vf.id} className="rounded-2xl border-2 border-border bg-card p-5">
-                    <label className="text-base text-foreground font-medium block mb-2">
-                      {vf.label}{vf.required && <span className="text-destructive ml-0.5">*</span>}
-                    </label>
-                    <Input
-                      type={vf.field_type === "date" ? "date" : "text"}
-                      value={flow.healthAnswers[`vacc_${vf.name}`] || ""}
-                      onChange={(e) => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [`vacc_${vf.name}`]: e.target.value }))}
-                      className="h-14 text-lg rounded-xl"
-                    />
+            <div className="text-center space-y-1">
+              <h2 className="text-2xl font-bold text-foreground">Health Screening</h2>
+              <p className="text-sm text-muted-foreground">
+                {Object.keys(flow.healthAnswers).length} of {flow.healthQuestions.length} answered
+              </p>
+            </div>
+            <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1 kiosk-scroll-fade">
+              {flow.healthQuestions.map((q, idx) => {
+                const answer = flow.healthAnswers[q.id];
+                const isYesNo = q.type === "yesno";
+                const hasYes = isYesNo && answer === true;
+                const hasNo = isYesNo && answer === false;
+                return (
+                  <div key={q.id} className={`rounded-2xl border-2 p-5 transition-all ${
+                    hasNo ? "border-success/30 bg-success/5" : hasYes ? "border-destructive/30 bg-destructive/5" : "border-border bg-card"
+                  }`}>
+                    <div className="flex items-start gap-3 mb-3">
+                      <span className={`text-sm font-bold shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${
+                        hasNo ? "bg-success text-success-foreground" : hasYes ? "bg-destructive text-destructive-foreground" : "bg-muted text-muted-foreground"
+                      }`}>{hasNo ? "✓" : hasYes ? "✗" : idx + 1}</span>
+                      <p className="text-base text-foreground font-medium leading-relaxed">
+                        {q.question}{q.required && <span className="text-destructive ml-0.5">*</span>}
+                      </p>
+                    </div>
+                    <div className="ml-11">
+                      {q.type === "yesno" && (
+                        <div className="flex gap-3">
+                          <button onClick={() => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [q.id]: false }))}
+                            className={`flex-1 py-4 rounded-xl text-base font-bold transition-all flex items-center justify-center gap-2 min-h-[52px] ${answer === false ? "bg-success text-success-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-success/20"}`}>
+                            ✓ No
+                          </button>
+                          <button onClick={() => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [q.id]: true }))}
+                            className={`flex-1 py-4 rounded-xl text-base font-bold transition-all flex items-center justify-center gap-2 min-h-[52px] ${answer === true ? "bg-destructive text-destructive-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-destructive/20"}`}>
+                            ✗ Yes
+                          </button>
+                        </div>
+                      )}
+                      {q.type === "text" && (
+                        <Input value={answer || ""} onChange={(e) => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [q.id]: e.target.value }))}
+                          placeholder={q.placeholder || "Enter response..."} className="h-14 text-lg rounded-xl" />
+                      )}
+                      {q.type === "textarea" && (
+                        <Textarea value={answer || ""} onChange={(e) => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [q.id]: e.target.value }))}
+                          placeholder={q.placeholder || "Enter details..."} className="min-h-[80px] text-base rounded-xl resize-none" />
+                      )}
+                      {q.type === "select" && q.options && (
+                        <Select value={answer || ""} onValueChange={(val) => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [q.id]: val }))}>
+                          <SelectTrigger className="h-14 text-base rounded-xl"><SelectValue placeholder="Select..." /></SelectTrigger>
+                          <SelectContent>{(q.options as string[]).map((opt) => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}</SelectContent>
+                        </Select>
+                      )}
+                      {q.type === "checkbox" && (
+                        <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 cursor-pointer"
+                          onClick={() => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [q.id]: !prev[q.id] }))}>
+                          <Checkbox checked={!!answer} className="h-6 w-6" />
+                          <span className="text-base text-foreground font-medium">Yes, I confirm</span>
+                        </div>
+                      )}
+                      {hasYes && (
+                        <div className="mt-3 rounded-xl bg-destructive/10 border border-destructive/20 p-3 flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+                          <p className="text-sm text-destructive font-medium">This may require staff review.</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                ))}
+                );
+              })}
+
+              {flow.vaccinationFields.length > 0 && (
+                <div className="pt-3 mt-2 border-t border-border space-y-3">
+                  <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Vaccination Records</p>
+                  {flow.vaccinationFields.map((vf) => (
+                    <div key={vf.id} className="rounded-2xl border-2 border-border bg-card p-5">
+                      <label className="text-base text-foreground font-medium block mb-2">
+                        {vf.label}{vf.required && <span className="text-destructive ml-0.5">*</span>}
+                      </label>
+                      <Input
+                        type={vf.field_type === "date" ? "date" : "text"}
+                        value={flow.healthAnswers[`vacc_${vf.name}`] || ""}
+                        onChange={(e) => flow.setHealthAnswers((prev: Record<string, any>) => ({ ...prev, [`vacc_${vf.name}`]: e.target.value }))}
+                        className="h-14 text-lg rounded-xl"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {flow.screeningBlocked && (
+              <div className="rounded-2xl bg-destructive/10 border-2 border-destructive/30 p-5 flex items-start gap-3">
+                <AlertTriangle className="h-6 w-6 text-destructive shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-lg font-bold text-destructive">Please see a staff member</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {flow.highTemperature
+                      ? `Your recorded temperature (${flow.bodyTemperature}°C) is above the safe limit. `
+                      : ""}
+                    We cannot complete your check-in at this screen. Reception has been notified and will assist you.
+                  </p>
+                </div>
               </div>
             )}
 
@@ -621,10 +734,11 @@ export default function KioskCheckIn() {
               <Button variant="secondary" onClick={goBack} className="flex-1 h-14 text-base gap-2 border border-border">
                 <ArrowLeft className="h-5 w-5" /> Back
               </Button>
-              <Button onClick={goNext} className="flex-1 h-14 text-base gap-2">
+              <Button onClick={goNext} disabled={flow.screeningBlocked} className="flex-1 h-14 text-base gap-2">
                 Next <ArrowRight className="h-5 w-5" />
               </Button>
             </div>
+
           </motion.div>
         )}
 

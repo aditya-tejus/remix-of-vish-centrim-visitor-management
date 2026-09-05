@@ -3,7 +3,9 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, UserPlus } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CheckCircle2, UserPlus, ShieldAlert } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
 import { Visitor } from "@/types/visitor";
 import { useCheckInFlow } from "./useCheckInFlow";
 import { StepIdentify } from "./StepIdentify";
@@ -38,6 +40,25 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
   const handleSubmit = () => {
     const visitor = flow.buildVisitor();
     onAdd(visitor);
+    if (flow.screeningFlagged && flow.overrideReason.trim()) {
+      const name = `${flow.formData.firstName} ${flow.formData.surname}`.trim();
+      supabase.auth.getUser().then(({ data }) => {
+        supabase.from("audit_log").insert({
+          action: "health_screening_override",
+          performed_by: data.user?.email || "Staff",
+          user_id: data.user?.id ?? null,
+          records_affected: 1,
+          change_reason: flow.overrideReason.trim(),
+          details: {
+            visitor_name: name,
+            visitor_type: flow.selectedType,
+            symptom_flag: flow.hasSymptomFlag,
+            body_temperature: flow.formData.bodyTemperature || null,
+            overridden_at: new Date().toISOString(),
+          } as any,
+        }).then(() => undefined);
+      });
+    }
     setSuccessName(`${flow.formData.firstName} ${flow.formData.surname}`);
     setShowSuccess(true);
     setTimeout(() => {
@@ -184,6 +205,28 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
                   checkInTimeOverride={flow.checkInTimeOverride}
                   setCheckInTimeOverride={flow.setCheckInTimeOverride}
                 />
+              )}
+
+              {flow.step === "confirm" && flow.screeningFlagged && (
+                <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <ShieldAlert className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                    <div className="space-y-0.5">
+                      <p className="text-[13px] font-semibold text-destructive">Health screening flagged</p>
+                      <p className="text-[12px] text-muted-foreground">
+                        {flow.hasHighTemperature ? `Temperature ${flow.formData.bodyTemperature}°C is above 37.8°C. ` : ""}
+                        {flow.hasSymptomFlag ? "A symptom was reported. " : ""}
+                        A staff override is required to continue, and it will be recorded in the audit trail.
+                      </p>
+                    </div>
+                  </div>
+                  <Textarea
+                    value={flow.overrideReason}
+                    onChange={(e) => flow.setOverrideReason(e.target.value)}
+                    placeholder="Reason for allowing this check-in (required)"
+                    className="min-h-[64px] text-[13px] rounded-lg"
+                  />
+                </div>
               )}
             </div>
           )}

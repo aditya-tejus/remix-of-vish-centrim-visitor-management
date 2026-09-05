@@ -14,7 +14,7 @@ export default function KioskQRScan() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const mode = searchParams.get("mode");
-  const { visitors, addVisitor, checkOutVisitor } = useVisitors();
+  const { visitors, addVisitor, checkOutVisitor } = useVisitors({ publicMode: true });
   const { toast } = useToast();
 
   const [manualCode, setManualCode] = useState("");

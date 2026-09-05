@@ -5,24 +5,19 @@ import { Button } from "@/components/ui/button";
 import { useResidents } from "@/hooks/useResidents";
 import { useVisitors } from "@/hooks/useVisitors";
 import { useActiveLeaveTypes } from "@/hooks/useLeaveTypes";
-import { useFormFields } from "@/hooks/useFormFields";
-import { useActiveHealthQuestions } from "@/hooks/useHealthQuestions";
 import { useToast } from "@/hooks/use-toast";
-import { DoorOpen, Search, Home, ArrowLeft, ArrowRight, Calendar, ClipboardList } from "lucide-react";
+import { DoorOpen, Search, Home, ArrowLeft, ArrowRight, Calendar } from "lucide-react";
 import { motion } from "framer-motion";
 import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
 import { KioskSuccessScreen } from "@/components/kiosk/KioskSuccessScreen";
-import { KioskDynamicQuestions } from "@/components/kiosk/KioskDynamicQuestions";
 
-type Mode = "select" | "leaving" | "leaving-confirm" | "leaving-questions" | "returning" | "returning-confirm";
+type Mode = "select" | "leaving" | "leaving-confirm" | "returning" | "returning-confirm";
 
 export default function KioskResidentLeave() {
   const navigate = useNavigate();
-  const { residents } = useResidents();
-  const { visitors, checkOutVisitor, checkInReturn } = useVisitors();
+  const { residents } = useResidents({ publicMode: true });
+  const { visitors, checkOutVisitor, checkInReturn } = useVisitors({ publicMode: true });
   const { data: leaveTypes = [] } = useActiveLeaveTypes();
-  const { data: formFields = [] } = useFormFields("resident");
-  const { data: healthQuestions = [] } = useActiveHealthQuestions("resident");
   const { toast } = useToast();
 
   const [mode, setMode] = useState<Mode>("select");
@@ -32,15 +27,6 @@ export default function KioskResidentLeave() {
   const [selectedLeaveType, setSelectedLeaveType] = useState<string>("");
   const [expectedReturn, setExpectedReturn] = useState("");
   const [doneMessage, setDoneMessage] = useState<{ title: string; subtitle: string } | null>(null);
-  const [formAnswers, setFormAnswers] = useState<Record<string, string>>({});
-  const [healthAnswers, setHealthAnswers] = useState<Record<string, string | boolean>>({});
-
-  const activeFormFields = useMemo(
-    () => formFields.filter((f) => f.is_active).sort((a, b) => a.sort_order - b.sort_order),
-    [formFields]
-  );
-
-  const hasQuestions = activeFormFields.length > 0 || healthQuestions.length > 0;
 
   const awayResidents = useMemo(
     () => visitors.filter((v) => v.type === "resident" && v.status === "checked-out"),
@@ -66,40 +52,11 @@ export default function KioskResidentLeave() {
     setMode("leaving-confirm");
   };
 
-  const handleProceedFromConfirm = () => {
-    if (hasQuestions) {
-      setFormAnswers({});
-      setHealthAnswers({});
-      setMode("leaving-questions");
-    } else {
-      handleConfirmLeave();
-    }
-  };
-
   const handleConfirmLeave = async () => {
     if (!selectedResident) return;
     const name = `${selectedResident.firstName} ${selectedResident.surname}`;
     const roomNum = selectedResident.room || "—";
-
-    // Build checkout reason with answers
-    let reason = `Kiosk self-service departure${selectedLeaveType ? ` — ${selectedLeaveType}` : ""}`;
-    const extraDetails: string[] = [];
-    for (const f of activeFormFields) {
-      if (formAnswers[f.field_key]) {
-        extraDetails.push(`${f.label}: ${formAnswers[f.field_key]}`);
-      }
-    }
-    for (const q of healthQuestions) {
-      const ans = healthAnswers[q.id];
-      if (ans !== undefined && ans !== "") {
-        extraDetails.push(`${q.question}: ${ans}`);
-      }
-    }
-    if (extraDetails.length > 0) {
-      reason += ` | ${extraDetails.join(" | ")}`;
-    }
-
-    await checkOutVisitor(selectedResident.visitorId, reason);
+    await checkOutVisitor(selectedResident.visitorId, `Kiosk self-service departure${selectedLeaveType ? ` — ${selectedLeaveType}` : ""}`);
     setDoneMessage({ title: `${name} — have a safe trip!`, subtitle: `Room ${roomNum} departure recorded` });
     toast({ title: "Departure Recorded", description: `${name} has been marked as away.` });
   };
@@ -127,37 +84,6 @@ export default function KioskResidentLeave() {
         accentColor="info"
         onComplete={handleComplete}
       />
-    );
-  }
-
-  // Pre-departure questions step
-  if (mode === "leaving-questions" && selectedResident) {
-    const name = `${selectedResident.firstName} ${selectedResident.surname}`;
-    return (
-      <motion.div initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} className="w-full space-y-6">
-        <KioskDynamicQuestions
-          title="Pre-Departure Check"
-          subtitle={name}
-          formFields={activeFormFields}
-          formAnswers={formAnswers}
-          onFormAnswerChange={(key, value) => setFormAnswers((prev) => ({ ...prev, [key]: value }))}
-          healthQuestions={healthQuestions}
-          healthAnswers={healthAnswers}
-          onHealthAnswerChange={(id, value) => setHealthAnswers((prev) => ({ ...prev, [id]: value }))}
-        />
-
-        <div className="flex gap-3">
-          <Button variant="secondary" onClick={() => setMode("leaving-confirm")} className="flex-1 h-14 text-base gap-2 border border-border">
-            <ArrowLeft className="h-5 w-5" /> Back
-          </Button>
-          <Button
-            onClick={handleConfirmLeave}
-            className="flex-1 h-14 text-base gap-2 bg-warning hover:bg-warning/90 text-warning-foreground"
-          >
-            <DoorOpen className="h-5 w-5" /> Confirm Departure
-          </Button>
-        </div>
-      </motion.div>
     );
   }
 
@@ -213,12 +139,8 @@ export default function KioskResidentLeave() {
           <Button variant="secondary" onClick={() => setMode("leaving")} className="flex-1 h-14 text-base gap-2 border border-border">
             <ArrowLeft className="h-5 w-5" /> Back
           </Button>
-          <Button onClick={handleProceedFromConfirm} className="flex-1 h-14 text-base gap-2 bg-warning hover:bg-warning/90 text-warning-foreground">
-            {hasQuestions ? (
-              <><ArrowRight className="h-5 w-5" /> Next</>
-            ) : (
-              <><DoorOpen className="h-5 w-5" /> Confirm Departure</>
-            )}
+          <Button onClick={handleConfirmLeave} className="flex-1 h-14 text-base gap-2 bg-warning hover:bg-warning/90 text-warning-foreground">
+            <DoorOpen className="h-5 w-5" /> Confirm Departure
           </Button>
         </div>
       </motion.div>

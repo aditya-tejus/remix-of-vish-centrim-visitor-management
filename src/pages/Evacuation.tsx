@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useVisitors } from "@/hooks/useVisitors";
+import { useResidents } from "@/hooks/useResidents";
+import { useEvacuationDrills, useEvacuationAttendance, useEvacuationMutations, EvacuationDrill } from "@/hooks/useEvacuation";
+import { supabase } from "@/integrations/supabase/client";
 import { AlertTriangle, CheckCircle2, Search, Shield, Clock, Users, LogIn, Download, Printer, CheckSquare, Layers, Home, MapPin } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format, differenceInMinutes } from "date-fns";
@@ -21,47 +24,98 @@ function formatDuration(start: Date): string {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
-// Extract wing from address (e.g. "Room 12, East Wing" → "East Wing")
-function extractWing(address: string): string {
-  if (!address) return "Unknown";
-  const parts = address.split(",").map((s) => s.trim());
-  const wingPart = parts.find((p) => p.toLowerCase().includes("wing"));
-  return wingPart || "Unknown";
-}
-
-// Extract room from address (e.g. "Room 12, East Wing" → "Room 12")
-function extractRoom(address: string): string {
-  if (!address) return "";
-  const parts = address.split(",").map((s) => s.trim());
-  const roomPart = parts.find((p) => p.toLowerCase().includes("room"));
-  return roomPart || parts[0] || "";
-}
-
 type GroupBy = "type" | "status";
 
 export default function Evacuation() {
   const { visitors } = useVisitors();
+  const { residents } = useResidents();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterWing, setFilterWing] = useState<string>("all");
-  const [safeIds, setSafeIds] = useState<Set<string>>(new Set());
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [groupBy, setGroupBy] = useState<GroupBy>("type");
+  const [busy, setBusy] = useState(false);
+
+  // Shared, live-synced roll call state
+  const { data: activeDrills = [] } = useEvacuationDrills("active");
+  const activeDrill = activeDrills[0];
+  const { data: attendance = [] } = useEvacuationAttendance(activeDrill?.id);
+  const { startDrill, markSafe, markUnsafe, endDrill, addAttendee } = useEvacuationMutations();
+
+  const residentMap = useMemo(
+    () => new Map(residents.map((r) => [r.visitorId, r])),
+    [residents]
+  );
+  const wingOf = (v: Visitor) =>
+    v.type === "resident" ? residentMap.get(v.id)?.wing || "Unassigned wing" : "";
+  const roomOf = (v: Visitor) =>
+    v.type === "resident" ? residentMap.get(v.id)?.room || "" : "";
+
+  const safeIds = useMemo(
+    () => new Set(attendance.filter((a) => a.status === "safe" && a.visitor_id).map((a) => a.visitor_id as string)),
+    [attendance]
+  );
 
   const checkedIn = useMemo(() =>
     visitors.filter((v) => v.status === "checked-in"),
     [visitors]
   );
 
+  const ensureDrill = async (): Promise<EvacuationDrill> => {
+    if (activeDrill) return activeDrill;
+    return await startDrill.mutateAsync({
+      title: `Roll call ${format(new Date(), "dd MMM yyyy HH:mm")}`,
+      people: checkedIn.map((v) => ({ name: `${v.firstName} ${v.surname}`, type: v.type, visitor_id: v.id })),
+    });
+  };
+
+  // Persisted, cross-device safe marking
+  const setSafeFor = async (ids: string[], safe: boolean) => {
+    if (ids.length === 0) return;
+    setBusy(true);
+    try {
+      const drill = await ensureDrill();
+      const { data: rows } = await supabase
+        .from("evacuation_attendance" as any)
+        .select("id, visitor_id")
+        .eq("drill_id", drill.id)
+        .in("visitor_id", ids);
+      const found = new Map(((rows || []) as any[]).map((r) => [r.visitor_id as string, r.id as string]));
+      for (const id of ids) {
+        const attId = found.get(id);
+        if (attId) {
+          if (safe) await markSafe.mutateAsync({ id: attId });
+          else await markUnsafe.mutateAsync(attId);
+        } else if (safe) {
+          const v = checkedIn.find((x) => x.id === id);
+          if (v) {
+            await addAttendee.mutateAsync({
+              drillId: drill.id,
+              name: `${v.firstName} ${v.surname}`,
+              type: v.type,
+              visitorId: v.id,
+              safe: true,
+            });
+          }
+        }
+      }
+    } catch (e: any) {
+      toast({ title: "Could not update roll call", description: e?.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+
   // All unique wings
   const allWings = useMemo(() => {
     const wings = new Set<string>();
     checkedIn.forEach((v) => {
-      if (v.type === "resident") wings.add(extractWing(v.address));
+      if (v.type === "resident") wings.add(wingOf(v));
     });
-    return [...wings].filter((w) => w !== "Unknown").sort();
+    return [...wings].filter((w) => w !== "Unassigned wing").sort();
   }, [checkedIn]);
 
   const filtered = useMemo(() => {
@@ -78,7 +132,7 @@ export default function Evacuation() {
       list = list.filter((v) => v.type === filterType);
     }
     if (filterWing !== "all") {
-      list = list.filter((v) => extractWing(v.address) === filterWing);
+      list = list.filter((v) => wingOf(v) === filterWing);
     }
     if (filterStatus === "safe") {
       list = list.filter((v) => safeIds.has(v.id));
@@ -97,8 +151,8 @@ export default function Evacuation() {
     const sortByRoom = (items: Visitor[]) =>
       items.sort((a, b) => {
         if (a.type === "resident" && b.type === "resident") {
-          const roomA = extractRoom(a.address).replace(/\D/g, "");
-          const roomB = extractRoom(b.address).replace(/\D/g, "");
+          const roomA = roomOf(a).replace(/\D/g, "");
+          const roomB = roomOf(b).replace(/\D/g, "");
           return (parseInt(roomA) || 0) - (parseInt(roomB) || 0);
         }
         return 0;
@@ -110,7 +164,7 @@ export default function Evacuation() {
       const otherMap = new Map<string, Visitor[]>();
       filtered.forEach((v) => {
         if (v.type === "resident") {
-          const wing = extractWing(v.address);
+          const wing = wingOf(v);
           if (!wingMap.has(wing)) wingMap.set(wing, []);
           wingMap.get(wing)!.push(v);
         } else {
@@ -151,19 +205,24 @@ export default function Evacuation() {
   const awayResidentCount = awayResidents.length;
 
   const toggleSafe = (id: string) => {
-    setSafeIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
+    void setSafeFor([id], !safeIds.has(id));
   };
 
-  const markAllSafe = () => {
-    setSafeIds(new Set(checkedIn.map((v) => v.id)));
+  const markAllSafe = async () => {
+    await setSafeFor(checkedIn.map((v) => v.id), true);
     toast({ title: "All marked safe", description: `${checkedIn.length} people marked as safe.` });
   };
 
-  const resetAll = () => setSafeIds(new Set());
+  const resetAll = async () => {
+    await setSafeFor([...safeIds], false);
+  };
+
+  const finishRollCall = async () => {
+    if (!activeDrill) return;
+    await endDrill.mutateAsync({ drillId: activeDrill.id, accounted: safeIds.size });
+    toast({ title: "Roll call ended", description: `${safeIds.size} of ${checkedIn.length} accounted for.` });
+  };
+
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -182,16 +241,14 @@ export default function Evacuation() {
     }
   };
 
-  const markSelectedSafe = () => {
+  const markSelectedSafe = async () => {
     if (selectedIds.size === 0) return;
-    setSafeIds((prev) => {
-      const next = new Set(prev);
-      selectedIds.forEach((id) => next.add(id));
-      return next;
-    });
-    toast({ title: "Marked safe", description: `${selectedIds.size} people marked as safe.` });
+    const count = selectedIds.size;
+    await setSafeFor([...selectedIds], true);
+    toast({ title: "Marked safe", description: `${count} people marked as safe.` });
     setSelectedIds(new Set());
   };
+
 
   const selectedCount = selectedIds.size;
   const allUnaccountedSelected = filtered.filter((v) => !safeIds.has(v.id)).length > 0 &&
@@ -201,8 +258,8 @@ export default function Evacuation() {
     const rows = filtered.map((v) => ({
       Name: `${v.firstName} ${v.surname}`,
       Type: v.type,
-      Wing: v.type === "resident" ? extractWing(v.address) : "",
-      Room: v.type === "resident" ? extractRoom(v.address) : "",
+      Wing: v.type === "resident" ? wingOf(v) : "",
+      Room: v.type === "resident" ? roomOf(v) : "",
       Mobile: v.mobile,
       Email: v.email,
       Visiting: v.whomToVisit || "",
@@ -234,7 +291,7 @@ export default function Evacuation() {
     const rows = filtered.map((v) => `
       <tr class="${safeIds.has(v.id) ? "safe" : "danger"}">
         <td>${safeIds.has(v.id) ? "✅" : "⚠️"}</td>
-        <td><strong>${v.firstName} ${v.surname}</strong>${v.type === "resident" ? `<br><small style="color:#6b7280">${extractRoom(v.address)} • ${extractWing(v.address)}</small>` : ""}</td>
+        <td><strong>${v.firstName} ${v.surname}</strong>${v.type === "resident" ? `<br><small style="color:#6b7280">${roomOf(v)} • ${wingOf(v)}</small>` : ""}</td>
         <td>${v.type}</td>
         <td>${v.whomToVisit || "—"}</td>
         <td>${format(new Date(v.checkInTime), "HH:mm")}</td>
@@ -273,8 +330,8 @@ export default function Evacuation() {
 
   const renderRow = (v: Visitor) => {
     const isSafe = safeIds.has(v.id);
-    const wing = v.type === "resident" ? extractWing(v.address) : "";
-    const room = v.type === "resident" ? extractRoom(v.address) : "";
+    const wing = v.type === "resident" ? wingOf(v) : "";
+    const room = v.type === "resident" ? roomOf(v) : "";
 
     return (
       <TableRow key={v.id} className={isSafe ? "bg-success/5" : selectedIds.has(v.id) ? "bg-muted/50" : ""}>
@@ -303,7 +360,7 @@ export default function Evacuation() {
                   <Home className="h-2.5 w-2.5" /> {room}
                 </span>
               )}
-              {v.type === "resident" && wing && wing !== "Unknown" && (
+              {v.type === "resident" && wing && wing !== "Unassigned wing" && (
                 <span className="text-[10px] text-primary font-medium flex items-center gap-0.5">
                   <MapPin className="h-2.5 w-2.5" /> {wing}
                 </span>
@@ -390,16 +447,21 @@ export default function Evacuation() {
                   <Printer className="h-3.5 w-3.5" /> Print
                 </Button>
                 {selectedCount > 0 && (
-                  <Button size="sm" onClick={markSelectedSafe} className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-emerald-50">
+                  <Button size="sm" disabled={busy} onClick={markSelectedSafe} className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-emerald-50">
                     <CheckSquare className="h-3.5 w-3.5" /> Mark {selectedCount} Safe
                   </Button>
                 )}
                 {safeCount > 0 && safeCount < checkedIn.length && (
-                  <Button variant="ghost" size="sm" onClick={resetAll} className="h-8 text-xs">Reset</Button>
+                  <Button variant="ghost" size="sm" disabled={busy} onClick={resetAll} className="h-8 text-xs">Reset</Button>
                 )}
                 {checkedIn.length > 0 && safeCount < checkedIn.length && selectedCount === 0 && (
-                  <Button size="sm" onClick={markAllSafe} className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-emerald-50">
+                  <Button size="sm" disabled={busy} onClick={markAllSafe} className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-emerald-50">
                     <CheckCircle2 className="h-3.5 w-3.5" /> Mark All Safe
+                  </Button>
+                )}
+                {activeDrill && (
+                  <Button variant="outline" size="sm" disabled={busy} onClick={finishRollCall} className="h-8 text-xs">
+                    End roll call
                   </Button>
                 )}
               </div>
@@ -407,6 +469,17 @@ export default function Evacuation() {
           </header>
 
           <main className="p-6 space-y-5">
+            <div className={`rounded-xl border px-4 py-2.5 text-sm flex items-center gap-2 ${activeDrill ? "border-destructive/30 bg-destructive/5 text-destructive" : "border-border bg-muted/40 text-muted-foreground"}`}>
+              <Shield className="h-4 w-4 shrink-0" />
+              {activeDrill ? (
+                <span>
+                  Live roll call in progress since {format(new Date(activeDrill.started_at), "HH:mm")} — everyone marked safe is shared instantly with all devices.
+                </span>
+              ) : (
+                <span>No roll call running. Marking the first person safe starts one and shares it live with every device.</span>
+              )}
+            </div>
+
             {/* Summary cards */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="rounded-xl border border-border bg-card p-4 text-center">
