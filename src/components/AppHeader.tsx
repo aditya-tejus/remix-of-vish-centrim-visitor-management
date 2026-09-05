@@ -81,7 +81,9 @@ export function AppHeader({
               overdueCount={overdueCount}
               draftCount={draftCount}
               pendingCount={pendingCount}
+              healthBlockCount={healthBlockCount}
             />
+
           </div>
 
           {/* Page-specific actions */}
