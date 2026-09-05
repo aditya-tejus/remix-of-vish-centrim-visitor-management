@@ -134,6 +134,7 @@ export default function KioskCheckIn() {
       comments: flow.formValues.comments || "",
       retentionExpiry: new Date(Date.now() + 86400000 * 60),
       acknowledgedPrivacy: flow.privacyAcknowledged,
+      bodyTemperature: flow.bodyTemperature ?? undefined,
       contractorScreening: flow.selectedType === "contractor" ? flow.contractorAnswers : undefined,
       supplierId: flow.selectedSupplier?.id || undefined,
       qrCode: primaryQr,
