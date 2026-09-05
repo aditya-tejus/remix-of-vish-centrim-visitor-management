@@ -61,6 +61,8 @@ export default function KioskCheckIn() {
         body_temperature: flow.bodyTemperature,
         blocked_at: new Date().toISOString(),
       } as any,
+    }).then(({ error }) => {
+      if (error) alertedRef.current = false;
     });
   }, [flow.screeningBlocked, flow.hasYesFlags, flow.bodyTemperature, flow.formValues, flow.selectedType]);
 
