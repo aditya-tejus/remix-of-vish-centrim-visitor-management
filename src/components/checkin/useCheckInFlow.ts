@@ -53,6 +53,7 @@ export function useCheckInFlow(open: boolean) {
   });
 
   const [healthAnswers, setHealthAnswers] = useState<Record<string, any>>({});
+  const [overrideReason, setOverrideReason] = useState("");
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [companions, setCompanions] = useState<CompanionDetail[]>([]);
   const [photo, setPhoto] = useState<string | null>(null);
@@ -203,6 +204,7 @@ export function useCheckInFlow(open: boolean) {
       influenzaVaccineDate: "", covidDose1Date: "", covidDose2Date: "",
     });
     setHealthAnswers({});
+    setOverrideReason("");
     setPrivacyAcknowledged(false);
     setCompanions([]);
     setPhoto(null);
@@ -297,5 +299,8 @@ export function useCheckInFlow(open: boolean) {
 
     // Actions
     canProceed, resetForm, buildVisitor,
+
+    // Health screening override
+    screeningFlagged, hasSymptomFlag, hasHighTemperature, overrideReason, setOverrideReason,
   };
 }
