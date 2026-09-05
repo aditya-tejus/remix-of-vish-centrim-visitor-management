@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useVisitors } from "@/hooks/useVisitors";
+import { useResidents } from "@/hooks/useResidents";
+import { useEvacuationDrills, useEvacuationAttendance, useEvacuationMutations, EvacuationDrill } from "@/hooks/useEvacuation";
+import { supabase } from "@/integrations/supabase/client";
 import { AlertTriangle, CheckCircle2, Search, Shield, Clock, Users, LogIn, Download, Printer, CheckSquare, Layers, Home, MapPin } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format, differenceInMinutes } from "date-fns";
@@ -21,39 +24,90 @@ function formatDuration(start: Date): string {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
-// Extract wing from address (e.g. "Room 12, East Wing" → "East Wing")
-function extractWing(address: string): string {
-  if (!address) return "Unknown";
-  const parts = address.split(",").map((s) => s.trim());
-  const wingPart = parts.find((p) => p.toLowerCase().includes("wing"));
-  return wingPart || "Unknown";
-}
-
-// Extract room from address (e.g. "Room 12, East Wing" → "Room 12")
-function extractRoom(address: string): string {
-  if (!address) return "";
-  const parts = address.split(",").map((s) => s.trim());
-  const roomPart = parts.find((p) => p.toLowerCase().includes("room"));
-  return roomPart || parts[0] || "";
-}
-
 type GroupBy = "type" | "status";
 
 export default function Evacuation() {
   const { visitors } = useVisitors();
+  const { residents } = useResidents();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterWing, setFilterWing] = useState<string>("all");
-  const [safeIds, setSafeIds] = useState<Set<string>>(new Set());
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [groupBy, setGroupBy] = useState<GroupBy>("type");
+  const [busy, setBusy] = useState(false);
+
+  // Shared, live-synced roll call state
+  const { data: activeDrills = [] } = useEvacuationDrills("active");
+  const activeDrill = activeDrills[0];
+  const { data: attendance = [] } = useEvacuationAttendance(activeDrill?.id);
+  const { startDrill, markSafe, markUnsafe, endDrill, addAttendee } = useEvacuationMutations();
+
+  const residentMap = useMemo(
+    () => new Map(residents.map((r) => [r.visitorId, r])),
+    [residents]
+  );
+  const wingOf = (v: Visitor) =>
+    v.type === "resident" ? residentMap.get(v.id)?.wing || "Unknown" : "";
+  const roomOf = (v: Visitor) =>
+    v.type === "resident" ? residentMap.get(v.id)?.room || "" : "";
+
+  const safeIds = useMemo(
+    () => new Set(attendance.filter((a) => a.status === "safe" && a.visitor_id).map((a) => a.visitor_id as string)),
+    [attendance]
+  );
 
   const checkedIn = useMemo(() =>
     visitors.filter((v) => v.status === "checked-in"),
     [visitors]
   );
+
+  const ensureDrill = async (): Promise<EvacuationDrill> => {
+    if (activeDrill) return activeDrill;
+    return await startDrill.mutateAsync({
+      title: `Roll call ${format(new Date(), "dd MMM yyyy HH:mm")}`,
+      people: checkedIn.map((v) => ({ name: `${v.firstName} ${v.surname}`, type: v.type, visitor_id: v.id })),
+    });
+  };
+
+  // Persisted, cross-device safe marking
+  const setSafeFor = async (ids: string[], safe: boolean) => {
+    if (ids.length === 0) return;
+    setBusy(true);
+    try {
+      const drill = await ensureDrill();
+      const { data: rows } = await supabase
+        .from("evacuation_attendance" as any)
+        .select("id, visitor_id")
+        .eq("drill_id", drill.id)
+        .in("visitor_id", ids);
+      const found = new Map(((rows || []) as any[]).map((r) => [r.visitor_id as string, r.id as string]));
+      for (const id of ids) {
+        const attId = found.get(id);
+        if (attId) {
+          if (safe) await markSafe.mutateAsync({ id: attId });
+          else await markUnsafe.mutateAsync(attId);
+        } else if (safe) {
+          const v = checkedIn.find((x) => x.id === id);
+          if (v) {
+            await addAttendee.mutateAsync({
+              drillId: drill.id,
+              name: `${v.firstName} ${v.surname}`,
+              type: v.type,
+              visitorId: v.id,
+              safe: true,
+            });
+          }
+        }
+      }
+    } catch (e: any) {
+      toast({ title: "Could not update roll call", description: e?.message || "Please try again.", variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
 
   // All unique wings
   const allWings = useMemo(() => {
