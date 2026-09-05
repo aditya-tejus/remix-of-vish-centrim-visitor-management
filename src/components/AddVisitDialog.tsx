@@ -21,6 +21,7 @@ import { useActiveLeaveTypes } from "@/hooks/useLeaveTypes";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { ContractorScreening } from "@/components/ContractorScreening";
+import { isContractorBlocked } from "@/lib/contractorCredentials";
 import { Supplier } from "@/hooks/useSuppliers";
 import { useResidents } from "@/hooks/useResidents";
 import { useStaffMembers } from "@/hooks/useStaffMembers";
@@ -361,7 +362,9 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
   const hasHighTemperature = !!formData.bodyTemperature && parseFloat(formData.bodyTemperature) > 37.8;
   const screeningFlagged = !isResident && (hasSymptomFlag || hasHighTemperature);
   const overrideValid = overrideReason.trim().length >= 3;
-  const canSubmit = privacyAcknowledged && (!screeningFlagged || overrideValid);
+  // Contractor credential gate: only the highest-risk credential blocks check-in
+  const contractorBlocked = visitorType === "contractor" && isContractorBlocked(jurisdiction, selectedSupplier).blocked;
+  const canSubmit = privacyAcknowledged && !contractorBlocked && (!screeningFlagged || overrideValid);
 
 
   // Render health questions shared component
