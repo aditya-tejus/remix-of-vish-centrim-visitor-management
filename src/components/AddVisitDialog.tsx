@@ -1215,7 +1215,30 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
           )}
 
           {!isResident && step === 4 && renderReview()}
+
+          {screeningFlagged && step === totalSteps && (
+            <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-2">
+              <div className="flex items-start gap-2">
+                <Shield className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                <div className="space-y-0.5">
+                  <p className="text-sm font-semibold text-destructive">Health screening failed</p>
+                  <p className="text-xs text-muted-foreground">
+                    {hasHighTemperature ? `Temperature ${formData.bodyTemperature}°C is above 37.8°C. ` : ""}
+                    {hasSymptomFlag ? "A symptom was reported. " : ""}
+                    A staff override is required to continue, and it will be recorded in the audit trail.
+                  </p>
+                </div>
+              </div>
+              <Textarea
+                value={overrideReason}
+                onChange={(e) => setOverrideReason(e.target.value)}
+                placeholder="Reason for allowing this check-in (required)"
+                className="min-h-[64px] text-sm rounded-lg"
+              />
+            </div>
+          )}
         </div>
+
 
         {/* Footer */}
         <div className="shrink-0 flex items-center justify-between px-6 py-3 border-t border-border bg-card/80 backdrop-blur-sm">
