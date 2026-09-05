@@ -6,7 +6,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const ALLOWED_RETENTION = [30, 60, 90, 180];
+const ALLOWED_RETENTION = [30, 60, 90, 180, 365, 1095, 2555];
+const NEVER = "never";
 const BATCH_SIZE = 500;
 const VISITOR_TYPES = ["visitor", "contractor", "resident"];
 
@@ -27,11 +28,17 @@ Deno.serve(async (req) => {
       .select("key, value")
       .like("key", "retention_period_days%");
 
-    const retentionMap: Record<string, number> = {};
+    // null = never auto-delete for that type
+    const retentionMap: Record<string, number | null> = {};
     for (const type of VISITOR_TYPES) {
       const setting = settings?.find((s: any) => s.key === `retention_period_days_${type}`);
       const fallback = settings?.find((s: any) => s.key === "retention_period_days");
-      const days = setting ? parseInt(setting.value, 10) : fallback ? parseInt(fallback.value, 10) : 60;
+      const raw = setting?.value ?? fallback?.value ?? "60";
+      if (raw === NEVER) {
+        retentionMap[type] = null;
+        continue;
+      }
+      const days = parseInt(raw, 10);
       retentionMap[type] = ALLOWED_RETENTION.includes(days) ? days : 60;
     }
 
@@ -42,6 +49,11 @@ Deno.serve(async (req) => {
     // 2. Delete per type with appropriate retention
     for (const type of VISITOR_TYPES) {
       const safeDays = retentionMap[type];
+      // "Never delete" configured for this type — skip entirely
+      if (safeDays === null) {
+        console.log(`Cleanup: ${type} set to never auto-delete — skipped`);
+        continue;
+      }
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - safeDays);
       const cutoffISO = cutoff.toISOString();
@@ -55,6 +67,7 @@ Deno.serve(async (req) => {
           .eq("type", type)
           .lt("check_in_time", cutoffISO)
           .neq("status", "checked-in")
+          .eq("legal_hold", false)
           .limit(BATCH_SIZE);
 
         if (selectErr) throw new Error(`Select error (${type}): ${selectErr.message}`);
@@ -79,6 +92,7 @@ Deno.serve(async (req) => {
         .eq("type", type)
         .eq("status", "checked-in")
         .lt("check_in_time", staleCutoffISO)
+        .eq("legal_hold", false)
         .limit(BATCH_SIZE);
 
       if (stale && stale.length > 0) {
