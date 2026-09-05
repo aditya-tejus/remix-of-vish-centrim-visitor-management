@@ -3,7 +3,7 @@ import { Bell, Clock, RefreshCw, UserX, ClipboardCheck, Check } from "lucide-rea
 import { Button } from "@/components/ui/button";
 
 interface NotificationItem {
-  type: "overstay" | "draft" | "overdue" | "pending";
+  type: "overstay" | "draft" | "overdue" | "pending" | "health";
   icon: React.ReactNode;
   title: string;
   time: string;
@@ -15,12 +15,14 @@ interface NotificationBellProps {
   overdueCount: number;
   draftCount: number;
   pendingCount: number;
+  healthBlockCount?: number;
 }
 
-export function NotificationBell({ overstayedCount, overdueCount, draftCount, pendingCount }: NotificationBellProps) {
+export function NotificationBell({ overstayedCount, overdueCount, draftCount, pendingCount, healthBlockCount = 0 }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const totalAlerts = overstayedCount + overdueCount + draftCount + pendingCount;
+  const totalAlerts = overstayedCount + overdueCount + draftCount + pendingCount + healthBlockCount;
+
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
