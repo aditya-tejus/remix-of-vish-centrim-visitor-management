@@ -25,7 +25,7 @@ export default function Visitors() {
   const [selectedVisitor, setSelectedVisitor] = useState<Visitor | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const { toast } = useToast();
-  const { data: watchlist = [], addEntry, removeEntry } = useWatchlist();
+  const { data: watchlist = [], addEntry, removeEntry, entriesDueReview } = useWatchlist();
 
   const handleVisitorClick = (visitor: Visitor) => {
     setSelectedVisitor(visitor);
@@ -205,12 +205,28 @@ export default function Visitors() {
                   </Button>
                 </div>
 
+                {entriesDueReview.length > 0 && (
+                  <div className="rounded-[10px] border-2 border-warning/40 bg-warning/5 p-3 flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[13px] font-semibold text-foreground">
+                        {entriesDueReview.length} entr{entriesDueReview.length === 1 ? "y is" : "ies are"} due for review
+                      </p>
+                      <p className="text-[12px] text-muted-foreground">
+                        {entriesDueReview.map((e) => `${e.first_name} ${e.surname}`).join(", ")} — renew, downgrade or remove{" "}
+                        {entriesDueReview.length === 1 ? "this restriction" : "these restrictions"}.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="rounded-[10px] border border-border bg-card overflow-hidden shadow-sm">
                   <Table>
                     <TableHeader>
                       <TableRow className="hover:bg-transparent bg-muted/50">
                         <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Name</TableHead>
                         <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Reason</TableHead>
+                        <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Review Due</TableHead>
                         <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Alert Type</TableHead>
                         <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Added By</TableHead>
                         <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Date Added</TableHead>
@@ -220,7 +236,7 @@ export default function Visitors() {
                     <TableBody>
                       {watchlist.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-16">
+                          <TableCell colSpan={7} className="text-center py-16">
                             <div className="flex flex-col items-center gap-2">
                               <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
                                 <ShieldAlert className="h-5 w-5 text-muted-foreground" />
@@ -243,6 +259,15 @@ export default function Visitors() {
                               </div>
                             </TableCell>
                             <TableCell className="text-sm text-foreground max-w-[200px] truncate">{entry.reason}</TableCell>
+                            <TableCell className="text-sm">
+                              {entry.review_date ? (
+                                <span className={new Date(`${entry.review_date}T23:59:59`) < new Date() ? "text-warning font-semibold" : "text-muted-foreground"}>
+                                  {format(new Date(entry.review_date), "dd MMM yyyy")}
+                                </span>
+                              ) : (
+                                <span className="text-warning font-semibold">Not set</span>
+                              )}
+                            </TableCell>
                             <TableCell>
                               <Badge variant={entry.alert_type === "hard" ? "destructive" : "outline"} className="text-[10px] gap-1">
                                 {entry.alert_type === "hard" ? (
