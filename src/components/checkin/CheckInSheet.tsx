@@ -214,7 +214,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
                     <div className="space-y-0.5">
                       <p className="text-[13px] font-semibold text-destructive">Health screening flagged</p>
                       <p className="text-[12px] text-muted-foreground">
-                        {flow.hasHighTemperature ? `Temperature ${flow.formData.bodyTemperature}\u00B0C is above 37.8\u00B0C. ` : ""}
+                        {flow.hasHighTemperature ? `Temperature ${flow.formData.bodyTemperature}°C is above 37.8°C. ` : ""}
                         {flow.hasSymptomFlag ? "A symptom was reported. " : ""}
                         A staff override is required to continue, and it will be recorded in the audit trail.
                       </p>
