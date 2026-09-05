@@ -211,6 +211,12 @@ export function useCheckInFlow(open: boolean) {
     setSelectedSupplier(null);
   };
 
+  // Health screening gate (attended desk: staff may override with a recorded reason)
+  const hasSymptomFlag = Object.values(healthAnswers).some((v) => v === true);
+  const hasHighTemperature = !!formData.bodyTemperature && parseFloat(formData.bodyTemperature) > 37.8;
+  const screeningFlagged = hasSymptomFlag || hasHighTemperature;
+  const overrideValid = overrideReason.trim().length >= 3;
+
   const canProceed = useMemo(() => {
     switch (step) {
       case "identify":
@@ -218,13 +224,14 @@ export function useCheckInFlow(open: boolean) {
       case "details":
         return !!(formData.firstName && formData.surname);
       case "screening":
-        return true; // Screening is advisory, not blocking
+        return true; // Flagged answers are handled with a staff override at confirm
       case "confirm":
-        return privacyAcknowledged;
+        return privacyAcknowledged && (!screeningFlagged || overrideValid);
       default:
         return true;
     }
-  }, [step, formData, privacyAcknowledged]);
+  }, [step, formData, privacyAcknowledged, screeningFlagged, overrideValid]);
+
 
   const buildVisitor = (): Omit<Visitor, "id"> => {
     const allHealthClear = Object.values(healthAnswers).every((v) => v === false);
