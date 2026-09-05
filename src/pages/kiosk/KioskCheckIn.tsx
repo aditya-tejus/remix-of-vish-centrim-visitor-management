@@ -170,6 +170,14 @@ export default function KioskCheckIn() {
   }, [flow, addVisitor, toast]);
 
   const handleSubmit = () => {
+    if (flow.screeningBlocked) {
+      toast({
+        title: "Please see a staff member",
+        description: "Your health screening answers need to be reviewed before you can check in.",
+        variant: "destructive",
+      });
+      return;
+    }
     const match = flow.checkVisitor(flow.formValues.firstName || "", flow.formValues.surname || "");
     if (match) {
       setWatchlistEntry(match);
@@ -178,6 +186,7 @@ export default function KioskCheckIn() {
     }
     doCheckIn();
   };
+
 
   const handleComplete = useCallback(() => navigate("/kiosk/home"), [navigate]);
   const handleStartOver = () => {
