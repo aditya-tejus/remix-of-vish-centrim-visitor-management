@@ -30,6 +30,8 @@ export function AppHeader({
   pendingCount = 0,
 }: AppHeaderProps) {
   const [now, setNow] = useState(new Date());
+  const { data: healthBlockCount = 0 } = useHealthAlerts();
+
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 30000);
