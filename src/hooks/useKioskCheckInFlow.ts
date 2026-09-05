@@ -199,6 +199,10 @@ export function useKioskCheckInFlow() {
     checkVisitor,
     detailsValid,
     hasYesFlags,
+    bodyTemperature,
+    highTemperature,
+    screeningBlocked,
+
     reset,
     residentLookupMode,
     staffLookupMode,
