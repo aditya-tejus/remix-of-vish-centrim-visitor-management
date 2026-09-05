@@ -198,6 +198,7 @@ export default function KioskCheckIn() {
     setVisitingSearch("");
     setVisitingMode(null);
     setCheckedInQrCode(null);
+    alertedRef.current = false;
   };
 
   if (submitted) {
