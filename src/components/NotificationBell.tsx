@@ -33,6 +33,12 @@ export function NotificationBell({ overstayedCount, overdueCount, draftCount, pe
   }, []);
 
   const items: NotificationItem[] = [];
+  if (healthBlockCount > 0) items.push({
+    type: "health", icon: <AlertTriangle className="h-4 w-4" />,
+    title: `${healthBlockCount} kiosk check-in${healthBlockCount > 1 ? "s" : ""} blocked by health screening`,
+    time: "Needs staff assistance", color: "text-destructive bg-destructive/10",
+  });
+
   if (overstayedCount > 0) items.push({
     type: "overstay", icon: <Clock className="h-4 w-4" />,
     title: `${overstayedCount} visitor${overstayedCount > 1 ? "s" : ""} overstayed`,
