@@ -220,5 +220,5 @@ export function useEvacuationMutations() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["evacuation-points"] }),
   });
 
-  return { startDrill, markSafe, markUnsafe, endDrill, addPoint, updatePoint, deletePoint };
+  return { startDrill, markSafe, markUnsafe, endDrill, addAttendee, addPoint, updatePoint, deletePoint };
 }
