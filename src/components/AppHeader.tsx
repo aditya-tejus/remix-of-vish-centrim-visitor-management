@@ -5,6 +5,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { useHealthAlerts } from "@/hooks/useHealthAlerts";
 
 interface AppHeaderProps {
   /** Page title shown after the sidebar trigger */
