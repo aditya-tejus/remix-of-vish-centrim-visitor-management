@@ -221,7 +221,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
       accompaniedByName: "",
     });
     setExpectedReturnDate(undefined); setExpectedReturnTime("12:00");
-    setHealthAnswers({}); setPrivacyAcknowledged(false);
+    setHealthAnswers({}); setOverrideReason(""); setPrivacyAcknowledged(false);
     setReturnNotificationOptIn(false);
     setPhoto(null); setCompanions([]); stopCamera();
     setContractorScreeningAnswers({}); setSelectedSupplier(null);
