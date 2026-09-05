@@ -113,7 +113,7 @@ export default function Evacuation() {
   const allWings = useMemo(() => {
     const wings = new Set<string>();
     checkedIn.forEach((v) => {
-      if (v.type === "resident") wings.add(extractWing(v.address));
+      if (v.type === "resident") wings.add(wingOf(v));
     });
     return [...wings].filter((w) => w !== "Unknown").sort();
   }, [checkedIn]);
@@ -132,7 +132,7 @@ export default function Evacuation() {
       list = list.filter((v) => v.type === filterType);
     }
     if (filterWing !== "all") {
-      list = list.filter((v) => extractWing(v.address) === filterWing);
+      list = list.filter((v) => wingOf(v) === filterWing);
     }
     if (filterStatus === "safe") {
       list = list.filter((v) => safeIds.has(v.id));
@@ -151,8 +151,8 @@ export default function Evacuation() {
     const sortByRoom = (items: Visitor[]) =>
       items.sort((a, b) => {
         if (a.type === "resident" && b.type === "resident") {
-          const roomA = extractRoom(a.address).replace(/\D/g, "");
-          const roomB = extractRoom(b.address).replace(/\D/g, "");
+          const roomA = roomOf(a).replace(/\D/g, "");
+          const roomB = roomOf(b).replace(/\D/g, "");
           return (parseInt(roomA) || 0) - (parseInt(roomB) || 0);
         }
         return 0;
@@ -164,7 +164,7 @@ export default function Evacuation() {
       const otherMap = new Map<string, Visitor[]>();
       filtered.forEach((v) => {
         if (v.type === "resident") {
-          const wing = extractWing(v.address);
+          const wing = wingOf(v);
           if (!wingMap.has(wing)) wingMap.set(wing, []);
           wingMap.get(wing)!.push(v);
         } else {
@@ -255,8 +255,8 @@ export default function Evacuation() {
     const rows = filtered.map((v) => ({
       Name: `${v.firstName} ${v.surname}`,
       Type: v.type,
-      Wing: v.type === "resident" ? extractWing(v.address) : "",
-      Room: v.type === "resident" ? extractRoom(v.address) : "",
+      Wing: v.type === "resident" ? wingOf(v) : "",
+      Room: v.type === "resident" ? roomOf(v) : "",
       Mobile: v.mobile,
       Email: v.email,
       Visiting: v.whomToVisit || "",
@@ -288,7 +288,7 @@ export default function Evacuation() {
     const rows = filtered.map((v) => `
       <tr class="${safeIds.has(v.id) ? "safe" : "danger"}">
         <td>${safeIds.has(v.id) ? "✅" : "⚠️"}</td>
-        <td><strong>${v.firstName} ${v.surname}</strong>${v.type === "resident" ? `<br><small style="color:#6b7280">${extractRoom(v.address)} • ${extractWing(v.address)}</small>` : ""}</td>
+        <td><strong>${v.firstName} ${v.surname}</strong>${v.type === "resident" ? `<br><small style="color:#6b7280">${roomOf(v)} • ${wingOf(v)}</small>` : ""}</td>
         <td>${v.type}</td>
         <td>${v.whomToVisit || "—"}</td>
         <td>${format(new Date(v.checkInTime), "HH:mm")}</td>
@@ -327,8 +327,8 @@ export default function Evacuation() {
 
   const renderRow = (v: Visitor) => {
     const isSafe = safeIds.has(v.id);
-    const wing = v.type === "resident" ? extractWing(v.address) : "";
-    const room = v.type === "resident" ? extractRoom(v.address) : "";
+    const wing = v.type === "resident" ? wingOf(v) : "";
+    const room = v.type === "resident" ? roomOf(v) : "";
 
     return (
       <TableRow key={v.id} className={isSafe ? "bg-success/5" : selectedIds.has(v.id) ? "bg-muted/50" : ""}>
