@@ -616,7 +616,7 @@ export default function KioskCheckIn() {
               <Button variant="secondary" onClick={goBack} className="flex-1 h-14 text-base gap-2 border border-border">
                 <ArrowLeft className="h-5 w-5" /> Back
               </Button>
-              <Button onClick={goNext} className="flex-1 h-14 text-base gap-2">
+              <Button onClick={goNext} disabled={flow.contractorBlocked} className="flex-1 h-14 text-base gap-2">
                 Next <ArrowRight className="h-5 w-5" />
               </Button>
             </div>
