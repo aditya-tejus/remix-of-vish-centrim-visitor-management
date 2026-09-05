@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { Visitor } from "@/types/visitor";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Clock, LogOut, X, ChevronRight, Ban, Bell, Home } from "lucide-react";
+import { AlertTriangle, Clock, LogOut, X, ChevronRight, Ban, Bell, Home, ShieldAlert } from "lucide-react";
 import { formatDistanceToNow, format, isPast } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { EscalateIncidentDialog } from "@/components/EscalateIncidentDialog";
 
 interface UrgentActionsProps {
   visitors: Visitor[];
@@ -20,13 +21,14 @@ interface ActionItem {
   time: string;
   severity: "red" | "amber" | "yellow" | "green";
   icon: typeof AlertTriangle;
-  actions: { label: string; variant: "default" | "outline"; onClick: () => void }[];
+  actions: { label: string; variant: "default" | "outline" | "destructive"; onClick: () => void }[];
 }
 
 export function UrgentActions({ visitors, onCheckOut, onCheckOutAllOverstayed }: UrgentActionsProps) {
   const navigate = useNavigate();
   const actions: ActionItem[] = [];
   const [noReturnEnabled, setNoReturnEnabled] = useState(false);
+  const [escalateTarget, setEscalateTarget] = useState<Visitor | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -117,7 +119,9 @@ export function UrgentActions({ visitors, onCheckOut, onCheckOutAllOverstayed }:
           time: format(v.expectedReturnDate!, "dd MMM"),
           severity: "red",
           icon: Home,
-          actions: [],
+          actions: [
+            { label: "Escalate to Incident", variant: "destructive", onClick: () => setEscalateTarget(v) },
+          ],
         });
       });
   }
@@ -228,6 +232,7 @@ export function UrgentActions({ visitors, onCheckOut, onCheckOutAllOverstayed }:
                           onClick={act.onClick}
                         >
                           {act.variant === "default" && <LogOut className="h-3 w-3" />}
+                          {act.variant === "destructive" && <ShieldAlert className="h-3 w-3" />}
                           {act.label}
                         </Button>
                       ))}
@@ -243,6 +248,19 @@ export function UrgentActions({ visitors, onCheckOut, onCheckOutAllOverstayed }:
           </div>
         ))}
       </div>
+
+      <EscalateIncidentDialog
+        open={!!escalateTarget}
+        onOpenChange={(o) => { if (!o) setEscalateTarget(null); }}
+        visitorId={escalateTarget?.id || null}
+        residentName={escalateTarget ? `${escalateTarget.firstName} ${escalateTarget.surname}` : ""}
+        expectedReturnDate={escalateTarget?.expectedReturnDate || null}
+        defaultDescription={
+          escalateTarget
+            ? `${escalateTarget.firstName} ${escalateTarget.surname} did not return from leave as expected. Reason for leave: ${escalateTarget.checkoutReason || "not specified"}.`
+            : ""
+        }
+      />
     </div>
   );
 }
