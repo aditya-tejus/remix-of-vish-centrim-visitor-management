@@ -45,6 +45,27 @@ export default function KioskCheckIn() {
 
   const currentIdx = flow.steps.findIndex((s) => s.id === step);
 
+  // Alert reception once when a kiosk check-in is stopped by health screening
+  const alertedRef = useRef(false);
+  useEffect(() => {
+    if (!flow.screeningBlocked || alertedRef.current) return;
+    alertedRef.current = true;
+    void supabase.from("audit_log").insert({
+      action: "kiosk_health_block",
+      performed_by: "Kiosk",
+      records_affected: 1,
+      details: {
+        name: `${flow.formValues.firstName || ""} ${flow.formValues.surname || ""}`.trim() || "Unknown",
+        visitor_type: flow.selectedType,
+        symptom_flag: flow.hasYesFlags,
+        body_temperature: flow.bodyTemperature,
+        blocked_at: new Date().toISOString(),
+      } as any,
+    });
+  }, [flow.screeningBlocked, flow.hasYesFlags, flow.bodyTemperature, flow.formValues, flow.selectedType]);
+
+
+
   const goNext = () => {
     const nextIdx = currentIdx + 1;
     if (nextIdx < flow.steps.length) setStep(flow.steps[nextIdx].id);
