@@ -447,16 +447,21 @@ export default function Evacuation() {
                   <Printer className="h-3.5 w-3.5" /> Print
                 </Button>
                 {selectedCount > 0 && (
-                  <Button size="sm" onClick={markSelectedSafe} className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-emerald-50">
+                  <Button size="sm" disabled={busy} onClick={markSelectedSafe} className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-emerald-50">
                     <CheckSquare className="h-3.5 w-3.5" /> Mark {selectedCount} Safe
                   </Button>
                 )}
                 {safeCount > 0 && safeCount < checkedIn.length && (
-                  <Button variant="ghost" size="sm" onClick={resetAll} className="h-8 text-xs">Reset</Button>
+                  <Button variant="ghost" size="sm" disabled={busy} onClick={resetAll} className="h-8 text-xs">Reset</Button>
                 )}
                 {checkedIn.length > 0 && safeCount < checkedIn.length && selectedCount === 0 && (
-                  <Button size="sm" onClick={markAllSafe} className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-emerald-50">
+                  <Button size="sm" disabled={busy} onClick={markAllSafe} className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-emerald-50">
                     <CheckCircle2 className="h-3.5 w-3.5" /> Mark All Safe
+                  </Button>
+                )}
+                {activeDrill && (
+                  <Button variant="outline" size="sm" disabled={busy} onClick={finishRollCall} className="h-8 text-xs">
+                    End roll call
                   </Button>
                 )}
               </div>
@@ -464,6 +469,17 @@ export default function Evacuation() {
           </header>
 
           <main className="p-6 space-y-5">
+            <div className={`rounded-xl border px-4 py-2.5 text-sm flex items-center gap-2 ${activeDrill ? "border-destructive/30 bg-destructive/5 text-destructive" : "border-border bg-muted/40 text-muted-foreground"}`}>
+              <Shield className="h-4 w-4 shrink-0" />
+              {activeDrill ? (
+                <span>
+                  Live roll call in progress since {format(new Date(activeDrill.started_at), "HH:mm")} — everyone marked safe is shared instantly with all devices.
+                </span>
+              ) : (
+                <span>No roll call running. Marking the first person safe starts one and shares it live with every device.</span>
+              )}
+            </div>
+
             {/* Summary cards */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="rounded-xl border border-border bg-card p-4 text-center">
