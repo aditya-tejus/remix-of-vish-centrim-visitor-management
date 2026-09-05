@@ -357,7 +357,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
   const canProceedResidentStep2 = formData.email && formData.mobile;
 
   // Health screening gate (attended desk: staff may override with a reason)
-  const hasSymptomFlag = healthQuestions.some((q) => q.type === "yesno" && healthAnswers[q.id] === true);
+  const hasSymptomFlag = Object.values(healthAnswers).some((v) => v === true);
   const hasHighTemperature = !!formData.bodyTemperature && parseFloat(formData.bodyTemperature) > 37.8;
   const screeningFlagged = !isResident && (hasSymptomFlag || hasHighTemperature);
   const overrideValid = overrideReason.trim().length >= 3;
