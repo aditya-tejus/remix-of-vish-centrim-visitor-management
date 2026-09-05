@@ -679,12 +679,17 @@ export default function KioskCheckIn() {
               )}
             </div>
 
-            {flow.hasYesFlags && (
-              <div className="rounded-2xl bg-destructive/10 border-2 border-destructive/20 p-4 flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            {flow.screeningBlocked && (
+              <div className="rounded-2xl bg-destructive/10 border-2 border-destructive/30 p-5 flex items-start gap-3">
+                <AlertTriangle className="h-6 w-6 text-destructive shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-base font-bold text-destructive">Health Concern Flagged</p>
-                  <p className="text-sm text-muted-foreground mt-0.5">Staff review may be required.</p>
+                  <p className="text-lg font-bold text-destructive">Please see a staff member</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {flow.highTemperature
+                      ? `Your recorded temperature (${flow.bodyTemperature}°C) is above the safe limit. `
+                      : ""}
+                    We cannot complete your check-in at this screen. Reception has been notified and will assist you.
+                  </p>
                 </div>
               </div>
             )}
@@ -693,10 +698,11 @@ export default function KioskCheckIn() {
               <Button variant="secondary" onClick={goBack} className="flex-1 h-14 text-base gap-2 border border-border">
                 <ArrowLeft className="h-5 w-5" /> Back
               </Button>
-              <Button onClick={goNext} className="flex-1 h-14 text-base gap-2">
+              <Button onClick={goNext} disabled={flow.screeningBlocked} className="flex-1 h-14 text-base gap-2">
                 Next <ArrowRight className="h-5 w-5" />
               </Button>
             </div>
+
           </motion.div>
         )}
 
