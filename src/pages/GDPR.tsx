@@ -17,6 +17,7 @@ import { useVisitors } from "@/hooks/useVisitors";
 import { SARDialog } from "@/components/SARDialog";
 import { ErasureDialog } from "@/components/ErasureDialog";
 import { exportVisitorsToCSV } from "@/lib/exportVisitors";
+import { useJurisdiction } from "@/hooks/useJurisdiction";
 
 export default function GDPRPage() {
   const navigate = useNavigate();
@@ -25,6 +26,7 @@ export default function GDPRPage() {
   const [erasureOpen, setErasureOpen] = useState(false);
   const [exportConfirmOpen, setExportConfirmOpen] = useState(false);
   const { toast } = useToast();
+  const { isUK, regimeName, regimeShort, subjectAccessTerm, accessDeadline, erasureRef, portabilityRef } = useJurisdiction();
 
   const handleConfirmExport = () => {
     exportVisitorsToCSV(visitors);
@@ -41,7 +43,7 @@ export default function GDPRPage() {
             <div className="flex items-center gap-4 px-6 py-4">
               <SidebarTrigger />
               <div>
-                <h1 className="text-lg font-semibold text-foreground">GDPR & Privacy</h1>
+                <h1 className="text-lg font-semibold text-foreground">{isUK ? "GDPR & Privacy" : "Privacy & Compliance"}</h1>
                 <p className="text-xs text-muted-foreground">Data protection compliance tools</p>
               </div>
             </div>
@@ -110,11 +112,13 @@ export default function GDPRPage() {
                     <CardContent className="p-5 space-y-3">
                       <div className="flex items-center gap-2">
                         <Shield className="h-4 w-4 text-primary" />
-                        <p className="text-sm font-semibold text-foreground">UK GDPR Compliance Status</p>
+                        <p className="text-sm font-semibold text-foreground">{regimeName} Compliance Status</p>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        This system processes visitor data in accordance with UK GDPR. Privacy notices are displayed at check-in,
-                        consent is recorded, and data retention policies are enforced. Visit the Settings page to configure retention periods and compliance requirements.
+                        {isUK
+                          ? "This system processes visitor data in accordance with UK GDPR. Privacy notices are displayed at check-in, consent is recorded, and data retention policies are enforced."
+                          : "This system handles personal information in accordance with the Australian Privacy Act 1988 and the Australian Privacy Principles. Collection notices are shown at check-in, consent is recorded, and retention limits are enforced (APP 1, 3, 5 and 11)."}
+                        {" "}Visit the Settings page to configure retention periods and compliance requirements.
                       </p>
                     </CardContent>
                   </Card>
@@ -131,13 +135,13 @@ export default function GDPRPage() {
                           <FileText className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                          <h2 className="font-semibold text-foreground">Subject Access Requests (SAR)</h2>
-                          <p className="text-xs text-muted-foreground">Search and export visitor data to fulfil SARs within the 30-day statutory deadline (Art. 15/20).</p>
+                          <h2 className="font-semibold text-foreground">{subjectAccessTerm}</h2>
+                          <p className="text-xs text-muted-foreground">{`Search and export visitor data to fulfil access requests within the ${accessDeadline}.`}</p>
                         </div>
                       </div>
                       <Button className="gap-1.5" onClick={() => setSarOpen(true)}>
                         <FileText className="h-4 w-4" />
-                        Process New SAR
+                        {isUK ? "Process New SAR" : "Process New Access Request"}
                       </Button>
                     </CardContent>
                   </Card>
@@ -154,8 +158,8 @@ export default function GDPRPage() {
                           <Trash2 className="h-5 w-5 text-destructive" />
                         </div>
                         <div>
-                          <h2 className="font-semibold text-foreground">Right to Erasure</h2>
-                          <p className="text-xs text-muted-foreground">Delete individual visitor records, anonymise PII, or remove specific visit entries (Art. 17).</p>
+                          <h2 className="font-semibold text-foreground">{isUK ? "Right to Erasure" : "Destruction & De-identification"}</h2>
+                          <p className="text-xs text-muted-foreground">{`Delete individual visitor records, anonymise personal information, or remove specific visit entries (${erasureRef}).`}</p>
                         </div>
                       </div>
                       <Button variant="destructive" className="gap-1.5" onClick={() => setErasureOpen(true)}>
@@ -183,7 +187,7 @@ export default function GDPRPage() {
                         </div>
                         <div>
                           <h2 className="font-semibold text-foreground">Data Portability</h2>
-                          <p className="text-xs text-muted-foreground">Export all visitor data in machine-readable CSV format (Art. 20). Handle exported files in accordance with UK GDPR.</p>
+                          <p className="text-xs text-muted-foreground">{`Export all visitor data in machine-readable CSV format (${portabilityRef}). Handle exported files in accordance with the ${regimeShort}.`}</p>
                         </div>
                       </div>
                       <div className="rounded-lg bg-muted/50 border border-border p-3">
@@ -224,7 +228,7 @@ export default function GDPRPage() {
               Export All Visitor Data
             </AlertDialogTitle>
             <AlertDialogDescription>
-              You are about to export <span className="font-semibold text-foreground">{visitors.length}</span> visitor record(s) as a CSV file. This file will contain personal data — handle it in accordance with UK GDPR.
+              You are about to export <span className="font-semibold text-foreground">{visitors.length}</span> visitor record(s) as a CSV file. This file will contain personal information — handle it in accordance with the {regimeShort}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
