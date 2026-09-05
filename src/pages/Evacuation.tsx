@@ -49,7 +49,7 @@ export default function Evacuation() {
     [residents]
   );
   const wingOf = (v: Visitor) =>
-    v.type === "resident" ? residentMap.get(v.id)?.wing || "Unknown" : "";
+    v.type === "resident" ? residentMap.get(v.id)?.wing || "Unassigned wing" : "";
   const roomOf = (v: Visitor) =>
     v.type === "resident" ? residentMap.get(v.id)?.room || "" : "";
 
@@ -115,7 +115,7 @@ export default function Evacuation() {
     checkedIn.forEach((v) => {
       if (v.type === "resident") wings.add(wingOf(v));
     });
-    return [...wings].filter((w) => w !== "Unknown").sort();
+    return [...wings].filter((w) => w !== "Unassigned wing").sort();
   }, [checkedIn]);
 
   const filtered = useMemo(() => {
@@ -360,7 +360,7 @@ export default function Evacuation() {
                   <Home className="h-2.5 w-2.5" /> {room}
                 </span>
               )}
-              {v.type === "resident" && wing && wing !== "Unknown" && (
+              {v.type === "resident" && wing && wing !== "Unassigned wing" && (
                 <span className="text-[10px] text-primary font-medium flex items-center gap-0.5">
                   <MapPin className="h-2.5 w-2.5" /> {wing}
                 </span>
