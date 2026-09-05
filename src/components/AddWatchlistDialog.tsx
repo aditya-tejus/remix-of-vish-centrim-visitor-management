@@ -6,11 +6,22 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle, ShieldAlert } from "lucide-react";
+import { WATCHLIST_REASON_CATEGORIES, WatchlistReasonCategory } from "@/hooks/useWatchlist";
 
 interface AddWatchlistDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (entry: { first_name: string; surname: string; reason: string; instructions: string; alert_type: "soft" | "hard"; added_by: string }) => void;
+  onAdd: (entry: {
+    first_name: string;
+    surname: string;
+    date_of_birth: string | null;
+    reason: string;
+    reason_category: WatchlistReasonCategory;
+    review_date: string;
+    instructions: string;
+    alert_type: "soft" | "hard";
+    added_by: string;
+  }) => void;
 }
 
 export function AddWatchlistDialog({ open, onOpenChange, onAdd }: AddWatchlistDialogProps) {
@@ -19,12 +30,24 @@ export function AddWatchlistDialog({ open, onOpenChange, onAdd }: AddWatchlistDi
   const [reason, setReason] = useState("");
   const [instructions, setInstructions] = useState("");
   const [alertType, setAlertType] = useState<"soft" | "hard">("soft");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [reasonCategory, setReasonCategory] = useState<WatchlistReasonCategory | "">("");
+  // Default review in 6 months so entries never sit indefinitely
+  const defaultReview = () => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 6);
+    return d.toISOString().slice(0, 10);
+  };
+  const [reviewDate, setReviewDate] = useState(defaultReview);
 
   const handleSubmit = () => {
-    if (!firstName.trim() || !surname.trim() || !reason.trim()) return;
+    if (!firstName.trim() || !surname.trim() || !reason.trim() || !reasonCategory || !reviewDate) return;
     onAdd({
       first_name: firstName.trim(),
       surname: surname.trim(),
+      date_of_birth: dateOfBirth || null,
+      reason_category: reasonCategory,
+      review_date: reviewDate,
       reason: reason.trim(),
       instructions: instructions.trim(),
       alert_type: alertType,
@@ -35,12 +58,15 @@ export function AddWatchlistDialog({ open, onOpenChange, onAdd }: AddWatchlistDi
     setReason("");
     setInstructions("");
     setAlertType("soft");
+    setDateOfBirth("");
+    setReasonCategory("");
+    setReviewDate(defaultReview());
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShieldAlert className="h-5 w-5 text-destructive" />
@@ -58,6 +84,34 @@ export function AddWatchlistDialog({ open, onOpenChange, onAdd }: AddWatchlistDi
               <Label className="text-[12px]">Surname *</Label>
               <Input value={surname} onChange={(e) => setSurname(e.target.value)} className="h-9 text-[13px]" />
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-[12px]">Date of Birth</Label>
+            <Input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} className="h-9 text-[13px]" />
+            <p className="text-[11px] text-muted-foreground">
+              Used to confirm a match automatically. Without it, staff are asked to confirm identity at check-in.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-[12px]">Reason Category *</Label>
+            <Select value={reasonCategory} onValueChange={(v) => setReasonCategory(v as WatchlistReasonCategory)}>
+              <SelectTrigger className="h-9 text-[13px]">
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {WATCHLIST_REASON_CATEGORIES.map((c) => (
+                  <SelectItem key={c.value} value={c.value} className="text-[13px]">{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-[12px]">Review Date *</Label>
+            <Input type="date" value={reviewDate} onChange={(e) => setReviewDate(e.target.value)} className="h-9 text-[13px]" />
+            <p className="text-[11px] text-muted-foreground">Entry is flagged for renewal, downgrade or removal after this date.</p>
           </div>
 
           <div className="space-y-1.5">
@@ -96,7 +150,7 @@ export function AddWatchlistDialog({ open, onOpenChange, onAdd }: AddWatchlistDi
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} className="text-[13px]">Cancel</Button>
-          <Button onClick={handleSubmit} disabled={!firstName || !surname || !reason} className="text-[13px] bg-destructive hover:bg-destructive/90">
+          <Button onClick={handleSubmit} disabled={!firstName || !surname || !reason || !reasonCategory || !reviewDate} className="text-[13px] bg-destructive hover:bg-destructive/90">
             Add to Watchlist
           </Button>
         </DialogFooter>
