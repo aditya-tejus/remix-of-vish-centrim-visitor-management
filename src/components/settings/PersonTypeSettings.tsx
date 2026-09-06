@@ -12,6 +12,7 @@ import { AlertSettingsPerType } from "@/components/settings/AlertSettingsPerType
 import { AutomationSettingsPerType } from "@/components/settings/AutomationSettingsPerType";
 
 import { ResidentLeaveSettingsTab } from "@/components/settings/ResidentLeaveSettingsTab";
+import { ContractorEnforcementTab } from "@/components/settings/ContractorEnforcementTab";
 import { ResidentPrivacyTab } from "@/components/settings/ResidentPrivacyTab";
 import { StaffPrivacyTab } from "@/components/settings/StaffPrivacyTab";
 import { ReturnNotificationSettingsTab } from "@/components/settings/ReturnNotificationSettingsTab";
@@ -63,6 +64,12 @@ function getSections(type: string): SectionConfig[] {
     sections.push(
       { id: "resident-privacy", label: "Resident Privacy on Kiosk", icon: ShieldCheck, component: <ResidentPrivacyTab personType={type} /> },
       { id: "staff-privacy", label: "Staff Lookup on Kiosk", icon: UserSearch, component: <StaffPrivacyTab personType={type} /> },
+    );
+  }
+
+  if (type === "contractor") {
+    sections.push(
+      { id: "credential-enforcement", label: "Credential Enforcement", icon: ShieldCheck, component: <ContractorEnforcementTab /> },
     );
   }
 

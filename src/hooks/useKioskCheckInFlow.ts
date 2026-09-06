@@ -22,6 +22,7 @@ export function useKioskCheckInFlow() {
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [tcContent, setTcContent] = useState<string | null>(null);
   const [jurisdiction, setJurisdiction] = useState<"AU" | "UK">("UK");
+  const [credentialEnforcement, setCredentialEnforcement] = useState<"warn" | "block">("warn");
   const [residentLookupMode, setResidentLookupMode] = useState<"show_all" | "search_first">("search_first");
   const [staffLookupMode, setStaffLookupMode] = useState<"search_first" | "by_department" | "free_text">("search_first");
   const [contractorAnswers, setContractorAnswers] = useState<Record<string, any>>({});
@@ -55,7 +56,7 @@ export function useKioskCheckInFlow() {
     supabase
       .from("settings")
       .select("key, value")
-      .in("key", [`tc_content_${selectedType}`, "jurisdiction", "kiosk_resident_lookup_mode", `kiosk_resident_lookup_mode_${selectedType}`, "kiosk_staff_lookup_mode", `kiosk_staff_lookup_mode_${selectedType}`])
+      .in("key", [`tc_content_${selectedType}`, "jurisdiction", "kiosk_resident_lookup_mode", `kiosk_resident_lookup_mode_${selectedType}`, "kiosk_staff_lookup_mode", `kiosk_staff_lookup_mode_${selectedType}`, "contractor_credential_enforcement"])
       .then(({ data }) => {
         const tc = data?.find((d) => d.key === `tc_content_${selectedType}`);
         const jur = data?.find((d) => d.key === "jurisdiction");
@@ -69,6 +70,8 @@ export function useKioskCheckInFlow() {
         const slmValue = slmSpecific?.value || slmGlobal?.value;
         setTcContent(tc?.value || null);
         if (jur?.value === "AU" || jur?.value === "UK") setJurisdiction(jur.value);
+        const enf = data?.find((d) => d.key === "contractor_credential_enforcement");
+        if (enf?.value === "warn" || enf?.value === "block") setCredentialEnforcement(enf.value);
         if (rlmValue === "show_all" || rlmValue === "search_first") setResidentLookupMode(rlmValue);
         if (slmValue === "search_first" || slmValue === "by_department" || slmValue === "free_text") setStaffLookupMode(slmValue);
       });
@@ -184,8 +187,8 @@ export function useKioskCheckInFlow() {
     setPrivacyAcknowledged,
     tcContent,
     jurisdiction,
-    contractorBlocked: selectedType === "contractor" && isContractorBlocked(jurisdiction, selectedSupplier).blocked,
-    contractorBlockReason: selectedType === "contractor" ? isContractorBlocked(jurisdiction, selectedSupplier).reason : null,
+    contractorBlocked: selectedType === "contractor" && isContractorBlocked(jurisdiction, selectedSupplier, credentialEnforcement).blocked,
+    contractorBlockReason: selectedType === "contractor" ? isContractorBlocked(jurisdiction, selectedSupplier, credentialEnforcement).reason : null,
     contractorAnswers,
     setContractorAnswers,
     selectedSupplier,

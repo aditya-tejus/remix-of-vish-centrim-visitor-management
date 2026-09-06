@@ -62,6 +62,7 @@ export function useCheckInFlow(open: boolean) {
   const [contractorScreeningAnswers, setContractorScreeningAnswers] = useState<Record<string, any>>({});
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [jurisdiction, setJurisdiction] = useState<"AU" | "UK">("AU");
+  const [credentialEnforcement, setCredentialEnforcement] = useState<"warn" | "block">("warn");
   const [branchTcUrl, setBranchTcUrl] = useState<string | null>(null);
   const [branchPrivacyUrl, setBranchPrivacyUrl] = useState<string | null>(null);
   const [tcContent, setTcContent] = useState<string | null>(null);
@@ -111,6 +112,7 @@ export function useCheckInFlow(open: boolean) {
       .select("key, value")
       .in("key", [
         "branch_tc_url", "branch_privacy_url", "show_branch_docs_in_form", "jurisdiction",
+        "contractor_credential_enforcement",
         `tc_content_${selectedType}`,
       ])
       .then(({ data }) => {
@@ -122,6 +124,7 @@ export function useCheckInFlow(open: boolean) {
           setBranchPrivacyUrl(showDocs && map.branch_privacy_url ? map.branch_privacy_url : null);
           setTcContent(map[`tc_content_${selectedType}`] || null);
           if (map.jurisdiction === "UK" || map.jurisdiction === "AU") setJurisdiction(map.jurisdiction);
+          if (map.contractor_credential_enforcement === "block" || map.contractor_credential_enforcement === "warn") setCredentialEnforcement(map.contractor_credential_enforcement);
         }
       });
   }, [selectedType]);
@@ -221,7 +224,7 @@ export function useCheckInFlow(open: boolean) {
   const overrideValid = overrideReason.trim().length >= 3;
 
   const contractorGate = selectedType === "contractor"
-    ? isContractorBlocked(jurisdiction as "AU" | "UK", selectedSupplier)
+    ? isContractorBlocked(jurisdiction as "AU" | "UK", selectedSupplier, credentialEnforcement)
     : { blocked: false, reason: null };
   const contractorBlocked = contractorGate.blocked;
 

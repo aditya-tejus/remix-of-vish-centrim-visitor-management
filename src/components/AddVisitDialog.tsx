@@ -22,6 +22,7 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { ContractorScreening } from "@/components/ContractorScreening";
 import { isContractorBlocked } from "@/lib/contractorCredentials";
+import { useContractorEnforcement } from "@/hooks/useContractorEnforcement";
 import { Supplier } from "@/hooks/useSuppliers";
 import { useResidents } from "@/hooks/useResidents";
 import { useStaffMembers } from "@/hooks/useStaffMembers";
@@ -115,6 +116,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
   const [contractorScreeningAnswers, setContractorScreeningAnswers] = useState<Record<string, any>>({});
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [jurisdiction, setJurisdiction] = useState<"AU" | "UK">("AU");
+  const { enforcement: credentialEnforcement } = useContractorEnforcement();
 
   const isResident = selectedType === "resident";
   const isContractor = selectedType === "contractor";
@@ -363,7 +365,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
   const screeningFlagged = !isResident && (hasSymptomFlag || hasHighTemperature);
   const overrideValid = overrideReason.trim().length >= 3;
   // Contractor credential gate: only the highest-risk credential blocks check-in
-  const contractorBlocked = isContractor && isContractorBlocked(jurisdiction, selectedSupplier).blocked;
+  const contractorBlocked = isContractor && isContractorBlocked(jurisdiction, selectedSupplier, credentialEnforcement).blocked;
   const canSubmit = privacyAcknowledged && !contractorBlocked && (!screeningFlagged || overrideValid);
 
 
