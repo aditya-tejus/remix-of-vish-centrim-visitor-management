@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useSuppliers, Supplier } from "@/hooks/useSuppliers";
 import { Search, Check, Building2, Shield, HardHat, FileCheck, AlertTriangle, Syringe, ShieldAlert, CalendarClock, Loader2 } from "lucide-react";
 import { getSupplierCredentials, isContractorBlocked } from "@/lib/contractorCredentials";
+import { useContractorEnforcement } from "@/hooks/useContractorEnforcement";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 
@@ -88,7 +89,8 @@ export function ContractorScreening({
   );
 
   const credentials = getSupplierCredentials(jurisdiction, selectedSupplier);
-  const gate = isContractorBlocked(jurisdiction, selectedSupplier);
+  const { enforcement } = useContractorEnforcement();
+  const gate = isContractorBlocked(jurisdiction, selectedSupplier, enforcement);
 
   useEffect(() => {
     onBlockedChange?.(gate.blocked, gate.reason);
@@ -243,12 +245,14 @@ export function ContractorScreening({
         </div>
       )}
 
-      {gate.blocked && gate.reason && (
-        <div className="rounded-xl border-2 border-destructive/40 bg-destructive/5 p-3 flex items-start gap-2">
-          <ShieldAlert className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+      {gate.reason && (
+        <div className={`rounded-xl border-2 p-3 flex items-start gap-2 ${gate.blocked ? "border-destructive/40 bg-destructive/5" : "border-amber-500/40 bg-amber-500/5"}`}>
+          <ShieldAlert className={`h-4 w-4 shrink-0 mt-0.5 ${gate.blocked ? "text-destructive" : "text-amber-600"}`} />
           <div>
-            <p className="text-[12px] font-bold text-destructive">Check-in blocked</p>
-            <p className="text-[11px] text-destructive/80">{gate.reason}</p>
+            <p className={`text-[12px] font-bold ${gate.blocked ? "text-destructive" : "text-amber-700"}`}>
+              {gate.blocked ? "Check-in blocked" : "Credential warning — staff review"}
+            </p>
+            <p className={`text-[11px] ${gate.blocked ? "text-destructive/80" : "text-amber-700/80"}`}>{gate.reason}</p>
           </div>
         </div>
       )}
@@ -359,7 +363,7 @@ export function ContractorScreening({
       </div>
 
       {/* Completion indicator */}
-      {allRequiredAnswered && failedChecks.length === 0 && !gate.blocked && (
+      {allRequiredAnswered && failedChecks.length === 0 && !gate.reason && (
         <div className="rounded-xl border border-success/30 bg-success/5 p-3 flex items-center gap-2">
           <Check className="h-4 w-4 text-success" />
           <p className="text-[12px] font-semibold text-success">All screening checks passed</p>
