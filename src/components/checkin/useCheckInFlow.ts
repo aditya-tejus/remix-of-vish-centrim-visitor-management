@@ -7,8 +7,9 @@ import { useStaffMembers } from "@/hooks/useStaffMembers";
 import { supabase } from "@/integrations/supabase/client";
 import { isContractorBlocked } from "@/lib/contractorCredentials";
 import { Supplier } from "@/hooks/useSuppliers";
+import { FoodFormState, emptyFoodForm, isFoodFormValid } from "@/components/food/FoodFormFields";
 
-export type StepId = "identify" | "details" | "screening" | "confirm";
+export type StepId = "identify" | "details" | "food" | "screening" | "confirm";
 
 export interface VisitorProfile {
   id: string;
@@ -66,6 +67,11 @@ export function useCheckInFlow(open: boolean) {
   const [branchTcUrl, setBranchTcUrl] = useState<string | null>(null);
   const [branchPrivacyUrl, setBranchPrivacyUrl] = useState<string | null>(null);
   const [tcContent, setTcContent] = useState<string | null>(null);
+  const [badgePrintingEnabled, setBadgePrintingEnabled] = useState(false);
+
+  // Food register (visitors/volunteers visiting a resident)
+  const [bringingFood, setBringingFood] = useState<boolean | null>(null);
+  const [foodForm, setFoodForm] = useState<FoodFormState>(emptyFoodForm);
 
   // Dynamic settings-driven fields
   const { data: dbQuestions = [] } = useActiveHealthQuestions(selectedType as any);
@@ -83,12 +89,24 @@ export function useCheckInFlow(open: boolean) {
   const residentItems = useMemo(() => dbResidents.map(r => ({ id: r.visitorId, name: r.name, room: r.room, wing: r.wing })), [dbResidents]);
   const staffItems = useMemo(() => dbStaff.map(s => ({ id: s.id, name: s.name, role: s.role, department: s.department || "" })), [dbStaff]);
 
+  // Food register only applies to visitors/volunteers who are visiting a resident
+  const selectedResident = useMemo(
+    () => residentItems.find((r) => r.name === formData.selectPerson) || null,
+    [residentItems, formData.selectPerson]
+  );
+  const foodStepApplies =
+    (selectedType === "visitor" || selectedType === "volunteer") &&
+    formData.whomToVisit === "Resident" &&
+    !!selectedResident;
+
   // Assemble step pipeline dynamically
   const steps = useMemo<StepId[]>(() => {
     const pipeline: StepId[] = ["identify"];
 
     // Details always shown (even for returning, they might want to edit)
     pipeline.push("details");
+
+    if (foodStepApplies) pipeline.push("food");
 
     // Screening: only if there are health questions OR it's a contractor
     const hasScreening = selectedType === "contractor" || healthQuestions.length > 0 || dbVaccFields.length > 0;
@@ -98,7 +116,7 @@ export function useCheckInFlow(open: boolean) {
 
     pipeline.push("confirm");
     return pipeline;
-  }, [selectedType, healthQuestions.length, dbVaccFields.length]);
+  }, [selectedType, healthQuestions.length, dbVaccFields.length, foodStepApplies]);
 
   const currentStepIndex = steps.indexOf(step);
   const totalSteps = steps.length;
@@ -112,7 +130,7 @@ export function useCheckInFlow(open: boolean) {
       .select("key, value")
       .in("key", [
         "branch_tc_url", "branch_privacy_url", "show_branch_docs_in_form", "jurisdiction",
-        "contractor_credential_enforcement",
+        "contractor_credential_enforcement", "badge_printing_enabled",
         `tc_content_${selectedType}`,
       ])
       .then(({ data }) => {
@@ -124,6 +142,7 @@ export function useCheckInFlow(open: boolean) {
           setBranchPrivacyUrl(showDocs && map.branch_privacy_url ? map.branch_privacy_url : null);
           setTcContent(map[`tc_content_${selectedType}`] || null);
           if (map.jurisdiction === "UK" || map.jurisdiction === "AU") setJurisdiction(map.jurisdiction);
+          setBadgePrintingEnabled(map.badge_printing_enabled === "true");
           if (map.contractor_credential_enforcement === "block" || map.contractor_credential_enforcement === "warn") setCredentialEnforcement(map.contractor_credential_enforcement);
         }
       });
@@ -215,6 +234,8 @@ export function useCheckInFlow(open: boolean) {
     setCheckInTimeOverride(null);
     setContractorScreeningAnswers({});
     setSelectedSupplier(null);
+    setBringingFood(null);
+    setFoodForm(emptyFoodForm);
   };
 
   // Health screening gate (attended desk: staff may override with a recorded reason)
@@ -234,6 +255,8 @@ export function useCheckInFlow(open: boolean) {
         return true; // Can always proceed (new or returning)
       case "details":
         return !!(formData.firstName && formData.surname);
+      case "food":
+        return bringingFood === false || (bringingFood === true && isFoodFormValid(foodForm));
       case "screening":
         // Contractors are blocked when the highest-risk credential is missing/expired
         return !contractorBlocked;
@@ -242,7 +265,7 @@ export function useCheckInFlow(open: boolean) {
       default:
         return true;
     }
-  }, [step, formData, privacyAcknowledged, screeningFlagged, overrideValid, contractorBlocked]);
+  }, [step, formData, privacyAcknowledged, screeningFlagged, overrideValid, contractorBlocked, bringingFood, foodForm]);
 
 
   const buildVisitor = (): Omit<Visitor, "id"> => {
@@ -310,6 +333,12 @@ export function useCheckInFlow(open: boolean) {
 
     // Actions
     canProceed, resetForm, buildVisitor,
+
+    // Food register
+    bringingFood, setBringingFood, foodForm, setFoodForm, foodStepApplies, selectedResident,
+
+    // Badge printing
+    badgePrintingEnabled,
 
     // Health screening override
     screeningFlagged, hasSymptomFlag, hasHighTemperature, overrideReason, setOverrideReason,
