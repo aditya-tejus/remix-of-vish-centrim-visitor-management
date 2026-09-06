@@ -3,7 +3,7 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, UserPlus, ShieldAlert } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CheckCircle2, UserPlus, ShieldAlert, UtensilsCrossed, Printer } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { Visitor } from "@/types/visitor";
@@ -12,6 +12,10 @@ import { StepIdentify } from "./StepIdentify";
 import { StepDetails } from "./StepDetails";
 import { StepScreening } from "./StepScreening";
 import { StepConfirm } from "./StepConfirm";
+import { FoodFormFields } from "@/components/food/FoodFormFields";
+import { insertFoodRecord } from "@/lib/foodRegister";
+import { printBadge } from "@/lib/printBadge";
+import { Label } from "@/components/ui/label";
 
 interface CheckInSheetProps {
   open: boolean;
@@ -22,6 +26,7 @@ interface CheckInSheetProps {
 const stepConfig: Record<string, { label: string; icon: string }> = {
   identify: { label: "Identify", icon: "1" },
   details: { label: "Details", icon: "2" },
+  food: { label: "Food", icon: "F" },
   screening: { label: "Screening", icon: "3" },
   confirm: { label: "Confirm", icon: "4" },
 };
@@ -30,6 +35,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
   const flow = useCheckInFlow(open);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successName, setSuccessName] = useState("");
+  const [successBadge, setSuccessBadge] = useState<{ name: string; type: string; visiting?: string } | null>(null);
 
   const handleClose = () => {
     flow.resetForm();
@@ -39,7 +45,32 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
 
   const handleSubmit = () => {
     const visitor = flow.buildVisitor();
-    onAdd(visitor);
+    const created = onAdd(visitor);
+    const fullName = `${flow.formData.firstName} ${flow.formData.surname}`.trim();
+
+    // Food register entry (linked to the resident's real record id)
+    if (flow.bringingFood && flow.selectedResident) {
+      const resident = flow.selectedResident;
+      supabase.auth.getUser().then(({ data }) => {
+        insertFoodRecord({
+          residentVisitorId: resident.id,
+          residentName: resident.name,
+          visitorId: created?.id ?? null,
+          broughtByName: fullName,
+          foodDescription: flow.foodForm.foodDescription.trim(),
+          foodType: flow.foodForm.foodType,
+          sharedWithOthers: flow.foodForm.sharedWithOthers,
+          sharedResidentIds: flow.foodForm.sharedResidentIds,
+          sharedResidentNames: flow.foodForm.sharedResidentIds
+            .map((id) => flow.residentItems.find((r) => r.id === id)?.name)
+            .filter(Boolean) as string[],
+          notes: flow.foodForm.notes.trim() || null,
+          source: "check_in",
+          createdBy: data.user?.email || "Staff",
+        }).then(() => undefined);
+      });
+    }
+
     if (flow.screeningFlagged && flow.overrideReason.trim()) {
       const name = `${flow.formData.firstName} ${flow.formData.surname}`.trim();
       supabase.auth.getUser().then(({ data }) => {
@@ -59,13 +90,16 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
         }).then(() => undefined);
       });
     }
-    setSuccessName(`${flow.formData.firstName} ${flow.formData.surname}`);
+    setSuccessName(fullName);
+    setSuccessBadge({ name: fullName, type: flow.selectedType, visiting: flow.formData.selectPerson || undefined });
     setShowSuccess(true);
-    setTimeout(() => {
-      flow.resetForm();
-      setShowSuccess(false);
-      onOpenChange(false);
-    }, 2500);
+    if (!flow.badgePrintingEnabled) {
+      setTimeout(() => {
+        flow.resetForm();
+        setShowSuccess(false);
+        onOpenChange(false);
+      }, 2500);
+    }
   };
 
   return (
@@ -136,6 +170,14 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
                 <p className="text-[18px] font-bold text-foreground">{successName} checked in!</p>
                 <p className="text-[14px] text-muted-foreground">Welcome to the facility.</p>
               </div>
+              {flow.badgePrintingEnabled && successBadge && (
+                <div className="flex gap-2.5 pt-2">
+                  <Button variant="outline" className="gap-2 rounded-xl" onClick={() => printBadge(successBadge)}>
+                    <Printer className="h-4 w-4" /> Print Badge
+                  </Button>
+                  <Button className="rounded-xl" onClick={handleClose}>Done</Button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="px-6 py-6">
@@ -171,6 +213,48 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
                   setPhoto={flow.setPhoto}
                   onChangeProfile={() => flow.setStep("identify")}
                 />
+              )}
+
+              {flow.step === "food" && (
+                <div className="space-y-5">
+                  <div className="space-y-1">
+                    <h3 className="text-[16px] font-bold text-foreground flex items-center gap-2">
+                      <UtensilsCrossed className="h-4 w-4 text-primary" /> Food Register
+                    </h3>
+                    <p className="text-[13px] text-muted-foreground">
+                      Recording food brought in for {flow.selectedResident?.name}.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-[12px] font-medium">Are you bringing food into the home?</Label>
+                    <div className="flex gap-3">
+                      {[true, false].map((val) => (
+                        <button
+                          key={String(val)}
+                          type="button"
+                          onClick={() => flow.setBringingFood(val)}
+                          className={`flex-1 h-10 rounded-xl border text-[13px] font-semibold transition-all active:scale-[0.98] ${
+                            flow.bringingFood === val
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background text-muted-foreground border-border"
+                          }`}
+                        >
+                          {val ? "Yes" : "No"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {flow.bringingFood && (
+                    <FoodFormFields
+                      state={flow.foodForm}
+                      onChange={flow.setFoodForm}
+                      residents={flow.residentItems}
+                      primaryResidentId={flow.selectedResident?.id || null}
+                    />
+                  )}
+                </div>
               )}
 
               {flow.step === "screening" && (
