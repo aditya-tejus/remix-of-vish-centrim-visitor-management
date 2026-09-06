@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import centrimLogo from "@/assets/centrim-life-logo.png";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { NotificationBell } from "@/components/NotificationBell";
-import { Clock } from "lucide-react";
+import { Clock, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useHealthAlerts } from "@/hooks/useHealthAlerts";
+import { useOccupancy } from "@/hooks/useOccupancy";
+
 
 interface AppHeaderProps {
   /** Page title shown after the sidebar trigger */
