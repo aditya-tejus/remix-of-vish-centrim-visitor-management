@@ -84,34 +84,43 @@ function evaluateInto(expiry: string | null | undefined, reference: string | nul
 /**
  * True when check-in must be blocked: the single highest-risk credential
  * is missing or expired for the selected supplier.
+ *
+ * `enforcement` comes from the global `contractor_credential_enforcement`
+ * setting — in "warn" mode the reason is still returned for display, but
+ * `blocked` is false so staff can proceed.
  */
 export function isContractorBlocked(
   jurisdiction: Jurisdiction,
-  supplier: Supplier | null
-): { blocked: boolean; reason: string | null; credential: CredentialCheck | null } {
+  supplier: Supplier | null,
+  enforcement: "warn" | "block" = "block"
+): { blocked: boolean; reason: string | null; credential: CredentialCheck | null; enforcement: "warn" | "block" } {
   const credentials = getSupplierCredentials(jurisdiction, supplier);
   const primary = credentials.find((c) => c.blocking) || null;
+  const gate = (blocked: boolean, reason: string | null, credential: CredentialCheck | null) => ({
+    blocked: blocked && enforcement === "block",
+    reason,
+    credential,
+    enforcement,
+  });
+
   if (!supplier) {
-    return {
-      blocked: true,
-      reason: `Select the contractor's supplier so their ${primary?.label} can be verified.`,
-      credential: primary,
-    };
+    return gate(true, `Select the contractor's supplier so their ${primary?.label} can be verified.`, primary);
   }
-  if (!primary) return { blocked: false, reason: null, credential: null };
+  if (!primary) return gate(false, null, null);
   if (primary.state === "missing") {
-    return {
-      blocked: true,
-      reason: `${primary.label} has not been recorded for ${supplier.name}. Record the expiry date and reference before allowing site access.`,
-      credential: primary,
-    };
+    return gate(
+      true,
+      `${primary.label} has not been recorded for ${supplier.name}. Record the expiry date and reference before allowing site access.`,
+      primary
+    );
   }
   if (primary.state === "expired") {
-    return {
-      blocked: true,
-      reason: `${primary.label} for ${supplier.name} expired on ${primary.expiry}. Site access cannot proceed until it is renewed.`,
-      credential: primary,
-    };
+    return gate(
+      true,
+      `${primary.label} for ${supplier.name} expired on ${primary.expiry}. Site access cannot proceed until it is renewed.`,
+      primary
+    );
   }
-  return { blocked: false, reason: null, credential: primary };
+  return gate(false, null, primary);
 }
+
