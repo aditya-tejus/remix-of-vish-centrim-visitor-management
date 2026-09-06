@@ -382,6 +382,7 @@ export default function KioskCheckIn() {
                         className="w-full h-14 text-base"
                         onClick={() => {
                           flow.updateField("whomToVisit", staffFreeText.trim());
+                          flow.setVisitedResidentId(null);
                           goNext();
                         }}
                       >
@@ -433,6 +434,7 @@ export default function KioskCheckIn() {
                                   accentColor="primary"
                                   onClick={() => {
                                     flow.updateField("whomToVisit", person.name);
+                                    flow.setVisitedResidentId(null);
                                     goNext();
                                   }}
                                 />
@@ -462,6 +464,7 @@ export default function KioskCheckIn() {
                               accentColor="primary"
                               onClick={() => {
                                 flow.updateField("whomToVisit", person.name);
+                                flow.setVisitedResidentId(visitingMode === "resident" ? person.visitorId || person.id : null);
                                 goNext();
                               }}
                             />
