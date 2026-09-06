@@ -7,8 +7,9 @@ import { useResidents } from "@/hooks/useResidents";
 import { useStaffMembers } from "@/hooks/useStaffMembers";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import type { VisitorType } from "@/types/visitor";
+import { FoodFormState, emptyFoodForm, isFoodFormValid } from "@/components/food/FoodFormFields";
 
-export type KioskStepId = "type" | "details" | "visiting" | "companions" | "screening" | "contractor" | "terms" | "confirm";
+export type KioskStepId = "type" | "details" | "visiting" | "food" | "companions" | "screening" | "contractor" | "terms" | "confirm";
 
 export interface KioskStep {
   id: KioskStepId;
@@ -30,6 +31,11 @@ export function useKioskCheckInFlow() {
   const [returningVisitor, setReturningVisitor] = useState<any>(null);
   const [companions, setCompanions] = useState<Array<{ id: string; firstName: string; surname: string; email: string; mobile: string }>>([]);
   const [hasCompanions, setHasCompanions] = useState<boolean | null>(null);
+  const [outbreakMode, setOutbreakMode] = useState(false);
+  const [badgePrintingEnabled, setBadgePrintingEnabled] = useState(false);
+  const [bringingFood, setBringingFood] = useState<boolean | null>(null);
+  const [foodForm, setFoodForm] = useState<FoodFormState>(emptyFoodForm);
+  const [visitedResidentId, setVisitedResidentId] = useState<string | null>(null);
 
   // Dynamic form fields
   const { data: formFields = [] } = useFormFields(selectedType as any);
@@ -56,7 +62,7 @@ export function useKioskCheckInFlow() {
     supabase
       .from("settings")
       .select("key, value")
-      .in("key", [`tc_content_${selectedType}`, "jurisdiction", "kiosk_resident_lookup_mode", `kiosk_resident_lookup_mode_${selectedType}`, "kiosk_staff_lookup_mode", `kiosk_staff_lookup_mode_${selectedType}`, "contractor_credential_enforcement"])
+      .in("key", [`tc_content_${selectedType}`, "jurisdiction", "kiosk_resident_lookup_mode", `kiosk_resident_lookup_mode_${selectedType}`, "kiosk_staff_lookup_mode", `kiosk_staff_lookup_mode_${selectedType}`, "contractor_credential_enforcement", "outbreak_mode", "badge_printing_enabled"])
       .then(({ data }) => {
         const tc = data?.find((d) => d.key === `tc_content_${selectedType}`);
         const jur = data?.find((d) => d.key === "jurisdiction");
@@ -72,6 +78,8 @@ export function useKioskCheckInFlow() {
         if (jur?.value === "AU" || jur?.value === "UK") setJurisdiction(jur.value);
         const enf = data?.find((d) => d.key === "contractor_credential_enforcement");
         if (enf?.value === "warn" || enf?.value === "block") setCredentialEnforcement(enf.value);
+        setOutbreakMode(data?.find((d) => d.key === "outbreak_mode")?.value === "true");
+        setBadgePrintingEnabled(data?.find((d) => d.key === "badge_printing_enabled")?.value === "true");
         if (rlmValue === "show_all" || rlmValue === "search_first") setResidentLookupMode(rlmValue);
         if (slmValue === "search_first" || slmValue === "by_department" || slmValue === "free_text") setStaffLookupMode(slmValue);
       });
@@ -106,6 +114,10 @@ export function useKioskCheckInFlow() {
     if (selectedType !== "contractor") {
       pipeline.push({ id: "visiting", label: "Visiting" });
     }
+    // Food register — visitors/volunteers visiting a resident
+    if ((selectedType === "visitor" || selectedType === "volunteer") && visitedResidentId) {
+      pipeline.push({ id: "food", label: "Food" });
+    }
     // Companions step (always after visiting/contractor)
     pipeline.push({ id: "companions", label: "Companions" });
     // Contractor screening
@@ -122,7 +134,7 @@ export function useKioskCheckInFlow() {
     }
     pipeline.push({ id: "confirm", label: "Review" });
     return pipeline;
-  }, [selectedType, healthQuestions.length, tcContent]);
+  }, [selectedType, healthQuestions.length, tcContent, visitedResidentId]);
 
   const updateField = (key: string, value: string) => {
     setFormValues((prev) => ({ ...prev, [key]: value }));
@@ -138,6 +150,9 @@ export function useKioskCheckInFlow() {
     setSelectedType("visitor");
     setCompanions([]);
     setHasCompanions(null);
+    setBringingFood(null);
+    setFoodForm(emptyFoodForm);
+    setVisitedResidentId(null);
   };
 
   // Check if details step has required fields filled
@@ -171,8 +186,12 @@ export function useKioskCheckInFlow() {
   }, [formValues, healthAnswers]);
 
   const highTemperature = bodyTemperature !== null && bodyTemperature > 37.8;
-  // Unattended kiosk: a positive symptom or high temperature must stop the check-in
-  const screeningBlocked = hasYesFlags || highTemperature;
+  const screeningFlagged = hasYesFlags || highTemperature;
+  // Unattended kiosk: during Outbreak Mode a positive symptom or high temperature
+  // hard-stops the check-in. Outside outbreak periods it is flagged for staff instead.
+  const screeningBlocked = outbreakMode && screeningFlagged;
+
+  const foodStepValid = bringingFood === false || (bringingFood === true && isFoodFormValid(foodForm));
 
 
   return {
@@ -208,6 +227,16 @@ export function useKioskCheckInFlow() {
     bodyTemperature,
     highTemperature,
     screeningBlocked,
+    screeningFlagged,
+    outbreakMode,
+    badgePrintingEnabled,
+    bringingFood,
+    setBringingFood,
+    foodForm,
+    setFoodForm,
+    foodStepValid,
+    visitedResidentId,
+    setVisitedResidentId,
 
     reset,
     residentLookupMode,

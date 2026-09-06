@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export function PrintingTab() {
   const { toast } = useToast();
+  const [badgePrintingEnabled, setBadgePrintingEnabled] = useState(false);
   const [printOnCheckin, setPrintOnCheckin] = useState(false);
   const [printerModel, setPrinterModel] = useState("brother_ql820");
   const [printerIp, setPrinterIp] = useState("");
@@ -23,11 +24,12 @@ export function PrintingTab() {
     supabase
       .from("settings")
       .select("key, value")
-      .in("key", ["print_on_checkin", "printer_model", "printer_ip", "label_size", "badge_include_photo", "badge_include_qr"])
+      .in("key", ["badge_printing_enabled", "print_on_checkin", "printer_model", "printer_ip", "label_size", "badge_include_photo", "badge_include_qr"])
       .then(({ data }) => {
         if (data) {
           const map: Record<string, string> = {};
           data.forEach((r) => { map[r.key] = r.value; });
+          setBadgePrintingEnabled(map.badge_printing_enabled === "true");
           setPrintOnCheckin(map.print_on_checkin === "true");
           setPrinterModel(map.printer_model || "brother_ql820");
           setPrinterIp(map.printer_ip || "");
@@ -41,6 +43,7 @@ export function PrintingTab() {
   const save = async () => {
     setSaving(true);
     const settings = [
+      { key: "badge_printing_enabled", value: badgePrintingEnabled ? "true" : "false" },
       { key: "print_on_checkin", value: printOnCheckin ? "true" : "false" },
       { key: "printer_model", value: printerModel },
       { key: "printer_ip", value: printerIp },
@@ -65,6 +68,16 @@ export function PrintingTab() {
           <CardDescription className="text-xs">Configure visitor badge printing on check-in. Print failures will not block check-in — staff will see a toast with a reprint option.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="rounded-lg border border-border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-foreground">Enable badge printing</p>
+                <p className="text-xs text-muted-foreground">Show a "Print Badge" action after a successful check-in</p>
+              </div>
+              <Switch checked={badgePrintingEnabled} onCheckedChange={setBadgePrintingEnabled} />
+            </div>
+          </div>
+
           <div className="rounded-lg border border-border p-4">
             <div className="flex items-center justify-between">
               <div>

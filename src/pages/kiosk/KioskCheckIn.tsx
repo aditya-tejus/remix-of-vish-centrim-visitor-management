@@ -13,6 +13,9 @@ import { useToast } from "@/hooks/use-toast";
 import { WatchlistAlertDialog } from "@/components/WatchlistAlertDialog";
 import { ContractorScreening } from "@/components/ContractorScreening";
 import { KioskProgressStepper } from "@/components/kiosk/KioskProgressStepper";
+import { FoodFormFields } from "@/components/food/FoodFormFields";
+import { insertFoodRecord } from "@/lib/foodRegister";
+import { printBadge } from "@/lib/printBadge";
 import { KioskSuccessScreen } from "@/components/kiosk/KioskSuccessScreen";
 import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
 import { useKioskCheckInFlow, KioskStepId } from "@/hooks/useKioskCheckInFlow";
@@ -168,6 +171,25 @@ export default function KioskCheckIn() {
       });
     });
 
+    // Food register entry (linked to the resident's real record id)
+    if (flow.bringingFood && flow.visitedResidentId) {
+      insertFoodRecord({
+        residentVisitorId: flow.visitedResidentId,
+        residentName: flow.formValues.whomToVisit || "",
+        broughtByName: `${flow.formValues.firstName || ""} ${flow.formValues.surname || ""}`.trim(),
+        foodDescription: flow.foodForm.foodDescription.trim(),
+        foodType: flow.foodForm.foodType,
+        sharedWithOthers: flow.foodForm.sharedWithOthers,
+        sharedResidentIds: flow.foodForm.sharedResidentIds,
+        sharedResidentNames: flow.foodForm.sharedResidentIds
+          .map((id) => flow.residents.find((r) => r.visitorId === id)?.name)
+          .filter(Boolean) as string[],
+        notes: flow.foodForm.notes.trim() || null,
+        source: "check_in",
+        createdBy: "Kiosk",
+      }).then(() => undefined);
+    }
+
     setCheckedInQrCode(primaryQr);
     setSubmitted(true);
     toast({ title: "Checked In", description: `Welcome, ${flow.formValues.firstName}!${flow.companions.length > 0 ? ` (+${flow.companions.length} companion${flow.companions.length > 1 ? "s" : ""})` : ""}` });
@@ -215,6 +237,24 @@ export default function KioskCheckIn() {
         onComplete={handleComplete}
         qrCode={checkedInQrCode || undefined}
         companionCount={flow.companions.length}
+        extraAction={
+          flow.badgePrintingEnabled ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="gap-2 border border-border text-sm"
+              onClick={() =>
+                printBadge({
+                  name: `${flow.formValues.firstName || ""} ${flow.formValues.surname || ""}`.trim(),
+                  type: flow.selectedType,
+                  visiting: flow.formValues.whomToVisit || undefined,
+                })
+              }
+            >
+              Print Badge
+            </Button>
+          ) : undefined
+        }
       />
     );
   }
@@ -382,6 +422,7 @@ export default function KioskCheckIn() {
                         className="w-full h-14 text-base"
                         onClick={() => {
                           flow.updateField("whomToVisit", staffFreeText.trim());
+                          flow.setVisitedResidentId(null);
                           goNext();
                         }}
                       >
@@ -433,6 +474,7 @@ export default function KioskCheckIn() {
                                   accentColor="primary"
                                   onClick={() => {
                                     flow.updateField("whomToVisit", person.name);
+                                    flow.setVisitedResidentId(null);
                                     goNext();
                                   }}
                                 />
@@ -461,8 +503,16 @@ export default function KioskCheckIn() {
                               }
                               accentColor="primary"
                               onClick={() => {
+                                const isResident = visitingMode === "resident";
+                                const residentId = isResident ? person.visitorId || person.id : null;
                                 flow.updateField("whomToVisit", person.name);
-                                goNext();
+                                flow.setVisitedResidentId(residentId);
+                                // Selecting a resident inserts the Food step next, so navigate explicitly
+                                if (residentId && (flow.selectedType === "visitor" || flow.selectedType === "volunteer")) {
+                                  setStep("food");
+                                } else {
+                                  goNext();
+                                }
                               }}
                             />
                           ))
@@ -486,6 +536,55 @@ export default function KioskCheckIn() {
               </Button>
               <Button variant="secondary" onClick={goNext} className="flex-1 h-14 text-base gap-2 border border-border">
                 Skip <ArrowRight className="h-5 w-5" />
+              </Button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Step: Food Register */}
+        {step === "food" && (
+          <motion.div key="food" {...anim} className="space-y-5">
+            <div className="text-center space-y-1">
+              <h2 className="text-2xl font-bold text-foreground">Are you bringing food in?</h2>
+              <p className="text-base text-muted-foreground">
+                For {flow.formValues.whomToVisit || "the resident"} — we keep a simple record of food brought into the home.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {[true, false].map((val) => (
+                <button
+                  key={String(val)}
+                  onClick={() => flow.setBringingFood(val)}
+                  className={`h-20 rounded-2xl border-2 text-lg font-bold transition-all active:scale-[0.97] ${
+                    flow.bringingFood === val
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-card/80 text-foreground"
+                  }`}
+                >
+                  {val ? "Yes" : "No"}
+                </button>
+              ))}
+            </div>
+
+            {flow.bringingFood && (
+              <div className="rounded-2xl border-2 border-border bg-card p-5">
+                <FoodFormFields
+                  state={flow.foodForm}
+                  onChange={flow.setFoodForm}
+                  residents={flow.residents.map((r) => ({ id: r.visitorId, name: r.name, room: r.room }))}
+                  primaryResidentId={flow.visitedResidentId}
+                  size="kiosk"
+                />
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <Button variant="secondary" onClick={goBack} className="flex-1 h-14 text-base gap-2 border border-border">
+                <ArrowLeft className="h-5 w-5" /> Back
+              </Button>
+              <Button onClick={goNext} disabled={!flow.foodStepValid} className="flex-1 h-14 text-base gap-2">
+                Next <ArrowRight className="h-5 w-5" />
               </Button>
             </div>
           </motion.div>
@@ -717,6 +816,18 @@ export default function KioskCheckIn() {
                 </div>
               )}
             </div>
+
+            {!flow.screeningBlocked && flow.screeningFlagged && (
+              <div className="rounded-2xl bg-warning/10 border-2 border-warning/30 p-5 flex items-start gap-3">
+                <AlertTriangle className="h-6 w-6 text-warning shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-lg font-bold text-warning">Please speak to reception</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Your answers have been flagged for staff review. You can continue, and a staff member will check in with you.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {flow.screeningBlocked && (
               <div className="rounded-2xl bg-destructive/10 border-2 border-destructive/30 p-5 flex items-start gap-3">

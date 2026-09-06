@@ -12,6 +12,8 @@ interface KioskSuccessScreenProps {
   accentColor?: "success" | "warning" | "info" | "primary";
   qrCode?: string;
   companionCount?: number;
+  /** Optional extra action rendered above the return button (e.g. Print Badge) */
+  extraAction?: React.ReactNode;
 }
 
 export function KioskSuccessScreen({
@@ -22,6 +24,7 @@ export function KioskSuccessScreen({
   accentColor = "success",
   qrCode,
   companionCount,
+  extraAction,
 }: KioskSuccessScreenProps) {
   const [remaining, setRemaining] = useState(countdownSeconds);
 
@@ -110,6 +113,7 @@ export function KioskSuccessScreen({
         transition={{ delay: 0.5 }}
         className="flex flex-col items-center gap-2 mt-2"
       >
+        {extraAction}
         <Button variant="secondary" size="sm" onClick={onComplete} className="gap-2 border border-border text-sm">
           Return to Start · {remaining}s
         </Button>

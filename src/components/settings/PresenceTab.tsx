@@ -4,12 +4,17 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Globe, Save, Check } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Globe, Save, Check, Users, ShieldAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 export function PresenceTab() {
   const [jurisdiction, setJurisdiction] = useState<"AU" | "UK">("AU");
+  const [maxVisitors, setMaxVisitors] = useState("");
+  const [outbreakMode, setOutbreakMode] = useState(false);
+  const [savingOps, setSavingOps] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
@@ -17,12 +22,15 @@ export function PresenceTab() {
     supabase
       .from("settings")
       .select("key, value")
-      .eq("key", "jurisdiction")
-      .maybeSingle()
+      .in("key", ["jurisdiction", "max_visitors_on_site", "outbreak_mode"])
       .then(({ data }) => {
-        if (data && (data.value === "AU" || data.value === "UK")) {
-          setJurisdiction(data.value as "AU" | "UK");
+        const map: Record<string, string> = {};
+        (data || []).forEach((r) => { map[r.key] = r.value; });
+        if (map.jurisdiction === "AU" || map.jurisdiction === "UK") {
+          setJurisdiction(map.jurisdiction as "AU" | "UK");
         }
+        setMaxVisitors(map.max_visitors_on_site || "");
+        setOutbreakMode(map.outbreak_mode === "true");
         setLoaded(true);
       });
   }, []);
@@ -38,6 +46,25 @@ export function PresenceTab() {
     } else {
       toast({ title: "Saved", description: `Jurisdiction set to ${jurisdiction === "AU" ? "Australia" : "United Kingdom"}.` });
     }
+  };
+
+  const saveOps = async () => {
+    setSavingOps(true);
+    const rows = [
+      { key: "max_visitors_on_site", value: maxVisitors.trim() },
+      { key: "outbreak_mode", value: outbreakMode ? "true" : "false" },
+    ];
+    let failed = false;
+    for (const row of rows) {
+      const { error } = await supabase.from("settings").upsert(row, { onConflict: "key" });
+      if (error) failed = true;
+    }
+    setSavingOps(false);
+    toast(
+      failed
+        ? { title: "Error", description: "Could not save occupancy settings.", variant: "destructive" }
+        : { title: "Saved", description: "Occupancy and outbreak settings updated." }
+    );
   };
 
   if (!loaded) return null;
@@ -97,6 +124,52 @@ export function PresenceTab() {
           <Button onClick={handleSave} disabled={saving} className="gap-1.5">
             {saving ? <Save className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
             Save Jurisdiction
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            Occupancy & Outbreak Controls
+          </CardTitle>
+          <CardDescription className="text-[13px]">
+            Set a live cap on visitors on site and switch the home into outbreak precautions.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Maximum visitors on site at once</Label>
+            <Input
+              type="number"
+              min={1}
+              value={maxVisitors}
+              onChange={(e) => setMaxVisitors(e.target.value)}
+              placeholder="Leave blank for no limit"
+              className="w-[280px]"
+            />
+            <p className="text-[12px] text-muted-foreground">
+              A live count is shown in the header; it turns amber near the limit and red once reached.
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-border p-4 flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                <ShieldAlert className="h-3.5 w-3.5 text-warning" /> Outbreak Mode
+              </p>
+              <p className="text-[12px] text-muted-foreground">
+                When on, the self-service kiosk stops check-in completely on a positive symptom answer or a high
+                temperature. When off, reception can still override at the front desk.
+              </p>
+            </div>
+            <Switch checked={outbreakMode} onCheckedChange={setOutbreakMode} />
+          </div>
+
+          <Button onClick={saveOps} disabled={savingOps} className="gap-1.5">
+            {savingOps ? <Save className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            Save Controls
           </Button>
         </CardContent>
       </Card>

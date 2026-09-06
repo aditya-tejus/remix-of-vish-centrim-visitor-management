@@ -392,6 +392,88 @@ export type Database = {
         }
         Relationships: []
       }
+      food_register: {
+        Row: {
+          branch_id: string | null
+          brought_by_name: string
+          created_at: string
+          created_by: string | null
+          food_description: string
+          food_type: string
+          id: string
+          notes: string | null
+          recorded_at: string
+          resident_name: string
+          resident_visitor_id: string | null
+          shared_resident_ids: string[]
+          shared_resident_names: string[]
+          shared_with_others: boolean
+          source: string
+          updated_at: string
+          visitor_id: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          brought_by_name: string
+          created_at?: string
+          created_by?: string | null
+          food_description: string
+          food_type?: string
+          id?: string
+          notes?: string | null
+          recorded_at?: string
+          resident_name: string
+          resident_visitor_id?: string | null
+          shared_resident_ids?: string[]
+          shared_resident_names?: string[]
+          shared_with_others?: boolean
+          source?: string
+          updated_at?: string
+          visitor_id?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          brought_by_name?: string
+          created_at?: string
+          created_by?: string | null
+          food_description?: string
+          food_type?: string
+          id?: string
+          notes?: string | null
+          recorded_at?: string
+          resident_name?: string
+          resident_visitor_id?: string | null
+          shared_resident_ids?: string[]
+          shared_resident_names?: string[]
+          shared_with_others?: boolean
+          source?: string
+          updated_at?: string
+          visitor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "food_register_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_register_resident_visitor_id_fkey"
+            columns: ["resident_visitor_id"]
+            isOneToOne: false
+            referencedRelation: "visitors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_register_visitor_id_fkey"
+            columns: ["visitor_id"]
+            isOneToOne: false
+            referencedRelation: "visitors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_fields: {
         Row: {
           created_at: string
