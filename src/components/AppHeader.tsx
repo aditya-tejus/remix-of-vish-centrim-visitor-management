@@ -34,6 +34,7 @@ export function AppHeader({
 }: AppHeaderProps) {
   const [now, setNow] = useState(new Date());
   const { data: healthBlockCount = 0 } = useHealthAlerts();
+  const { count: onSiteCount, cap, atLimit, nearLimit } = useOccupancy();
 
 
   useEffect(() => {
@@ -65,6 +66,27 @@ export function AppHeader({
             <span className="text-[13px] font-mono font-medium text-muted-foreground tabular-nums">
               {format(now, "hh:mm a")}
             </span>
+          </div>
+
+          <div className="w-px h-5 bg-border" />
+
+          {/* Live occupancy */}
+          <div
+            className={`hidden md:flex items-center gap-1.5 px-2 py-1 rounded-lg mx-1 ${
+              atLimit
+                ? "bg-destructive/10 text-destructive"
+                : nearLimit
+                ? "bg-warning/10 text-warning"
+                : "text-muted-foreground"
+            }`}
+            title={cap ? `On-site visitors (limit ${cap})` : "Visitors currently on site"}
+          >
+            <Users className="h-3.5 w-3.5" />
+            <span className="text-[13px] font-medium tabular-nums">
+              {onSiteCount}{cap ? ` / ${cap}` : ""}
+            </span>
+            {atLimit && <span className="text-[11px] font-semibold">At limit</span>}
+            {nearLimit && <span className="text-[11px] font-semibold">Near limit</span>}
           </div>
 
           <div className="w-px h-5 bg-border" />
