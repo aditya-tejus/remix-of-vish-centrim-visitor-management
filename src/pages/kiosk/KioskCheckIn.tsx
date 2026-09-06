@@ -503,9 +503,16 @@ export default function KioskCheckIn() {
                               }
                               accentColor="primary"
                               onClick={() => {
+                                const isResident = visitingMode === "resident";
+                                const residentId = isResident ? person.visitorId || person.id : null;
                                 flow.updateField("whomToVisit", person.name);
-                                flow.setVisitedResidentId(visitingMode === "resident" ? person.visitorId || person.id : null);
-                                goNext();
+                                flow.setVisitedResidentId(residentId);
+                                // Selecting a resident inserts the Food step next, so navigate explicitly
+                                if (residentId && (flow.selectedType === "visitor" || flow.selectedType === "volunteer")) {
+                                  setStep("food");
+                                } else {
+                                  goNext();
+                                }
                               }}
                             />
                           ))
