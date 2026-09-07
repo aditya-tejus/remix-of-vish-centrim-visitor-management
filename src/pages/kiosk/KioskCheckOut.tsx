@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useVisitors } from "@/hooks/useVisitors";
 import { useToast } from "@/hooks/use-toast";
-import { Search, LogOut, ArrowLeft, Clock, QrCode } from "lucide-react";
+import { Search, LogOut, ArrowLeft, Clock, QrCode, KeyRound } from "lucide-react";
+import { useOpenKeyIssues } from "@/hooks/useOpenKeyIssues";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
@@ -26,6 +27,8 @@ export default function KioskCheckOut() {
   const [selected, setSelected] = useState<any>(null);
   const [doneName, setDoneName] = useState("");
   const [stayingBehind, setStayingBehind] = useState(0);
+  const { openIssues } = useOpenKeyIssues();
+  const heldKeys = selected ? openIssues.filter((i) => i.visitorId === selected.id) : [];
 
   const checkedIn = useMemo(
     () => visitors.filter((v) => v.status === "checked-in" && v.type !== "resident"),
@@ -202,6 +205,21 @@ export default function KioskCheckOut() {
             )}
           </div>
         </div>
+
+        {heldKeys.length > 0 && (
+          <div className="rounded-2xl border-2 border-warning/40 bg-warning/5 p-4 flex items-start gap-3 mb-4">
+            <KeyRound className="h-6 w-6 text-warning shrink-0 mt-0.5" />
+            <div>
+              <p className="text-base font-semibold text-foreground">
+                Please hand back {heldKeys.length === 1 ? "the key" : "the keys"} before you leave
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {heldKeys.map((k) => `${k.keyLabel}${k.propertyLabel ? ` (${k.propertyLabel})` : ""}`).join(", ")}
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="flex gap-3">
           <Button variant="secondary" onClick={() => setPhase((selected.additionalVisitors || 0) > 0 ? "companions" : "search")} className="flex-1 h-14 text-base gap-2 border border-border" aria-label="Cancel and go back">
             <ArrowLeft className="h-5 w-5" /> Cancel
