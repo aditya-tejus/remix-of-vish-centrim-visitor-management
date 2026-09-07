@@ -51,6 +51,14 @@ interface ContractorScreeningProps {
   compact?: boolean;
   /** Reports whether credential status currently holds up check-in */
   onBlockedChange?: (blocked: boolean, reason: string | null) => void;
+  /** The individual tradesperson — personal checks are looked up against them */
+  workerFirstName?: string;
+  workerSurname?: string;
+  workerMobile?: string;
+  /** Unattended kiosk: self-uploads only, no staff confirmation */
+  kiosk?: boolean;
+  /** Reports the matched contractor person record so check-in can store it */
+  onPersonChange?: (personId: string | null) => void;
 }
 
 export function ContractorScreening({
@@ -61,17 +69,59 @@ export function ContractorScreening({
   onSupplierChange,
   compact = true,
   onBlockedChange,
+  workerFirstName = "",
+  workerSurname = "",
+  workerMobile = "",
+  kiosk = false,
+  onPersonChange,
 }: ContractorScreeningProps) {
   const { suppliers } = useSuppliers();
   const { toast } = useToast();
-  const [savingCredential, setSavingCredential] = useState<string | null>(null);
   const [supplierSearch, setSupplierSearch] = useState("");
   const [showSupplierList, setShowSupplierList] = useState(false);
+  const [person, setPerson] = useState<ContractorPerson | null>(null);
 
   const questions = jurisdiction === "AU" ? auScreeningQuestions : ukScreeningQuestions;
 
   const { activeTypes } = useCredentialTypes();
   const { records, save } = useSupplierCredentials(selectedSupplier?.id);
+  const entryPolicy = useContractorEntryPolicy();
+  const { records: personRecords, save: savePersonCredential, verify } = usePersonCredentials(person?.id);
+
+  const nameKey = `${workerFirstName.trim().toLowerCase()}|${workerSurname.trim().toLowerCase()}|${workerMobile.replace(/\D/g, "")}`;
+
+  // Find (or create) the individual worker so their own police check / DBS can
+  // be shown. Company details stay on the supplier record.
+  useEffect(() => {
+    let cancelled = false;
+    const first = workerFirstName.trim();
+    const last = workerSurname.trim();
+    if (!first || !last) {
+      setPerson(null);
+      onPersonChange?.(null);
+      return;
+    }
+    (async () => {
+      const found = await findContractorPerson({ firstName: first, surname: last, mobile: workerMobile });
+      if (cancelled) return;
+      if (found) {
+        setPerson(found);
+        onPersonChange?.(found.id);
+        return;
+      }
+      const created = await upsertContractorPerson({
+        firstName: first,
+        surname: last,
+        mobile: workerMobile || null,
+        supplierId: selectedSupplier?.id || null,
+      });
+      if (cancelled) return;
+      setPerson(created);
+      onPersonChange?.(created?.id ?? null);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nameKey, selectedSupplier?.id]);
 
   const filteredSuppliers = useMemo(() => {
     if (!supplierSearch.trim()) return suppliers;
@@ -91,16 +141,25 @@ export function ContractorScreening({
       : null;
   const escortReason: string = answers[ESCORT_REASON_KEY] || "";
 
-  const credentials = getSupplierCredentials(jurisdiction, activeTypes, records);
+  const credentials = buildComplianceChecklist({
+    jurisdiction,
+    types: activeTypes,
+    supplierRecords: records,
+    personRecords,
+  });
   const anyRequired = credentials.some((c) => c.blocking);
   const gate = evaluateContractorGate({
     jurisdiction,
     supplierName: selectedSupplier?.name ?? null,
     types: activeTypes,
-    records,
+    checklist: credentials,
     unsupervisedAccess: unsupervisedAnswer,
     escortReason,
+    entryPolicy,
+    personIdentified: !!person,
   });
+  const allClear = credentials.length > 0 && credentials.every((c) => c.state === "valid" || c.state === "expiring");
+  const actionNeeded = credentials.filter((c) => c.state !== "valid" && c.state !== "expiring");
 
   const allRequiredAnswered = questions
     .filter((q) => q.required)
@@ -126,17 +185,14 @@ export function ContractorScreening({
     onBlockedChangeRef.current?.(gate.blocked, gate.reason);
   }, [gate.blocked, gate.reason]);
 
-  const saveCredential = async (typeId: string, field: "expiry_date" | "reference", value: string) => {
-    if (!selectedSupplier) return;
-    setSavingCredential(`${typeId}:${field}`);
+  const verifyCredential = async (typeId: string, expiry?: string | null) => {
     try {
-      await save(typeId, { [field]: value || null } as any);
+      await verify(typeId, "Staff", expiry ?? undefined);
     } catch {
-      toast({ title: "Could not save", description: "The credential details were not saved.", variant: "destructive" });
-    } finally {
-      setSavingCredential(null);
+      toast({ title: "Could not confirm", variant: "destructive" });
     }
   };
+
 
   const stateStyles: Record<string, string> = {
     valid: "border-success/30 bg-success/5",
