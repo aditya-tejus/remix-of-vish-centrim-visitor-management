@@ -1206,6 +1206,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
                   onAnswersChange={setContractorScreeningAnswers}
                   selectedSupplier={selectedSupplier}
                   onSupplierChange={setSelectedSupplier}
+                  onBlockedChange={(blocked, reason) => setContractorGate({ blocked, reason })}
                 />
               ) : (
                 <>
