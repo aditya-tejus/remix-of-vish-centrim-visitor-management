@@ -39,6 +39,25 @@ export function AppHeader({
   const [now, setNow] = useState(new Date());
   const { data: healthBlockCount = 0 } = useHealthAlerts();
   const { count: onSiteCount, cap, atLimit, nearLimit } = useOccupancy();
+  const { enabled: outbreakMode, saving: outbreakSaving, setOutbreakMode } = useOutbreakMode();
+  const { role, user } = useAuth();
+  const { toast } = useToast();
+  const isAdmin = role === "admin";
+
+  const toggleOutbreak = async () => {
+    if (!isAdmin || outbreakSaving) return;
+    const next = !outbreakMode;
+    const ok = await setOutbreakMode(next, user?.email || "staff");
+    toast({
+      title: ok ? (next ? "Outbreak Mode turned on" : "Outbreak Mode turned off") : "Could not change Outbreak Mode",
+      description: ok
+        ? next
+          ? "Kiosk check-in is now blocked for anyone reporting symptoms or a high temperature."
+          : "Symptoms at the kiosk will now show a staff-review warning instead of blocking."
+        : undefined,
+      variant: ok ? undefined : "destructive",
+    });
+  };
 
 
   useEffect(() => {
@@ -92,6 +111,45 @@ export function AppHeader({
             {atLimit && <span className="text-[11px] font-semibold">At limit</span>}
             {nearLimit && <span className="text-[11px] font-semibold">Near limit</span>}
           </div>
+
+          {/* Outbreak Mode */}
+          {outbreakMode && (
+            <>
+              <div className="w-px h-5 bg-border" />
+              <button
+                type="button"
+                onClick={toggleOutbreak}
+                disabled={!isAdmin || outbreakSaving}
+                title={
+                  isAdmin
+                    ? "Outbreak Mode is on — click to turn off"
+                    : "Outbreak Mode is on — kiosk check-in is blocked for anyone reporting symptoms"
+                }
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg mx-1 bg-destructive/10 text-destructive ${
+                  isAdmin ? "hover:bg-destructive/20 cursor-pointer" : "cursor-default"
+                } disabled:opacity-70`}
+              >
+                <ShieldAlert className="h-3.5 w-3.5" />
+                <span className="text-[11px] font-semibold uppercase tracking-wide">Outbreak Mode On</span>
+                {isAdmin && <span className="text-[10px] font-medium opacity-70">Turn off</span>}
+              </button>
+            </>
+          )}
+          {!outbreakMode && isAdmin && (
+            <>
+              <div className="w-px h-5 bg-border" />
+              <button
+                type="button"
+                onClick={toggleOutbreak}
+                disabled={outbreakSaving}
+                title="Turn Outbreak Mode on — blocks kiosk check-in on symptoms or high temperature"
+                className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded-lg mx-1 text-muted-foreground hover:text-foreground hover:bg-secondary"
+              >
+                <ShieldAlert className="h-3.5 w-3.5" />
+                <span className="text-[11px] font-medium">Outbreak Mode off</span>
+              </button>
+            </>
+          )}
 
           <div className="w-px h-5 bg-border" />
 
