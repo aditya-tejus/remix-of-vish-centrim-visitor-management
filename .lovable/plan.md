@@ -30,7 +30,7 @@ A key can already be issued to a staff member, but the holder's name is typed by
 - Since staff never check out at the kiosk, staff-held keys are only cleared by a staff return on the Keys Register — the checkout warning in the previous section applies only to visitors and contractors.
 
 
-## 2. Walk the kiosk as a repeat visitor
+## 3. Walk the kiosk as a repeat visitor
 
 Run the full journey in the live preview and confirm each point, then report back with what happened:
 
