@@ -4,17 +4,34 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useVisitors } from "@/hooks/useVisitors";
 import { useResidents } from "@/hooks/useResidents";
-import { useEvacuationDrills, useEvacuationAttendance, useEvacuationMutations, EvacuationDrill } from "@/hooks/useEvacuation";
+import { useAuth } from "@/hooks/useAuth";
+import { useSiteStructure } from "@/hooks/useSiteStructure";
+import { useJurisdiction } from "@/hooks/useJurisdiction";
+import {
+  useEvacuationDrills,
+  useEvacuationAttendance,
+  useEvacuationPoints,
+  useEvacuationMutations,
+  EvacuationDrill,
+  RollCallSeed,
+  AttendanceStatus,
+} from "@/hooks/useEvacuation";
 import { supabase } from "@/integrations/supabase/client";
-import { AlertTriangle, CheckCircle2, Search, Shield, Clock, Users, LogIn, Download, Printer, CheckSquare, Layers, Home, MapPin } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertTriangle, CheckCircle2, Search, Shield, Clock, Users, Download, Printer,
+  Home, MapPin, Phone, Accessibility, ArrowDown, PlaneTakeoff, Ambulance,
+} from "lucide-react";
 import { format, differenceInMinutes } from "date-fns";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Visitor } from "@/types/visitor";
+import {
+  buildRollCall, sortPeople, attendanceKey, RollCallPerson,
+  ASSISTANCE_ORDER, assistanceLabel, UNASSIGNED_AREA,
+} from "@/lib/evacuation";
 
 function formatDuration(start: Date): string {
   const mins = differenceInMinutes(new Date(), start);
@@ -24,81 +41,110 @@ function formatDuration(start: Date): string {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
-type GroupBy = "type" | "status";
+type GroupBy = "area" | "assistance" | "type" | "status";
+
+const ASSIST_STYLE: Record<string, string> = {
+  "full-assist": "bg-destructive/10 text-destructive border-destructive/30",
+  wheelchair: "bg-warning/10 text-warning border-warning/30",
+  "walking-aid": "bg-primary/10 text-primary border-primary/30",
+  independent: "bg-muted text-muted-foreground border-border",
+  unknown: "bg-destructive/10 text-destructive border-destructive/30",
+};
 
 export default function Evacuation() {
   const { visitors } = useVisitors();
   const { residents } = useResidents();
+  const { user } = useAuth();
+  const { areaLabel, roomLabel } = useSiteStructure();
+  const { isUK } = useJurisdiction();
   const { toast } = useToast();
+
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
-  const [filterWing, setFilterWing] = useState<string>("all");
+  const [filterArea, setFilterArea] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [groupBy, setGroupBy] = useState<GroupBy>("type");
+  const [groupBy, setGroupBy] = useState<GroupBy>("area");
+  const [assemblyPoint, setAssemblyPoint] = useState<string>("");
   const [busy, setBusy] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [closeReason, setCloseReason] = useState("");
 
-  // Shared, live-synced roll call state
   const { data: activeDrills = [] } = useEvacuationDrills("active");
   const activeDrill = activeDrills[0];
   const { data: attendance = [] } = useEvacuationAttendance(activeDrill?.id);
+  const { data: points = [] } = useEvacuationPoints();
   const { startDrill, markSafe, markUnsafe, endDrill, addAttendee } = useEvacuationMutations();
 
-  const residentMap = useMemo(
-    () => new Map(residents.map((r) => [r.visitorId, r])),
-    [residents]
-  );
-  const wingOf = (v: Visitor) =>
-    v.type === "resident" ? residentMap.get(v.id)?.wing || "Unassigned wing" : "";
-  const roomOf = (v: Visitor) =>
-    v.type === "resident" ? residentMap.get(v.id)?.room || "" : "";
+  const markedBy = user?.email || "Staff";
 
-  const safeIds = useMemo(
-    () => new Set(attendance.filter((a) => a.status === "safe" && a.visitor_id).map((a) => a.visitor_id as string)),
-    [attendance]
+  const { onSite, offSite } = useMemo(
+    () => buildRollCall({ visitors, residents }),
+    [visitors, residents]
   );
 
-  const checkedIn = useMemo(() =>
-    visitors.filter((v) => v.status === "checked-in"),
-    [visitors]
-  );
+  const statusByKey = useMemo(() => {
+    const map = new Map<string, { id: string; status: AttendanceStatus; at: string | null; point: string | null }>();
+    attendance.forEach((a) => {
+      const key = attendanceKey(a as any);
+      if (key) map.set(key, {
+        id: a.id,
+        status: (a.status as AttendanceStatus) || "unaccounted",
+        at: a.marked_safe_at,
+        point: a.evacuation_point_id,
+      });
+    });
+    return map;
+  }, [attendance]);
+
+  const statusOf = (p: RollCallPerson): AttendanceStatus =>
+    statusByKey.get(p.key)?.status || "unaccounted";
+
+  const seedOf = (p: RollCallPerson): RollCallSeed => ({
+    name: p.name,
+    type: p.type,
+    visitorId: p.visitorId,
+    companionIndex: p.companionIndex,
+    assistanceLevel: p.assistance.label,
+    contactPhone: p.phone,
+    emergencyContactName: p.emergencyContactName,
+    emergencyContactPhone: p.emergencyContactPhone,
+    area: p.area,
+    room: p.room,
+  });
 
   const ensureDrill = async (): Promise<EvacuationDrill> => {
     if (activeDrill) return activeDrill;
     return await startDrill.mutateAsync({
       title: `Roll call ${format(new Date(), "dd MMM yyyy HH:mm")}`,
-      people: checkedIn.map((v) => ({ name: `${v.firstName} ${v.surname}`, type: v.type, visitor_id: v.id })),
+      people: onSite.map(seedOf),
     });
   };
 
-  // Persisted, cross-device safe marking
-  const setSafeFor = async (ids: string[], safe: boolean) => {
-    if (ids.length === 0) return;
+  /** Records an outcome for a group of people, creating the drill if needed. */
+  const setStatusFor = async (people: RollCallPerson[], status: AttendanceStatus) => {
+    if (people.length === 0) return;
     setBusy(true);
     try {
       const drill = await ensureDrill();
       const { data: rows } = await supabase
         .from("evacuation_attendance" as any)
-        .select("id, visitor_id")
-        .eq("drill_id", drill.id)
-        .in("visitor_id", ids);
-      const found = new Map(((rows || []) as any[]).map((r) => [r.visitor_id as string, r.id as string]));
-      for (const id of ids) {
-        const attId = found.get(id);
+        .select("id, visitor_id, parent_visitor_id, companion_index")
+        .eq("drill_id", drill.id);
+      const found = new Map(((rows || []) as any[]).map((r) => [attendanceKey(r), r.id as string]));
+
+      for (const p of people) {
+        const attId = found.get(p.key);
         if (attId) {
-          if (safe) await markSafe.mutateAsync({ id: attId });
-          else await markUnsafe.mutateAsync(attId);
-        } else if (safe) {
-          const v = checkedIn.find((x) => x.id === id);
-          if (v) {
-            await addAttendee.mutateAsync({
-              drillId: drill.id,
-              name: `${v.firstName} ${v.surname}`,
-              type: v.type,
-              visitorId: v.id,
-              safe: true,
-            });
-          }
+          if (status === "unaccounted") await markUnsafe.mutateAsync(attId);
+          else await markSafe.mutateAsync({ id: attId, status, pointId: assemblyPoint || undefined, markedBy });
+        } else {
+          await addAttendee.mutateAsync({
+            drillId: drill.id,
+            person: seedOf(p),
+            status,
+            pointId: assemblyPoint || undefined,
+            markedBy,
+          });
         }
       }
     } catch (e: any) {
@@ -108,317 +154,299 @@ export default function Evacuation() {
     }
   };
 
+  const togglePerson = (p: RollCallPerson) => {
+    const current = statusOf(p);
+    void setStatusFor([p], current === "unaccounted" ? "safe" : "unaccounted");
+  };
 
-  // All unique wings
-  const allWings = useMemo(() => {
-    const wings = new Set<string>();
-    checkedIn.forEach((v) => {
-      if (v.type === "resident") wings.add(wingOf(v));
-    });
-    return [...wings].filter((w) => w !== "Unassigned wing").sort();
-  }, [checkedIn]);
+  const allAreas = useMemo(() => {
+    const set = new Set<string>();
+    onSite.forEach((p) => { if (p.area) set.add(p.area); });
+    return [...set].sort();
+  }, [onSite]);
+
+  const allTypes = useMemo(() => [...new Set(onSite.map((p) => p.type))].sort(), [onSite]);
 
   const filtered = useMemo(() => {
-    let list = checkedIn;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter((v) =>
-        `${v.firstName} ${v.surname}`.toLowerCase().includes(q) ||
-        v.whomToVisit?.toLowerCase().includes(q) ||
-        v.address?.toLowerCase().includes(q)
+    let list = onSite;
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter((p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.room.toLowerCase().includes(q) ||
+        p.area.toLowerCase().includes(q) ||
+        p.host.toLowerCase().includes(q) ||
+        p.phone.includes(q)
       );
     }
-    if (filterType !== "all") {
-      list = list.filter((v) => v.type === filterType);
-    }
-    if (filterWing !== "all") {
-      list = list.filter((v) => wingOf(v) === filterWing);
-    }
-    if (filterStatus === "safe") {
-      list = list.filter((v) => safeIds.has(v.id));
-    } else if (filterStatus === "unaccounted") {
-      list = list.filter((v) => !safeIds.has(v.id));
-    }
+    if (filterType !== "all") list = list.filter((p) => p.type === filterType);
+    if (filterArea !== "all") list = list.filter((p) => p.area === filterArea);
+    if (filterStatus === "safe") list = list.filter((p) => statusOf(p) !== "unaccounted");
+    else if (filterStatus === "unaccounted") list = list.filter((p) => statusOf(p) === "unaccounted");
     return list;
-  }, [checkedIn, searchQuery, filterType, filterWing, filterStatus, safeIds]);
+  }, [onSite, searchQuery, filterType, filterArea, filterStatus, statusByKey]);
 
-  // Group the filtered list — when grouped by type, residents are sub-grouped by wing
-  // Two-level structure: sections → groups
-  interface EvacGroup { label: string; items: Visitor[]; isSubGroup?: boolean }
-  interface EvacSection { label: string; groups: EvacGroup[] }
+  interface Group { label: string; sublabel?: string; people: RollCallPerson[] }
 
-  const sections = useMemo((): EvacSection[] => {
-    const sortByRoom = (items: Visitor[]) =>
-      items.sort((a, b) => {
-        if (a.type === "resident" && b.type === "resident") {
-          const roomA = roomOf(a).replace(/\D/g, "");
-          const roomB = roomOf(b).replace(/\D/g, "");
-          return (parseInt(roomA) || 0) - (parseInt(roomB) || 0);
-        }
-        return 0;
-      });
+  const groups = useMemo((): Group[] => {
+    const map = new Map<string, RollCallPerson[]>();
+    const push = (k: string, p: RollCallPerson) => {
+      if (!map.has(k)) map.set(k, []);
+      map.get(k)!.push(p);
+    };
 
-    if (groupBy === "type") {
-      // Residents section with wing sub-groups, then other types
-      const wingMap = new Map<string, Visitor[]>();
-      const otherMap = new Map<string, Visitor[]>();
-      filtered.forEach((v) => {
-        if (v.type === "resident") {
-          const wing = wingOf(v);
-          if (!wingMap.has(wing)) wingMap.set(wing, []);
-          wingMap.get(wing)!.push(v);
-        } else {
-          const key = v.type.charAt(0).toUpperCase() + v.type.slice(1) + "s";
-          if (!otherMap.has(key)) otherMap.set(key, []);
-          otherMap.get(key)!.push(v);
-        }
-      });
-      const wingGroups = [...wingMap.entries()]
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([wing, items]) => ({ label: wing, items: sortByRoom(items), isSubGroup: true }));
-
-      const result: EvacSection[] = [];
-      if (wingGroups.length > 0) result.push({ label: "Residents", groups: wingGroups });
-      [...otherMap.entries()].sort(([a], [b]) => a.localeCompare(b)).forEach(([label, items]) => {
-        result.push({ label, groups: [{ label: "", items }] });
-      });
-      return result;
-    }
-
-    // Status grouping
-    const map = new Map<string, Visitor[]>();
-    filtered.forEach((v) => {
-      const key = safeIds.has(v.id) ? "✅ Safe" : "⚠️ Unaccounted";
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(v);
+    filtered.forEach((p) => {
+      if (groupBy === "area") push(p.area || (p.type === "resident" ? UNASSIGNED_AREA : `${p.typeLabel}s`), p);
+      else if (groupBy === "assistance") push(p.assistance.level, p);
+      else if (groupBy === "type") push(`${p.typeLabel}s`, p);
+      else push(statusOf(p) === "unaccounted" ? "Not accounted for" : "Accounted for", p);
     });
 
-    return [...map.entries()]
-      .map(([label, items]) => ({ label, groups: [{ label: "", items: sortByRoom(items) }] }));
-  }, [filtered, groupBy, safeIds]);
+    let entries = [...map.entries()];
+    if (groupBy === "assistance") {
+      entries.sort(([a], [b]) => ASSISTANCE_ORDER.indexOf(a as any) - ASSISTANCE_ORDER.indexOf(b as any));
+      return entries.map(([k, people]) => ({ label: assistanceLabel(k as any), people: sortPeople(people) }));
+    }
+    if (groupBy === "status") {
+      entries.sort(([a]) => (a === "Not accounted for" ? -1 : 1));
+    } else {
+      entries.sort(([a], [b]) => a.localeCompare(b));
+    }
+    return entries.map(([k, people]) => ({ label: k, people: sortPeople(people) }));
+  }, [filtered, groupBy, statusByKey]);
 
-  const totalPeople = checkedIn.reduce((sum, v) => sum + 1 + (v.additionalVisitors || 0), 0);
-  const types = [...new Set(checkedIn.map((v) => v.type))];
-  const safeCount = checkedIn.filter((v) => safeIds.has(v.id)).length;
-  const unaccountedCount = checkedIn.length - safeCount;
-  const awayResidents = visitors.filter((v) => v.type === "resident" && v.status !== "checked-in");
-  const awayResidentCount = awayResidents.length;
+  const safeCount = onSite.filter((p) => statusOf(p) !== "unaccounted").length;
+  const unaccountedCount = onSite.length - safeCount;
+  const offSiteCount = offSite.length;
 
-  const toggleSafe = (id: string) => {
-    void setSafeFor([id], !safeIds.has(id));
+  const markGroupSafe = async (g: Group) => {
+    const pending = g.people.filter((p) => statusOf(p) === "unaccounted");
+    if (pending.length === 0) return;
+    await setStatusFor(pending, "safe");
+    toast({ title: `${g.label} accounted for`, description: `${pending.length} people marked safe.` });
   };
 
   const markAllSafe = async () => {
-    await setSafeFor(checkedIn.map((v) => v.id), true);
-    toast({ title: "All marked safe", description: `${checkedIn.length} people marked as safe.` });
+    const pending = onSite.filter((p) => statusOf(p) === "unaccounted");
+    await setStatusFor(pending, "safe");
+    toast({ title: "All marked safe", description: `${pending.length} people marked as safe.` });
   };
 
   const resetAll = async () => {
-    await setSafeFor([...safeIds], false);
+    await setStatusFor(onSite.filter((p) => statusOf(p) !== "unaccounted"), "unaccounted");
+  };
+
+  const jumpToNext = () => {
+    const next = filtered.find((p) => statusOf(p) === "unaccounted");
+    if (!next) return;
+    document.getElementById(`person-${next.key}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   const finishRollCall = async () => {
     if (!activeDrill) return;
-    await endDrill.mutateAsync({ drillId: activeDrill.id, accounted: safeIds.size });
-    toast({ title: "Roll call ended", description: `${safeIds.size} of ${checkedIn.length} accounted for.` });
-  };
-
-
-  const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleSelectAll = () => {
-    const unaccountedFiltered = filtered.filter((v) => !safeIds.has(v.id));
-    if (unaccountedFiltered.every((v) => selectedIds.has(v.id)) && unaccountedFiltered.length > 0) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(unaccountedFiltered.map((v) => v.id)));
+    if (unaccountedCount > 0 && !closeReason.trim()) {
+      toast({ title: "Reason required", description: "Record why people are still unaccounted for before closing.", variant: "destructive" });
+      return;
     }
+    await endDrill.mutateAsync({ drillId: activeDrill.id, accounted: safeCount, reason: closeReason.trim() || undefined });
+    setClosing(false);
+    setCloseReason("");
+    toast({ title: "Roll call ended", description: `${safeCount} of ${onSite.length} accounted for.` });
   };
 
-  const markSelectedSafe = async () => {
-    if (selectedIds.size === 0) return;
-    const count = selectedIds.size;
-    await setSafeFor([...selectedIds], true);
-    toast({ title: "Marked safe", description: `${count} people marked as safe.` });
-    setSelectedIds(new Set());
-  };
-
-
-  const selectedCount = selectedIds.size;
-  const allUnaccountedSelected = filtered.filter((v) => !safeIds.has(v.id)).length > 0 &&
-    filtered.filter((v) => !safeIds.has(v.id)).every((v) => selectedIds.has(v.id));
+  const rows = () => filtered.map((p) => ({
+    Name: p.name,
+    Type: p.typeLabel,
+    [areaLabel]: p.area,
+    [roomLabel]: p.room,
+    "Assistance needed": p.assistance.label,
+    "Mobility aids": p.assistance.aids.join("; "),
+    Flags: p.assistance.flags.join("; "),
+    Phone: p.phone,
+    "Emergency contact": p.emergencyContactName,
+    "Emergency phone": p.emergencyContactPhone,
+    Visiting: p.host,
+    "On site since": p.checkInTime ? format(p.checkInTime, "dd/MM/yyyy HH:mm") : "",
+    Status: statusOf(p) === "safe" ? "Safe" : statusOf(p) === "evacuated_offsite" ? "Evacuated off-site" : "Not accounted for",
+    "Marked at": statusByKey.get(p.key)?.at ? format(new Date(statusByKey.get(p.key)!.at!), "HH:mm") : "",
+  }));
 
   const exportCSV = () => {
-    const rows = filtered.map((v) => ({
-      Name: `${v.firstName} ${v.surname}`,
-      Type: v.type,
-      Wing: v.type === "resident" ? wingOf(v) : "",
-      Room: v.type === "resident" ? roomOf(v) : "",
-      Mobile: v.mobile,
-      Email: v.email,
-      Visiting: v.whomToVisit || "",
-      "Checked In": format(new Date(v.checkInTime), "dd/MM/yyyy HH:mm"),
-      Duration: formatDuration(new Date(v.checkInTime)),
-      Companions: String(v.additionalVisitors || 0),
-      Status: safeIds.has(v.id) ? "Safe" : "Unaccounted",
-    }));
-    if (rows.length === 0) return;
-    const headers = Object.keys(rows[0]);
+    const data = rows();
+    if (data.length === 0) return;
+    const headers = Object.keys(data[0]);
     const csv = [
       headers.join(","),
-      ...rows.map((r) => headers.map((h) => `"${String((r as any)[h]).replace(/"/g, '""')}"`).join(","))
+      ...data.map((r) => headers.map((h) => `"${String((r as any)[h] ?? "").replace(/"/g, '""')}"`).join(",")),
     ].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `evacuation-list-${format(new Date(), "yyyy-MM-dd-HHmm")}.csv`;
+    a.download = `roll-call-${format(new Date(), "yyyy-MM-dd-HHmm")}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast({ title: "CSV exported", description: `${rows.length} records exported.` });
+    toast({ title: "CSV exported", description: `${data.length} people exported.` });
   };
 
   const printList = () => {
     const date = format(new Date(), "dd MMMM yyyy, HH:mm");
-    const rows = filtered.map((v) => `
-      <tr class="${safeIds.has(v.id) ? "safe" : "danger"}">
-        <td>${safeIds.has(v.id) ? "✅" : "⚠️"}</td>
-        <td><strong>${v.firstName} ${v.surname}</strong>${v.type === "resident" ? `<br><small style="color:#6b7280">${roomOf(v)} • ${wingOf(v)}</small>` : ""}</td>
-        <td>${v.type}</td>
-        <td>${v.whomToVisit || "—"}</td>
-        <td>${format(new Date(v.checkInTime), "HH:mm")}</td>
-        <td>${formatDuration(new Date(v.checkInTime))}</td>
-        <td>${v.additionalVisitors || 0}</td>
-        <td>${safeIds.has(v.id) ? "Safe" : "Unaccounted"}</td>
-      </tr>`).join("");
+    const body = groups.map((g) => `
+      <tr class="grp"><td colspan="7">${g.label} — ${g.people.length} people</td></tr>
+      ${g.people.map((p) => {
+        const s = statusOf(p);
+        return `<tr class="${s === "unaccounted" ? "danger" : "safe"}">
+        <td>${s === "unaccounted" ? "☐" : "☑"}</td>
+        <td><strong>${p.name}</strong>${p.room ? `<br><small>${p.room}</small>` : ""}</td>
+        <td>${p.typeLabel}</td>
+        <td>${p.assistance.label}${p.assistance.aids.length ? `<br><small>${p.assistance.aids.join(", ")}</small>` : ""}${p.assistance.flags.length ? `<br><small>${p.assistance.flags.join(", ")}</small>` : ""}</td>
+        <td>${p.phone || "—"}</td>
+        <td>${p.emergencyContactName ? `${p.emergencyContactName}<br>${p.emergencyContactPhone || ""}` : "—"}</td>
+        <td>${s === "unaccounted" ? "Not accounted for" : s === "safe" ? "Safe" : "Evacuated off-site"}</td>
+      </tr>`;
+      }).join("")}
+    `).join("");
 
-    const html = `<!DOCTYPE html><html><head><title>Evacuation List</title><style>
-      body{font-family:Arial,sans-serif;margin:30px;color:#1a1a2e}
-      h1{color:#dc2626;font-size:22px;margin-bottom:4px}
-      .sub{color:#6b7280;font-size:13px;margin-bottom:20px}
-      .summary{display:flex;gap:24px;margin-bottom:16px;font-size:14px}
-      .summary strong{color:#111}
-      table{width:100%;border-collapse:collapse;font-size:12px}
-      th,td{padding:8px 10px;border-bottom:1px solid #e5e7eb;text-align:left}
-      th{background:#fef2f2;color:#dc2626;font-weight:600}
-      tr.safe td{background:#f0fdf4} tr.danger td{background:#fef2f2}
-      .footer{margin-top:24px;font-size:11px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:12px}
+    const offSiteRows = offSite.map((p) => `<tr>
+      <td>☑</td><td><strong>${p.name}</strong>${p.room ? `<br><small>${p.room}</small>` : ""}</td>
+      <td>Off site</td><td>${p.assistance.label}</td><td>${p.phone || "—"}</td>
+      <td>${p.emergencyContactName ? `${p.emergencyContactName}<br>${p.emergencyContactPhone || ""}` : "—"}</td>
+      <td>${p.expectedReturn ? `Back ${format(p.expectedReturn, "dd MMM HH:mm")}` : "Away"}</td>
+    </tr>`).join("");
+
+    const footer = isUK
+      ? "Retain as evidence for the Regulatory Reform (Fire Safety) Order 2005 and CQC Regulation 12 (safe care and treatment)."
+      : "Retain as evidence for the Aged Care Quality Standards — emergency and disaster management.";
+
+    const html = `<!DOCTYPE html><html><head><title>Roll Call</title><style>
+      body{font-family:Arial,sans-serif;margin:24px;color:#111}
+      h1{color:#dc2626;font-size:20px;margin:0 0 2px}
+      .sub{color:#6b7280;font-size:12px;margin-bottom:14px}
+      .summary{display:flex;gap:20px;margin-bottom:12px;font-size:13px}
+      table{width:100%;border-collapse:collapse;font-size:11px}
+      th,td{padding:6px 8px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}
+      th{background:#fef2f2;color:#dc2626}
+      tr.grp td{background:#f3f4f6;font-weight:bold}
+      tr.safe td{background:#f0fdf4} tr.danger td{background:#fff}
+      h2{font-size:14px;margin:20px 0 6px}
+      .footer{margin-top:20px;font-size:10px;color:#6b7280;border-top:1px solid #e5e7eb;padding-top:10px}
     </style></head><body>
-      <h1>🚨 Emergency Evacuation List</h1>
-      <div class="sub">${date} • ${filtered.length} people listed</div>
+      <h1>Emergency Roll Call</h1>
+      <div class="sub">${date}</div>
       <div class="summary">
-        <span><strong>Total:</strong> ${checkedIn.length}</span>
-        <span style="color:#16a34a"><strong>Safe:</strong> ${safeCount}</span>
-        <span style="color:#dc2626"><strong>Unaccounted:</strong> ${unaccountedCount}</span>
+        <span><strong>On site:</strong> ${onSite.length}</span>
+        <span><strong>Accounted for:</strong> ${safeCount}</span>
+        <span><strong>Not accounted for:</strong> ${unaccountedCount}</span>
+        <span><strong>Off site:</strong> ${offSiteCount}</span>
       </div>
-      <table><thead><tr><th></th><th>Name</th><th>Type</th><th>Visiting</th><th>In</th><th>Duration</th><th>+People</th><th>Status</th></tr></thead>
-      <tbody>${rows}</tbody></table>
-      <div class="footer">Generated by Centrim Life • ${date} • CONFIDENTIAL</div>
+      <table><thead><tr><th></th><th>Name</th><th>Type</th><th>Assistance</th><th>Phone</th><th>Emergency contact</th><th>Status</th></tr></thead>
+      <tbody>${body}</tbody></table>
+      ${offSiteCount ? `<h2>Off site — accounted for elsewhere</h2><table><tbody>${offSiteRows}</tbody></table>` : ""}
+      <div class="footer">Generated by Centrim Life • ${date} • CONFIDENTIAL<br>${footer}</div>
     </body></html>`;
 
     const w = window.open("", "_blank");
     if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 300); }
   };
 
-  const renderRow = (v: Visitor) => {
-    const isSafe = safeIds.has(v.id);
-    const wing = v.type === "resident" ? wingOf(v) : "";
-    const room = v.type === "resident" ? roomOf(v) : "";
-
+  const renderPerson = (p: RollCallPerson) => {
+    const status = statusOf(p);
+    const isSafe = status !== "unaccounted";
+    const marked = statusByKey.get(p.key);
     return (
-      <TableRow key={v.id} className={isSafe ? "bg-success/5" : selectedIds.has(v.id) ? "bg-muted/50" : ""}>
-        <TableCell>
-          {!isSafe ? (
-            <Checkbox
-              checked={selectedIds.has(v.id)}
-              onCheckedChange={() => toggleSelect(v.id)}
-              aria-label={`Select ${v.firstName}`}
-            />
-          ) : (
-            <span className="text-[10px] text-muted-foreground">—</span>
-          )}
-        </TableCell>
-        <TableCell>
-          <div className={`h-7 w-7 rounded-full flex items-center justify-center ${isSafe ? "bg-success text-success-foreground" : "bg-destructive/10 text-destructive"}`}>
-            {isSafe ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+      <div
+        key={p.key}
+        id={`person-${p.key}`}
+        role="button"
+        tabIndex={0}
+        onClick={() => togglePerson(p)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); togglePerson(p); } }}
+        className={`w-full text-left rounded-xl border p-3 sm:p-4 transition-colors active:scale-[0.995] cursor-pointer ${
+          isSafe ? "border-success/40 bg-success/5" : "border-border bg-card hover:bg-muted/40"
+        }`}
+      >
+        <div className="flex items-start gap-3">
+          <div className={`h-9 w-9 shrink-0 rounded-full flex items-center justify-center ${isSafe ? "bg-success text-success-foreground" : "bg-destructive/10 text-destructive"}`}>
+            {status === "evacuated_offsite" ? <Ambulance className="h-4 w-4" /> : isSafe ? <CheckCircle2 className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
           </div>
-        </TableCell>
-        <TableCell>
-          <div>
-            <p className="text-sm font-semibold text-foreground">{v.firstName} {v.surname}</p>
-            <div className="flex items-center gap-2 mt-0.5">
-              {v.type === "resident" && room && (
-                <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
-                  <Home className="h-2.5 w-2.5" /> {room}
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <p className="text-[15px] font-semibold text-foreground">{p.name}</p>
+              <Badge variant="outline" className="text-[10px] capitalize">{p.typeLabel}</Badge>
+              {p.type === "resident" && (
+                <span className={`text-[10px] rounded-md border px-1.5 py-0.5 font-medium ${ASSIST_STYLE[p.assistance.level]}`}>
+                  <Accessibility className="h-3 w-3 inline mr-0.5" />{p.assistance.label}
                 </span>
               )}
-              {v.type === "resident" && wing && wing !== "Unassigned wing" && (
-                <span className="text-[10px] text-primary font-medium flex items-center gap-0.5">
-                  <MapPin className="h-2.5 w-2.5" /> {wing}
-                </span>
-              )}
-              {v.mobile && !(v.type === "resident") && (
-                <span className="text-[10px] text-muted-foreground">{v.mobile}</span>
+              {p.assistance.flags.map((f) => (
+                <span key={f} className="text-[10px] rounded-md border border-warning/30 bg-warning/10 text-warning px-1.5 py-0.5 font-medium">{f}</span>
+              ))}
+            </div>
+
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
+              {p.room && <span className="flex items-center gap-1"><Home className="h-3 w-3" />{p.room}</span>}
+              {p.area && <span className="flex items-center gap-1 text-primary font-medium"><MapPin className="h-3 w-3" />{p.area}</span>}
+              {p.assistance.aids.length > 0 && <span>{p.assistance.aids.join(", ")}</span>}
+              {p.host && <span>Visiting {p.host}</span>}
+              {p.accompaniedBy && p.type === "companion" && <span>With {p.accompaniedBy}</span>}
+              {p.workLocation && <span>Working at {p.workLocation}</span>}
+              {p.checkInTime && p.type !== "resident" && (
+                <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{format(p.checkInTime, "HH:mm")} · {formatDuration(p.checkInTime)}</span>
               )}
             </div>
-          </div>
-        </TableCell>
-        <TableCell>
-          <Badge variant="outline" className="text-[10px] capitalize">{v.type}</Badge>
-        </TableCell>
-        <TableCell className="text-sm text-foreground">{v.whomToVisit || "—"}</TableCell>
-        <TableCell>
-          {v.type !== "resident" ? (
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <LogIn className="h-3 w-3" />
-              {format(new Date(v.checkInTime), "HH:mm")}
-            </span>
-          ) : <span className="text-xs text-muted-foreground">—</span>}
-        </TableCell>
-        <TableCell>
-          {v.type !== "resident" ? (
-            <span className="text-xs font-medium text-foreground flex items-center gap-1">
-              <Clock className="h-3 w-3 text-muted-foreground" />
-              {formatDuration(new Date(v.checkInTime))}
-            </span>
-          ) : <span className="text-xs text-muted-foreground">—</span>}
-        </TableCell>
-        <TableCell>
-          {(v.additionalVisitors || 0) > 0 ? (
-            <div className="flex items-center gap-1.5">
-              <Badge variant="secondary" className="text-[10px] gap-1 font-semibold">
-                <Users className="h-3 w-3" />
-                +{v.additionalVisitors}
-              </Badge>
-              {v.companionDetails && v.companionDetails.length > 0 && (
-                <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
-                  {v.companionDetails.map((c) => c.name).filter(Boolean).join(", ")}
-                </span>
+
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
+              {p.phone && (
+                <a href={`tel:${p.phone}`} onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 font-medium text-primary underline-offset-2 hover:underline">
+                  <Phone className="h-3 w-3" />{p.phone}
+                </a>
+              )}
+              {p.emergencyContactPhone && (
+                <a href={`tel:${p.emergencyContactPhone}`} onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 text-muted-foreground underline-offset-2 hover:underline">
+                  <Phone className="h-3 w-3" />
+                  {p.emergencyContactName || "Emergency contact"}: {p.emergencyContactPhone}
+                </a>
+              )}
+              {!p.phone && !p.emergencyContactPhone && (
+                <span className="text-[12px] text-muted-foreground">No contact number recorded</span>
               )}
             </div>
-          ) : (
-            <span className="text-xs text-muted-foreground">—</span>
-          )}
-        </TableCell>
-        <TableCell>
-          <Button
-            size="sm"
-            variant={isSafe ? "ghost" : "default"}
-            className={`h-7 text-xs gap-1 ${!isSafe ? "bg-emerald-600 hover:bg-emerald-700 text-emerald-50" : "text-muted-foreground"}`}
-            onClick={() => toggleSafe(v.id)}
-          >
-            {isSafe ? <>Undo</> : <><CheckCircle2 className="h-3 w-3" /> Safe</>}
-          </Button>
-        </TableCell>
-      </TableRow>
+
+            {isSafe && marked?.at && (
+              <p className="mt-1 text-[11px] text-success">
+                {status === "evacuated_offsite" ? "Evacuated off-site" : "Safe"} at {format(new Date(marked.at), "HH:mm")}
+                {points.find((pt) => pt.id === marked.point) ? ` · ${points.find((pt) => pt.id === marked.point)!.name}` : ""}
+              </p>
+            )}
+          </div>
+
+          <div className="flex shrink-0 flex-col gap-1.5" onClick={(e) => e.stopPropagation()}>
+            <Button
+              size="sm"
+              disabled={busy}
+              variant={isSafe ? "outline" : "default"}
+              className={`h-9 min-w-[92px] text-xs ${!isSafe ? "bg-emerald-600 hover:bg-emerald-700 text-emerald-50" : ""}`}
+              onClick={() => togglePerson(p)}
+            >
+              {isSafe ? "Undo" : "Safe"}
+            </Button>
+            {!isSafe && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busy}
+                className="h-8 min-w-[92px] text-[11px] gap-1"
+                onClick={() => setStatusFor([p], "evacuated_offsite")}
+              >
+                <Ambulance className="h-3 w-3" /> Off-site
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
     );
   };
 
@@ -427,256 +455,216 @@ export default function Evacuation() {
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <SidebarInset className="flex-1">
-          <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm">
-            <div className="flex items-center justify-between px-6 py-4">
-              <div className="flex items-center gap-4">
+          <header className="sticky top-0 z-20 border-b border-border bg-card/90 backdrop-blur-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-6">
+              <div className="flex items-center gap-3">
                 <SidebarTrigger />
                 <div>
                   <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
                     <Shield className="h-5 w-5 text-destructive" />
-                    Emergency Evacuation
+                    Emergency Roll Call
                   </h1>
-                  <p className="text-xs text-muted-foreground">Everyone currently on-site</p>
+                  <p className="text-xs text-muted-foreground">Every person on the property, and who needs help to get out</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5 h-8">
-                  <Download className="h-3.5 w-3.5" /> CSV
-                </Button>
-                <Button variant="outline" size="sm" onClick={printList} className="gap-1.5 h-8">
-                  <Printer className="h-3.5 w-3.5" /> Print
-                </Button>
-                {selectedCount > 0 && (
-                  <Button size="sm" disabled={busy} onClick={markSelectedSafe} className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-emerald-50">
-                    <CheckSquare className="h-3.5 w-3.5" /> Mark {selectedCount} Safe
+              <div className="flex flex-wrap items-center gap-2">
+                {points.length > 0 && (
+                  <Select value={assemblyPoint || "none"} onValueChange={(v) => setAssemblyPoint(v === "none" ? "" : v)}>
+                    <SelectTrigger className="h-9 w-[190px] text-xs">
+                      <SelectValue placeholder="Assembly point" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No assembly point</SelectItem>
+                      {points.map((pt) => <SelectItem key={pt.id} value={pt.id}>{pt.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
+                <Button variant="outline" size="sm" onClick={exportCSV} className="h-9 gap-1.5"><Download className="h-3.5 w-3.5" /> CSV</Button>
+                <Button variant="outline" size="sm" onClick={printList} className="h-9 gap-1.5"><Printer className="h-3.5 w-3.5" /> Print sheet</Button>
+                {unaccountedCount > 0 && onSite.length > 0 && (
+                  <Button size="sm" disabled={busy} onClick={markAllSafe} className="h-9 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-emerald-50">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> All safe
                   </Button>
                 )}
-                {safeCount > 0 && safeCount < checkedIn.length && (
-                  <Button variant="ghost" size="sm" disabled={busy} onClick={resetAll} className="h-8 text-xs">Reset</Button>
-                )}
-                {checkedIn.length > 0 && safeCount < checkedIn.length && selectedCount === 0 && (
-                  <Button size="sm" disabled={busy} onClick={markAllSafe} className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-emerald-50">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Mark All Safe
-                  </Button>
-                )}
+                {safeCount > 0 && <Button variant="ghost" size="sm" disabled={busy} onClick={resetAll} className="h-9 text-xs">Reset</Button>}
                 {activeDrill && (
-                  <Button variant="outline" size="sm" disabled={busy} onClick={finishRollCall} className="h-8 text-xs">
-                    End roll call
-                  </Button>
+                  <Button variant="outline" size="sm" disabled={busy} onClick={() => setClosing(true)} className="h-9 text-xs">End roll call</Button>
                 )}
               </div>
             </div>
           </header>
 
-          <main className="p-6 space-y-5">
+          <main className="p-4 sm:p-6 space-y-5 pb-28 lg:pb-6">
             <div className={`rounded-xl border px-4 py-2.5 text-sm flex items-center gap-2 ${activeDrill ? "border-destructive/30 bg-destructive/5 text-destructive" : "border-border bg-muted/40 text-muted-foreground"}`}>
               <Shield className="h-4 w-4 shrink-0" />
               {activeDrill ? (
-                <span>
-                  Live roll call in progress since {format(new Date(activeDrill.started_at), "HH:mm")} — everyone marked safe is shared instantly with all devices.
-                </span>
+                <span>Roll call running since {format(new Date(activeDrill.started_at), "HH:mm")} — shared live with every device.</span>
               ) : (
-                <span>No roll call running. Marking the first person safe starts one and shares it live with every device.</span>
+                <span>No roll call running. Marking the first person starts one and shares it live with every device.</span>
               )}
             </div>
 
-            {/* Summary cards */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="rounded-xl border border-border bg-card p-4 text-center">
-                <p className="text-2xl font-bold text-foreground">{checkedIn.length}</p>
-                <p className="text-xs text-muted-foreground">On-Site</p>
+                <p className="text-2xl font-bold text-foreground">{onSite.length}</p>
+                <p className="text-xs text-muted-foreground">People on site</p>
               </div>
-              <div className="rounded-xl border border-border bg-card p-4 text-center">
-                <p className="text-2xl font-bold text-foreground">{totalPeople}</p>
-                <p className="text-xs text-muted-foreground">Total (incl. companions)</p>
-              </div>
-              <div className="rounded-xl border border-success/30 bg-success/5 p-4 text-center cursor-pointer" onClick={() => setFilterStatus(filterStatus === "safe" ? "all" : "safe")}>
+              <button onClick={() => setFilterStatus(filterStatus === "safe" ? "all" : "safe")} className="rounded-xl border border-success/30 bg-success/5 p-4 text-center">
                 <p className="text-2xl font-bold text-success">{safeCount}</p>
-                <p className="text-xs text-muted-foreground">Safe</p>
-              </div>
-              <div className={`rounded-xl border p-4 text-center cursor-pointer ${unaccountedCount > 0 ? "border-destructive/30 bg-destructive/5" : "border-border bg-card"}`}
-                onClick={() => setFilterStatus(filterStatus === "unaccounted" ? "all" : "unaccounted")}>
-                <p className={`text-2xl font-bold ${unaccountedCount > 0 ? "text-destructive" : "text-foreground"}`}>{unaccountedCount}</p>
-                <p className="text-xs text-muted-foreground">Unaccounted</p>
-              </div>
-              <div className={`rounded-xl border p-4 text-center ${awayResidentCount > 0 ? "border-warning/30 bg-warning/5" : "border-border bg-card"}`}>
-                <p className={`text-2xl font-bold ${awayResidentCount > 0 ? "text-warning" : "text-foreground"}`}>{awayResidentCount}</p>
-                <p className="text-xs text-muted-foreground">Residents Away</p>
+                <p className="text-xs text-muted-foreground">Accounted for</p>
+              </button>
+              <button onClick={() => setFilterStatus(filterStatus === "unaccounted" ? "all" : "unaccounted")} className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-center">
+                <p className="text-2xl font-bold text-destructive">{unaccountedCount}</p>
+                <p className="text-xs text-muted-foreground">Not accounted for</p>
+              </button>
+              <div className="rounded-xl border border-border bg-card p-4 text-center">
+                <p className="text-2xl font-bold text-foreground">{offSiteCount}</p>
+                <p className="text-xs text-muted-foreground">Off site (on leave)</p>
               </div>
             </div>
 
-            {/* Filters */}
-            <div className="rounded-xl border border-border bg-card p-3 shadow-soft">
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="relative flex-1 min-w-[200px]">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search name, room, wing..."
-                    className="pl-10 h-9"
-                  />
+            <div className="flex flex-wrap gap-2">
+              <div className="relative flex-1 min-w-[220px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={`Search name, ${roomLabel.toLowerCase()}, phone…`}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-10"
+                />
+              </div>
+              <Select value={groupBy} onValueChange={(v) => setGroupBy(v as GroupBy)}>
+                <SelectTrigger className="h-10 w-[170px] text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="area">Group by {areaLabel.toLowerCase()}</SelectItem>
+                  <SelectItem value="assistance">Group by assistance</SelectItem>
+                  <SelectItem value="type">Group by person type</SelectItem>
+                  <SelectItem value="status">Group by status</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={filterArea} onValueChange={setFilterArea}>
+                <SelectTrigger className="h-10 w-[150px] text-sm"><SelectValue placeholder={areaLabel} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All {areaLabel.toLowerCase()}s</SelectItem>
+                  {allAreas.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="h-10 w-[150px] text-sm"><SelectValue placeholder="Type" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Everyone</SelectItem>
+                  {allTypes.map((t) => <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {groups.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border py-16 text-center">
+                <Users className="mx-auto h-10 w-10 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">Nobody matches this view.</p>
+              </div>
+            ) : (
+              groups.map((g) => {
+                const pending = g.people.filter((p) => statusOf(p) === "unaccounted").length;
+                const done = g.people.length - pending;
+                return (
+                  <section key={g.label} className="space-y-2">
+                    <div className="sticky top-[68px] z-10 flex items-center justify-between gap-3 rounded-lg border border-border bg-card/95 px-3 py-2 backdrop-blur-sm">
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-sm font-semibold text-foreground">{g.label}</h2>
+                        <span className={`text-xs font-medium ${pending === 0 ? "text-success" : "text-muted-foreground"}`}>
+                          {done} of {g.people.length} accounted for
+                        </span>
+                      </div>
+                      {pending > 0 && (
+                        <Button size="sm" disabled={busy} onClick={() => markGroupSafe(g)} className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-emerald-50">
+                          All {g.label.toLowerCase()} safe
+                        </Button>
+                      )}
+                    </div>
+                    <div className="space-y-2">{g.people.map(renderPerson)}</div>
+                  </section>
+                );
+              })
+            )}
+
+            {offSite.length > 0 && (
+              <section className="space-y-2">
+                <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2">
+                  <PlaneTakeoff className="h-4 w-4 text-muted-foreground" />
+                  <h2 className="text-sm font-semibold text-foreground">Off site — accounted for elsewhere</h2>
+                  <span className="text-xs text-muted-foreground">{offSite.length} residents</span>
                 </div>
-                <Select value={filterType} onValueChange={setFilterType}>
-                  <SelectTrigger className="w-[130px] h-9 text-xs">
-                    <SelectValue placeholder="All Types" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    {types.map((t) => (
-                      <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={filterWing} onValueChange={setFilterWing}>
-                  <SelectTrigger className="w-[140px] h-9 text-xs">
-                    <SelectValue placeholder="All Wings" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Wings</SelectItem>
-                    {allWings.map((w) => (
-                      <SelectItem key={w} value={w}>{w}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-[140px] h-9 text-xs">
-                    <SelectValue placeholder="All Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="safe">Safe</SelectItem>
-                    <SelectItem value="unaccounted">Unaccounted</SelectItem>
-                  </SelectContent>
-                </Select>
-
-
-                <div className="h-6 w-px bg-border" />
-
-                {/* Group By */}
-                <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg p-1">
-                  <span className="text-[10px] font-semibold text-muted-foreground px-1.5 flex items-center gap-1">
-                    <Layers className="h-3 w-3" /> Group:
-                  </span>
-                  {([
-                    { value: "type", label: "Type" },
-                    { value: "status", label: "Status" },
-                  ] as { value: GroupBy; label: string }[]).map((g) => (
-                    <Button
-                      key={g.value}
-                      variant={groupBy === g.value ? "default" : "ghost"}
-                      size="sm"
-                      className="h-6 text-[11px] px-2.5"
-                      onClick={() => setGroupBy(g.value)}
-                    >
-                      {g.label}
-                    </Button>
+                <div className="space-y-2">
+                  {sortPeople(offSite).map((p) => (
+                    <div key={p.key} className="rounded-xl border border-border bg-muted/20 p-3">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <p className="text-sm font-semibold text-foreground">{p.name}</p>
+                        {p.room && <span className="text-[12px] text-muted-foreground">{p.room}</span>}
+                        {p.area && <span className="text-[12px] text-primary">{p.area}</span>}
+                        <span className="text-[12px] text-muted-foreground">
+                          {p.accompaniedBy ? `With ${p.accompaniedBy}` : "Off site"}
+                          {p.expectedReturn ? ` · back ${format(p.expectedReturn, "dd MMM HH:mm")}` : ""}
+                        </span>
+                        {p.emergencyContactPhone && (
+                          <a href={`tel:${p.emergencyContactPhone}`} className="text-[12px] text-primary flex items-center gap-1">
+                            <Phone className="h-3 w-3" />{p.emergencyContactName || "Contact"}: {p.emergencyContactPhone}
+                          </a>
+                        )}
+                      </div>
+                    </div>
                   ))}
                 </div>
+              </section>
+            )}
+          </main>
+
+          {/* Mobile action bar */}
+          {onSite.length > 0 && (
+            <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-card/95 px-4 py-3 backdrop-blur-sm lg:hidden">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className={`text-lg font-bold ${unaccountedCount ? "text-destructive" : "text-success"}`}>
+                    {unaccountedCount ? `${unaccountedCount} not accounted for` : "Everyone accounted for"}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">{safeCount} of {onSite.length} safe</p>
+                </div>
+                {unaccountedCount > 0 ? (
+                  <Button onClick={jumpToNext} className="h-11 gap-1.5"><ArrowDown className="h-4 w-4" /> Next person</Button>
+                ) : (
+                  activeDrill && <Button onClick={() => setClosing(true)} className="h-11">End roll call</Button>
+                )}
               </div>
             </div>
+          )}
 
-            {/* Evacuation list */}
-            {sections.map((section, sIdx) => (
-              <div key={section.label || "all"} className="space-y-3">
-                {/* Section header (e.g. "Residents", "Other") */}
-                {section.label && (
-                  <div className="flex items-center gap-2 px-1 pt-2">
-                    <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
-                      {section.label.startsWith("Residents") ? <Home className="h-4 w-4 text-primary" /> :
-                       <Users className="h-4 w-4 text-primary" />}
-                    </div>
-                    <h2 className="text-base font-bold text-foreground">{section.label}</h2>
-                    {(() => {
-                      const allItems = section.groups.flatMap((g) => g.items);
-                      const sectionSafe = allItems.filter((v) => safeIds.has(v.id)).length;
-                      const sectionTotal = allItems.length;
-                      const allSafe = sectionSafe === sectionTotal;
-                      return (
-                        <>
-                          <Badge variant="secondary" className="text-[10px]">{sectionTotal}</Badge>
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] gap-1 ${allSafe ? "border-success/40 text-success" : "border-destructive/40 text-destructive"}`}
-                          >
-                            {allSafe ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
-                            {sectionSafe}/{sectionTotal} safe
-                          </Badge>
-                        </>
-                      );
-                    })()}
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
-                )}
-
-                {/* Sub-groups (wings) or flat group */}
-                {section.groups.map((group, gIdx) => (
-                  <div key={group.label || `flat-${gIdx}`} className={`space-y-2 ${group.isSubGroup ? "ml-6" : ""}`}>
-                    {group.label && (
-                      <div className="flex items-center gap-2 px-1">
-                        <div className="h-5 w-5 rounded bg-muted flex items-center justify-center">
-                          <MapPin className="h-3 w-3 text-muted-foreground" />
-                        </div>
-                        <h3 className="text-sm font-semibold text-foreground">{group.label}</h3>
-                        <Badge variant="secondary" className="text-[10px]">{group.items.length}</Badge>
-                        {(() => {
-                          const groupSafe = group.items.filter((v) => safeIds.has(v.id)).length;
-                          const groupTotal = group.items.length;
-                          const allSafe = groupSafe === groupTotal;
-                          return (
-                            <Badge
-                              variant="outline"
-                              className={`text-[10px] gap-1 ${allSafe ? "border-success/40 text-success" : "border-destructive/40 text-destructive"}`}
-                            >
-                              {allSafe ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
-                              {groupSafe}/{groupTotal} safe
-                            </Badge>
-                          );
-                        })()}
-                        <div className="flex-1 h-px bg-border/50" />
-                      </div>
-                    )}
-                    <div className="rounded-xl border border-border bg-card overflow-hidden">
-                      <Table>
-                        {sIdx === 0 && gIdx === 0 && (
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-[40px]">
-                                <Checkbox
-                                  checked={allUnaccountedSelected}
-                                  onCheckedChange={toggleSelectAll}
-                                  aria-label="Select all"
-                                />
-                              </TableHead>
-                              <TableHead className="w-[60px] text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Status</TableHead>
-                              <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Name / Location</TableHead>
-                              <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Type</TableHead>
-                              <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Visiting</TableHead>
-                              <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Checked In</TableHead>
-                              <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Duration</TableHead>
-                              <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Companions</TableHead>
-                              <TableHead className="w-[100px] text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Action</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                        )}
-                        <TableBody>
-                          {group.items.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={9} className="text-center py-8">
-                                <p className="text-xs text-muted-foreground">No people in this group</p>
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            group.items.map(renderRow)
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </main>
+          <Dialog open={closing} onOpenChange={setClosing}>
+            <DialogContent className="rounded-xl">
+              <DialogHeader>
+                <DialogTitle>End roll call</DialogTitle>
+                <DialogDescription>
+                  {safeCount} of {onSite.length} people accounted for
+                  {unaccountedCount > 0 ? `, ${unaccountedCount} still missing.` : "."}
+                </DialogDescription>
+              </DialogHeader>
+              {unaccountedCount > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-foreground">Why are these people unaccounted for?</p>
+                  <Textarea
+                    value={closeReason}
+                    onChange={(e) => setCloseReason(e.target.value)}
+                    placeholder="e.g. Mr Patel was taken to hospital by ambulance; two visitors left before the alarm."
+                    rows={4}
+                  />
+                  <p className="text-[12px] text-muted-foreground">Required — this appears on the evacuation report.</p>
+                </div>
+              )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setClosing(false)}>Keep going</Button>
+                <Button onClick={finishRollCall} disabled={busy}>End roll call</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </SidebarInset>
       </div>
     </SidebarProvider>

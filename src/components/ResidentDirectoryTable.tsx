@@ -126,7 +126,7 @@ export function ResidentDirectoryTable({ residents, wingMap, presenceMap, onQuic
               <TableCell className="py-3">
                 <div className="flex items-center gap-1.5">
                   <Footprints className={`h-3.5 w-3.5 ${mobilityColors[resident.mobilityLevel] || "text-muted-foreground"}`} />
-                  <span className="text-[13px] capitalize">{resident.mobilityLevel}</span>
+                  <span className="text-[13px] capitalize">{resident.mobilityLevel || "Not recorded"}</span>
                 </div>
                 {resident.mobilityAids.length > 0 && (
                   <p className="text-[11px] text-muted-foreground">{resident.mobilityAids.join(", ")}</p>

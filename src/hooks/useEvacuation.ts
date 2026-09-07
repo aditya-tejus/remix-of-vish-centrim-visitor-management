@@ -21,6 +21,8 @@ export interface EvacuationDrill {
   notes: string;
   total_people: number;
   accounted_for: number;
+  unaccounted_reason: string | null;
+  event_type: string;
   created_at: string;
 }
 
@@ -30,11 +32,52 @@ export interface EvacuationAttendance {
   person_name: string;
   person_type: string;
   visitor_id: string | null;
+  parent_visitor_id: string | null;
+  companion_index: number | null;
+  assistance_level: string | null;
+  contact_phone: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  area_label: string | null;
+  room_label: string | null;
   evacuation_point_id: string | null;
   status: string;
   marked_safe_at: string | null;
   marked_by: string | null;
   notes: string;
+}
+
+/** Anyone who can appear on a roll call, including named companions. */
+export interface RollCallSeed {
+  name: string;
+  type: string;
+  visitorId?: string | null;
+  companionIndex?: number | null;
+  assistanceLevel?: string;
+  contactPhone?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  area?: string;
+  room?: string;
+}
+
+export type AttendanceStatus = "safe" | "unaccounted" | "evacuated_offsite";
+
+function seedColumns(p: RollCallSeed) {
+  const isCompanion = p.companionIndex != null;
+  return {
+    person_name: p.name,
+    person_type: p.type,
+    visitor_id: isCompanion ? null : p.visitorId || null,
+    parent_visitor_id: isCompanion ? p.visitorId || null : null,
+    companion_index: isCompanion ? p.companionIndex : null,
+    assistance_level: p.assistanceLevel || null,
+    contact_phone: p.contactPhone || null,
+    emergency_contact_name: p.emergencyContactName || null,
+    emergency_contact_phone: p.emergencyContactPhone || null,
+    area_label: p.area || null,
+    room_label: p.room || null,
+  };
 }
 
 export function useEvacuationPoints() {
@@ -109,10 +152,10 @@ export function useEvacuationMutations() {
   };
 
   const startDrill = useMutation({
-    mutationFn: async ({ title, people }: { title: string; people: { name: string; type: string; visitor_id?: string }[] }) => {
+    mutationFn: async ({ title, people, eventType }: { title: string; people: RollCallSeed[]; eventType?: string }) => {
       const { data: drill, error } = await supabase
         .from("evacuation_drills" as any)
-        .insert({ title, total_people: people.length, status: "active" } as any)
+        .insert({ title, total_people: people.length, status: "active", event_type: eventType || "drill" } as any)
         .select()
         .single();
       if (error) throw error;
@@ -121,10 +164,8 @@ export function useEvacuationMutations() {
       if (people.length > 0) {
         const rows = people.map((p) => ({
           drill_id: drillId,
-          person_name: p.name,
-          person_type: p.type,
-          visitor_id: p.visitor_id || null,
           status: "unaccounted",
+          ...seedColumns(p),
         }));
         const { error: attError } = await supabase
           .from("evacuation_attendance" as any)
@@ -137,11 +178,12 @@ export function useEvacuationMutations() {
   });
 
   const markSafe = useMutation({
-    mutationFn: async ({ id, pointId }: { id: string; pointId?: string }) => {
+    mutationFn: async ({ id, pointId, status, markedBy }: { id: string; pointId?: string; status?: AttendanceStatus; markedBy?: string }) => {
       const { error } = await supabase
         .from("evacuation_attendance" as any)
         .update({
-          status: "safe",
+          status: status || "safe",
+          marked_by: markedBy || null,
           marked_safe_at: new Date().toISOString(),
           evacuation_point_id: pointId || null,
         } as any)
@@ -163,10 +205,10 @@ export function useEvacuationMutations() {
   });
 
   const endDrill = useMutation({
-    mutationFn: async ({ drillId, accounted }: { drillId: string; accounted: number }) => {
+    mutationFn: async ({ drillId, accounted, reason }: { drillId: string; accounted: number; reason?: string }) => {
       const { error } = await supabase
         .from("evacuation_drills" as any)
-        .update({ status: "completed", ended_at: new Date().toISOString(), accounted_for: accounted } as any)
+        .update({ status: "completed", ended_at: new Date().toISOString(), accounted_for: accounted, unaccounted_reason: reason || null } as any)
         .eq("id", drillId);
       if (error) throw error;
     },
@@ -175,16 +217,16 @@ export function useEvacuationMutations() {
 
   // Adds someone who arrived after the roll call started
   const addAttendee = useMutation({
-    mutationFn: async ({ drillId, name, type, visitorId, safe }: { drillId: string; name: string; type: string; visitorId?: string; safe?: boolean }) => {
+    mutationFn: async ({ drillId, person, status, pointId, markedBy }: { drillId: string; person: RollCallSeed; status?: AttendanceStatus; pointId?: string; markedBy?: string }) => {
       const { data, error } = await supabase
         .from("evacuation_attendance" as any)
         .insert({
           drill_id: drillId,
-          person_name: name,
-          person_type: type,
-          visitor_id: visitorId || null,
-          status: safe ? "safe" : "unaccounted",
-          marked_safe_at: safe ? new Date().toISOString() : null,
+          ...seedColumns(person),
+          status: status || "unaccounted",
+          marked_safe_at: status && status !== "unaccounted" ? new Date().toISOString() : null,
+          marked_by: markedBy || null,
+          evacuation_point_id: pointId || null,
         } as any)
         .select()
         .single();

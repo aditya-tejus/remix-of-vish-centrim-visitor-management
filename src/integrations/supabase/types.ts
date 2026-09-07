@@ -153,41 +153,65 @@ export type Database = {
       }
       evacuation_attendance: {
         Row: {
+          area_label: string | null
+          assistance_level: string | null
+          companion_index: number | null
+          contact_phone: string | null
           created_at: string
           drill_id: string
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
           evacuation_point_id: string | null
           id: string
           marked_by: string | null
           marked_safe_at: string | null
           notes: string | null
+          parent_visitor_id: string | null
           person_name: string
           person_type: string
+          room_label: string | null
           status: string
           visitor_id: string | null
         }
         Insert: {
+          area_label?: string | null
+          assistance_level?: string | null
+          companion_index?: number | null
+          contact_phone?: string | null
           created_at?: string
           drill_id: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           evacuation_point_id?: string | null
           id?: string
           marked_by?: string | null
           marked_safe_at?: string | null
           notes?: string | null
+          parent_visitor_id?: string | null
           person_name: string
           person_type?: string
+          room_label?: string | null
           status?: string
           visitor_id?: string | null
         }
         Update: {
+          area_label?: string | null
+          assistance_level?: string | null
+          companion_index?: number | null
+          contact_phone?: string | null
           created_at?: string
           drill_id?: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           evacuation_point_id?: string | null
           id?: string
           marked_by?: string | null
           marked_safe_at?: string | null
           notes?: string | null
+          parent_visitor_id?: string | null
           person_name?: string
           person_type?: string
+          room_label?: string | null
           status?: string
           visitor_id?: string | null
         }
@@ -207,6 +231,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "evacuation_attendance_parent_visitor_id_fkey"
+            columns: ["parent_visitor_id"]
+            isOneToOne: false
+            referencedRelation: "visitors"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "evacuation_attendance_visitor_id_fkey"
             columns: ["visitor_id"]
             isOneToOne: false
@@ -220,6 +251,7 @@ export type Database = {
           accounted_for: number
           created_at: string
           ended_at: string | null
+          event_type: string
           id: string
           notes: string | null
           started_at: string
@@ -227,11 +259,13 @@ export type Database = {
           status: string
           title: string
           total_people: number
+          unaccounted_reason: string | null
         }
         Insert: {
           accounted_for?: number
           created_at?: string
           ended_at?: string | null
+          event_type?: string
           id?: string
           notes?: string | null
           started_at?: string
@@ -239,11 +273,13 @@ export type Database = {
           status?: string
           title?: string
           total_people?: number
+          unaccounted_reason?: string | null
         }
         Update: {
           accounted_for?: number
           created_at?: string
           ended_at?: string | null
+          event_type?: string
           id?: string
           notes?: string | null
           started_at?: string
@@ -251,6 +287,7 @@ export type Database = {
           status?: string
           title?: string
           total_people?: number
+          unaccounted_reason?: string | null
         }
         Relationships: []
       }

@@ -12,6 +12,7 @@ import { toast } from "@/hooks/use-toast";
 
 export function PresenceTab() {
   const [jurisdiction, setJurisdiction] = useState<"AU" | "UK">("AU");
+  const [siteStructure, setSiteStructure] = useState<"rac" | "rv" | "mixed">("rac");
   const [maxVisitors, setMaxVisitors] = useState("");
   const [outbreakMode, setOutbreakMode] = useState(false);
   const [savingOps, setSavingOps] = useState(false);
@@ -22,12 +23,15 @@ export function PresenceTab() {
     supabase
       .from("settings")
       .select("key, value")
-      .in("key", ["jurisdiction", "max_visitors_on_site", "outbreak_mode"])
+      .in("key", ["jurisdiction", "max_visitors_on_site", "outbreak_mode", "site_structure"])
       .then(({ data }) => {
         const map: Record<string, string> = {};
         (data || []).forEach((r) => { map[r.key] = r.value; });
         if (map.jurisdiction === "AU" || map.jurisdiction === "UK") {
           setJurisdiction(map.jurisdiction as "AU" | "UK");
+        }
+        if (["rac", "rv", "mixed"].includes(map.site_structure)) {
+          setSiteStructure(map.site_structure as "rac" | "rv" | "mixed");
         }
         setMaxVisitors(map.max_visitors_on_site || "");
         setOutbreakMode(map.outbreak_mode === "true");
@@ -53,6 +57,7 @@ export function PresenceTab() {
     const rows = [
       { key: "max_visitors_on_site", value: maxVisitors.trim() },
       { key: "outbreak_mode", value: outbreakMode ? "true" : "false" },
+      { key: "site_structure", value: siteStructure },
     ];
     let failed = false;
     for (const row of rows) {
@@ -151,6 +156,23 @@ export function PresenceTab() {
             />
             <p className="text-[12px] text-muted-foreground">
               A live count is shown in the header; it turns amber near the limit and red once reached.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">What kind of site is this?</Label>
+            <Select value={siteStructure} onValueChange={(v) => setSiteStructure(v as "rac" | "rv" | "mixed")}>
+              <SelectTrigger className="w-[320px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="rac">Residential aged care / care home (wings and rooms)</SelectItem>
+                <SelectItem value="rv">Retirement village (stages and villas)</SelectItem>
+                <SelectItem value="mixed">Mixed site (both)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[12px] text-muted-foreground">
+              Sets the wording used across the roll call and evacuation reports.
             </p>
           </div>
 
