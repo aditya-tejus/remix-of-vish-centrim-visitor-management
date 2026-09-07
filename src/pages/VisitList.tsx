@@ -22,6 +22,7 @@ import { Visitor } from "@/types/visitor";
 import { useOverstayPolicy } from "@/hooks/useOverstayPolicy";
 import { VisitListQRDialog } from "@/components/VisitListQRDialog";
 import { HandoverPrintDialog } from "@/components/HandoverPrintDialog";
+import { TabContextStats } from "@/components/TabContextStats";
 
 export default function VisitList() {
   const navigate = useNavigate();
