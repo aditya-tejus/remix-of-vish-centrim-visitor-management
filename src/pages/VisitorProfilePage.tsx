@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useVisitors } from "@/hooks/useVisitors";
+import { useVisitorHistory } from "@/hooks/useVisitorHistory";
+import { useResidents } from "@/hooks/useResidents";
+import { ScreeningAnswers } from "@/components/ScreeningAnswers";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -70,6 +73,9 @@ export default function VisitorProfilePage() {
   const [deleting, setDeleting] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const visitor = visitors.find((v) => v.id === id);
+  const { visits: fullHistory } = useVisitorHistory(visitor);
+  const { residents } = useResidents();
+  const [expandedVisit, setExpandedVisit] = useState<string | null>(null);
 
   if (!visitor) {
     return (
@@ -89,17 +95,33 @@ export default function VisitorProfilePage() {
     );
   }
 
-  // Find all visits by same person
-  const visitHistory = visitors.filter(
+  // Every visit this person has ever made, not just today's records.
+  const localMatches = visitors.filter(
     (v) =>
       v.id !== visitor.id &&
       ((v.firstName === visitor.firstName && v.surname === visitor.surname) ||
         (v.email && v.email === visitor.email) ||
         (v.mobile && v.mobile === visitor.mobile))
   );
-  const allVisits = [visitor, ...visitHistory].sort(
+  const merged = new Map<string, any>();
+  [visitor, ...localMatches].forEach((v) => merged.set(v.id, v));
+  fullHistory.forEach((h) => { if (!merged.has(h.id)) merged.set(h.id, h); });
+  const allVisits = Array.from(merged.values()).sort(
     (a, b) => b.checkInTime.getTime() - a.checkInTime.getTime()
   );
+
+  /** Who was this visit for — a real resident record when we can match one. */
+  const residentForVisit = (v: any) => {
+    const id = v.visitedResidentIds?.[0];
+    if (id) {
+      const hit = residents.find((r) => r.visitorId === id);
+      if (hit) return hit;
+    }
+    const name = (v.whomToVisit || "").trim().toLowerCase();
+    if (!name) return null;
+    const matches = residents.find((r) => r.name.toLowerCase() === name);
+    return matches || null;
+  };
 
   const isResident = visitor.type === "resident";
   const isCheckedIn = visitor.status === "checked-in";

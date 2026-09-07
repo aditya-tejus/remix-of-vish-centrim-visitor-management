@@ -34,7 +34,7 @@ export function useVisitorHistory(visitor: Visitor | null | undefined) {
 
   useEffect(() => {
     let active = true;
-    if (!visitor) { setVisits([]); setLoading(false); return; }
+    if (!firstName && !personQr) { setVisits([]); setLoading(false); return; }
 
     const map = (rows: any[]): VisitHistoryEntry[] =>
       rows.map((r) => ({
@@ -85,7 +85,7 @@ export function useVisitorHistory(visitor: Visitor | null | undefined) {
     })();
 
     return () => { active = false; };
-  }, [visitor, personQr, firstName, surname, mobile]);
+  }, [visitor?.id, personQr, firstName, surname, mobile]);
 
   return { visits, loading };
 }
