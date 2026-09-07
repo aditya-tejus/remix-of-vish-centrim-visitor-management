@@ -26,11 +26,13 @@ const globalSections: PersonType[] = [
   { id: "feedback", label: "Feedback Surveys", icon: MessageSquare, color: "bg-muted-foreground" },
   { id: "presence", label: "Presence", icon: Globe, color: "bg-muted-foreground" },
   { id: "printing", label: "Printing", icon: Printer, color: "bg-muted-foreground" },
+  { id: "keys", label: "Keys & Fobs", icon: KeyRound, color: "bg-muted-foreground" },
   { id: "compliance", label: "GDPR", icon: Shield, color: "bg-muted-foreground" },
   { id: "integration", label: "Integration", icon: Link2, color: "bg-muted-foreground" },
   { id: "audit", label: "Audit Trail", icon: ClipboardList, color: "bg-muted-foreground" },
   { id: "governance", label: "Governance", icon: Lock, color: "bg-muted-foreground" },
 ];
+
 
 interface SettingsNavProps {
   active: SettingsSection;
