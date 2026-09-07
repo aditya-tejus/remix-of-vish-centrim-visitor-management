@@ -18,11 +18,14 @@ import { AddKeyDialog, keyTypeLabel } from "@/components/keys/AddKeyDialog";
 import { IssueKeySheet, IssuePrefill } from "@/components/keys/IssueKeySheet";
 import { KeyFilters, KeyFilterValues, EMPTY_FILTERS } from "@/components/keys/KeyFilters";
 import { format } from "date-fns";
-import { KeyRound, Plus, History, ArrowLeftRight, AlertTriangle, UserCog } from "lucide-react";
+import { KeyRound, Plus, History, ArrowLeftRight, AlertTriangle, UserCog, CalendarClock, Printer, TriangleAlert } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { printKeyCardAuto } from "@/lib/printKeyCard";
 
 const STATUS_STYLE: Record<KeyStatus, { label: string; className: string }> = {
   available: { label: "Available", className: "bg-success/10 text-success border-success/20" },
   issued: { label: "Issued out", className: "bg-primary/10 text-primary border-primary/20" },
+  permanent: { label: "Permanent", className: "bg-muted text-muted-foreground border-border" },
   overdue: { label: "Overdue", className: "bg-destructive/10 text-destructive border-destructive/20" },
   lost: { label: "Lost", className: "bg-destructive/10 text-destructive border-destructive/20" },
   retired: { label: "Retired", className: "bg-muted text-muted-foreground border-border" },
@@ -31,7 +34,7 @@ const STATUS_STYLE: Record<KeyStatus, { label: string; className: string }> = {
 const HOUR = 3600000;
 
 export default function KeysRegister() {
-  const { keys, issues, loading, addKey, issueKey, returnKey, historyFor } = useKeys();
+  const { keys, issues, loading, addKey, issueKey, returnKey, renewIssue, markLost, historyFor } = useKeys();
   const { residents } = useResidents();
   const { data: wings = [] } = useWings();
   const { toast } = useToast();
@@ -44,6 +47,10 @@ export default function KeysRegister() {
   const [historyKey, setHistoryKey] = useState<PropertyKey | null>(null);
   const [staffView, setStaffView] = useState<{ id: string | null; name: string } | null>(null);
   const [returnForm, setReturnForm] = useState({ returnedTo: "", conditionNotes: "" });
+  const [renewFor, setRenewFor] = useState<PropertyKey | null>(null);
+  const [renewForm, setRenewForm] = useState({ due: "", permanent: false, reason: "" });
+  const [lostFor, setLostFor] = useState<PropertyKey | null>(null);
+  const [lostForm, setLostForm] = useState({ notes: "", replace: true });
 
   // ---- Filters, kept in the page address so a view can be shared ----
   const filters: KeyFilterValues = {
@@ -150,7 +157,7 @@ export default function KeysRegister() {
   const out = useMemo(
     () =>
       keys
-        .filter((k) => k.currentIssue)
+        .filter((k) => k.currentIssue && !k.currentIssue.isPermanent)
         .sort((a, b) => {
           if (a.overdue !== b.overdue) return a.overdue ? -1 : 1;
           return b.currentIssue!.issuedAt.getTime() - a.currentIssue!.issuedAt.getTime();
@@ -162,6 +169,7 @@ export default function KeysRegister() {
     total: keys.length,
     available: keys.filter((k) => k.status === "available").length,
     issued: keys.filter((k) => k.status === "issued").length,
+    permanent: keys.filter((k) => k.status === "permanent").length,
     overdue: keys.filter((k) => k.status === "overdue").length,
     withStaff: keys.filter((k) => k.currentIssue?.issuedToType === "staff").length,
   }), [keys]);
@@ -192,6 +200,73 @@ export default function KeysRegister() {
     setReturnFor(null);
   };
 
+  const openRenew = (k: PropertyKey) => {
+    const base = k.currentIssue?.expectedReturn || new Date();
+    setRenewForm({ due: format(base, "yyyy-MM-dd'T'HH:mm"), permanent: !!k.currentIssue?.isPermanent, reason: "" });
+    setRenewFor(k);
+  };
+
+  const quickRenew = (kind: "2h" | "eod" | "tomorrow" | "7d") => {
+    const d = new Date();
+    if (kind === "2h") d.setHours(d.getHours() + 2);
+    if (kind === "eod") d.setHours(17, 0, 0, 0);
+    if (kind === "tomorrow") { d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); }
+    if (kind === "7d") d.setDate(d.getDate() + 7);
+    setRenewForm((f) => ({ ...f, permanent: false, due: format(d, "yyyy-MM-dd'T'HH:mm") }));
+  };
+
+  const submitRenew = async () => {
+    if (!renewFor?.currentIssue) return;
+    const error = await renewIssue({
+      issueId: renewFor.currentIssue.id,
+      keyLabel: renewFor.keyLabel,
+      holderName: renewFor.currentIssue.issuedToName,
+      newDue: renewForm.due ? new Date(renewForm.due) : null,
+      makePermanent: renewForm.permanent,
+      reason: renewForm.reason.trim() || null,
+    });
+    if (error) {
+      toast({ title: "Could not extend it", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: renewForm.permanent ? `${renewFor.keyLabel} is now permanent` : `${renewFor.keyLabel} extended` });
+    setRenewFor(null);
+  };
+
+  const submitLost = async () => {
+    if (!lostFor) return;
+    const error = await markLost({ key: lostFor, notes: lostForm.notes.trim() || null, replace: lostForm.replace });
+    if (error) {
+      toast({ title: "Could not record it as lost", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({
+      title: `${lostFor.keyLabel} marked lost`,
+      description: lostForm.replace ? "A replacement copy has been added to the cabinet." : undefined,
+    });
+    setLostForm({ notes: "", replace: true });
+    setLostFor(null);
+  };
+
+  const printCard = (k: PropertyKey) => {
+    if (!k.currentIssue) return;
+    printKeyCardAuto({
+      keyLabel: k.keyLabel,
+      keyTypeLabel: keyTypeLabel(k.keyType),
+      copyNumber: k.copyNumber,
+      propertyLabel: k.propertyLabel,
+      residentName: k.residentName,
+      holderName: k.currentIssue.issuedToName,
+      holderType: k.currentIssue.issuedToType,
+      issuedBy: k.currentIssue.issuedBy,
+      issuedAt: k.currentIssue.issuedAt,
+      dueBack: k.currentIssue.expectedReturn,
+      isPermanent: k.currentIssue.isPermanent,
+      overdue: k.overdue,
+      reference: k.id.slice(0, 8).toUpperCase(),
+    });
+  };
+
   const holderName = (k: PropertyKey) => k.currentIssue?.issuedToName || "";
 
   return (
@@ -206,11 +281,12 @@ export default function KeysRegister() {
 
           <main className="p-6 space-y-6">
             {/* Summary */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
               {[
                 { label: "Keys on register", value: counts.total, tone: "text-foreground" },
                 { label: "In the cabinet", value: counts.available, tone: "text-success" },
                 { label: "Issued out", value: counts.issued, tone: "text-primary" },
+                { label: "Permanently with residents", value: counts.permanent, tone: "text-muted-foreground" },
                 { label: "Overdue back", value: counts.overdue, tone: "text-destructive" },
                 { label: "Held by staff", value: counts.withStaff, tone: "text-foreground" },
               ].map((s) => (
@@ -342,12 +418,20 @@ export default function KeysRegister() {
                                       </span>
                                     </p>
                                     <p className={`text-xs ${k.overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
-                                      Out since {format(k.currentIssue.issuedAt, "hh:mm a dd MMM")}
-                                      {k.currentIssue.expectedReturn
-                                        ? ` · due ${format(k.currentIssue.expectedReturn, "hh:mm a dd MMM")}`
-                                        : ""}
+                                      {k.currentIssue.isPermanent
+                                        ? `Held permanently since ${format(k.currentIssue.issuedAt, "dd MMM yyyy")}`
+                                        : `Out since ${format(k.currentIssue.issuedAt, "hh:mm a dd MMM")}${
+                                            k.currentIssue.expectedReturn
+                                              ? ` · due ${format(k.currentIssue.expectedReturn, "hh:mm a dd MMM")}`
+                                              : ""
+                                          }`}
                                     </p>
                                   </>
+                                ) : k.status === "lost" ? (
+                                  <p className="text-xs text-destructive">
+                                    Reported lost{k.lostAt ? ` ${format(k.lostAt, "dd MMM yyyy")}` : ""}
+                                    {k.replacedByKeyId ? " · replacement copy added" : ""}
+                                  </p>
                                 ) : (
                                   <p className="text-xs text-muted-foreground">In the key cabinet</p>
                                 )}
@@ -355,12 +439,25 @@ export default function KeysRegister() {
                               <Badge variant="outline" className={style.className}>{style.label}</Badge>
                               <div className="flex gap-2">
                                 {k.currentIssue ? (
-                                  <Button size="sm" onClick={() => setReturnFor(k)} className="gap-1">
-                                    <ArrowLeftRight className="h-3.5 w-3.5" /> Return
-                                  </Button>
+                                  <>
+                                    <Button size="sm" onClick={() => setReturnFor(k)} className="gap-1">
+                                      <ArrowLeftRight className="h-3.5 w-3.5" /> Return
+                                    </Button>
+                                    <Button size="sm" variant="ghost" onClick={() => openRenew(k)} className="gap-1">
+                                      <CalendarClock className="h-3.5 w-3.5" /> Renew
+                                    </Button>
+                                    <Button size="sm" variant="ghost" onClick={() => printCard(k)} className="gap-1">
+                                      <Printer className="h-3.5 w-3.5" /> Card
+                                    </Button>
+                                  </>
                                 ) : (
                                   <Button size="sm" variant="secondary" onClick={() => openIssue(k)} className="gap-1 border border-border">
                                     <ArrowLeftRight className="h-3.5 w-3.5" /> Issue
+                                  </Button>
+                                )}
+                                {k.status !== "lost" && (
+                                  <Button size="sm" variant="ghost" onClick={() => { setLostForm({ notes: "", replace: true }); setLostFor(k); }} className="gap-1 text-destructive hover:text-destructive">
+                                    <TriangleAlert className="h-3.5 w-3.5" /> Lost
                                   </Button>
                                 )}
                                 <Button size="sm" variant="ghost" onClick={() => setHistoryKey(k)} className="gap-1">
@@ -409,6 +506,93 @@ export default function KeysRegister() {
               <Textarea value={returnForm.conditionNotes} onChange={(e) => setReturnForm({ ...returnForm, conditionNotes: e.target.value })} rows={2} />
             </div>
             <Button onClick={submitReturn} className="w-full">Record return</Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Renew */}
+      <Sheet open={!!renewFor} onOpenChange={(o) => !o && setRenewFor(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-[50vw] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Extend {renewFor?.keyLabel}</SheetTitle>
+            <SheetDescription>
+              With {renewFor?.currentIssue?.issuedToName}
+              {renewFor?.currentIssue?.expectedReturn
+                ? ` · was due ${format(renewFor.currentIssue.expectedReturn, "hh:mm a dd MMM")}`
+                : ""}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-1.5">
+              <Label>New due back</Label>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="secondary" className="border border-border" onClick={() => quickRenew("2h")}>In 2 hours</Button>
+                <Button type="button" size="sm" variant="secondary" className="border border-border" onClick={() => quickRenew("eod")}>End of day</Button>
+                <Button type="button" size="sm" variant="secondary" className="border border-border" onClick={() => quickRenew("tomorrow")}>Tomorrow</Button>
+                <Button type="button" size="sm" variant="secondary" className="border border-border" onClick={() => quickRenew("7d")}>In 7 days</Button>
+              </div>
+              <Input
+                type="datetime-local"
+                value={renewForm.due}
+                disabled={renewForm.permanent}
+                onChange={(e) => setRenewForm({ ...renewForm, due: e.target.value })}
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm text-foreground">
+              <Checkbox
+                checked={renewForm.permanent}
+                onCheckedChange={(v) => setRenewForm({ ...renewForm, permanent: !!v })}
+              />
+              Make this a permanent holding (their own key or fob)
+            </label>
+            <div className="space-y-1">
+              <Label>Reason</Label>
+              <Textarea
+                rows={2}
+                value={renewForm.reason}
+                onChange={(e) => setRenewForm({ ...renewForm, reason: e.target.value })}
+                placeholder="Job still running, resident keeps their own key…"
+              />
+            </div>
+            <Button onClick={submitRenew} className="w-full">Save new due date</Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Report lost */}
+      <Sheet open={!!lostFor} onOpenChange={(o) => !o && setLostFor(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-[50vw] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Report {lostFor?.keyLabel} lost</SheetTitle>
+            <SheetDescription>
+              {lostFor?.propertyLabel}
+              {lostFor?.copyNumber ? ` · copy ${lostFor.copyNumber}` : ""}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-1">
+              <Label>What happened?</Label>
+              <Textarea
+                rows={3}
+                value={lostForm.notes}
+                onChange={(e) => setLostForm({ ...lostForm, notes: e.target.value })}
+                placeholder="Not returned by contractor, misplaced on shift…"
+              />
+            </div>
+            <label className="flex items-start gap-2 text-sm text-foreground">
+              <Checkbox
+                className="mt-0.5"
+                checked={lostForm.replace}
+                onCheckedChange={(v) => setLostForm({ ...lostForm, replace: !!v })}
+              />
+              <span>
+                Add a replacement copy
+                <span className="block text-xs text-muted-foreground">
+                  Creates the next copy number for {lostFor?.propertyLabel}, ready in the cabinet.
+                </span>
+              </span>
+            </label>
+            <Button variant="destructive" onClick={submitLost} className="w-full">Mark as lost</Button>
           </div>
         </SheetContent>
       </Sheet>
