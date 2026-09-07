@@ -70,7 +70,7 @@ export function useResidents(options: UseResidentsOptions = {}) {
           photoUrl: rd?.photo_url || null,
           emergencyContactName: rd?.emergency_contact_name || null,
           emergencyContactPhone: rd?.emergency_contact_phone || null,
-          mobilityLevel: rd?.mobility_level || "independent",
+          mobilityLevel: rd?.mobility_level || "",
           dolsLpsFlag: rd?.dols_lps_flag || false,
           riskAssessmentLevel: rd?.risk_assessment_level || "standard",
           medicationNotes: rd?.medication_notes || null,

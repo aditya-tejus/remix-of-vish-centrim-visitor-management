@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
-import { Shield, Download, Clock, Users, CheckCircle2, AlertTriangle } from "lucide-react";
+import { useJurisdiction } from "@/hooks/useJurisdiction";
+import { useSiteStructure } from "@/hooks/useSiteStructure";
+import { format, differenceInMinutes } from "date-fns";
+import { Shield, Download, Printer, CheckCircle2, AlertTriangle, ChevronDown, Clock, Phone, Ambulance } from "lucide-react";
 
 interface DrillRecord {
   id: string;
@@ -18,45 +19,138 @@ interface DrillRecord {
   accounted_for: number;
   status: string;
   started_by: string;
+  notes: string | null;
+  unaccounted_reason: string | null;
+  event_type: string | null;
+}
+
+interface AttendanceRecord {
+  id: string;
+  drill_id: string;
+  person_name: string;
+  person_type: string;
+  status: string;
+  marked_safe_at: string | null;
+  marked_by: string | null;
+  assistance_level: string | null;
+  contact_phone: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  area_label: string | null;
+  room_label: string | null;
 }
 
 export default function EvacuationReport() {
   const [drills, setDrills] = useState<DrillRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [attendance, setAttendance] = useState<Record<string, AttendanceRecord[]>>({});
+  const { isUK } = useJurisdiction();
+  const { areaLabel, roomLabel } = useSiteStructure();
+
+  const complianceNote = isUK
+    ? "Evidence for the Regulatory Reform (Fire Safety) Order 2005 and CQC Regulation 12 (safe care and treatment). Retain fire drill and roll call records for inspection."
+    : "Evidence for the Aged Care Quality Standards — emergency and disaster management, and the Aged Care Act 1997. Retain drill and roll call records for accreditation review.";
 
   useEffect(() => {
-    const fetchDrills = async () => {
-      const { data } = await supabase
-        .from("evacuation_drills")
-        .select("*")
-        .order("started_at", { ascending: false })
-        .limit(50);
-      if (data) setDrills(data);
-      setLoading(false);
-    };
-    fetchDrills();
+    supabase
+      .from("evacuation_drills")
+      .select("*")
+      .order("started_at", { ascending: false })
+      .limit(50)
+      .then(({ data }) => {
+        setDrills((data || []) as any);
+        setLoading(false);
+      });
   }, []);
 
-  const exportCSV = () => {
-    const headers = ["Title", "Date", "Duration", "Total", "Accounted", "Status", "Started By"];
-    const rows = drills.map((d) => [
-      d.title,
-      format(new Date(d.started_at), "dd/MM/yyyy HH:mm"),
-      d.ended_at ? `${Math.round((new Date(d.ended_at).getTime() - new Date(d.started_at).getTime()) / 60000)}m` : "In progress",
-      d.total_people,
-      d.accounted_for,
-      d.status,
-      d.started_by,
+  const loadAttendance = async (drillId: string) => {
+    if (attendance[drillId]) return;
+    const { data } = await supabase
+      .from("evacuation_attendance")
+      .select("*")
+      .eq("drill_id", drillId)
+      .order("person_name");
+    setAttendance((prev) => ({ ...prev, [drillId]: (data || []) as any }));
+  };
+
+  const toggle = async (id: string) => {
+    if (openId === id) { setOpenId(null); return; }
+    await loadAttendance(id);
+    setOpenId(id);
+  };
+
+  const minutesToAccount = (d: DrillRecord) =>
+    d.ended_at ? differenceInMinutes(new Date(d.ended_at), new Date(d.started_at)) : null;
+
+  const statusText = (s: string) =>
+    s === "safe" ? "Safe" : s === "evacuated_offsite" ? "Evacuated off-site" : "Not accounted for";
+
+  const exportDrillCSV = async (d: DrillRecord) => {
+    await loadAttendance(d.id);
+    const rows = attendance[d.id] || (await supabase.from("evacuation_attendance").select("*").eq("drill_id", d.id)).data as any[] || [];
+    const headers = ["Name", "Type", areaLabel, roomLabel, "Assistance", "Phone", "Emergency contact", "Emergency phone", "Outcome", "Marked at", "Marked by"];
+    const body = rows.map((r: AttendanceRecord) => [
+      r.person_name, r.person_type, r.area_label || "", r.room_label || "", r.assistance_level || "",
+      r.contact_phone || "", r.emergency_contact_name || "", r.emergency_contact_phone || "",
+      statusText(r.status), r.marked_safe_at ? format(new Date(r.marked_safe_at), "dd/MM/yyyy HH:mm") : "", r.marked_by || "",
     ]);
-    const csv = [headers.join(","), ...rows.map((r) => r.map((c) => `"${c}"`).join(","))].join("\n");
+    const csv = [
+      [`"${d.title}"`].join(","),
+      [`"Started ${format(new Date(d.started_at), "dd/MM/yyyy HH:mm")}"`].join(","),
+      [`"Accounted for: ${d.accounted_for} of ${d.total_people}"`].join(","),
+      d.unaccounted_reason ? [`"Reason: ${d.unaccounted_reason.replace(/"/g, '""')}"`].join(",") : "",
+      "",
+      headers.join(","),
+      ...body.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")),
+    ].filter(Boolean).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `evacuation-report-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.download = `evacuation-${format(new Date(d.started_at), "yyyy-MM-dd-HHmm")}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const printDrill = async (d: DrillRecord) => {
+    await loadAttendance(d.id);
+    const rows = (attendance[d.id] || []) as AttendanceRecord[];
+    const html = `<!DOCTYPE html><html><head><title>${d.title}</title><style>
+      body{font-family:Arial,sans-serif;margin:24px;color:#111}
+      h1{font-size:19px;margin:0 0 2px;color:#dc2626}
+      .sub{font-size:12px;color:#6b7280;margin-bottom:12px}
+      .meta{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:12px;margin-bottom:12px}
+      .meta div{border:1px solid #e5e7eb;padding:6px 8px;border-radius:6px}
+      table{width:100%;border-collapse:collapse;font-size:11px}
+      th,td{padding:5px 7px;border-bottom:1px solid #e5e7eb;text-align:left}
+      th{background:#fef2f2;color:#dc2626}
+      .reason{margin:12px 0;padding:8px;border:1px solid #fca5a5;background:#fef2f2;font-size:12px;border-radius:6px}
+      .footer{margin-top:18px;font-size:10px;color:#6b7280;border-top:1px solid #e5e7eb;padding-top:8px}
+    </style></head><body>
+    <h1>${d.title}</h1>
+    <div class="sub">${d.event_type === "incident" ? "Real incident" : "Drill"} • started ${format(new Date(d.started_at), "dd MMMM yyyy, HH:mm")} by ${d.started_by}</div>
+    <div class="meta">
+      <div><strong>People on site</strong><br>${d.total_people}</div>
+      <div><strong>Accounted for</strong><br>${d.accounted_for}</div>
+      <div><strong>Not accounted for</strong><br>${Math.max(d.total_people - d.accounted_for, 0)}</div>
+      <div><strong>Time to account</strong><br>${minutesToAccount(d) != null ? `${minutesToAccount(d)} min` : "In progress"}</div>
+    </div>
+    ${d.unaccounted_reason ? `<div class="reason"><strong>Exceptions recorded:</strong> ${d.unaccounted_reason}</div>` : ""}
+    <table><thead><tr><th>Name</th><th>Type</th><th>${areaLabel}</th><th>${roomLabel}</th><th>Assistance</th><th>Phone</th><th>Emergency contact</th><th>Outcome</th><th>Marked</th></tr></thead>
+    <tbody>${rows.map((r) => `<tr>
+      <td>${r.person_name}</td><td>${r.person_type}</td><td>${r.area_label || "—"}</td><td>${r.room_label || "—"}</td>
+      <td>${r.assistance_level || "—"}</td><td>${r.contact_phone || "—"}</td>
+      <td>${r.emergency_contact_name ? `${r.emergency_contact_name} ${r.emergency_contact_phone || ""}` : "—"}</td>
+      <td>${statusText(r.status)}</td>
+      <td>${r.marked_safe_at ? format(new Date(r.marked_safe_at), "HH:mm") : "—"}${r.marked_by ? `<br><small>${r.marked_by}</small>` : ""}</td>
+    </tr>`).join("")}</tbody></table>
+    <div class="footer">${complianceNote}<br>Generated by Centrim Life • ${format(new Date(), "dd MMM yyyy HH:mm")} • CONFIDENTIAL</div>
+    </body></html>`;
+    const w = window.open("", "_blank");
+    if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 300); }
   };
 
   return (
@@ -65,74 +159,105 @@ export default function EvacuationReport() {
         <AppSidebar />
         <SidebarInset className="flex-1">
           <header className="sticky top-0 z-10 bg-card border-b border-border">
-            <div className="flex items-center justify-between px-6 h-14">
-              <div className="flex items-center gap-4">
-                <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-                <div>
-                  <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-destructive" /> Evacuation Report
-                  </h1>
-                  <p className="text-[13px] text-muted-foreground">History of evacuation drills and roll calls</p>
-                </div>
+            <div className="flex items-center gap-4 px-6 h-14">
+              <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
+              <div>
+                <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-destructive" /> Evacuation Report
+                </h1>
+                <p className="text-[13px] text-muted-foreground">Drills and real evacuations, with who was accounted for and when</p>
               </div>
-              <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5">
-                <Download className="h-3.5 w-3.5" /> Export CSV
-              </Button>
             </div>
           </header>
 
-          <main className="p-6">
+          <main className="p-6 space-y-4">
+            <div className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-[13px] text-muted-foreground">
+              {complianceNote}
+            </div>
+
             {loading ? (
-              <div className="space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-14 w-full" />)}</div>
+              <div className="space-y-3">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
             ) : drills.length === 0 ? (
               <div className="text-center py-16 border border-dashed border-border rounded-xl">
                 <Shield className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                <p className="text-sm font-medium text-muted-foreground">No evacuation drills recorded</p>
+                <p className="text-sm font-medium text-muted-foreground">No evacuations or drills recorded yet</p>
               </div>
             ) : (
-              <div className="rounded-xl border border-border bg-card overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="text-[11px] uppercase tracking-wider">Drill</TableHead>
-                      <TableHead className="text-[11px] uppercase tracking-wider">Date</TableHead>
-                      <TableHead className="text-[11px] uppercase tracking-wider">Duration</TableHead>
-                      <TableHead className="text-[11px] uppercase tracking-wider">People</TableHead>
-                      <TableHead className="text-[11px] uppercase tracking-wider">Accounted</TableHead>
-                      <TableHead className="text-[11px] uppercase tracking-wider">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {drills.map((d) => (
-                      <TableRow key={d.id}>
-                        <TableCell className="font-medium text-sm">{d.title}</TableCell>
-                        <TableCell className="text-sm">{format(new Date(d.started_at), "dd MMM yyyy HH:mm")}</TableCell>
-                        <TableCell className="text-sm">
-                          {d.ended_at
-                            ? `${Math.round((new Date(d.ended_at).getTime() - new Date(d.started_at).getTime()) / 60000)}m`
-                            : "—"}
-                        </TableCell>
-                        <TableCell className="text-sm">{d.total_people}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-medium">{d.accounted_for}</span>
-                            {d.accounted_for === d.total_people ? (
-                              <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                            ) : (
-                              <AlertTriangle className="h-3.5 w-3.5 text-warning" />
-                            )}
+              drills.map((d) => {
+                const missing = Math.max(d.total_people - d.accounted_for, 0);
+                const open = openId === d.id;
+                const rows = attendance[d.id] || [];
+                return (
+                  <div key={d.id} className="rounded-xl border border-border bg-card overflow-hidden">
+                    <button onClick={() => toggle(d.id)} className="w-full text-left px-4 py-3 hover:bg-muted/40 transition-colors">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-foreground">{d.title}</p>
+                            <Badge variant="outline" className="text-[10px] capitalize">{d.event_type === "incident" ? "Real incident" : "Drill"}</Badge>
+                            <Badge variant={d.status === "completed" ? "secondary" : "destructive"} className="text-[10px]">{d.status}</Badge>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={d.status === "completed" ? "secondary" : "destructive"} className="text-[10px]">
-                            {d.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                          <p className="text-[12px] text-muted-foreground mt-0.5">
+                            {format(new Date(d.started_at), "dd MMM yyyy HH:mm")} · started by {d.started_by}
+                            {minutesToAccount(d) != null && <> · <Clock className="inline h-3 w-3" /> {minutesToAccount(d)} min to account</>}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <p className="text-sm font-semibold text-foreground">{d.accounted_for} / {d.total_people}</p>
+                            <p className="text-[11px] text-muted-foreground">accounted for</p>
+                          </div>
+                          {missing === 0
+                            ? <CheckCircle2 className="h-5 w-5 text-success" />
+                            : <span className="flex items-center gap-1 text-destructive text-xs font-medium"><AlertTriangle className="h-4 w-4" />{missing} missing</span>}
+                          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+                        </div>
+                      </div>
+                    </button>
+
+                    {open && (
+                      <div className="border-t border-border p-4 space-y-3">
+                        {d.unaccounted_reason && (
+                          <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-[13px] text-destructive">
+                            <strong>Exceptions recorded:</strong> {d.unaccounted_reason}
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => exportDrillCSV(d)} className="h-8 gap-1.5 text-xs"><Download className="h-3.5 w-3.5" /> Export CSV</Button>
+                          <Button variant="outline" size="sm" onClick={() => printDrill(d)} className="h-8 gap-1.5 text-xs"><Printer className="h-3.5 w-3.5" /> Print</Button>
+                        </div>
+                        {rows.length === 0 ? (
+                          <p className="text-[13px] text-muted-foreground">No attendance records for this roll call.</p>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {rows.map((r) => (
+                              <div key={r.id} className={`rounded-lg border px-3 py-2 ${r.status === "unaccounted" ? "border-destructive/30 bg-destructive/5" : "border-border"}`}>
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                  <span className="text-[13px] font-medium text-foreground">{r.person_name}</span>
+                                  <Badge variant="outline" className="text-[10px] capitalize">{r.person_type}</Badge>
+                                  {r.room_label && <span className="text-[12px] text-muted-foreground">{r.room_label}</span>}
+                                  {r.area_label && <span className="text-[12px] text-primary">{r.area_label}</span>}
+                                  {r.assistance_level && <span className="text-[12px] text-muted-foreground">{r.assistance_level}</span>}
+                                  {r.contact_phone && <span className="text-[12px] text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" />{r.contact_phone}</span>}
+                                  {r.emergency_contact_phone && (
+                                    <span className="text-[12px] text-muted-foreground">{r.emergency_contact_name || "Emergency"}: {r.emergency_contact_phone}</span>
+                                  )}
+                                  <span className={`ml-auto text-[12px] font-medium ${r.status === "unaccounted" ? "text-destructive" : "text-success"}`}>
+                                    {r.status === "evacuated_offsite" && <Ambulance className="inline h-3 w-3 mr-1" />}
+                                    {statusText(r.status)}
+                                    {r.marked_safe_at ? ` · ${format(new Date(r.marked_safe_at), "HH:mm")}` : ""}
+                                    {r.marked_by ? ` · ${r.marked_by}` : ""}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             )}
           </main>
         </SidebarInset>
