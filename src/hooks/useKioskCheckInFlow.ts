@@ -188,7 +188,9 @@ export function useKioskCheckInFlow() {
     setBringingFood(null);
     setFoodForm(emptyFoodForm);
     setVisitedResidentId(null);
+    setPersonQr(null);
   };
+
 
   // Check if details step has required fields filled
   const detailsValid = useMemo(() => {
@@ -251,7 +253,11 @@ export function useKioskCheckInFlow() {
     returningVisitor,
     setReturningVisitor,
     searchReturningVisitor,
-    steps,
+    lookupReturningVisitor,
+    returningOptions,
+    personQr,
+    setPersonQr,
+
     activeFormFields,
     healthQuestions,
     vaccinationFields,
