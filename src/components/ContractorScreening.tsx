@@ -1,27 +1,24 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useSuppliers, Supplier } from "@/hooks/useSuppliers";
 import { Search, Check, Building2, Shield, HardHat, FileCheck, AlertTriangle, Syringe, ShieldAlert, CalendarClock, Loader2 } from "lucide-react";
-import { getSupplierCredentials, isContractorBlocked, UNSUPERVISED_ACCESS_KEY } from "@/lib/contractorCredentials";
-import { useMandatoryCredentials } from "@/hooks/useContractorEnforcement";
+import {
+  getSupplierCredentials,
+  evaluateContractorGate,
+  UNSUPERVISED_ACCESS_KEY,
+  ESCORT_REASON_KEY,
+} from "@/lib/contractorCredentials";
+import { useCredentialTypes, useSupplierCredentials } from "@/hooks/useContractorEnforcement";
 import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
 
 // AU screening template
-const unsupervisedQuestion = { id: UNSUPERVISED_ACCESS_KEY, label: "Will they have unsupervised access to residents?", type: "yesno" as const, required: true, icon: ShieldAlert };
-
 const auScreeningQuestions = [
-  unsupervisedQuestion,
-  { id: "acws_check", label: "Aged Care Worker Screening clearance current?", type: "yesno" as const, required: true, icon: Shield },
   { id: "swms", label: "Safe Work Method Statement (SWMS) provided?", type: "yesno" as const, required: true, icon: FileCheck },
   { id: "ppe", label: "Wearing appropriate PPE (hard hat, hi-vis, steel caps)?", type: "yesno" as const, required: true, icon: HardHat },
   { id: "permits", label: "Holds current work permits / licences?", type: "yesno" as const, required: true, icon: Shield },
-  { id: "insurance", label: "Public liability insurance current?", type: "yesno" as const, required: true, icon: FileCheck },
   { id: "induction", label: "Completed site induction?", type: "yesno" as const, required: true, icon: Shield },
   { id: "infection_control", label: "No signs of illness or infection?", type: "yesno" as const, required: true, icon: Syringe },
   { id: "work_area", label: "Work area / scope of works", type: "text" as const, required: true, placeholder: "e.g. Room 12 bathroom renovation" },
@@ -29,12 +26,9 @@ const auScreeningQuestions = [
 
 // UK screening template
 const ukScreeningQuestions = [
-  unsupervisedQuestion,
   { id: "rams", label: "Risk Assessment & Method Statement (RAMS) provided?", type: "yesno" as const, required: true, icon: FileCheck },
   { id: "ppe", label: "Wearing appropriate PPE?", type: "yesno" as const, required: true, icon: HardHat },
-  { id: "dbs_check", label: "DBS check completed and current?", type: "yesno" as const, required: true, icon: Shield },
   { id: "permits", label: "Required permits / CSCS card valid?", type: "yesno" as const, required: true, icon: Shield },
-  { id: "insurance", label: "Public liability insurance current?", type: "yesno" as const, required: true, icon: FileCheck },
   { id: "safeguarding", label: "Completed safeguarding awareness?", type: "yesno" as const, required: true, icon: Shield },
   { id: "infection_control", label: "No signs of illness or infection?", type: "yesno" as const, required: true, icon: Syringe },
   { id: "work_area", label: "Work area / scope of works", type: "text" as const, required: true, placeholder: "e.g. Kitchen refurbishment, East Wing" },
@@ -47,7 +41,7 @@ interface ContractorScreeningProps {
   selectedSupplier: Supplier | null;
   onSupplierChange: (supplier: Supplier | null) => void;
   compact?: boolean;
-  /** Reports whether the highest-risk credential blocks check-in */
+  /** Reports whether credential status currently holds up check-in */
   onBlockedChange?: (blocked: boolean, reason: string | null) => void;
 }
 
@@ -60,13 +54,16 @@ export function ContractorScreening({
   compact = true,
   onBlockedChange,
 }: ContractorScreeningProps) {
-  const { suppliers, updateCredential } = useSuppliers();
+  const { suppliers } = useSuppliers();
   const { toast } = useToast();
   const [savingCredential, setSavingCredential] = useState<string | null>(null);
   const [supplierSearch, setSupplierSearch] = useState("");
   const [showSupplierList, setShowSupplierList] = useState(false);
 
   const questions = jurisdiction === "AU" ? auScreeningQuestions : ukScreeningQuestions;
+
+  const { activeTypes } = useCredentialTypes();
+  const { records, save } = useSupplierCredentials(selectedSupplier?.id);
 
   const filteredSuppliers = useMemo(() => {
     if (!supplierSearch.trim()) return suppliers;
@@ -80,6 +77,23 @@ export function ContractorScreening({
     onAnswersChange({ ...answers, [id]: value });
   };
 
+  const unsupervisedAnswer: boolean | null =
+    answers[UNSUPERVISED_ACCESS_KEY] === true ? true
+      : answers[UNSUPERVISED_ACCESS_KEY] === false ? false
+      : null;
+  const escortReason: string = answers[ESCORT_REASON_KEY] || "";
+
+  const credentials = getSupplierCredentials(jurisdiction, activeTypes, records);
+  const anyRequired = credentials.some((c) => c.blocking);
+  const gate = evaluateContractorGate({
+    jurisdiction,
+    supplierName: selectedSupplier?.name ?? null,
+    types: activeTypes,
+    records,
+    unsupervisedAccess: unsupervisedAnswer,
+    escortReason,
+  });
+
   const allRequiredAnswered = questions
     .filter((q) => q.required)
     .every((q) => {
@@ -92,21 +106,15 @@ export function ContractorScreening({
     (q) => q.type === "yesno" && answers[q.id] === false
   );
 
-  const { mandatory } = useMandatoryCredentials();
-  const unsupervisedAccess = answers[UNSUPERVISED_ACCESS_KEY] === true;
-  const credentials = getSupplierCredentials(jurisdiction, selectedSupplier, mandatory);
-  const gate = isContractorBlocked(jurisdiction, selectedSupplier, mandatory, unsupervisedAccess);
-
   useEffect(() => {
     onBlockedChange?.(gate.blocked, gate.reason);
   }, [gate.blocked, gate.reason, onBlockedChange]);
 
-  const saveCredential = async (field: string, value: string) => {
+  const saveCredential = async (typeId: string, field: "expiry_date" | "reference", value: string) => {
     if (!selectedSupplier) return;
-    setSavingCredential(field);
+    setSavingCredential(`${typeId}:${field}`);
     try {
-      const updated = await updateCredential(selectedSupplier.id, { [field]: value || null } as any);
-      onSupplierChange(updated);
+      await save(typeId, { [field]: value || null } as any);
     } catch {
       toast({ title: "Could not save", description: "The credential details were not saved.", variant: "destructive" });
     } finally {
@@ -129,6 +137,59 @@ export function ContractorScreening({
 
   return (
     <div className="space-y-4">
+      {/* Unsupervised resident access — asked first, it decides what the credentials mean */}
+      <div
+        className={`rounded-xl border-2 p-3 space-y-3 ${
+          unsupervisedAnswer === true ? "border-warning/40 bg-warning/5"
+            : unsupervisedAnswer === false ? "border-success/30 bg-success/5"
+            : gate.needsAnswer ? "border-destructive/40 bg-destructive/5"
+            : "border-border"
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <div className="h-7 w-7 rounded-lg bg-muted flex items-center justify-center shrink-0">
+            <ShieldAlert className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+          <p className="text-[12px] text-foreground flex-1">
+            Will they have unsupervised access to residents?
+            {anyRequired && <span className="text-destructive ml-0.5">*</span>}
+          </p>
+          <div className="flex gap-1.5 shrink-0">
+            <button
+              onClick={() => setAnswer(UNSUPERVISED_ACCESS_KEY, true)}
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
+                unsupervisedAnswer === true ? "bg-warning text-warning-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-warning/20"
+              }`}
+            >
+              Yes
+            </button>
+            <button
+              onClick={() => setAnswer(UNSUPERVISED_ACCESS_KEY, false)}
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
+                unsupervisedAnswer === false ? "bg-success text-success-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-success/20"
+              }`}
+            >
+              No
+            </button>
+          </div>
+        </div>
+
+        {unsupervisedAnswer === false && (
+          <div className="space-y-1">
+            <Label className="text-[10px] text-muted-foreground">
+              Escorted by / why there is no resident contact
+              {gate.needsEscortReason && <span className="text-destructive ml-0.5">*</span>}
+            </Label>
+            <Textarea
+              value={escortReason}
+              onChange={(e) => setAnswer(ESCORT_REASON_KEY, e.target.value)}
+              placeholder="e.g. Escorted by maintenance lead all visit — boiler room only"
+              className="rounded-lg text-sm min-h-[60px]"
+            />
+          </div>
+        )}
+      </div>
+
       {/* Supplier autocomplete */}
       <div className="space-y-2">
         <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -203,15 +264,15 @@ export function ContractorScreening({
         )}
       </div>
 
-      {/* Credential verification — expiry + document reference held on the supplier record */}
-      {selectedSupplier && (
+      {/* Credential verification — dynamic list configured in Settings */}
+      {selectedSupplier && credentials.length > 0 && (
         <div className="space-y-2">
           <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
             <CalendarClock className="h-3.5 w-3.5" />
             Credential Verification
           </Label>
           {credentials.map((c) => (
-            <div key={c.expiryField} className={`rounded-xl border-2 p-3 space-y-2 ${stateStyles[c.state]}`}>
+            <div key={c.typeId} className={`rounded-xl border-2 p-3 space-y-2 ${stateStyles[c.state]}`}>
               <div className="flex items-center justify-between gap-2">
                 <p className="text-[12px] font-semibold text-foreground">
                   {c.label}
@@ -228,7 +289,7 @@ export function ContractorScreening({
                   <Input
                     type="date"
                     defaultValue={c.expiry || ""}
-                    onBlur={(e) => e.target.value !== (c.expiry || "") && saveCredential(c.expiryField, e.target.value)}
+                    onBlur={(e) => e.target.value !== (c.expiry || "") && saveCredential(c.typeId, "expiry_date", e.target.value)}
                     className="rounded-lg h-9 text-sm"
                   />
                 </div>
@@ -237,12 +298,12 @@ export function ContractorScreening({
                   <Input
                     defaultValue={c.reference || ""}
                     placeholder="Certificate / clearance no."
-                    onBlur={(e) => e.target.value !== (c.reference || "") && saveCredential(c.referenceField, e.target.value)}
+                    onBlur={(e) => e.target.value !== (c.reference || "") && saveCredential(c.typeId, "reference", e.target.value)}
                     className="rounded-lg h-9 text-sm"
                   />
                 </div>
               </div>
-              {savingCredential === c.expiryField || savingCredential === c.referenceField ? (
+              {savingCredential?.startsWith(c.typeId) ? (
                 <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Saving…</p>
               ) : null}
             </div>
@@ -255,7 +316,7 @@ export function ContractorScreening({
           <ShieldAlert className={`h-4 w-4 shrink-0 mt-0.5 ${gate.blocked ? "text-destructive" : "text-amber-600"}`} />
           <div>
             <p className={`text-[12px] font-bold ${gate.blocked ? "text-destructive" : "text-amber-700"}`}>
-              {gate.blocked ? "Check-in blocked" : "Credential warning — staff review"}
+              {gate.blocked ? (gate.needsAnswer ? "Answer required" : "Check-in blocked") : "Credential warning — staff review"}
             </p>
             <p className={`text-[11px] ${gate.blocked ? "text-destructive/80" : "text-amber-700/80"}`}>{gate.reason}</p>
           </div>
