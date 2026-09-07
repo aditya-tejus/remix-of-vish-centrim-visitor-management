@@ -14,7 +14,7 @@ import { StepScreening } from "./StepScreening";
 import { StepConfirm } from "./StepConfirm";
 import { FoodFormFields } from "@/components/food/FoodFormFields";
 import { insertFoodRecord } from "@/lib/foodRegister";
-import { printBadge } from "@/lib/printBadge";
+import { printBadgeAuto } from "@/lib/printBadge";
 import { Label } from "@/components/ui/label";
 
 interface CheckInSheetProps {
@@ -172,7 +172,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
               </div>
               {flow.badgePrintingEnabled && successBadge && (
                 <div className="flex gap-2.5 pt-2">
-                  <Button variant="outline" className="gap-2 rounded-xl" onClick={() => printBadge(successBadge)}>
+                  <Button variant="outline" className="gap-2 rounded-xl" onClick={() => printBadgeAuto(successBadge)}>
                     <Printer className="h-4 w-4" /> Print Badge
                   </Button>
                   <Button className="rounded-xl" onClick={handleClose}>Done</Button>

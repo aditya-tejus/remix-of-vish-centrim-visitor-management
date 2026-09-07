@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Printer, Save, BadgeCheck } from "lucide-react";
+import { Printer, Save, BadgeCheck, Tag } from "lucide-react";
+import { printBadge } from "@/lib/printBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -16,6 +17,7 @@ export function PrintingTab() {
   const [printerModel, setPrinterModel] = useState("brother_ql820");
   const [printerIp, setPrinterIp] = useState("");
   const [labelSize, setLabelSize] = useState("62mm");
+  const [labelPrinterMode, setLabelPrinterMode] = useState("standard");
   const [includePhoto, setIncludePhoto] = useState(true);
   const [includeQr, setIncludeQr] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -24,7 +26,7 @@ export function PrintingTab() {
     supabase
       .from("settings")
       .select("key, value")
-      .in("key", ["badge_printing_enabled", "print_on_checkin", "printer_model", "printer_ip", "label_size", "badge_include_photo", "badge_include_qr"])
+      .in("key", ["badge_printing_enabled", "print_on_checkin", "printer_model", "printer_ip", "label_size", "label_printer_mode", "badge_include_photo", "badge_include_qr"])
       .then(({ data }) => {
         if (data) {
           const map: Record<string, string> = {};
@@ -34,6 +36,7 @@ export function PrintingTab() {
           setPrinterModel(map.printer_model || "brother_ql820");
           setPrinterIp(map.printer_ip || "");
           setLabelSize(map.label_size || "62mm");
+          setLabelPrinterMode(map.label_printer_mode === "label" ? "label" : "standard");
           setIncludePhoto(map.badge_include_photo !== "false");
           setIncludeQr(map.badge_include_qr !== "false");
         }
@@ -48,6 +51,7 @@ export function PrintingTab() {
       { key: "printer_model", value: printerModel },
       { key: "printer_ip", value: printerIp },
       { key: "label_size", value: labelSize },
+      { key: "label_printer_mode", value: labelPrinterMode },
       { key: "badge_include_photo", value: includePhoto ? "true" : "false" },
       { key: "badge_include_qr", value: includeQr ? "true" : "false" },
     ];
@@ -117,6 +121,37 @@ export function PrintingTab() {
                 </Select>
               </div>
             </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Output Format</Label>
+              <Select value={labelPrinterMode} onValueChange={setLabelPrinterMode}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="standard">Standard printer (badge card)</SelectItem>
+                  <SelectItem value="label">Brother QL label printer (exact label size)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                In label mode the badge is laid out at the exact roll size above, so choosing the Brother QL as the
+                print destination produces a correctly sized label with no scaling. Silent printing without a print
+                dialog requires a small local print agent on the reception PC — not yet installed.
+              </p>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() =>
+                printBadge(
+                  { name: "Test Label", type: "visitor", visiting: "Reception", date: new Date() },
+                  { mode: labelPrinterMode === "label" ? "label" : "standard", labelSize }
+                )
+              }
+            >
+              <Tag className="h-3.5 w-3.5" /> Print test label
+            </Button>
+
             <div className="space-y-1">
               <Label className="text-xs">Printer IP Address / Hostname</Label>
               <Input value={printerIp} onChange={(e) => setPrinterIp(e.target.value)} placeholder="192.168.1.100 or printer.local" className="h-8 text-sm" />
