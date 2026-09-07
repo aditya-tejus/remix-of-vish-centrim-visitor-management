@@ -263,6 +263,11 @@ export default function KioskCheckIn() {
     setStep("type");
     setSubmitted(false);
     setReturningChecked(false);
+    setReturningMatch(null);
+    setReturningMobile("");
+    setReturningCode("");
+    setReturningNotFound(false);
+
     setVisitingSearch("");
     setVisitingMode(null);
     setCheckedInQrCode(null);
