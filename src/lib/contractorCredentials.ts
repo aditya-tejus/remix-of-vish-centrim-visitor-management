@@ -1,6 +1,6 @@
 export type Jurisdiction = "AU" | "UK";
 
-export type CredentialState = "valid" | "expiring" | "expired" | "missing";
+export type CredentialState = "valid" | "expiring" | "expired" | "missing" | "pending";
 
 /** Credential keys are user-defined — the list lives in the `credential_types` table */
 export type CredentialKey = string;
@@ -9,6 +9,11 @@ export type CredentialKey = string;
 export const UNSUPERVISED_ACCESS_KEY = "unsupervised_resident_access";
 /** Free-text justification recorded when unsupervised access is answered "No" */
 export const ESCORT_REASON_KEY = "unsupervised_escort_reason";
+
+/** What happens when a mandatory credential is missing or out of date */
+export type EntryPolicy = "unsupervised" | "provisional" | "reception";
+
+export type HolderScope = "person" | "company";
 
 export interface CredentialType {
   id: string;
@@ -19,12 +24,28 @@ export interface CredentialType {
   is_required: boolean;
   is_active: boolean;
   sort_order: number;
+  /** Personal checks (police check / DBS) belong to the worker, not the company */
+  holder_scope?: HolderScope;
+  /** When true, staff expect an actual document on file — not just a date */
+  requires_document?: boolean;
 }
 
 export interface SupplierCredentialRecord {
   credential_type_id: string;
   expiry_date: string | null;
   reference: string | null;
+}
+
+export interface PersonCredentialRecord {
+  credential_type_id: string;
+  expiry_date: string | null;
+  reference: string | null;
+  document_path: string | null;
+  verification_status: string | null;
+  uploaded_by?: string | null;
+  uploaded_at?: string | null;
+  verified_by?: string | null;
+  verified_at?: string | null;
 }
 
 export interface CredentialCheck {
@@ -34,9 +55,17 @@ export interface CredentialCheck {
   shortLabel: string;
   /** True when this credential is marked as required before check-in */
   blocking: boolean;
+  scope: HolderScope;
+  requiresDocument: boolean;
   state: CredentialState;
   expiry: string | null;
   reference: string | null;
+  documentPath: string | null;
+  verificationStatus: string | null;
+  uploadedBy: string | null;
+  uploadedAt: string | null;
+  verifiedBy: string | null;
+  verifiedAt: string | null;
   daysToExpiry: number | null;
 }
 
@@ -52,6 +81,10 @@ function evaluate(expiry: string | null | undefined): { state: CredentialState; 
   return { state: "valid", days };
 }
 
+export function scopeOf(t: CredentialType): HolderScope {
+  return t.holder_scope === "person" ? "person" : "company";
+}
+
 /** Credential types that apply in the given jurisdiction, in display order. */
 export function applicableCredentialTypes(
   jurisdiction: Jurisdiction,
@@ -62,36 +95,81 @@ export function applicableCredentialTypes(
     .sort((a, b) => a.sort_order - b.sort_order);
 }
 
+interface ChecklistInput {
+  jurisdiction: Jurisdiction;
+  types: CredentialType[];
+  /** Company-wide records (insurance, trade licence) held against the supplier */
+  supplierRecords?: SupplierCredentialRecord[];
+  /** Personal records (police check / DBS / WWCC) held against the individual */
+  personRecords?: PersonCredentialRecord[];
+}
+
 /**
- * Builds the credential checklist for a supplier from the configured credential
- * types and whatever the supplier has on record.
+ * Builds the full compliance checklist for one contractor visit: personal checks
+ * come from the worker's own record, company checks from the supplier's.
+ *
+ * A personal document that has been uploaded but not yet confirmed by a staff
+ * member never counts as valid — it sits at "pending" until someone verifies it.
  */
-export function getSupplierCredentials(
-  jurisdiction: Jurisdiction,
-  types: CredentialType[],
-  records: SupplierCredentialRecord[] = []
-): CredentialCheck[] {
+export function buildComplianceChecklist({
+  jurisdiction,
+  types,
+  supplierRecords = [],
+  personRecords = [],
+}: ChecklistInput): CredentialCheck[] {
   return applicableCredentialTypes(jurisdiction, types).map((t) => {
-    const rec = records.find((r) => r.credential_type_id === t.id);
-    const { state, days } = evaluate(rec?.expiry_date);
+    const scope = scopeOf(t);
+    const personRec = personRecords.find((r) => r.credential_type_id === t.id);
+    const supplierRec = supplierRecords.find((r) => r.credential_type_id === t.id);
+    const rec = scope === "person" ? personRec : supplierRec;
+
+    const { state: dateState, days } = evaluate(rec?.expiry_date);
+    const verification = scope === "person" ? personRec?.verification_status ?? null : "verified";
+    const documentPath = scope === "person" ? personRec?.document_path ?? null : null;
+
+    let state: CredentialState = dateState;
+    if (scope === "person" && dateState !== "missing" && dateState !== "expired" && verification !== "verified") {
+      state = "pending";
+    }
+    if (scope === "person" && dateState === "missing" && documentPath && verification !== "verified") {
+      state = "pending";
+    }
+
     return {
       typeId: t.id,
       key: t.key,
       label: t.label,
       shortLabel: t.short_label,
       blocking: t.is_required,
+      scope,
+      requiresDocument: t.requires_document === true,
       state,
       expiry: rec?.expiry_date || null,
       reference: rec?.reference || null,
+      documentPath,
+      verificationStatus: verification,
+      uploadedBy: personRec?.uploaded_by ?? null,
+      uploadedAt: personRec?.uploaded_at ?? null,
+      verifiedBy: personRec?.verified_by ?? null,
+      verifiedAt: personRec?.verified_at ?? null,
       daysToExpiry: days,
     };
   });
 }
 
+/** Back-compat helper — company-only view of the checklist. */
+export function getSupplierCredentials(
+  jurisdiction: Jurisdiction,
+  types: CredentialType[],
+  records: SupplierCredentialRecord[] = []
+): CredentialCheck[] {
+  return buildComplianceChecklist({ jurisdiction, types, supplierRecords: records });
+}
+
 export interface ContractorGate {
   blocked: boolean;
   reason: string | null;
-  /** Every required credential that is missing or expired */
+  /** Every required credential that is missing, expired or awaiting verification */
   failing: CredentialCheck[];
   /** True when the contractor was marked as having unsupervised resident access */
   unsupervisedAccess: boolean;
@@ -99,36 +177,63 @@ export interface ContractorGate {
   needsAnswer: boolean;
   /** True when a "No" answer needs a written escort/exemption justification */
   needsEscortReason: boolean;
+  /** True when entry may go ahead but must be recorded as escorted / pending checks */
+  provisional: boolean;
+  /** True when the kiosk should send them to a staff member instead of continuing */
+  seeReception: boolean;
+  entryPolicy: EntryPolicy;
 }
 
 interface GateInput {
   jurisdiction: Jurisdiction;
   supplierName: string | null;
   types: CredentialType[];
+  /** Pre-built checklist. When absent it is derived from the record arrays. */
+  checklist?: CredentialCheck[];
   records?: SupplierCredentialRecord[];
+  personRecords?: PersonCredentialRecord[];
   /** null = not yet answered */
   unsupervisedAccess: boolean | null;
   escortReason?: string;
+  entryPolicy?: EntryPolicy;
+  /** Personal checks cannot be evaluated until we know who the worker is */
+  personIdentified?: boolean;
+}
+
+function joinList(parts: string[]) {
+  return parts.length > 1
+    ? `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`
+    : parts[0];
+}
+
+function describe(c: CredentialCheck) {
+  if (c.state === "expired") return `${c.label} expired on ${c.expiry}`;
+  if (c.state === "pending") return `${c.label} is waiting for a staff member to confirm it`;
+  return `${c.label} has not been recorded`;
 }
 
 /**
- * Evaluates every credential marked as required.
- *
- * The block only bites when the contractor has been marked as having
- * unsupervised access to residents. Escorted contractors, or ones with no
- * resident contact, still surface the reason for staff visibility but are not
- * blocked — though the exemption must be justified in writing when a required
- * credential is missing or expired.
+ * Evaluates every credential marked as required, against the configured entry
+ * policy:
+ *  - "unsupervised": only blocks contractors who will be alone with residents
+ *  - "provisional":  entry allowed but flagged as escorted / checks pending
+ *  - "reception":    kiosk stops and sends them to a staff member
  */
 export function evaluateContractorGate({
   jurisdiction,
   supplierName,
   types,
+  checklist,
   records = [],
+  personRecords = [],
   unsupervisedAccess,
   escortReason = "",
+  entryPolicy = "unsupervised",
+  personIdentified = true,
 }: GateInput): ContractorGate {
-  const credentials = getSupplierCredentials(jurisdiction, types, records);
+  const credentials =
+    checklist ??
+    buildComplianceChecklist({ jurisdiction, types, supplierRecords: records, personRecords });
   const required = credentials.filter((c) => c.blocking);
   const answered = unsupervisedAccess === true || unsupervisedAccess === false;
   const yes = unsupervisedAccess === true;
@@ -138,6 +243,9 @@ export function evaluateContractorGate({
     unsupervisedAccess: yes,
     needsAnswer: false,
     needsEscortReason: false,
+    provisional: false,
+    seeReception: false,
+    entryPolicy,
   };
 
   // Nothing is required — the question is informational only.
@@ -154,33 +262,60 @@ export function evaluateContractorGate({
     };
   }
 
-  if (!supplierName) {
-    const names = required.map((c) => c.label).join(" and ");
+  const needsPerson = required.some((c) => c.scope === "person");
+  if (needsPerson && !personIdentified) {
     return {
-      blocked: yes,
-      reason: `Select the contractor's supplier so their ${names} can be verified.`,
+      blocked: true,
+      reason: "Enter the contractor's own name and mobile so their personal checks can be looked up.",
       ...base,
-      failing: required,
+      failing: required.filter((c) => c.scope === "person"),
     };
   }
 
-  const failing = required.filter((c) => c.state === "missing" || c.state === "expired");
+  const needsCompany = required.some((c) => c.scope === "company");
+  if (needsCompany && !supplierName) {
+    const names = required.filter((c) => c.scope === "company").map((c) => c.label).join(" and ");
+    return {
+      blocked: true,
+      reason: `Select the contractor's company so their ${names} can be checked.`,
+      ...base,
+      failing: required.filter((c) => c.scope === "company"),
+    };
+  }
+
+  const failing = required.filter(
+    (c) => c.state === "missing" || c.state === "expired" || c.state === "pending"
+  );
   if (failing.length === 0) {
     return { blocked: false, reason: null, ...base };
   }
 
-  const parts = failing.map((c) =>
-    c.state === "expired" ? `${c.label} expired on ${c.expiry}` : `${c.label} has not been recorded`
-  );
-  const list =
-    parts.length > 1
-      ? `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`
-      : parts[0];
+  const list = joinList(failing.map(describe));
+
+  if (entryPolicy === "reception") {
+    return {
+      blocked: true,
+      reason: `${list}. A staff member needs to complete this check-in at reception.`,
+      ...base,
+      failing,
+      seeReception: true,
+    };
+  }
+
+  if (entryPolicy === "provisional") {
+    return {
+      blocked: false,
+      reason: `${list}. Entry allowed provisionally — this contractor must stay escorted until the checks are confirmed.`,
+      ...base,
+      failing,
+      provisional: true,
+    };
+  }
 
   if (yes) {
     return {
       blocked: true,
-      reason: `${list} for ${supplierName}. Unsupervised resident access cannot proceed until these are current.`,
+      reason: `${list}. Unsupervised resident access cannot proceed until these are current.`,
       ...base,
       failing,
     };
@@ -190,10 +325,11 @@ export function evaluateContractorGate({
   return {
     blocked: needsEscortReason,
     reason: needsEscortReason
-      ? `${list} for ${supplierName}. Record who is escorting this contractor, or why resident contact is not possible, before continuing.`
-      : `${list} for ${supplierName}. Not blocking — escorted / no unsupervised resident access.`,
+      ? `${list}. Record who is escorting this contractor, or why resident contact is not possible, before continuing.`
+      : `${list}. Not blocking — escorted / no unsupervised resident access.`,
     ...base,
     failing,
     needsEscortReason,
+    provisional: !needsEscortReason,
   };
 }
