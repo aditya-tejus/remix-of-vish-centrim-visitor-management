@@ -545,7 +545,8 @@ export default function VisitorProfilePage() {
                         return (
                           <div
                             key={v.id}
-                            className={`group rounded-lg border p-3 transition-colors ${
+                            onClick={() => setExpandedVisit(expandedVisit === v.id ? null : v.id)}
+                            className={`group rounded-lg border p-3 transition-colors cursor-pointer hover:border-primary/40 ${
                               v.id === visitor.id
                                 ? "border-primary/30 bg-primary/[0.03]"
                                 : "border-border bg-card"
@@ -591,12 +592,16 @@ export default function VisitorProfilePage() {
                                 <Timer className="h-3 w-3" />
                                 {duration}
                               </span>
-                              {v.whomToVisit && (
-                                <span className="flex items-center gap-1">
-                                  <User className="h-3 w-3" />
-                                  {v.whomToVisit}
-                                </span>
-                              )}
+                              {(() => {
+                                const res = residentForVisit(v);
+                                if (!res && !v.whomToVisit) return null;
+                                return (
+                                  <span className="flex items-center gap-1">
+                                    <User className="h-3 w-3" />
+                                    {res ? `${res.name}${res.room ? ` · ${res.room}` : ""}${res.wing ? ` · ${res.wing}` : ""}` : v.whomToVisit}
+                                  </span>
+                                );
+                              })()}
                               {v.additionalVisitors > 0 && (
                                 <span className="flex items-center gap-1">
                                   <Users className="h-3 w-3" />
@@ -604,6 +609,47 @@ export default function VisitorProfilePage() {
                                 </span>
                               )}
                             </div>
+
+                            {expandedVisit === v.id && (
+                              <div className="mt-3 pt-3 border-t border-border space-y-3" onClick={(e) => e.stopPropagation()}>
+                                {v.bodyTemperature != null && (
+                                  <p className="text-[11px] text-muted-foreground">
+                                    Temperature recorded: <span className="font-semibold text-foreground">{v.bodyTemperature}°C</span>
+                                  </p>
+                                )}
+                                {v.checkoutReason && (
+                                  <p className="text-[11px] text-muted-foreground">
+                                    Reason for leaving: <span className="text-foreground">{v.checkoutReason}</span>
+                                  </p>
+                                )}
+                                {Array.isArray(v.companionDetails) && v.companionDetails.length > 0 && (
+                                  <div className="space-y-1">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">People with them</p>
+                                    {v.companionDetails.map((c: any, i: number) => (
+                                      <p key={i} className="text-[11px] text-foreground">
+                                        {c.name || `Companion ${i + 1}`}
+                                        {c.relation ? ` · ${c.relation}` : ""}
+                                        <span className="text-muted-foreground">
+                                          {c.checkedOutAt ? ` · left ${format(new Date(c.checkedOutAt), "hh:mm a")}` : " · still on site"}
+                                        </span>
+                                      </p>
+                                    ))}
+                                  </div>
+                                )}
+                                {v.healthAnswers && Object.keys(v.healthAnswers).length > 0 && (
+                                  <div className="space-y-1">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Questions answered</p>
+                                    <ScreeningAnswers answers={v.healthAnswers} />
+                                  </div>
+                                )}
+                                {v.comments && (
+                                  <p className="text-[11px] text-muted-foreground">Notes: <span className="text-foreground">{v.comments}</span></p>
+                                )}
+                                {!v.healthAnswers || Object.keys(v.healthAnswers).length === 0 ? (
+                                  <p className="text-[11px] text-muted-foreground italic">No questions were recorded for this visit.</p>
+                                ) : null}
+                              </div>
+                            )}
                           </div>
                         );
                       })}
