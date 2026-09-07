@@ -19,7 +19,18 @@ Today a key issue can be linked to a visitor, but the visit itself gives no hint
 
 No new key status is stored on the visit — it is read live from the keys register, so it can never drift out of sync.
 
-## 2. Walk the kiosk as a repeat visitor
+## 2. Keys held by staff, with no visit record
+
+A key can already be issued to a staff member, but the holder's name is typed by hand, so those keys are easy to mistype and impossible to report on reliably.
+
+- When the holder is a staff member, pick them from the staff list instead of typing a name (free text stays available for anyone not on the list).
+- Keys held by staff show the staff member's name and role on the key row, with no link to any visit — staff key holding is completely independent of the visitor log.
+- A "held by staff" filter and a per-staff-member view: every key that person currently holds and their past issues.
+- Overdue chasing works the same for staff-held keys: they surface at the top of the page and in the overdue count.
+- Since staff never check out at the kiosk, staff-held keys are only cleared by a staff return on the Keys Register — the checkout warning in the previous section applies only to visitors and contractors.
+
+
+## 3. Walk the kiosk as a repeat visitor
 
 Run the full journey in the live preview and confirm each point, then report back with what happened:
 
