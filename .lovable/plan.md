@@ -1,27 +1,18 @@
 # Kiosk repeat visitors, companion fixes, and a Keys Register
 
-## 1. Repeat visitors — recognition happens as they type
+## 1. Returning visitor fast lane (all optional, per setting)
 
-No separate "been here before?" screen and no extra tile. The visitor just starts checking in as normal:
+A "Been here before?" panel on the kiosk check-in details step, plus a shortcut tile on the kiosk home screen. Three recognition methods, each independently switched on or off in the Visitor and Volunteer kiosk settings:
 
-- They enter first name, surname and mobile on the details step.
-- As soon as name + mobile match a past visit, a quiet card slides in: "Welcome back, Sarah — we've filled in the rest from your last visit." Email and address fill themselves in, and they can edit anything.
-- If nothing matches, nothing happens — the form behaves exactly as it does today. No "have you been here before?" prompt that a first-timer has to dismiss.
+- Mobile number: visitor types their mobile, we find their last visit and pre-fill name, email, address and who they were visiting.
+- Personal QR: a permanent code the visitor keeps (shown on the success screen, printable) and scans to load their profile instantly.
+- Name search: type first and last name, pick the matching card, confirm.
 
-Then the visiting step becomes one tap for regulars:
+Once matched, a confirmation card shows the saved details with "That's me" / "Not me". Confirming skips past the details step to who they're visiting, with the resident from last time pre-selected as a one-tap suggestion ("Here to see John Smith, Room 12?" with a "Someone else" option that opens the normal search, respecting the existing privacy lookup mode).
 
-- Top of the screen: "Here to see John Smith (Room 12)?" with a big Yes button, based on who they visited last time.
-- Below it: "Someone else" which opens the normal resident search/list (respecting the existing privacy lookup mode).
+Health questions, terms and food questions are always asked fresh — never pre-answered. With all switches off, the kiosk behaves exactly as it does today.
 
-Settings (Visitor and Volunteer kiosk sections), each independently switchable:
-
-- Recognise returning visitors by name + mobile (on/off)
-- Suggest the resident they visited last time (on/off)
-- Personal QR badge — a permanent code the visitor keeps and scans to be recognised instantly (on/off)
-
-With everything off, the kiosk works as it does today. Health questions, terms and food questions are always asked fresh, never pre-answered.
-
-Privacy: matching runs server-side and returns only the one matched person's own details; a mobile number that doesn't match returns nothing, so the kiosk can never be used to browse visitors.
+Privacy: matching runs server-side and returns only the one matched person's own details, so the kiosk can never be used to browse visitors.
 
 ## 2. Companion step fixes
 
@@ -33,6 +24,7 @@ Privacy: matching runs server-side and returns only the one matched person's own
 ## 3. Keys Register (new section in the left menu)
 
 A standalone Keys Register page, staff-operated — issuing is a staff action, not something a contractor does themselves at the kiosk.
+
 
 Main view — every key in the village at a glance, colour coded:
 
