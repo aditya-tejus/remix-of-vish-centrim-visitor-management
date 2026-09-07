@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useOpenKeyIssues } from "@/hooks/useOpenKeyIssues";
 import { useFormFields, FormField } from "@/hooks/useFormFields";
 import { useActiveHealthQuestions, useActiveVaccinationFields } from "@/hooks/useHealthQuestions";
 import { useResidents } from "@/hooks/useResidents";
@@ -23,6 +24,7 @@ export function useKioskCheckInFlow() {
   const [tcContent, setTcContent] = useState<string | null>(null);
   const [jurisdiction, setJurisdiction] = useState<"AU" | "UK">("UK");
   const [contractorGate, setContractorGate] = useState<{ blocked: boolean; reason: string | null }>({ blocked: false, reason: null });
+  const { overdueForName, policy: keyPolicy } = useOpenKeyIssues();
   const [residentLookupMode, setResidentLookupMode] = useState<"show_all" | "search_first">("search_first");
   const [staffLookupMode, setStaffLookupMode] = useState<"search_first" | "by_department" | "free_text">("search_first");
   const [returningOptions, setReturningOptions] = useState({ mobile: false, qr: false, name: false, suggestResident: false });
@@ -228,6 +230,12 @@ export function useKioskCheckInFlow() {
   // hard-stops the check-in. Outside outbreak periods it is flagged for staff instead.
   const screeningBlocked = outbreakMode && screeningFlagged;
 
+  // Outstanding keys or fobs: at an unattended kiosk we ask the person to see
+  // reception rather than silently letting them in.
+  const fullName = `${(formValues.firstName || "").trim()} ${(formValues.surname || "").trim()}`.trim();
+  const overdueKeys = overdueForName(fullName);
+  const keyBlocked = keyPolicy.enforcement === "block" && overdueKeys.length > 0;
+
   const foodStepValid = bringingFood === false || (bringingFood === true && isFoodFormValid(foodForm));
 
 
@@ -271,6 +279,9 @@ export function useKioskCheckInFlow() {
     highTemperature,
     screeningBlocked,
     screeningFlagged,
+    overdueKeys,
+    keyBlocked,
+    keyEnforcement: keyPolicy.enforcement,
     outbreakMode,
     badgePrintingEnabled,
     bringingFood,
