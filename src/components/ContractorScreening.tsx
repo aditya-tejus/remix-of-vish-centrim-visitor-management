@@ -336,52 +336,47 @@ export function ContractorScreening({
         )}
       </div>
 
-      {/* Credential verification — dynamic list configured in Settings */}
-      {selectedSupplier && credentials.length > 0 && (
+      {/* Compliance status — show where they stand, only ask when something is missing */}
+      {credentials.length > 0 && (
         <div className="space-y-2">
           <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
             <CalendarClock className="h-3.5 w-3.5" />
-            Credential Verification
+            Compliance status
           </Label>
-          {credentials.map((c) => (
-            <div key={c.typeId} className={`rounded-xl border-2 p-3 space-y-2 ${stateStyles[c.state]}`}>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[12px] font-semibold text-foreground">
-                  {c.label}
-                  {c.blocking && <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wider text-destructive">Required</span>}
+
+          {allClear ? (
+            <div className="rounded-xl border-2 border-success/30 bg-success/5 p-3 flex items-center gap-2.5">
+              <Check className="h-5 w-5 text-success shrink-0" />
+              <div>
+                <p className="text-[13px] font-semibold text-success">All checks current — good to continue</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {credentials.map((c) => `${c.shortLabel}${c.expiry ? ` to ${c.expiry}` : ""}`).join(" · ")}
                 </p>
-                <Badge variant="outline" className="text-[10px] font-bold shrink-0">
-                  {stateLabel[c.state]}
-                  {c.state === "expiring" && c.daysToExpiry !== null && ` · ${c.daysToExpiry}d`}
-                </Badge>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <Label className="text-[10px] text-muted-foreground">Expiry date</Label>
-                  <Input
-                    type="date"
-                    defaultValue={c.expiry || ""}
-                    onBlur={(e) => e.target.value !== (c.expiry || "") && saveCredential(c.typeId, "expiry_date", e.target.value)}
-                    className="rounded-lg h-9 text-sm"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[10px] text-muted-foreground">Document reference</Label>
-                  <Input
-                    defaultValue={c.reference || ""}
-                    placeholder="Certificate / clearance no."
-                    onBlur={(e) => e.target.value !== (c.reference || "") && saveCredential(c.typeId, "reference", e.target.value)}
-                    className="rounded-lg h-9 text-sm"
-                  />
-                </div>
-              </div>
-              {savingCredential?.startsWith(c.typeId) ? (
-                <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Saving…</p>
-              ) : null}
             </div>
-          ))}
+          ) : (
+            <>
+              {actionNeeded.length > 0 && (
+                <p className="text-[11px] text-muted-foreground">
+                  {kiosk
+                    ? "Please attach the item below so a staff member can confirm it."
+                    : "Attach the document and confirm it once you have seen the original."}
+                </p>
+              )}
+              <ComplianceChecklist
+                checklist={credentials}
+                personId={person?.id ?? null}
+                kiosk={kiosk}
+                large={!compact}
+                onSavePerson={async (typeId, fields) => { await savePersonCredential(typeId, fields as any); }}
+                onSaveCompany={async (typeId, fields) => { await save(typeId, fields); }}
+                onVerify={kiosk ? undefined : verifyCredential}
+              />
+            </>
+          )}
         </div>
       )}
+
 
       {gate.reason && (
         <div className={`rounded-xl border-2 p-3 flex items-start gap-2 ${gate.blocked ? "border-destructive/40 bg-destructive/5" : "border-amber-500/40 bg-amber-500/5"}`}>
