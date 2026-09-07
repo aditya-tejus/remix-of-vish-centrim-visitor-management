@@ -1,3 +1,4 @@
+import { FoodPrivacyNotice } from "@/components/FoodPrivacyNotice";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -149,6 +150,8 @@ export function FoodFormFields({ state, onChange, residents, primaryResidentId, 
           className={`rounded-xl ${kiosk ? "min-h-[96px] text-base" : "min-h-[70px] text-[13px]"}`}
         />
       </div>
+
+      <FoodPrivacyNotice size={kiosk ? "kiosk" : "default"} />
     </div>
   );
 }

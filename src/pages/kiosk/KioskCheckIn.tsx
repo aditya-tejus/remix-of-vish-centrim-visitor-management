@@ -15,7 +15,7 @@ import { ContractorScreening } from "@/components/ContractorScreening";
 import { KioskProgressStepper } from "@/components/kiosk/KioskProgressStepper";
 import { FoodFormFields } from "@/components/food/FoodFormFields";
 import { insertFoodRecord } from "@/lib/foodRegister";
-import { printBadge } from "@/lib/printBadge";
+import { printBadgeAuto } from "@/lib/printBadge";
 import { KioskSuccessScreen } from "@/components/kiosk/KioskSuccessScreen";
 import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
 import { useKioskCheckInFlow, KioskStepId } from "@/hooks/useKioskCheckInFlow";
@@ -244,7 +244,7 @@ export default function KioskCheckIn() {
               size="sm"
               className="gap-2 border border-border text-sm"
               onClick={() =>
-                printBadge({
+                printBadgeAuto({
                   name: `${flow.formValues.firstName || ""} ${flow.formValues.surname || ""}`.trim(),
                   type: flow.selectedType,
                   visiting: flow.formValues.whomToVisit || undefined,

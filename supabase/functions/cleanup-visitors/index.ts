@@ -102,12 +102,66 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 2b. Food register records follow the VISITOR retention period.
+    //     Records linked to a visitor under legal hold are exempt.
+    let foodDeleted = 0;
+    const foodDays = retentionMap["visitor"];
+    if (foodDays === null) {
+      console.log("Cleanup: food register set to never auto-delete (visitor retention) — skipped");
+    } else {
+      const foodCutoff = new Date();
+      foodCutoff.setDate(foodCutoff.getDate() - foodDays);
+      const foodCutoffISO = foodCutoff.toISOString();
+
+      // Visitor ids currently under legal hold — their food records are protected.
+      const { data: heldVisitors } = await supabase
+        .from("visitors")
+        .select("id")
+        .eq("legal_hold", true);
+      const heldIds: string[] = (heldVisitors || []).map((r: { id: string }) => r.id);
+
+      let foodMore = true;
+      while (foodMore) {
+        let q = supabase
+          .from("food_register")
+          .select("id, visitor_id, resident_visitor_id")
+          .lt("recorded_at", foodCutoffISO)
+          .limit(BATCH_SIZE);
+
+        const { data: foodBatch, error: foodSelErr } = await q;
+        if (foodSelErr) throw new Error(`Select error (food_register): ${foodSelErr.message}`);
+        if (!foodBatch || foodBatch.length === 0) break;
+
+        const deletable = foodBatch
+          .filter(
+            (r: any) =>
+              !heldIds.includes(r.visitor_id) && !heldIds.includes(r.resident_visitor_id)
+          )
+          .map((r: any) => r.id);
+
+        if (deletable.length > 0) {
+          const { error: foodDelErr } = await supabase
+            .from("food_register")
+            .delete()
+            .in("id", deletable);
+          if (foodDelErr) throw new Error(`Delete error (food_register): ${foodDelErr.message}`);
+          foodDeleted += deletable.length;
+        }
+
+        // Nothing deletable in this batch (all under legal hold) — stop to avoid looping.
+        if (foodBatch.length < BATCH_SIZE || deletable.length === 0) foodMore = false;
+      }
+      totalDeleted += foodDeleted;
+      console.log(`Cleanup: ${foodDeleted} food register records deleted`);
+    }
+
     // 3. Log to audit_log
     await supabase.from("audit_log").insert({
       action: "automated_retention_cleanup",
       details: {
         retention_per_type: retentionMap,
         records_deleted: totalDeleted,
+        food_records_deleted: foodDeleted,
       },
       records_affected: totalDeleted,
       performed_by: "system_cron",

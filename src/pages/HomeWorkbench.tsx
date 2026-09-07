@@ -11,7 +11,9 @@ import { ResidentOutingDialog } from "@/components/ResidentOutingDialog";
 import { ActiveNowList } from "@/components/workbench/ActiveNowList";
 import { DayGroupedHistory } from "@/components/workbench/DayGroupedHistory";
 import { Button } from "@/components/ui/button";
-import { UserPlus, LogOut, DoorOpen, Clock, Users, AlertTriangle } from "lucide-react";
+import { UserPlus, LogOut, DoorOpen, Clock, Users, AlertTriangle, ShieldAlert } from "lucide-react";
+import { useOccupancy } from "@/hooks/useOccupancy";
+import { useOutbreakMode } from "@/hooks/useOutbreakMode";
 import { format, isPast } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Visitor } from "@/types/visitor";
@@ -25,6 +27,8 @@ export default function HomeWorkbench() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [draftCount, setDraftCount] = useState(0);
   const [pendingApprovals, setPendingApprovals] = useState(0);
+  const { count: onSiteCount, cap, atLimit, nearLimit } = useOccupancy();
+  const { enabled: outbreakMode } = useOutbreakMode();
 
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -78,6 +82,66 @@ export default function HomeWorkbench() {
           />
 
           <main className="p-6 space-y-6">
+            {/* Outbreak Mode banner */}
+            {outbreakMode && (
+              <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+                <ShieldAlert className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-destructive">Outbreak Mode is on</p>
+                  <p className="text-[13px] text-muted-foreground mt-0.5">
+                    Self check-in at the kiosk is blocked for anyone reporting symptoms or a temperature above 37.8&deg;C.
+                    They are asked to see a staff member, and reception is alerted. An admin can turn this off from the header.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Live occupancy */}
+            {cap !== null && (
+              <div
+                className={`flex items-center justify-between gap-4 rounded-xl border p-4 ${
+                  atLimit
+                    ? "border-destructive/30 bg-destructive/5"
+                    : nearLimit
+                    ? "border-warning/30 bg-warning/5"
+                    : "border-border bg-card"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                      atLimit ? "bg-destructive/10 text-destructive" : nearLimit ? "bg-warning/10 text-warning" : "bg-primary/10 text-primary"
+                    }`}
+                  >
+                    <Users className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      {atLimit
+                        ? "Visitor limit reached"
+                        : nearLimit
+                        ? "Approaching the visitor limit"
+                        : "Visitors on site"}
+                    </p>
+                    <p className="text-[13px] text-muted-foreground">
+                      {atLimit
+                        ? "No further visitors should be admitted until someone leaves."
+                        : nearLimit
+                        ? "Only a few places left before the limit is reached."
+                        : "Live count against the maximum set in Settings."}
+                    </p>
+                  </div>
+                </div>
+                <p
+                  className={`text-2xl font-bold tabular-nums ${
+                    atLimit ? "text-destructive" : nearLimit ? "text-warning" : "text-foreground"
+                  }`}
+                >
+                  {onSiteCount} / {cap}
+                </p>
+              </div>
+            )}
+
             {/* 3 Big Action Buttons */}
             <section>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
