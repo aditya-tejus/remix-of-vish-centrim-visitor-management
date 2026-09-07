@@ -10,6 +10,8 @@ import { useVisitors } from "@/hooks/useVisitors";
 import { useStaffMembers } from "@/hooks/useStaffMembers";
 import { useResidents } from "@/hooks/useResidents";
 import type { PropertyKey } from "@/hooks/useKeys";
+import { useKeyPolicy, dueDateFromPolicy } from "@/hooks/useKeyPolicy";
+import { Switch } from "@/components/ui/switch";
 import { format } from "date-fns";
 
 export interface IssuePrefill {
@@ -29,6 +31,7 @@ interface Props {
     visitorId?: string | null;
     issuedToStaffId?: string | null;
     expectedReturn?: Date | null;
+    isPermanent?: boolean;
     issuedBy?: string | null;
     notes?: string | null;
   }) => Promise<any>;
@@ -41,12 +44,14 @@ export function IssueKeySheet({ keyRecord, onClose, prefill, onIssue }: Props) {
   const { visitors } = useVisitors();
   const { staff } = useStaffMembers();
   const { residents } = useResidents();
+  const { policy } = useKeyPolicy();
 
   // person value encodes source: visit:<id> | staff:<id> | resident:<visitorId> | manual
   const [person, setPerson] = useState("manual");
   const [manualName, setManualName] = useState("");
   const [manualType, setManualType] = useState("contractor");
   const [expectedReturn, setExpectedReturn] = useState("");
+  const [permanent, setPermanent] = useState(false);
   const [issuedBy, setIssuedBy] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
@@ -65,17 +70,21 @@ export function IssueKeySheet({ keyRecord, onClose, prefill, onIssue }: Props) {
       setManualName("");
       setManualType("contractor");
     }
-    setExpectedReturn("");
+    const preset = dueDateFromPolicy(policy);
+    setExpectedReturn(preset ? toLocalInput(preset) : "");
+    setPermanent(false);
     setIssuedBy("");
     setNotes("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keyRecord?.id]);
+  }, [keyRecord?.id, policy.defaultLoanPeriod]);
 
-  const quickDue = (kind: "2h" | "eod" | "tomorrow") => {
+  const quickDue = (kind: "2h" | "eod" | "tomorrow" | "7d") => {
     const d = new Date();
     if (kind === "2h") d.setHours(d.getHours() + 2);
     if (kind === "eod") d.setHours(17, 0, 0, 0);
     if (kind === "tomorrow") { d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); }
+    if (kind === "7d") d.setDate(d.getDate() + 7);
+    setPermanent(false);
     setExpectedReturn(toLocalInput(d));
   };
 
@@ -99,7 +108,7 @@ export function IssueKeySheet({ keyRecord, onClose, prefill, onIssue }: Props) {
     if (!keyRecord) return;
     const holder = resolveHolder();
     if (!holder.name) {
-      toast({ title: "Who is taking the key?", variant: "destructive" });
+      toast({ title: "Who is taking it?", variant: "destructive" });
       return;
     }
     setSaving(true);
@@ -109,7 +118,8 @@ export function IssueKeySheet({ keyRecord, onClose, prefill, onIssue }: Props) {
       issuedToType: holder.type,
       visitorId: holder.visitorId,
       issuedToStaffId: holder.staffId,
-      expectedReturn: expectedReturn ? new Date(expectedReturn) : null,
+      expectedReturn: permanent || !expectedReturn ? null : new Date(expectedReturn),
+      isPermanent: permanent,
       issuedBy: issuedBy.trim() || null,
       notes: notes.trim() || null,
     });
@@ -118,7 +128,11 @@ export function IssueKeySheet({ keyRecord, onClose, prefill, onIssue }: Props) {
       toast({ title: "Could not issue the key", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: `${keyRecord.keyLabel} issued to ${holder.name}` });
+    toast({
+      title: permanent
+        ? `${keyRecord.keyLabel} recorded as ${holder.name}'s own`
+        : `${keyRecord.keyLabel} issued to ${holder.name}`,
+    });
     onClose();
   };
 
@@ -135,7 +149,7 @@ export function IssueKeySheet({ keyRecord, onClose, prefill, onIssue }: Props) {
 
         <div className="space-y-4 mt-4">
           <div className="space-y-1.5">
-            <Label>Who is taking the key?</Label>
+            <Label>Who is taking it?</Label>
             <Select value={person} onValueChange={setPerson}>
               <SelectTrigger><SelectValue placeholder="Pick a person" /></SelectTrigger>
               <SelectContent>
@@ -194,15 +208,28 @@ export function IssueKeySheet({ keyRecord, onClose, prefill, onIssue }: Props) {
             </p>
           </div>
 
-          <div className="space-y-1.5">
-            <Label>Expected back</Label>
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" size="sm" variant="secondary" className="border border-border" onClick={() => quickDue("2h")}>In 2 hours</Button>
-              <Button type="button" size="sm" variant="secondary" className="border border-border" onClick={() => quickDue("eod")}>End of day</Button>
-              <Button type="button" size="sm" variant="secondary" className="border border-border" onClick={() => quickDue("tomorrow")}>Tomorrow</Button>
+          {policy.permanentAllowed && (
+            <div className="flex items-center justify-between rounded-xl border border-border p-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">Permanent — their own key or fob</p>
+                <p className="text-xs text-muted-foreground">No due-back date. Never shown as overdue.</p>
+              </div>
+              <Switch checked={permanent} onCheckedChange={setPermanent} />
             </div>
-            <Input type="datetime-local" value={expectedReturn} onChange={(e) => setExpectedReturn(e.target.value)} />
-          </div>
+          )}
+
+          {!permanent && (
+            <div className="space-y-1.5">
+              <Label>Expected back</Label>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="secondary" className="border border-border" onClick={() => quickDue("2h")}>In 2 hours</Button>
+                <Button type="button" size="sm" variant="secondary" className="border border-border" onClick={() => quickDue("eod")}>End of day</Button>
+                <Button type="button" size="sm" variant="secondary" className="border border-border" onClick={() => quickDue("tomorrow")}>Tomorrow</Button>
+                <Button type="button" size="sm" variant="secondary" className="border border-border" onClick={() => quickDue("7d")}>In 7 days</Button>
+              </div>
+              <Input type="datetime-local" value={expectedReturn} onChange={(e) => setExpectedReturn(e.target.value)} />
+            </div>
+          )}
 
           <div className="space-y-1">
             <Label>Issued by</Label>
@@ -214,7 +241,7 @@ export function IssueKeySheet({ keyRecord, onClose, prefill, onIssue }: Props) {
           </div>
 
           <Button onClick={submit} disabled={saving} className="w-full">
-            {saving ? "Issuing…" : "Issue key"}
+            {saving ? "Issuing…" : permanent ? "Record permanent holding" : "Issue key"}
           </Button>
         </div>
       </SheetContent>

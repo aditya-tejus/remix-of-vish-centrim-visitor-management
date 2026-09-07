@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchKeyPolicy, KeyPolicy, DEFAULT_KEY_POLICY } from "@/hooks/useKeyPolicy";
 
-export type KeyStatus = "available" | "issued" | "overdue" | "lost" | "retired";
+export type KeyStatus = "available" | "issued" | "permanent" | "overdue" | "lost" | "retired";
 
 export interface KeyIssue {
   id: string;
@@ -19,6 +20,8 @@ export interface KeyIssue {
   returnedTo: string | null;
   conditionNotes: string | null;
   notes: string | null;
+  /** A resident's own key or fob — never due back, never overdue. */
+  isPermanent: boolean;
 }
 
 export interface PropertyKey {
@@ -35,8 +38,11 @@ export interface PropertyKey {
   isActive: boolean;
   /** The open (not yet returned) issue, if the key is currently out. */
   currentIssue: KeyIssue | null;
-  /** True when the key is out past its expected return time. */
+  /** True when the key is out past its expected return time (plus grace). */
   overdue: boolean;
+  lostAt: Date | null;
+  lostNotes: string | null;
+  replacedByKeyId: string | null;
 }
 
 const mapIssue = (r: any): KeyIssue => ({
@@ -54,16 +60,24 @@ const mapIssue = (r: any): KeyIssue => ({
   returnedTo: r.returned_to,
   conditionNotes: r.condition_notes,
   notes: r.notes,
+  isPermanent: !!r.is_permanent,
 });
+
+/** Shared overdue rule so every surface agrees: permanent holdings never expire. */
+export function isIssueOverdue(issue: { expectedReturn: Date | null; isPermanent: boolean }, graceMinutes: number, now = Date.now()) {
+  if (issue.isPermanent || !issue.expectedReturn) return false;
+  return issue.expectedReturn.getTime() + graceMinutes * 60000 < now;
+}
 
 export function useKeys() {
   const [keys, setKeys] = useState<PropertyKey[]>([]);
   const [issues, setIssues] = useState<KeyIssue[]>([]);
+  const [policy, setPolicy] = useState<KeyPolicy>(DEFAULT_KEY_POLICY);
   const [loading, setLoading] = useState(true);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    const [{ data: keyRows }, { data: issueRows }] = await Promise.all([
+    const [{ data: keyRows }, { data: issueRows }, keyPolicy] = await Promise.all([
       (supabase.from("property_keys" as any) as any)
         .select("*")
         .eq("is_active", true)
@@ -72,20 +86,22 @@ export function useKeys() {
         .select("*")
         .order("issued_at", { ascending: false })
         .limit(1000),
+      fetchKeyPolicy(),
     ]);
 
     const allIssues: KeyIssue[] = (issueRows || []).map(mapIssue);
     setIssues(allIssues);
+    setPolicy(keyPolicy);
 
     const now = Date.now();
     setKeys(
       ((keyRows as any[]) || []).map((r) => {
         const open = allIssues.find((i) => i.keyId === r.id && !i.returnedAt) || null;
-        const overdue = !!(open?.expectedReturn && open.expectedReturn.getTime() < now);
+        const overdue = !!open && isIssueOverdue(open, keyPolicy.graceMinutes, now);
         const status: KeyStatus = r.status === "lost" || r.status === "retired"
           ? r.status
           : open
-            ? (overdue ? "overdue" : "issued")
+            ? (open.isPermanent ? "permanent" : overdue ? "overdue" : "issued")
             : "available";
         return {
           id: r.id,
@@ -101,6 +117,9 @@ export function useKeys() {
           isActive: r.is_active,
           currentIssue: open,
           overdue,
+          lostAt: r.lost_at ? new Date(r.lost_at) : null,
+          lostNotes: r.lost_notes ?? null,
+          replacedByKeyId: r.replaced_by_key_id ?? null,
         };
       })
     );
@@ -152,6 +171,7 @@ export function useKeys() {
     supplierId?: string | null;
     issuedToStaffId?: string | null;
     expectedReturn?: Date | null;
+    isPermanent?: boolean;
     issuedBy?: string | null;
     notes?: string | null;
   }) => {
@@ -162,7 +182,8 @@ export function useKeys() {
       visitor_id: input.visitorId || null,
       supplier_id: input.supplierId || null,
       issued_to_staff_id: input.issuedToStaffId || null,
-      expected_return: input.expectedReturn ? input.expectedReturn.toISOString() : null,
+      expected_return: input.isPermanent || !input.expectedReturn ? null : input.expectedReturn.toISOString(),
+      is_permanent: !!input.isPermanent,
       issued_by: input.issuedBy || null,
       notes: input.notes || null,
     });
@@ -194,6 +215,117 @@ export function useKeys() {
     return error;
   };
 
+  /** Extend the due-back date, or convert the holding to permanent. */
+  const renewIssue = async (input: {
+    issueId: string;
+    keyLabel: string;
+    holderName: string;
+    newDue: Date | null;
+    makePermanent?: boolean;
+    reason?: string | null;
+    performedBy?: string | null;
+  }) => {
+    const { error } = await (supabase.from("key_issues" as any) as any)
+      .update({
+        expected_return: input.makePermanent || !input.newDue ? null : input.newDue.toISOString(),
+        is_permanent: !!input.makePermanent,
+      })
+      .eq("id", input.issueId);
+
+    if (!error) {
+      await supabase.from("audit_log").insert({
+        action: "key_renewed",
+        details: {
+          key: input.keyLabel,
+          holder: input.holderName,
+          new_due: input.makePermanent ? "permanent" : input.newDue?.toISOString() || null,
+        } as any,
+        change_reason: input.reason || null,
+        records_affected: 1,
+        performed_by: input.performedBy || "staff",
+      });
+    }
+    await fetchAll();
+    return error;
+  };
+
+  /**
+   * Mark a key or fob as lost. Optionally creates a replacement copy for the
+   * same property/resident, numbered as the next copy in that set.
+   */
+  const markLost = async (input: {
+    key: PropertyKey;
+    notes?: string | null;
+    replace?: boolean;
+    performedBy?: string | null;
+  }) => {
+    const { key } = input;
+    let replacementId: string | null = null;
+
+    if (input.replace) {
+      const siblings = keys.filter(
+        (k) =>
+          k.keyType === key.keyType &&
+          k.propertyLabel === key.propertyLabel &&
+          (k.residentVisitorId || null) === (key.residentVisitorId || null)
+      );
+      const nextCopy = Math.max(0, ...siblings.map((k) => k.copyNumber || 0)) + 1;
+      const { data, error: insertError } = await (supabase.from("property_keys" as any) as any)
+        .insert({
+          key_label: key.keyLabel,
+          key_type: key.keyType,
+          property_label: key.propertyLabel,
+          resident_visitor_id: key.residentVisitorId,
+          resident_name: key.residentName,
+          storage_location: key.storageLocation,
+          copy_number: nextCopy,
+          notes: `Replacement for copy ${key.copyNumber ?? "—"} reported lost`,
+          status: "available",
+        })
+        .select("id")
+        .maybeSingle();
+      if (insertError) return insertError;
+      replacementId = (data as any)?.id ?? null;
+    }
+
+    // Close any open handover as "not returned — lost".
+    const open = key.currentIssue;
+    if (open) {
+      await (supabase.from("key_issues" as any) as any)
+        .update({
+          returned_at: new Date().toISOString(),
+          condition_notes: `Not returned — reported lost${input.notes ? `: ${input.notes}` : ""}`,
+        })
+        .eq("id", open.id);
+    }
+
+    const { error } = await (supabase.from("property_keys" as any) as any)
+      .update({
+        status: "lost",
+        lost_at: new Date().toISOString(),
+        lost_notes: input.notes || null,
+        replaced_by_key_id: replacementId,
+      })
+      .eq("id", key.id);
+
+    if (!error) {
+      await supabase.from("audit_log").insert({
+        action: "key_reported_lost",
+        details: {
+          key: key.keyLabel,
+          copy: key.copyNumber,
+          property: key.propertyLabel,
+          replacement_created: !!replacementId,
+        } as any,
+        change_reason: input.notes || null,
+        records_affected: 1,
+        performed_by: input.performedBy || "staff",
+      });
+    }
+    await fetchAll();
+    return error;
+  };
+
   const setKeyStatus = async (keyId: string, status: KeyStatus) => {
     await (supabase.from("property_keys" as any) as any).update({ status }).eq("id", keyId);
     await fetchAll();
@@ -201,5 +333,9 @@ export function useKeys() {
 
   const historyFor = (keyId: string) => issues.filter((i) => i.keyId === keyId);
 
-  return { keys, issues, loading, refetch: fetchAll, addKey, issueKey, returnKey, setKeyStatus, historyFor };
+  return {
+    keys, issues, loading, policy,
+    refetch: fetchAll,
+    addKey, issueKey, returnKey, renewIssue, markLost, setKeyStatus, historyFor,
+  };
 }

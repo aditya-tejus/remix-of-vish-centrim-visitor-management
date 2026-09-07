@@ -237,6 +237,14 @@ export default function KioskCheckIn() {
   }, [flow, addVisitor, toast]);
 
   const handleSubmit = () => {
+    if (flow.keyBlocked) {
+      toast({
+        title: "Please see reception",
+        description: `Our records show ${flow.overdueKeys.map((k) => k.keyLabel).join(", ")} has not been returned yet.`,
+        variant: "destructive",
+      });
+      return;
+    }
     if (flow.screeningBlocked) {
       toast({
         title: "Please see a staff member",
@@ -975,6 +983,23 @@ export default function KioskCheckIn() {
               )}
             </div>
 
+            {flow.overdueKeys.length > 0 && flow.keyEnforcement !== "off" && (
+              <div className={`rounded-2xl p-5 flex items-start gap-3 border-2 ${flow.keyBlocked ? "bg-destructive/10 border-destructive/30" : "bg-warning/10 border-warning/30"}`}>
+                <AlertTriangle className={`h-6 w-6 shrink-0 mt-0.5 ${flow.keyBlocked ? "text-destructive" : "text-warning"}`} />
+                <div>
+                  <p className={`text-lg font-bold ${flow.keyBlocked ? "text-destructive" : "text-warning"}`}>
+                    {flow.keyBlocked ? "Please see reception" : "You still have a key or fob"}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {flow.overdueKeys.map((k) => k.keyLabel).join(", ")} has not been returned.
+                    {flow.keyBlocked
+                      ? " Reception will help you complete your check-in."
+                      : " Please hand it back at reception when you can."}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {!flow.screeningBlocked && flow.screeningFlagged && (
               <div className="rounded-2xl bg-warning/10 border-2 border-warning/30 p-5 flex items-start gap-3">
                 <AlertTriangle className="h-6 w-6 text-warning shrink-0 mt-0.5" />
@@ -1006,7 +1031,7 @@ export default function KioskCheckIn() {
               <Button variant="secondary" onClick={goBack} className="flex-1 h-14 text-base gap-2 border border-border">
                 <ArrowLeft className="h-5 w-5" /> Back
               </Button>
-              <Button onClick={goNext} disabled={flow.screeningBlocked} className="flex-1 h-14 text-base gap-2">
+              <Button onClick={goNext} disabled={flow.screeningBlocked || flow.keyBlocked} className="flex-1 h-14 text-base gap-2">
                 Next <ArrowRight className="h-5 w-5" />
               </Button>
             </div>
