@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -106,9 +106,17 @@ export function ContractorScreening({
     (q) => q.type === "yesno" && answers[q.id] === false
   );
 
+  // Report the gate upward only when it actually changes — the callback is
+  // usually an inline arrow, so it must stay out of the dependency list.
+  const lastReported = useRef<string>("");
+  const onBlockedChangeRef = useRef(onBlockedChange);
+  onBlockedChangeRef.current = onBlockedChange;
   useEffect(() => {
-    onBlockedChange?.(gate.blocked, gate.reason);
-  }, [gate.blocked, gate.reason, onBlockedChange]);
+    const signature = `${gate.blocked}|${gate.reason ?? ""}`;
+    if (signature === lastReported.current) return;
+    lastReported.current = signature;
+    onBlockedChangeRef.current?.(gate.blocked, gate.reason);
+  }, [gate.blocked, gate.reason]);
 
   const saveCredential = async (typeId: string, field: "expiry_date" | "reference", value: string) => {
     if (!selectedSupplier) return;
