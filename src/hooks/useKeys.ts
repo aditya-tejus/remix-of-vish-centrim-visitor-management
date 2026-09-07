@@ -120,21 +120,29 @@ export function useKeys() {
     copyNumber?: number | null;
     storageLocation?: string | null;
     notes?: string | null;
+    /** Create this many identical keys, numbered copy 1..n. */
+    copies?: number;
   }) => {
-    const { error } = await (supabase.from("property_keys" as any) as any).insert({
+    const count = Math.min(Math.max(input.copies ?? 1, 1), 20);
+    const base = {
       key_label: input.keyLabel,
       key_type: input.keyType,
       property_label: input.propertyLabel,
       resident_visitor_id: input.residentVisitorId || null,
       resident_name: input.residentName || null,
-      copy_number: input.copyNumber ?? null,
       storage_location: input.storageLocation || null,
       notes: input.notes || null,
       status: "available",
-    });
+    };
+    const rows = count > 1
+      ? Array.from({ length: count }, (_, i) => ({ ...base, copy_number: i + 1 }))
+      : [{ ...base, copy_number: input.copyNumber ?? null }];
+
+    const { error } = await (supabase.from("property_keys" as any) as any).insert(rows);
     await fetchAll();
     return error;
   };
+
 
   const issueKey = async (input: {
     keyId: string;
