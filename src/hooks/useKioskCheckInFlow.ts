@@ -25,6 +25,9 @@ export function useKioskCheckInFlow() {
   const [contractorGate, setContractorGate] = useState<{ blocked: boolean; reason: string | null }>({ blocked: false, reason: null });
   const [residentLookupMode, setResidentLookupMode] = useState<"show_all" | "search_first">("search_first");
   const [staffLookupMode, setStaffLookupMode] = useState<"search_first" | "by_department" | "free_text">("search_first");
+  const [returningOptions, setReturningOptions] = useState({ mobile: false, qr: false, name: false, suggestResident: false });
+  const [personQr, setPersonQr] = useState<string | null>(null);
+
   const [contractorAnswers, setContractorAnswers] = useState<Record<string, any>>({});
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [returningVisitor, setReturningVisitor] = useState<any>(null);
