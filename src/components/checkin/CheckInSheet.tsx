@@ -271,6 +271,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
                   setContractorScreeningAnswers={flow.setContractorScreeningAnswers}
                   selectedSupplier={flow.selectedSupplier}
                   setSelectedSupplier={flow.setSelectedSupplier}
+                  onBlockedChange={(blocked, reason) => flow.setContractorGate({ blocked, reason })}
                 />
               )}
 

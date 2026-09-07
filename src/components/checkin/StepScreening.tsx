@@ -30,6 +30,7 @@ interface StepScreeningProps {
   setContractorScreeningAnswers: React.Dispatch<React.SetStateAction<Record<string, any>>>;
   selectedSupplier: Supplier | null;
   setSelectedSupplier: (supplier: Supplier | null) => void;
+  onBlockedChange?: (blocked: boolean, reason: string | null) => void;
 }
 
 export function StepScreening({
@@ -45,6 +46,7 @@ export function StepScreening({
   setContractorScreeningAnswers,
   selectedSupplier,
   setSelectedSupplier,
+  onBlockedChange,
 }: StepScreeningProps) {
   const isContractor = selectedType === "contractor";
 
@@ -56,6 +58,7 @@ export function StepScreening({
         onAnswersChange={setContractorScreeningAnswers}
         selectedSupplier={selectedSupplier}
         onSupplierChange={setSelectedSupplier}
+        onBlockedChange={onBlockedChange}
       />
     );
   }

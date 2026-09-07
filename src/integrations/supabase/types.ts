@@ -112,6 +112,45 @@ export type Database = {
         }
         Relationships: []
       }
+      credential_types: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          is_required: boolean
+          jurisdiction: string
+          key: string
+          label: string
+          short_label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          jurisdiction?: string
+          key: string
+          label: string
+          short_label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          jurisdiction?: string
+          key?: string
+          label?: string
+          short_label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       evacuation_attendance: {
         Row: {
           created_at: string
@@ -920,6 +959,51 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_credentials: {
+        Row: {
+          created_at: string
+          credential_type_id: string
+          expiry_date: string | null
+          id: string
+          reference: string | null
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          credential_type_id: string
+          expiry_date?: string | null
+          id?: string
+          reference?: string | null
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          credential_type_id?: string
+          expiry_date?: string | null
+          id?: string
+          reference?: string | null
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_credentials_credential_type_id_fkey"
+            columns: ["credential_type_id"]
+            isOneToOne: false
+            referencedRelation: "credential_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_credentials_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_min"
             referencedColumns: ["id"]
           },
         ]
