@@ -23,7 +23,7 @@ import { format } from "date-fns";
 import { exportVisitorsToCSV, exportVisitorToPDF } from "@/lib/exportVisitors";
 import { useToast } from "@/hooks/use-toast";
 import { CheckInReturnDialog } from "@/components/CheckInReturnDialog";
-import { TabContextStats } from "@/components/TabContextStats";
+
 
 interface VisitorTableProps {
   visitors: Visitor[];
@@ -347,13 +347,6 @@ export function VisitorTable({
           </TabsList>
         </div>
 
-        <TabContextStats
-          tab={activeTab || "all"}
-          visitors={visitorsByType[activeTab || "all"]}
-          allVisitors={visitors}
-          onFilter={onFilter}
-          activeFilter={activeFilter}
-        />
 
         {visibleSelected.length > 0 && (
           <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-primary/5 border-b border-border">

@@ -17,6 +17,8 @@ interface TabContextStatsProps {
   allVisitors: Visitor[];
   onFilter?: (key: string) => void;
   activeFilter?: string | null;
+  /** "strip" = thin inline row, "cards" = compact cards at the top of the page */
+  variant?: "strip" | "cards";
 }
 
 function getStats(
@@ -32,15 +34,15 @@ function getStats(
   switch (tab) {
     case "all":
       return [
-        { label: "On-site", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
-        { label: "Left", value: checkedOut, icon: <LogOut className="h-3.5 w-3.5" />, accent: "text-muted-foreground", filterKey: "checked-out" },
+        { label: "On site now", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
+        { label: "Left today", value: checkedOut, icon: <LogOut className="h-3.5 w-3.5" />, accent: "text-muted-foreground", filterKey: "checked-out" },
         { label: "Overdue", value: overstayed, icon: <AlertTriangle className="h-3.5 w-3.5" />, accent: "text-destructive", filterKey: "overstayed" },
       ];
 
     case "visitor":
       return [
-        { label: "On-site", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
-        { label: "Left", value: checkedOut, icon: <LogOut className="h-3.5 w-3.5" />, accent: "text-muted-foreground", filterKey: "checked-out" },
+        { label: "On site now", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
+        { label: "Left today", value: checkedOut, icon: <LogOut className="h-3.5 w-3.5" />, accent: "text-muted-foreground", filterKey: "checked-out" },
         { label: "Overdue", value: overstayed, icon: <AlertTriangle className="h-3.5 w-3.5" />, accent: "text-destructive", filterKey: "overstayed" },
       ];
 
@@ -50,7 +52,7 @@ function getStats(
         return v.status === "checked-in" && (!screening || !screening.dbsCheck);
       }).length;
       return [
-        { label: "On-site", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
+        { label: "On site now", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
         { label: "Pending DBS", value: pendingDBS, icon: <ShieldCheck className="h-3.5 w-3.5" />, accent: "text-warning", filterKey: "pending-dbs" },
         { label: "Overdue", value: overstayed, icon: <AlertTriangle className="h-3.5 w-3.5" />, accent: "text-destructive", filterKey: "overstayed" },
       ];
@@ -58,14 +60,14 @@ function getStats(
 
     case "volunteer":
       return [
-        { label: "On-site", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
-        { label: "Left", value: checkedOut, icon: <LogOut className="h-3.5 w-3.5" />, accent: "text-muted-foreground", filterKey: "checked-out" },
+        { label: "On site now", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
+        { label: "Left today", value: checkedOut, icon: <LogOut className="h-3.5 w-3.5" />, accent: "text-muted-foreground", filterKey: "checked-out" },
         { label: "Overdue", value: overstayed, icon: <AlertTriangle className="h-3.5 w-3.5" />, accent: "text-destructive", filterKey: "overstayed" },
       ];
 
     case "staff":
       return [
-        { label: "On-site", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
+        { label: "On site now", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
         { label: "On Shift", value: onSite, icon: <Clock className="h-3.5 w-3.5" />, accent: "text-info" },
       ];
 
@@ -74,7 +76,7 @@ function getStats(
   }
 }
 
-export function TabContextStats({ tab, visitors, allVisitors, onFilter, activeFilter }: TabContextStatsProps) {
+export function TabContextStats({ tab, visitors, allVisitors, onFilter, activeFilter, variant = "strip" }: TabContextStatsProps) {
   const { isOverstayed } = useOverstayPolicy();
   const stats = useMemo(
     () => getStats(tab, visitors, allVisitors, isOverstayed),
@@ -82,6 +84,42 @@ export function TabContextStats({ tab, visitors, allVisitors, onFilter, activeFi
   );
 
   if (stats.length === 0) return null;
+
+  if (variant === "cards") {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 px-6 pt-3">
+        {stats.map((stat) => {
+          const active = activeFilter === stat.filterKey;
+          const isAlert = stat.accent.includes("destructive") && stat.value > 0;
+          return (
+            <button
+              key={stat.label}
+              onClick={() => stat.filterKey && onFilter?.(stat.filterKey)}
+              className={`flex items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 text-left transition-all duration-150 active:scale-[0.99] hover:shadow-sm ${
+                active ? "border-primary/40 ring-1 ring-primary/20 shadow-sm" : "border-border"
+              }`}
+            >
+              <span className="flex items-center gap-2 min-w-0">
+                <span className={stat.accent}>{stat.icon}</span>
+                <span className="text-[13px] font-medium text-muted-foreground truncate">{stat.label}</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className={`text-xl font-bold tabular-nums ${isAlert ? "text-destructive" : "text-foreground"}`}>
+                  {stat.value}
+                </span>
+                {isAlert && (
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-destructive" />
+                  </span>
+                )}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-border bg-muted/30">

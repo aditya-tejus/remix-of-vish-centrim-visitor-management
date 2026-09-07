@@ -22,6 +22,7 @@ import { Visitor } from "@/types/visitor";
 import { useOverstayPolicy } from "@/hooks/useOverstayPolicy";
 import { VisitListQRDialog } from "@/components/VisitListQRDialog";
 import { HandoverPrintDialog } from "@/components/HandoverPrintDialog";
+import { TabContextStats } from "@/components/TabContextStats";
 
 export default function VisitList() {
   const navigate = useNavigate();
@@ -67,6 +68,13 @@ export default function VisitList() {
   }, [filteredVisitors, searchQuery]);
 
   const { isOverstayed } = useOverstayPolicy();
+
+  // Counts follow the selected tab and search, but not the status filter,
+  // so the numbers never disagree with what the desk sees.
+  const tabVisitors = useMemo(
+    () => (activeTab === "all" ? searchedVisitors : searchedVisitors.filter((v) => v.type === activeTab)),
+    [searchedVisitors, activeTab]
+  );
 
   // Status filter from the counter row
   const displayVisitors = useMemo(() => {
@@ -187,6 +195,16 @@ export default function VisitList() {
               </div>
             </div>
           </div>
+
+          {/* Counters — the live picture, readable the moment the page opens */}
+          <TabContextStats
+            variant="cards"
+            tab={activeTab}
+            visitors={tabVisitors}
+            allVisitors={searchedVisitors}
+            onFilter={handleStatCardClick}
+            activeFilter={activeFilter}
+          />
 
           {/* Filter pill */}
           {activeFilter && activeFilter !== "all" && filterLabels[activeFilter] && (
