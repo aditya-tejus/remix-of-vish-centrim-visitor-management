@@ -837,19 +837,23 @@ export default function KioskCheckIn() {
             )}
 
             <div className="flex gap-3 pt-2">
-              <Button variant="secondary" onClick={() => { if (flow.hasCompanions !== null && flow.companions.length === 0) { flow.setHasCompanions(null); } else { goBack(); } }} className="flex-1 h-14 text-base gap-2 border border-border">
+              <Button variant="secondary" onClick={goBack} className="flex-1 h-14 text-base gap-2 border border-border">
                 <ArrowLeft className="h-5 w-5" /> Back
               </Button>
-              {flow.hasCompanions && (
-                <Button
-                  onClick={goNext}
-                  disabled={flow.companions.length > 0 && flow.companions.some((c) => !c.firstName.trim() || !c.surname.trim())}
-                  className="flex-1 h-14 text-base gap-2"
-                >
-                  {flow.companions.length === 0 ? "Skip" : "Next"} <ArrowRight className="h-5 w-5" />
-                </Button>
-              )}
+              <Button
+                onClick={goNext}
+                disabled={
+                  flow.hasCompanions === null ||
+                  (flow.hasCompanions === true &&
+                    (flow.companions.length === 0 ||
+                      flow.companions.some((c) => !c.firstName.trim() || !c.surname.trim())))
+                }
+                className="flex-1 h-14 text-base gap-2"
+              >
+                Next <ArrowRight className="h-5 w-5" />
+              </Button>
             </div>
+
           </motion.div>
         )}
 
