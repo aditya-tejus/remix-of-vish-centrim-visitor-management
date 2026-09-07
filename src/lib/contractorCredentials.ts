@@ -1,24 +1,38 @@
-import { Supplier } from "@/hooks/useSuppliers";
-
 export type Jurisdiction = "AU" | "UK";
 
 export type CredentialState = "valid" | "expiring" | "expired" | "missing";
 
-/** Keys stored in the `contractor_mandatory_credentials` setting */
-export type CredentialKey = "dbs" | "acws" | "insurance";
+/** Credential keys are user-defined — the list lives in the `credential_types` table */
+export type CredentialKey = string;
 
-/** Screening answer key that gates whether mandatory credentials actually block */
+/** Screening answer key that gates whether required credentials actually block */
 export const UNSUPERVISED_ACCESS_KEY = "unsupervised_resident_access";
+/** Free-text justification recorded when unsupervised access is answered "No" */
+export const ESCORT_REASON_KEY = "unsupervised_escort_reason";
+
+export interface CredentialType {
+  id: string;
+  key: string;
+  label: string;
+  short_label: string;
+  jurisdiction: "AU" | "UK" | "ALL";
+  is_required: boolean;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface SupplierCredentialRecord {
+  credential_type_id: string;
+  expiry_date: string | null;
+  reference: string | null;
+}
 
 export interface CredentialCheck {
-  /** Stable key used by the mandatory-credentials setting */
+  typeId: string;
   key: CredentialKey;
-  /** Field key on suppliers_min holding the expiry date */
-  expiryField: "dbs_expiry_date" | "acws_expiry_date" | "insurance_expiry_date";
-  referenceField: "dbs_reference" | "acws_reference" | "insurance_reference";
   label: string;
   shortLabel: string;
-  /** True when this credential is in the configured mandatory list */
+  /** True when this credential is marked as required before check-in */
   blocking: boolean;
   state: CredentialState;
   expiry: string | null;
@@ -38,118 +52,148 @@ function evaluate(expiry: string | null | undefined): { state: CredentialState; 
   return { state: "valid", days };
 }
 
-function evaluateInto(expiry: string | null | undefined, reference: string | null | undefined) {
-  const { state, days } = evaluate(expiry);
-  return {
-    state,
-    expiry: expiry || null,
-    reference: reference || null,
-    daysToExpiry: days,
-  };
+/** Credential types that apply in the given jurisdiction, in display order. */
+export function applicableCredentialTypes(
+  jurisdiction: Jurisdiction,
+  types: CredentialType[]
+): CredentialType[] {
+  return types
+    .filter((t) => t.is_active && (t.jurisdiction === "ALL" || t.jurisdiction === jurisdiction))
+    .sort((a, b) => a.sort_order - b.sort_order);
 }
 
 /**
- * Credential checks for a supplier in the given jurisdiction.
- * Which credentials are treated as blocking is driven entirely by the
- * `contractor_mandatory_credentials` setting (default: none).
- *   UK -> DBS check, AU -> Aged Care Worker Screening, plus Public Liability Insurance.
+ * Builds the credential checklist for a supplier from the configured credential
+ * types and whatever the supplier has on record.
  */
 export function getSupplierCredentials(
   jurisdiction: Jurisdiction,
-  supplier: Supplier | null,
-  mandatory: CredentialKey[] = []
+  types: CredentialType[],
+  records: SupplierCredentialRecord[] = []
 ): CredentialCheck[] {
-  const primary: CredentialCheck =
-    jurisdiction === "UK"
-      ? {
-          key: "dbs",
-          expiryField: "dbs_expiry_date",
-          referenceField: "dbs_reference",
-          label: "DBS Check",
-          shortLabel: "DBS",
-          blocking: mandatory.includes("dbs"),
-          ...evaluateInto(supplier?.dbs_expiry_date, supplier?.dbs_reference),
-        }
-      : {
-          key: "acws",
-          expiryField: "acws_expiry_date",
-          referenceField: "acws_reference",
-          label: "Aged Care Worker Screening",
-          shortLabel: "ACWS",
-          blocking: mandatory.includes("acws"),
-          ...evaluateInto(supplier?.acws_expiry_date, supplier?.acws_reference),
-        };
-
-  const insurance: CredentialCheck = {
-    key: "insurance",
-    expiryField: "insurance_expiry_date",
-    referenceField: "insurance_reference",
-    label: "Public Liability Insurance",
-    shortLabel: "Insurance",
-    blocking: mandatory.includes("insurance"),
-    ...evaluateInto(supplier?.insurance_expiry_date, supplier?.insurance_reference),
-  };
-
-  return [primary, insurance];
+  return applicableCredentialTypes(jurisdiction, types).map((t) => {
+    const rec = records.find((r) => r.credential_type_id === t.id);
+    const { state, days } = evaluate(rec?.expiry_date);
+    return {
+      typeId: t.id,
+      key: t.key,
+      label: t.label,
+      shortLabel: t.short_label,
+      blocking: t.is_required,
+      state,
+      expiry: rec?.expiry_date || null,
+      reference: rec?.reference || null,
+      daysToExpiry: days,
+    };
+  });
 }
 
 export interface ContractorGate {
   blocked: boolean;
   reason: string | null;
-  /** Every mandatory credential that is missing or expired */
+  /** Every required credential that is missing or expired */
   failing: CredentialCheck[];
   /** True when the contractor was marked as having unsupervised resident access */
   unsupervisedAccess: boolean;
+  /** True when the access question still needs an answer before proceeding */
+  needsAnswer: boolean;
+  /** True when a "No" answer needs a written escort/exemption justification */
+  needsEscortReason: boolean;
+}
+
+interface GateInput {
+  jurisdiction: Jurisdiction;
+  supplierName: string | null;
+  types: CredentialType[];
+  records?: SupplierCredentialRecord[];
+  /** null = not yet answered */
+  unsupervisedAccess: boolean | null;
+  escortReason?: string;
 }
 
 /**
- * Evaluates every credential flagged as mandatory.
+ * Evaluates every credential marked as required.
  *
  * The block only bites when the contractor has been marked as having
  * unsupervised access to residents. Escorted contractors, or ones with no
- * resident contact at all, still surface the reason for staff visibility but
- * are never blocked.
+ * resident contact, still surface the reason for staff visibility but are not
+ * blocked — though the exemption must be justified in writing when a required
+ * credential is missing or expired.
  */
-export function isContractorBlocked(
-  jurisdiction: Jurisdiction,
-  supplier: Supplier | null,
-  mandatory: CredentialKey[] = [],
-  unsupervisedAccess = false
-): ContractorGate {
-  const credentials = getSupplierCredentials(jurisdiction, supplier, mandatory);
+export function evaluateContractorGate({
+  jurisdiction,
+  supplierName,
+  types,
+  records = [],
+  unsupervisedAccess,
+  escortReason = "",
+}: GateInput): ContractorGate {
+  const credentials = getSupplierCredentials(jurisdiction, types, records);
   const required = credentials.filter((c) => c.blocking);
+  const answered = unsupervisedAccess === true || unsupervisedAccess === false;
+  const yes = unsupervisedAccess === true;
 
+  const base = {
+    failing: [] as CredentialCheck[],
+    unsupervisedAccess: yes,
+    needsAnswer: false,
+    needsEscortReason: false,
+  };
+
+  // Nothing is required — the question is informational only.
   if (required.length === 0) {
-    return { blocked: false, reason: null, failing: [], unsupervisedAccess };
+    return { blocked: false, reason: null, ...base };
   }
 
-  if (!supplier) {
+  if (!answered) {
+    return {
+      blocked: true,
+      reason: "Answer whether this contractor will have unsupervised access to residents.",
+      ...base,
+      needsAnswer: true,
+    };
+  }
+
+  if (!supplierName) {
     const names = required.map((c) => c.label).join(" and ");
     return {
-      blocked: unsupervisedAccess,
+      blocked: yes,
       reason: `Select the contractor's supplier so their ${names} can be verified.`,
+      ...base,
       failing: required,
-      unsupervisedAccess,
     };
   }
 
   const failing = required.filter((c) => c.state === "missing" || c.state === "expired");
   if (failing.length === 0) {
-    return { blocked: false, reason: null, failing: [], unsupervisedAccess };
+    return { blocked: false, reason: null, ...base };
   }
 
   const parts = failing.map((c) =>
-    c.state === "expired"
-      ? `${c.label} expired on ${c.expiry}`
-      : `${c.label} has not been recorded`
+    c.state === "expired" ? `${c.label} expired on ${c.expiry}` : `${c.label} has not been recorded`
   );
-  const list = parts.length > 1
-    ? `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`
-    : parts[0];
+  const list =
+    parts.length > 1
+      ? `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`
+      : parts[0];
 
-  const reason = unsupervisedAccess
-    ? `${list} for ${supplier.name}. Unsupervised resident access cannot proceed until these are current.`
-    : `${list} for ${supplier.name}. Not blocking — this contractor is not marked as having unsupervised resident access.`;
+  if (yes) {
+    return {
+      blocked: true,
+      reason: `${list} for ${supplierName}. Unsupervised resident access cannot proceed until these are current.`,
+      ...base,
+      failing,
+    };
+  }
 
-  return { blocked: unsupervisedAccess, reason, failing, unsupervisedAccess };
+  const needsEscortReason = escortReason.trim().length < 3;
+  return {
+    blocked: needsEscortReason,
+    reason: needsEscortReason
+      ? `${list} for ${supplierName}. Record who is escorting this contractor, or why resident contact is not possible, before continuing.`
+      : `${list} for ${supplierName}. Not blocking — escorted / no unsupervised resident access.`,
+    ...base,
+    failing,
+    needsEscortReason,
+  };
 }
