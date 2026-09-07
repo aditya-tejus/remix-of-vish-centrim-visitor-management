@@ -469,6 +469,18 @@ export default function VisitorProfilePage() {
                       </div>
                     )}
 
+                    {/* Contractor compliance documents */}
+                    {visitor.type === "contractor" && (
+                      <ContractorCompliancePanel
+                        firstName={visitor.firstName}
+                        surname={visitor.surname}
+                        mobile={visitor.mobile}
+                        supplierId={(visitor as any).supplierId ?? null}
+                      />
+                    )}
+
+
+
                     {/* Vaccination Info */}
                     {(visitor.influenzaVaccineDate || visitor.covidVaccineStatus !== undefined) && (
                       <div className="space-y-2">
