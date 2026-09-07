@@ -145,7 +145,9 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       contractor_screening: (visitor.contractorScreening || {}) as any,
       supplier_id: visitor.supplierId ?? null,
       qr_code: visitor.qrCode ?? null,
+      person_qr: visitor.personQr ?? null,
       group_id: visitor.groupId ?? null,
+
     };
 
     // Columns only staff (authenticated) may write

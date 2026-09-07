@@ -43,7 +43,9 @@ export interface Visitor {
   contractorScreening?: Record<string, any>;
   supplierId?: string;
   qrCode?: string;
+  personQr?: string;
   groupId?: string;
+
 }
 
 export interface RetentionSettings {
