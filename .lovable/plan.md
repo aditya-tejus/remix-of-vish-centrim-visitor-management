@@ -14,8 +14,17 @@ Health questions, terms and food questions are always asked fresh — never pre-
 
 Privacy: matching runs server-side and returns only the one matched person's own details, so the kiosk can never be used to browse visitors.
 
+## 2. Companion step fixes
+
+- The Yes/No answer stays on screen and can be changed at any time; choosing "No" clears anything half-entered.
+- Back from the companions screen returns to the Yes/No question first, not out of the step.
+- A clear remove button on every companion row, plus "Add another" below.
+- The review screen lists companions with a link back to change them.
+
+## 3. Keys Register (new section in the left menu)
 
 A standalone Keys Register page, staff-operated — issuing is a staff action, not something a contractor does themselves at the kiosk.
+
 
 Main view — every key in the village at a glance, colour coded:
 
