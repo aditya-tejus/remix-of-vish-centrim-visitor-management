@@ -301,12 +301,80 @@ export default function KioskCheckIn() {
           <motion.div key="details" {...anim} className="space-y-4">
             <h2 className="text-2xl font-bold text-foreground text-center">Your Details</h2>
 
+            {/* Returning visitor fast lane */}
+            {!flow.returningVisitor && (flow.returningOptions.mobile || flow.returningOptions.qr) && !returningMatch && (
+              <div className="rounded-2xl border-2 border-border bg-card/80 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <RotateCcw className="h-5 w-5 text-primary" />
+                  <p className="text-base font-bold text-foreground">Been here before?</p>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  We'll fill in your details so you don't have to type them again.
+                </p>
+                {flow.returningOptions.mobile && (
+                  <div className="flex gap-2">
+                    <Input
+                      value={returningMobile}
+                      onChange={(e) => setReturningMobile(e.target.value)}
+                      placeholder="Your mobile number"
+                      inputMode="tel"
+                      type="tel"
+                      className="h-14 text-lg flex-1"
+                    />
+                    <Button onClick={() => void handleReturningLookup({ mobile: returningMobile })} disabled={returningBusy} className="h-14 px-5 text-base">
+                      Find me
+                    </Button>
+                  </div>
+                )}
+                {flow.returningOptions.qr && (
+                  <div className="flex gap-2">
+                    <Input
+                      value={returningCode}
+                      onChange={(e) => setReturningCode(e.target.value.toUpperCase())}
+                      placeholder="Visitor card code"
+                      className="h-14 text-lg flex-1 tracking-widest"
+                    />
+                    <Button variant="secondary" onClick={() => void handleReturningLookup({ qr: returningCode })} disabled={returningBusy} className="h-14 px-5 text-base border border-border">
+                      <QrCode className="h-5 w-5" />
+                    </Button>
+                  </div>
+                )}
+                {returningNotFound && (
+                  <p className="text-sm text-muted-foreground">
+                    We couldn't find you — no problem, just fill in your details below.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Match confirmation */}
+            {returningMatch && (
+              <div className="rounded-2xl border-2 border-success/30 bg-success/5 p-4 space-y-3">
+                <p className="text-base font-bold text-foreground">Is this you?</p>
+                <div className="space-y-1 text-sm">
+                  <p className="text-lg font-bold text-foreground">{returningMatch.firstName} {returningMatch.surname}</p>
+                  {returningMatch.mobile && <p className="text-muted-foreground">{returningMatch.mobile}</p>}
+                  {returningMatch.email && <p className="text-muted-foreground">{returningMatch.email}</p>}
+                  {returningMatch.whomToVisit && <p className="text-muted-foreground">Last visited {returningMatch.whomToVisit}</p>}
+                </div>
+                <div className="flex gap-3">
+                  <Button variant="secondary" onClick={handleReturningReject} className="flex-1 h-12 text-base border border-border">
+                    Not me
+                  </Button>
+                  <Button onClick={handleReturningConfirm} className="flex-1 h-12 text-base">
+                    That's me
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {flow.returningVisitor && (
               <div className="rounded-xl border-2 border-success/20 bg-success/5 p-3 flex items-center gap-2 text-sm text-success">
                 <UserSearch className="h-4 w-4 shrink-0" />
                 <span className="font-medium">Welcome back! Details pre-filled from your last visit.</span>
               </div>
             )}
+
 
             <div className="grid grid-cols-2 gap-3">
               <KioskInput
