@@ -7,13 +7,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useSuppliers, Supplier } from "@/hooks/useSuppliers";
 import { Search, Check, Building2, Shield, HardHat, FileCheck, AlertTriangle, Syringe, ShieldAlert, CalendarClock, Loader2 } from "lucide-react";
-import { getSupplierCredentials, isContractorBlocked } from "@/lib/contractorCredentials";
-import { useContractorEnforcement } from "@/hooks/useContractorEnforcement";
+import { getSupplierCredentials, isContractorBlocked, UNSUPERVISED_ACCESS_KEY } from "@/lib/contractorCredentials";
+import { useMandatoryCredentials } from "@/hooks/useContractorEnforcement";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 
 // AU screening template
+const unsupervisedQuestion = { id: UNSUPERVISED_ACCESS_KEY, label: "Will they have unsupervised access to residents?", type: "yesno" as const, required: true, icon: ShieldAlert };
+
 const auScreeningQuestions = [
+  unsupervisedQuestion,
   { id: "acws_check", label: "Aged Care Worker Screening clearance current?", type: "yesno" as const, required: true, icon: Shield },
   { id: "swms", label: "Safe Work Method Statement (SWMS) provided?", type: "yesno" as const, required: true, icon: FileCheck },
   { id: "ppe", label: "Wearing appropriate PPE (hard hat, hi-vis, steel caps)?", type: "yesno" as const, required: true, icon: HardHat },
@@ -26,6 +29,7 @@ const auScreeningQuestions = [
 
 // UK screening template
 const ukScreeningQuestions = [
+  unsupervisedQuestion,
   { id: "rams", label: "Risk Assessment & Method Statement (RAMS) provided?", type: "yesno" as const, required: true, icon: FileCheck },
   { id: "ppe", label: "Wearing appropriate PPE?", type: "yesno" as const, required: true, icon: HardHat },
   { id: "dbs_check", label: "DBS check completed and current?", type: "yesno" as const, required: true, icon: Shield },
@@ -88,9 +92,10 @@ export function ContractorScreening({
     (q) => q.type === "yesno" && answers[q.id] === false
   );
 
-  const credentials = getSupplierCredentials(jurisdiction, selectedSupplier);
-  const { enforcement } = useContractorEnforcement();
-  const gate = isContractorBlocked(jurisdiction, selectedSupplier, enforcement);
+  const { mandatory } = useMandatoryCredentials();
+  const unsupervisedAccess = answers[UNSUPERVISED_ACCESS_KEY] === true;
+  const credentials = getSupplierCredentials(jurisdiction, selectedSupplier, mandatory);
+  const gate = isContractorBlocked(jurisdiction, selectedSupplier, mandatory, unsupervisedAccess);
 
   useEffect(() => {
     onBlockedChange?.(gate.blocked, gate.reason);
@@ -289,7 +294,7 @@ export function ContractorScreening({
         <div className="space-y-2">
           {questions.map((q) => {
             const answer = answers[q.id];
-            const Icon = q.icon;
+            const Icon = (q as { icon?: React.ComponentType<{ className?: string }> }).icon;
 
             if (q.type === "yesno") {
               const isYes = answer === true;
