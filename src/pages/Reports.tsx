@@ -1,3 +1,4 @@
+import { isOverstayedSync } from "@/hooks/useOverstayPolicy";
 import { useMemo, useState } from "react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
@@ -61,7 +62,7 @@ export default function ReportsPage() {
     return Math.round(total / completed.length);
   }, [last30]);
   const overstayedCount = visitors.filter(
-    (v) => v.status === "checked-in" && Date.now() - v.checkInTime.getTime() > 8 * 3600000
+    isOverstayedSync
   ).length;
 
   // ── Daily visits chart (last 7 days) ──

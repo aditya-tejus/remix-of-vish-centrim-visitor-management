@@ -67,7 +67,17 @@ const fallbackHealthQuestions: HealthQuestion[] = [
   { id: "consent_screening", question: "I consent to compliance screening and temperature check", type: "checkbox", required: true },
 ];
 
-export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVisitDialogProps & { initialType?: VisitorType }) {
+export interface CheckInPrefill {
+  firstName?: string;
+  surname?: string;
+  mobile?: string;
+  email?: string;
+  address?: string;
+  type?: VisitorType;
+}
+
+export function AddVisitDialog({ open, onOpenChange, onAdd, initialType, prefill }: AddVisitDialogProps & { initialType?: VisitorType; prefill?: CheckInPrefill }) {
+
   const { residents: dbResidents } = useResidents();
   const { staff: dbStaff } = useStaffMembers();
   const [previousVisitors, setPreviousVisitors] = useState<VisitorProfile[]>([]);
@@ -147,10 +157,23 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
 
   // Set initial type from prop
   useEffect(() => {
-    if (initialType && open) {
-      setSelectedType(initialType);
+    if (!open) return;
+    if (initialType) setSelectedType(initialType);
+    if (prefill) {
+      if (prefill.type) setSelectedType(prefill.type);
+      setFormData((prev) => ({
+        ...prev,
+        firstName: prefill.firstName ?? prev.firstName,
+        surname: prefill.surname ?? prev.surname,
+        email: prefill.email ?? prev.email,
+        mobile: prefill.mobile ?? prev.mobile,
+        address: prefill.address ?? prev.address,
+      }));
+      // Known person: skip the "who is this?" lookup, still ask every question fresh.
+      setStep(2);
     }
-  }, [initialType, open]);
+  }, [initialType, prefill, open]);
+
 
   const filteredResidents = useMemo(() => {
     if (!residentSearchQuery.trim()) return residentItems;

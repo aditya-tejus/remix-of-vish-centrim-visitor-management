@@ -32,6 +32,15 @@ import { VisitorBadge } from "@/components/VisitorBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Visitor } from "@/types/visitor";
+import { useAuth } from "@/hooks/useAuth";
+import { useOpenKeyIssues } from "@/hooks/useOpenKeyIssues";
+import { useWatchlist } from "@/hooks/useWatchlist";
+import { CheckOutSheet } from "@/components/CheckOutSheet";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, KeyRound, ShieldAlert, ChevronDown } from "lucide-react";
 
 function formatDuration(start: Date, end: Date | null): string {
   const endTime = end || new Date();
@@ -48,7 +57,12 @@ export default function VisitorProfilePage() {
   const navigate = useNavigate();
   const { visitors, deleteVisitor, addVisitor, checkOutVisitor } = useVisitors();
   const { toast } = useToast();
-  const isAdmin = true;
+  const { role } = useAuth();
+  const isAdmin = role === "admin";
+  const { openIssues } = useOpenKeyIssues();
+  const { checkVisitor } = useWatchlist();
+  const [checkOutOpen, setCheckOutOpen] = useState(false);
+  const [complianceOpen, setComplianceOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [quickCheckInOpen, setQuickCheckInOpen] = useState(false);
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
@@ -123,10 +137,9 @@ export default function VisitorProfilePage() {
     if (visitId === visitor.id) navigate("/visitors");
   };
 
-  const handleQuickCheckOut = async () => {
-    await checkOutVisitor(visitor.id);
-    toast({ title: "Checked Out", description: `${visitor.firstName} ${visitor.surname} has been checked out.` });
-  };
+  const visitIds = new Set(allVisits.map((v) => v.id));
+  const heldKeys = openIssues.filter((i) => i.visitorId && visitIds.has(i.visitorId));
+  const flag = checkVisitor(visitor.firstName, visitor.surname);
 
   return (
     <SidebarProvider>
@@ -143,42 +156,55 @@ export default function VisitorProfilePage() {
                 <h1 className="text-lg font-semibold text-foreground">Visitor Profile</h1>
                 <p className="text-xs text-muted-foreground">{visitor.firstName} {visitor.surname}</p>
               </div>
-              <div className="flex gap-2">
-                {/* Quick Check-In — opens full wizard with pre-filled data & re-asks health questions */}
-                <Button size="sm" onClick={() => setQuickCheckInOpen(true)} className="gap-1.5">
-                  <LogIn className="h-3.5 w-3.5" /> Quick Check-In
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setFeedbackOpen(true)} className="gap-1.5">
-                  <MessageSquare className="h-3.5 w-3.5" /> Give Feedback
-                </Button>
-                {/* Quick Check-Out */}
-                {isCheckedIn && (
-                  <Button size="sm" variant="outline" onClick={handleQuickCheckOut} className="gap-1.5">
-                    <LogOut className="h-3.5 w-3.5" /> Quick Check-Out
+              <div className="flex items-center gap-2">
+                {isCheckedIn ? (
+                  <Button size="sm" onClick={() => setCheckOutOpen(true)} className="gap-1.5">
+                    <LogOut className="h-3.5 w-3.5" /> Check out
+                  </Button>
+                ) : (
+                  <Button size="sm" onClick={() => setQuickCheckInOpen(true)} className="gap-1.5">
+                    <LogIn className="h-3.5 w-3.5" /> Check in again
                   </Button>
                 )}
-                {/* Print Badge */}
                 <VisitorBadge visitor={visitor} variant="print" />
-                {isAdmin && (
-                  <>
-                    <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-                      <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                      <MoreHorizontal className="h-4 w-4" />
                     </Button>
-                    <Button variant="destructive" size="sm" onClick={() => setConfirmDeleteAll(true)}>
-                      <Trash2 className="h-3.5 w-3.5 mr-1.5" /> Delete Profile
-                    </Button>
-                  </>
-                )}
-                <Button variant="outline" size="sm" onClick={() => {
-                  const name = `${visitor.firstName}_${visitor.surname}`.replace(/\s+/g, "_");
-                  const date = format(new Date(), "yyyy-MM-dd");
-                  exportVisitorsToCSV([visitor], `${name}_${date}.csv`);
-                }}>
-                  <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5" /> CSV
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => exportVisitorToPDF(visitor)}>
-                  <FileText className="h-3.5 w-3.5 mr-1.5" /> PDF
-                </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuItem onClick={() => setFeedbackOpen(true)}>
+                      <MessageSquare className="h-3.5 w-3.5 mr-2" /> Record feedback
+                    </DropdownMenuItem>
+                    {isAdmin && (
+                      <DropdownMenuItem onClick={() => setEditOpen(true)}>
+                        <Pencil className="h-3.5 w-3.5 mr-2" /> Edit details
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => {
+                      const name = `${visitor.firstName}_${visitor.surname}`.replace(/\s+/g, "_");
+                      exportVisitorsToCSV([visitor], `${name}_${format(new Date(), "yyyy-MM-dd")}.csv`);
+                    }}>
+                      <FileSpreadsheet className="h-3.5 w-3.5 mr-2" /> Export CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => exportVisitorToPDF(visitor)}>
+                      <FileText className="h-3.5 w-3.5 mr-2" /> Export PDF
+                    </DropdownMenuItem>
+                    {isAdmin && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => setConfirmDeleteAll(true)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete profile
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </header>
@@ -214,6 +240,36 @@ export default function VisitorProfilePage() {
                   </div>
                 </div>
               </div>
+
+              {flag && (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-1">
+                  <p className="text-sm font-semibold text-destructive flex items-center gap-2">
+                    <ShieldAlert className="h-4 w-4" />
+                    {flag.entry.alert_type === "hard" ? "Access restricted" : "Watchlist — check before allowing access"}
+                  </p>
+                  <p className="text-[13px] text-foreground">{flag.entry.reason}</p>
+                  {flag.entry.instructions && (
+                    <p className="text-[13px] text-muted-foreground">{flag.entry.instructions}</p>
+                  )}
+                </div>
+              )}
+
+              {heldKeys.length > 0 && (
+                <div className="rounded-xl border border-warning/30 bg-warning/5 p-4 space-y-2">
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <KeyRound className="h-4 w-4" /> Holding {heldKeys.length} key{heldKeys.length !== 1 ? "s" : ""}
+                  </p>
+                  {heldKeys.map((k) => (
+                    <p key={k.id} className={`text-[13px] ${k.overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                      {k.keyLabel}{k.propertyLabel ? ` · ${k.propertyLabel}` : ""} — out since {format(k.issuedAt, "hh:mm a dd MMM")}
+                      {k.overdue ? " · overdue" : ""}
+                    </p>
+                  ))}
+                  <Button variant="outline" size="sm" className="mt-1" onClick={() => navigate("/keys")}>
+                    Open keys register
+                  </Button>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* ===== LEFT COLUMN ===== */}
@@ -326,11 +382,16 @@ export default function VisitorProfilePage() {
                     )}
                   </div>
 
-                   {/* CHECK-IN COMPLIANCE */}
-                  <div className="rounded-xl border border-border bg-card p-5 space-y-3">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-                      <Shield className="h-3 w-3" /> Check-in Compliance
-                    </p>
+                   {/* CHECK-IN COMPLIANCE — evidence, only opened when asked for */}
+                  <Collapsible open={complianceOpen} onOpenChange={setComplianceOpen}>
+                    <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+                    <CollapsibleTrigger className="w-full flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                        <Shield className="h-3 w-3" /> Check-in compliance & evidence
+                      </p>
+                      <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${complianceOpen ? "rotate-180" : ""}`} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-3 pt-1">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <div className="rounded-lg border border-border p-3">
                         <p className="text-[10px] text-muted-foreground font-medium">Declaration</p>
@@ -440,7 +501,9 @@ export default function VisitorProfilePage() {
                         </div>
                       </div>
                     )}
-                  </div>
+                    </CollapsibleContent>
+                    </div>
+                  </Collapsible>
                 </div>
 
                 {/* ===== RIGHT COLUMN — VISIT HISTORY ===== */}
@@ -536,6 +599,23 @@ export default function VisitorProfilePage() {
         open={quickCheckInOpen}
         onOpenChange={setQuickCheckInOpen}
         onAdd={addVisitor}
+        prefill={{
+          firstName: visitor.firstName,
+          surname: visitor.surname,
+          mobile: visitor.mobile,
+          email: visitor.email,
+          address: visitor.address,
+          type: visitor.type,
+        }}
+      />
+
+      <CheckOutSheet
+        open={checkOutOpen}
+        onOpenChange={setCheckOutOpen}
+        visitors={visitors}
+        onCheckOut={checkOutVisitor}
+        preSelectedVisitorId={visitor.id}
+        onPreSelectedClear={() => {}}
       />
 
       <EditVisitorDialog

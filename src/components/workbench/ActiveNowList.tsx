@@ -1,3 +1,4 @@
+import { isOverstayedSync } from "@/hooks/useOverstayPolicy";
 import { Visitor } from "@/types/visitor";
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,7 @@ export function ActiveNowList({ visitors, onCheckOut, onViewAll }: ActiveNowList
             const cfg = typeConfig[v.type] || typeConfig.visitor;
             const Icon = cfg.icon;
             const duration = formatDistanceToNowStrict(v.checkInTime, { addSuffix: false });
-            const isOverstayed = Date.now() - v.checkInTime.getTime() > 8 * 3600000;
+            const isOverstayed = isOverstayedSync(v);
 
             return (
               <div key={v.id} className="flex items-center gap-3 px-5 py-3 hover:bg-muted/50 transition-colors">

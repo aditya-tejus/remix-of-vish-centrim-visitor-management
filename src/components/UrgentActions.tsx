@@ -1,3 +1,4 @@
+import { isOverstayedSync } from "@/hooks/useOverstayPolicy";
 import { useState, useEffect } from "react";
 import { Visitor } from "@/types/visitor";
 import { useNavigate } from "react-router-dom";
@@ -44,7 +45,7 @@ export function UrgentActions({ visitors, onCheckOut, onCheckOutAllOverstayed }:
 
   // Overstayed visitors (8+ hours)
   visitors
-    .filter((v) => v.status === "checked-in" && Date.now() - v.checkInTime.getTime() > 8 * 3600000)
+    .filter(isOverstayedSync)
     .forEach((v) => {
       actions.push({
         id: `overstay-${v.id}`,
@@ -66,7 +67,7 @@ export function UrgentActions({ visitors, onCheckOut, onCheckOutAllOverstayed }:
       (v) =>
         v.status === "checked-in" &&
         Date.now() - v.checkInTime.getTime() > 4 * 3600000 &&
-        Date.now() - v.checkInTime.getTime() <= 8 * 3600000
+        !isOverstayedSync(v)
     )
     .forEach((v) => {
       actions.push({

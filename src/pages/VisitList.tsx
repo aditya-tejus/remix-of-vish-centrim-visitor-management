@@ -19,6 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format, isSameDay, addDays, subDays, isToday } from "date-fns";
 import { Visitor } from "@/types/visitor";
+import { useOverstayPolicy } from "@/hooks/useOverstayPolicy";
 import { VisitListQRDialog } from "@/components/VisitListQRDialog";
 import { HandoverPrintDialog } from "@/components/HandoverPrintDialog";
 
@@ -31,10 +32,12 @@ export default function VisitList() {
   const [qrOpen, setQrOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [feedbackVisitor, setFeedbackVisitor] = useState<Visitor | null>(null);
-  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  // Reception opens on the live picture: who is in the building right now.
+  const [activeFilter, setActiveFilter] = useState<string | null>("checked-in");
   const [activeTab, setActiveTab] = useState<string>("all");
   const [handoverOpen, setHandoverOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [bulkCheckOutIds, setBulkCheckOutIds] = useState<string[]>([]);
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -63,26 +66,23 @@ export default function VisitList() {
     );
   }, [filteredVisitors, searchQuery]);
 
-  // Status filter from stat cards / TabContextStats
+  const { isOverstayed } = useOverstayPolicy();
+
+  // Status filter from the counter row
   const displayVisitors = useMemo(() => {
     if (!activeFilter || activeFilter === "all") return searchedVisitors;
     switch (activeFilter) {
       case "checked-in": return searchedVisitors.filter(v => v.status === "checked-in");
       case "checked-out": return searchedVisitors.filter(v => v.status === "checked-out");
-      case "overstayed": return searchedVisitors.filter(v => v.status === "checked-in" && Date.now() - v.checkInTime.getTime() > 8 * 3600000);
+      case "overstayed": return searchedVisitors.filter(isOverstayed);
       default: return searchedVisitors;
     }
-  }, [searchedVisitors, activeFilter]);
-
-  // Summary counts for cards
-  const totalToday = filteredVisitors.length;
-  const activeCount = filteredVisitors.filter(v => v.status === "checked-in").length;
-  const overstayedToday = filteredVisitors.filter(v => v.status === "checked-in" && Date.now() - v.checkInTime.getTime() > 8 * 3600000).length;
+  }, [searchedVisitors, activeFilter, isOverstayed]);
 
   const filterLabels: Record<string, string> = {
-    "checked-in": "Active / On-site",
-    "checked-out": "Checked Out",
-    "overstayed": "Overstayed",
+    "checked-in": "On site now",
+    "checked-out": "Left today",
+    "overstayed": "Overdue",
   };
 
   const handleStatCardClick = (key: string) => {
@@ -94,34 +94,10 @@ export default function VisitList() {
     setCheckOutSheetOpen(true);
   };
 
-  const countCards = [
-    {
-      key: "all",
-      label: "All Visitors Today",
-      value: totalToday,
-      colorClass: "text-primary",
-      borderClass: "border-l-primary",
-      bgClass: "bg-primary/5",
-    },
-    {
-      key: "checked-in",
-      label: "Active / On-site",
-      value: activeCount,
-      colorClass: "text-success",
-      borderClass: "border-l-success",
-      bgClass: "bg-success/5",
-      dot: true,
-    },
-    {
-      key: "overstayed",
-      label: "Overstayed",
-      value: overstayedToday,
-      colorClass: "text-destructive",
-      borderClass: "border-l-destructive",
-      bgClass: "bg-destructive/5",
-      pulse: overstayedToday > 0,
-    },
-  ];
+  const handleCheckOutMany = (ids: string[]) => {
+    setBulkCheckOutIds(ids);
+    setCheckOutSheetOpen(true);
+  };
 
   return (
     <SidebarProvider>
@@ -212,37 +188,6 @@ export default function VisitList() {
             </div>
           </div>
 
-          {/* ZONE C — Summary count cards */}
-          <div className="px-6 pt-4 pb-2">
-            <div className="grid grid-cols-3 gap-4">
-              {countCards.map(card => (
-                <button
-                  key={card.key}
-                  onClick={() => handleStatCardClick(card.key)}
-                  className={`rounded-xl border border-l-[3px] ${card.borderClass} p-5 text-left transition-all duration-150 hover:shadow-card ${
-                    activeFilter === card.key
-                      ? `${card.bgClass} border-border shadow-sm`
-                      : "bg-card border-border hover:bg-muted/30"
-                  }`}
-                >
-                  <p className={`text-3xl font-bold tabular-nums ${card.colorClass}`}>
-                    {card.value}
-                    {card.dot && card.value > 0 && (
-                      <span className="inline-flex h-2 w-2 rounded-full bg-success ml-2 align-middle" />
-                    )}
-                    {card.pulse && (
-                      <span className="relative inline-flex h-2 w-2 ml-2 align-middle">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive" />
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1 font-medium">{card.label}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Filter pill */}
           {activeFilter && activeFilter !== "all" && filterLabels[activeFilter] && (
             <div className="px-6 pb-1">
@@ -260,6 +205,7 @@ export default function VisitList() {
             <VisitorTable
               visitors={displayVisitors}
               onCheckOut={handleCheckOutFromTable}
+              onCheckOutMany={handleCheckOutMany}
               onCheckInReturn={checkInReturn}
               onDelete={deleteVisitor}
               onFeedback={(v) => setFeedbackVisitor(v)}
@@ -281,7 +227,8 @@ export default function VisitList() {
         visitors={visitors}
         onCheckOut={checkOutVisitor}
         preSelectedVisitorId={checkOutPreSelectedId}
-        onPreSelectedClear={() => setCheckOutPreSelectedId(null)}
+        onPreSelectedClear={() => { setCheckOutPreSelectedId(null); setBulkCheckOutIds([]); }}
+        bulkVisitorIds={bulkCheckOutIds}
       />
       {feedbackVisitor && (
         <FeedbackDialog

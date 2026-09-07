@@ -3,18 +3,24 @@ import { useNavigate } from "react-router-dom";
 import { Visitor } from "@/types/visitor";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, LogOut, Trash2, FileText, FileSpreadsheet, Users, MessageSquare, KeyRound } from "lucide-react";
+import {
+  MoreHorizontal, LogOut, Trash2, FileText, FileSpreadsheet, Users,
+  MessageSquare, KeyRound, ShieldAlert, AlertTriangle,
+} from "lucide-react";
 import { useOpenKeyIssues } from "@/hooks/useOpenKeyIssues";
+import { useWatchlist } from "@/hooks/useWatchlist";
+import { useOverstayPolicy } from "@/hooks/useOverstayPolicy";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
-import { exportVisitorsToCSV, exportVisitorToPDF, exportVisitorsToPDFBulk } from "@/lib/exportVisitors";
+import { exportVisitorsToCSV, exportVisitorToPDF } from "@/lib/exportVisitors";
 import { useToast } from "@/hooks/use-toast";
 import { CheckInReturnDialog } from "@/components/CheckInReturnDialog";
 import { TabContextStats } from "@/components/TabContextStats";
@@ -22,6 +28,7 @@ import { TabContextStats } from "@/components/TabContextStats";
 interface VisitorTableProps {
   visitors: Visitor[];
   onCheckOut: (id: string) => void;
+  onCheckOutMany?: (ids: string[]) => void;
   onCheckInReturn?: (id: string, comment?: string, timeOverride?: string) => Promise<void>;
   onDelete: (id: string) => void;
   onFeedback?: (visitor: Visitor) => void;
@@ -31,32 +38,32 @@ interface VisitorTableProps {
   activeFilter?: string | null;
 }
 
+/** Times are what the desk is asked about; duration is supporting detail. */
 const visitorColumns = [
-  { key: "name", label: "Visitor" },
-  { key: "checkIn", label: "Check-In" },
-  { key: "duration", label: "Duration" },
+  { key: "name", label: "Person" },
+  { key: "checkIn", label: "In" },
+  { key: "checkOut", label: "Out" },
   { key: "visiting", label: "Visiting" },
-  { key: "companions", label: "Companions" },
-  { key: "status", label: "Status" },
+  { key: "companions", label: "With" },
+  { key: "action", label: "" },
 ];
 
 const staffColumns = [
   { key: "name", label: "Staff Member" },
-  { key: "checkIn", label: "Signed In" },
-  { key: "duration", label: "Duration" },
-  { key: "department", label: "Department" },
-  { key: "status", label: "Status" },
+  { key: "checkIn", label: "In" },
+  { key: "checkOut", label: "Out" },
+  { key: "visiting", label: "Department" },
+  { key: "action", label: "" },
 ];
 
 const contractorColumns = [
   { key: "name", label: "Contractor" },
-  { key: "checkIn", label: "Arrived" },
-  { key: "duration", label: "Duration" },
-  { key: "company", label: "Company / Purpose" },
-  { key: "status", label: "Status" },
+  { key: "checkIn", label: "In" },
+  { key: "checkOut", label: "Out" },
+  { key: "visiting", label: "Company / Purpose" },
+  { key: "action", label: "" },
 ];
 
-// Live duration formatter
 function formatDuration(checkIn: Date, checkOut: Date | null): string {
   const end = checkOut || new Date();
   const diffMs = end.getTime() - checkIn.getTime();
@@ -67,14 +74,6 @@ function formatDuration(checkIn: Date, checkOut: Date | null): string {
   return `${hours}h ${mins}m`;
 }
 
-// Subtle type label colors — muted text only, no background or border
-const typeLabelStyles: Record<string, string> = {
-  visitor: "text-muted-foreground",
-  contractor: "text-muted-foreground",
-  volunteer: "text-muted-foreground",
-  staff: "text-muted-foreground",
-};
-
 const typeLabelsMap: Record<string, string> = {
   visitor: "Visitor",
   contractor: "Contractor",
@@ -82,13 +81,20 @@ const typeLabelsMap: Record<string, string> = {
   staff: "Staff",
 };
 
-export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, onFeedback, activeTab, onTabChange, onFilter, activeFilter }: VisitorTableProps) {
+export function VisitorTable({
+  visitors, onCheckOut, onCheckOutMany, onCheckInReturn, onDelete, onFeedback,
+  activeTab, onTabChange, onFilter, activeFilter,
+}: VisitorTableProps) {
   const [returnVisitor, setReturnVisitor] = useState<Visitor | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [, setTick] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { openIssues } = useOpenKeyIssues();
+  const { checkVisitor } = useWatchlist();
+  const { isOverstayed, hoursFor } = useOverstayPolicy();
 
-  // Tick every 30s to update durations for checked-in visitors
+  // Tick every 30s so live durations stay honest
   useEffect(() => {
     const hasActive = visitors.some(v => v.status === "checked-in");
     if (!hasActive) return;
@@ -104,7 +110,7 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
     staff: visitors.filter((v) => v.type === "staff"),
   };
 
-  const { openIssues } = useOpenKeyIssues();
+  const isWatchlisted = (v: Visitor) => !!checkVisitor(v.firstName, v.surname);
 
   const handleSingleCSV = (visitor: Visitor) => {
     exportVisitorsToCSV([visitor], `visitor-${visitor.firstName}-${visitor.surname}.csv`);
@@ -119,14 +125,6 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
     staff: "Staff",
   };
 
-  const emptyIcons: Record<string, string> = {
-    all: "📋",
-    visitor: "👤",
-    contractor: "🔧",
-    volunteer: "🤝",
-    staff: "👨‍💼",
-  };
-
   const getColumns = (type: string) => {
     switch (type) {
       case "staff": return staffColumns;
@@ -137,72 +135,117 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
 
   const keysForVisitor = (id: string) => openIssues.filter((i) => i.visitorId === id);
 
-  const isOverstayed = (v: Visitor) => v.status === "checked-in" && Date.now() - v.checkInTime.getTime() > 8 * 3600000;
+  const toggleSelected = (id: string) =>
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
+
+  const actionLabel = (type: string) =>
+    type === "staff" ? "Sign Out" : type === "contractor" ? "Depart" : "Check Out";
 
   const renderRow = (visitor: Visitor, type: string) => {
     const showTypeBadge = type === "all";
-    const duration = formatDuration(visitor.checkInTime, visitor.checkOutTime);
     const overstayed = isOverstayed(visitor);
+    const keys = keysForVisitor(visitor.id);
+    const overdueKey = keys.some((k) => k.overdue);
+    const flagged = isWatchlisted(visitor);
+    const onSite = visitor.status === "checked-in";
+    const showCompanions = type === "visitor" || type === "volunteer" || type === "all";
 
     return (
       <TableRow
         key={visitor.id}
-        className={`group transition-colors cursor-pointer min-h-[64px] ${
-          visitor.status === "checked-in"
+        className={`group transition-colors cursor-pointer ${
+          onSite
             ? "bg-primary/[0.03] border-l-[3px] border-l-primary"
             : "hover:bg-muted/50"
         }`}
         onClick={() => navigate(`/visitors/${visitor.id}`)}
       >
-        {/* Name + optional type badge */}
+        {/* Selection */}
+        <TableCell className="py-3 w-9" onClick={(e) => e.stopPropagation()}>
+          {onSite && (
+            <Checkbox
+              checked={selectedIds.includes(visitor.id)}
+              onCheckedChange={() => toggleSelected(visitor.id)}
+              aria-label={`Select ${visitor.firstName} ${visitor.surname}`}
+            />
+          )}
+        </TableCell>
+
+        {/* Person */}
         <TableCell className="py-3">
           <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10">
+            <Avatar className="h-9 w-9">
               <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
                 {visitor.firstName[0]}{visitor.surname[0]}
               </AvatarFallback>
             </Avatar>
-            <div className="flex flex-col">
-              <button
-                className="font-semibold text-[15px] text-primary hover:underline text-left"
-                onClick={(e) => { e.stopPropagation(); navigate(`/visitors/${visitor.id}`); }}
-              >
-                {visitor.firstName} {visitor.surname}
-              </button>
-              {showTypeBadge && (
-                <span className={`text-[11px] font-normal tracking-wide ${typeLabelStyles[visitor.type] || "text-muted-foreground"}`}>
-                  {typeLabelsMap[visitor.type] || visitor.type}
-                </span>
-              )}
-              {keysForVisitor(visitor.id).length > 0 && (
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-1.5">
                 <button
-                  onClick={(e) => { e.stopPropagation(); navigate("/keys"); }}
-                  className={`mt-0.5 inline-flex items-center gap-1 text-[11px] font-medium ${
-                    keysForVisitor(visitor.id).some((k) => k.overdue) ? "text-destructive" : "text-warning"
-                  }`}
+                  className="font-semibold text-[15px] text-primary hover:underline text-left truncate"
+                  onClick={(e) => { e.stopPropagation(); navigate(`/visitors/${visitor.id}`); }}
                 >
-                  <KeyRound className="h-3 w-3" />
-                  Key issued · {keysForVisitor(visitor.id).map((k) => k.keyLabel).join(", ")}
+                  {visitor.firstName} {visitor.surname}
                 </button>
-              )}
+                {flagged && (
+                  <span title="On the watchlist — check instructions before allowing access">
+                    <ShieldAlert className="h-3.5 w-3.5 text-destructive" />
+                  </span>
+                )}
+                {overstayed && (
+                  <span
+                    className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-destructive"
+                    title={`On site longer than ${hoursFor(visitor.type)}h`}
+                  >
+                    <AlertTriangle className="h-3 w-3" /> Overdue
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {showTypeBadge && (
+                  <span className="text-[11px] text-muted-foreground">
+                    {typeLabelsMap[visitor.type] || visitor.type}
+                  </span>
+                )}
+                {keys.length > 0 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); navigate("/keys"); }}
+                    className={`inline-flex items-center gap-1 text-[11px] font-medium ${
+                      overdueKey ? "text-destructive" : "text-warning"
+                    }`}
+                  >
+                    <KeyRound className="h-3 w-3" />
+                    {overdueKey ? "Key overdue" : "Key out"} · {keys.map((k) => k.keyLabel).join(", ")}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </TableCell>
 
-
-        {/* Check-In time */}
+        {/* In — time first, duration as quiet supporting text */}
         <TableCell className="py-3">
-          <span className="text-[13px] font-mono text-foreground">{format(visitor.checkInTime, "hh:mm a")}</span>
-          <span className="text-[11px] text-muted-foreground ml-1">{format(visitor.checkInTime, "dd MMM")}</span>
+          <div className="flex flex-col">
+            <span className="text-[13px] font-mono text-foreground">{format(visitor.checkInTime, "hh:mm a")}</span>
+            <span className={`text-[11px] tabular-nums ${overstayed ? "text-destructive" : "text-muted-foreground"}`}>
+              {formatDuration(visitor.checkInTime, visitor.checkOutTime)}
+              {onSite ? " so far" : ""}
+            </span>
+          </div>
         </TableCell>
 
-        {/* Duration */}
+        {/* Out — always a real column */}
         <TableCell className="py-3">
-          <span className={`text-[13px] font-mono tabular-nums ${
-            overstayed ? "text-destructive font-semibold" : visitor.status === "checked-in" ? "text-foreground" : "text-muted-foreground"
-          }`}>
-            {duration}
-          </span>
+          {visitor.checkOutTime ? (
+            <div className="flex flex-col">
+              <span className="text-[13px] font-mono text-foreground">{format(visitor.checkOutTime, "hh:mm a")}</span>
+              <span className="text-[11px] text-muted-foreground">{format(visitor.checkOutTime, "dd MMM")}</span>
+            </div>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-success">
+              <span className="h-1.5 w-1.5 rounded-full bg-success" /> On site
+            </span>
+          )}
         </TableCell>
 
         {/* Visiting / Department / Company */}
@@ -219,8 +262,8 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
           )}
         </TableCell>
 
-        {/* Companions (visitors/volunteers only) */}
-        {(type === "visitor" || type === "volunteer" || type === "all") && (
+        {/* Companions */}
+        {showCompanions && (
           <TableCell className="py-3">
             {visitor.additionalVisitors > 0 ? (
               <Badge variant="secondary" className="text-[10px] gap-1 font-semibold">
@@ -232,32 +275,28 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
           </TableCell>
         )}
 
-        {/* Status */}
+        {/* Action */}
         <TableCell onClick={(e) => e.stopPropagation()} className="py-3">
-          {visitor.status === "checked-in" ? (
-            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
-              onClick={() => onCheckOut(visitor.id)}>
+          {onSite ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
+              onClick={() => onCheckOut(visitor.id)}
+            >
               <LogOut className="h-3 w-3" />
-              {type === "staff" ? "Sign Out" : type === "contractor" ? "Depart" : "Check Out"}
+              {actionLabel(visitor.type)}
             </Button>
           ) : (
-            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
-              {visitor.checkOutTime ? (
-                <>
-                  <span className="font-mono">{format(visitor.checkOutTime, "hh:mm a")}</span>
-                  <span className="text-[11px]">{format(visitor.checkOutTime, "dd MMM")}</span>
-                </>
-              ) : "—"}
-            </span>
+            <span className="text-xs text-muted-foreground">Done</span>
           )}
         </TableCell>
 
-        {/* Actions */}
+        {/* Overflow menu */}
         <TableCell onClick={(e) => e.stopPropagation()} className="py-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -269,12 +308,9 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
                 <FileText className="h-3.5 w-3.5 mr-2" />Export PDF
               </DropdownMenuItem>
               {onFeedback && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => onFeedback(visitor)}>
-                    <MessageSquare className="h-3.5 w-3.5 mr-2" />Give Feedback
-                  </DropdownMenuItem>
-                </>
+                <DropdownMenuItem onClick={() => onFeedback(visitor)}>
+                  <MessageSquare className="h-3.5 w-3.5 mr-2" />Give Feedback
+                </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => onDelete(visitor.id)}>
@@ -287,10 +323,13 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
     );
   };
 
+  const visibleSelected = selectedIds.filter((id) =>
+    visitorsByType[activeTab || "all"].some((v) => v.id === id && v.status === "checked-in")
+  );
+
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
       <Tabs value={activeTab || "all"} onValueChange={onTabChange} defaultValue="all">
-        {/* Underline-style tabs */}
         <div className="border-b border-border px-4">
           <TabsList className="inline-flex items-center bg-transparent rounded-none p-0 gap-0 h-auto">
             {Object.entries(visitorsByType).map(([type, list]) => (
@@ -316,6 +355,26 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
           activeFilter={activeFilter}
         />
 
+        {visibleSelected.length > 0 && (
+          <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-primary/5 border-b border-border">
+            <p className="text-[13px] font-medium text-foreground">
+              {visibleSelected.length} selected
+            </p>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setSelectedIds([])}>
+                Clear
+              </Button>
+              <Button
+                size="sm"
+                className="h-8 text-xs gap-1.5"
+                onClick={() => { onCheckOutMany?.(visibleSelected); setSelectedIds([]); }}
+              >
+                <LogOut className="h-3.5 w-3.5" /> Check out selected
+              </Button>
+            </div>
+          </div>
+        )}
+
         {(["all", "visitor", "contractor", "volunteer", "staff"] as const).map((type) => {
           const list = visitorsByType[type];
           const columns = getColumns(type);
@@ -324,24 +383,20 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent bg-muted/50">
+                    <TableHead className="w-9" />
                     {columns.map((col) => (
-                      <TableHead key={col.key} className="text-xs uppercase tracking-wider font-semibold text-muted-foreground h-[48px]">
+                      <TableHead key={col.key} className="text-xs uppercase tracking-wider font-semibold text-muted-foreground h-[44px]">
                         {col.label}
                       </TableHead>
                     ))}
-                    <TableHead className="w-10"></TableHead>
+                    <TableHead className="w-10" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {list.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={columns.length + 1} className="text-center py-16">
-                        <div className="flex flex-col items-center gap-2">
-                          <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                            <span className="text-muted-foreground text-lg">{emptyIcons[type]}</span>
-                          </div>
-                          <p className="text-sm text-muted-foreground">No {tabLabels[type].toLowerCase()} found</p>
-                        </div>
+                      <TableCell colSpan={columns.length + 2} className="text-center py-16">
+                        <p className="text-sm text-muted-foreground">No {tabLabels[type].toLowerCase()} to show</p>
                       </TableCell>
                     </TableRow>
                   ) : (
