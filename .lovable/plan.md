@@ -47,7 +47,7 @@ Contractor checkout adds one step only: any keys or fobs still issued to them ar
 - Kiosk contractor check-in: worker identification, status card, upload-only-if-needed step, escorted/provisional messaging.
 - Staff check-in sheet (`ContractorScreening`): same status card, plus staff can verify documents inline and override with a reason.
 - Contractor / supplier settings: credential types gain a "held by person or company" choice and an optional "document required" flag; new entry-on-fail setting.
-- Visitor profile: contractor's compliance status, documents, and verification history.
+- Visitor profile (contractor): a "Compliance documents" panel listing every credential — personal and company — with its status (valid / expiring / expired / pending check), expiry date, the attached file viewable or downloadable by staff, who uploaded it, and who verified it and when. Staff can verify, replace an expired document, or upload a missing one from here, and every action is logged. Past visits show the status the contractor held on that day.
 - Checkout sheet + kiosk checkout: outstanding keys prompt.
 
 ## Technical notes
