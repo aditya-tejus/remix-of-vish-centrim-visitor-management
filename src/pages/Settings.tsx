@@ -49,6 +49,8 @@ export default function SettingsPage() {
                 {active === "feedback" && <SurveyBuilder />}
                 {active === "presence" && <PresenceTab />}
                 {active === "printing" && <PrintingTab />}
+                {active === "keys" && <KeysPolicyTab />}
+
                 {active === "compliance" && <ComplianceTab />}
                 {active === "integration" && <IntegrationTab />}
                 {active === "audit" && <AuditTrailTab />}
