@@ -194,18 +194,6 @@ export function ContractorScreening({
   };
 
 
-  const stateStyles: Record<string, string> = {
-    valid: "border-success/30 bg-success/5",
-    expiring: "border-warning/40 bg-warning/5",
-    expired: "border-destructive/40 bg-destructive/5",
-    missing: "border-destructive/40 bg-destructive/5",
-  };
-  const stateLabel: Record<string, string> = {
-    valid: "Verified",
-    expiring: "Expiring soon",
-    expired: "Expired",
-    missing: "Not recorded",
-  };
 
   return (
     <div className="space-y-4">
