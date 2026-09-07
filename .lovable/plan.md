@@ -40,3 +40,5 @@ Today the desk checkout silently assumes everyone leaves together (it just state
 - New shared `useQuestionLabels()` hook reading `health_questions` and `form_fields` (all types, including inactive) into an id → question map; used by the profile, history rows, PDF/CSV export, and the resident visit view.
 - Answer rendering moves into one shared `ScreeningAnswers` component so the current visit, history rows and exports stay consistent.
 - Visit list changes stay in `VisitorTable.tsx`; resident room/wing comes from the existing `useResidents` hook.
+- Companion departures are stored on the existing `companion_details` JSON (per-companion `checkedOutAt`), with `additional_visitors` reduced to those still on site — no schema change. One shared `checkoutCompanions` helper used by `CheckOutSheet.tsx` and the kiosk checkout so both behave identically.
+
