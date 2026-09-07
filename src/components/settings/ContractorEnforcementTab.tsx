@@ -1,52 +1,89 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ShieldAlert } from "lucide-react";
-import type { CredentialKey } from "@/lib/contractorCredentials";
-import { MANDATORY_CREDENTIALS_KEY, parseMandatoryCredentials } from "@/hooks/useContractorEnforcement";
+import { ShieldAlert, Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
+import { useCredentialTypes } from "@/hooks/useContractorEnforcement";
+import type { CredentialType } from "@/lib/contractorCredentials";
+
+const JURISDICTION_LABEL: Record<string, string> = {
+  ALL: "All regions",
+  AU: "Australia",
+  UK: "United Kingdom",
+};
+
+function slugify(label: string) {
+  return label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 40);
+}
 
 export function ContractorEnforcementTab() {
-  const [jurisdiction, setJurisdiction] = useState<"AU" | "UK">("UK");
-  const [selected, setSelected] = useState<CredentialKey[]>([]);
-  const [saving, setSaving] = useState(false);
+  const { types, loading, refetch } = useCredentialTypes();
   const { toast } = useToast();
+  const [adding, setAdding] = useState(false);
+  const [newLabel, setNewLabel] = useState("");
+  const [newShort, setNewShort] = useState("");
+  const [newJurisdiction, setNewJurisdiction] = useState<"ALL" | "AU" | "UK">("ALL");
+  const [newRequired, setNewRequired] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    supabase
-      .from("settings")
-      .select("key, value")
-      .in("key", [MANDATORY_CREDENTIALS_KEY, "jurisdiction"])
-      .then(({ data }) => {
-        const jur = data?.find((d) => d.key === "jurisdiction")?.value;
-        if (jur === "AU" || jur === "UK") setJurisdiction(jur);
-        setSelected(parseMandatoryCredentials(data?.find((d) => d.key === MANDATORY_CREDENTIALS_KEY)?.value));
+  const patch = async (id: string, fields: Partial<CredentialType>) => {
+    const { error } = await supabase.from("credential_types").update(fields as any).eq("id", id);
+    if (error) {
+      toast({ title: "Could not save", description: error.message, variant: "destructive" });
+      return;
+    }
+    await refetch();
+  };
+
+  const addCredential = async () => {
+    const label = newLabel.trim();
+    if (!label) return;
+    setBusy(true);
+    const key = slugify(label) || `credential_${Date.now()}`;
+    const { error } = await supabase.from("credential_types").insert({
+      key,
+      label,
+      short_label: (newShort.trim() || label).slice(0, 24),
+      jurisdiction: newJurisdiction,
+      is_required: newRequired,
+      sort_order: (types.at(-1)?.sort_order ?? 0) + 1,
+    } as any);
+    setBusy(false);
+    if (error) {
+      toast({
+        title: "Could not add credential",
+        description: error.message.includes("duplicate") ? "A credential with that name already exists." : error.message,
+        variant: "destructive",
       });
-  }, []);
+      return;
+    }
+    setNewLabel(""); setNewShort(""); setNewJurisdiction("ALL"); setNewRequired(false); setAdding(false);
+    await refetch();
+    toast({ title: "Credential added" });
+  };
 
-  const options: { key: CredentialKey; label: string; hint: string }[] = [
-    jurisdiction === "UK"
-      ? { key: "dbs", label: "DBS Check", hint: "Criminal records check (United Kingdom)" }
-      : { key: "acws", label: "Aged Care Worker Screening", hint: "Worker screening clearance (Australia)" },
-    { key: "insurance", label: "Public Liability Insurance", hint: "Current cover held by the supplier" },
-  ];
+  const remove = async (t: CredentialType) => {
+    const { error } = await supabase.from("credential_types").delete().eq("id", t.id);
+    if (error) {
+      toast({ title: "Could not remove", description: error.message, variant: "destructive" });
+      return;
+    }
+    await refetch();
+    toast({ title: `${t.label} removed` });
+  };
 
-  const toggle = (key: CredentialKey, on: boolean) =>
-    setSelected((prev) => (on ? [...new Set([...prev, key])] : prev.filter((k) => k !== key)));
-
-  const save = async () => {
-    setSaving(true);
-    await supabase.from("settings").upsert(
-      { key: MANDATORY_CREDENTIALS_KEY, value: JSON.stringify(selected) },
-      { onConflict: "key" }
-    );
-    setSaving(false);
-    toast({
-      title: selected.length
-        ? "Required credentials updated"
-        : "No credentials are required — warnings only",
-    });
+  const move = async (index: number, dir: -1 | 1) => {
+    const a = types[index];
+    const b = types[index + dir];
+    if (!a || !b) return;
+    await supabase.from("credential_types").update({ sort_order: b.sort_order } as any).eq("id", a.id);
+    await supabase.from("credential_types").update({ sort_order: a.sort_order } as any).eq("id", b.id);
+    await refetch();
   };
 
   return (
@@ -54,36 +91,103 @@ export function ContractorEnforcementTab() {
       <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/40">
         <ShieldAlert className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
         <p className="text-xs text-muted-foreground leading-relaxed">
-          Tick the credentials a contractor must hold before check-in can be completed. Entry is only
-          actually stopped when the contractor is marked as having <strong>unsupervised access to
-          residents</strong> during screening. For escorted contractors, or those with no resident
-          contact, a missing or expired credential is still shown to staff — but check-in can proceed.
+          Build the list of credentials your contractors must hold. Tick <strong>Required</strong> on any credential
+          that must be current before check-in can be completed. Entry is only actually stopped when the contractor is
+          marked as having <strong>unsupervised access to residents</strong> during screening. For escorted contractors,
+          or those with no resident contact, a missing or expired credential is shown to staff and the exemption must be
+          explained — but check-in can proceed.
         </p>
       </div>
 
       <div className="space-y-2">
-        <p className="text-sm font-medium text-foreground">Required before check-in can proceed</p>
-        {options.map((o) => (
-          <label
-            key={o.key}
-            className="flex items-start gap-3 rounded-xl border border-border p-3 cursor-pointer"
-          >
-            <Checkbox
-              checked={selected.includes(o.key)}
-              onCheckedChange={(v) => toggle(o.key, v === true)}
-              className="mt-0.5"
-            />
-            <span>
-              <span className="block text-sm font-medium text-foreground">{o.label}</span>
-              <span className="block text-xs text-muted-foreground">{o.hint}</span>
-            </span>
-          </label>
+        {loading && <p className="text-xs text-muted-foreground">Loading…</p>}
+        {!loading && types.length === 0 && (
+          <p className="text-xs text-muted-foreground">No credentials yet — add your first one below.</p>
+        )}
+
+        {types.map((t, i) => (
+          <div key={t.id} className="rounded-xl border border-border p-3 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">{t.label}</p>
+                <p className="text-xs text-muted-foreground">
+                  {JURISDICTION_LABEL[t.jurisdiction]} · short label “{t.short_label}”
+                </p>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <Button variant="ghost" size="icon" className="h-8 w-8" disabled={i === 0} onClick={() => move(i, -1)}>
+                  <ArrowUp className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" disabled={i === types.length - 1} onClick={() => move(i, 1)}>
+                  <ArrowDown className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => remove(t)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <Checkbox checked={t.is_required} onCheckedChange={(v) => patch(t.id, { is_required: v === true })} />
+                <span className="text-xs text-foreground">Required before check-in can proceed</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <Switch checked={t.is_active} onCheckedChange={(v) => patch(t.id, { is_active: v })} />
+                <span className="text-xs text-muted-foreground">{t.is_active ? "Active" : "Hidden"}</span>
+              </label>
+              <Select value={t.jurisdiction} onValueChange={(v) => patch(t.id, { jurisdiction: v as CredentialType["jurisdiction"] })}>
+                <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All regions</SelectItem>
+                  <SelectItem value="AU">Australia</SelectItem>
+                  <SelectItem value="UK">United Kingdom</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         ))}
       </div>
 
-      <Button size="sm" onClick={save} disabled={saving}>
-        {saving ? "Saving…" : "Save"}
-      </Button>
+      {adding ? (
+        <div className="rounded-xl border border-border p-3 space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Credential name</Label>
+              <Input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="e.g. Working with Children Check" className="h-9 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Short label</Label>
+              <Input value={newShort} onChange={(e) => setNewShort(e.target.value)} placeholder="e.g. WWCC" className="h-9 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Applies to</Label>
+              <Select value={newJurisdiction} onValueChange={(v) => setNewJurisdiction(v as any)}>
+                <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All regions</SelectItem>
+                  <SelectItem value="AU">Australia</SelectItem>
+                  <SelectItem value="UK">United Kingdom</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer sm:mt-6">
+              <Checkbox checked={newRequired} onCheckedChange={(v) => setNewRequired(v === true)} />
+              <span className="text-xs text-foreground">Required before check-in</span>
+            </label>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={addCredential} disabled={busy || !newLabel.trim()}>
+              {busy ? "Adding…" : "Add credential"}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>Cancel</Button>
+          </div>
+        </div>
+      ) : (
+        <Button size="sm" variant="outline" onClick={() => setAdding(true)} className="gap-1.5">
+          <Plus className="h-4 w-4" /> Add credential
+        </Button>
+      )}
     </div>
   );
 }
