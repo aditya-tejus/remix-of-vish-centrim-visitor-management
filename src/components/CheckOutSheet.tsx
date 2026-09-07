@@ -18,6 +18,8 @@ import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { TimeOverride } from "@/components/TimeOverride";
 import { Textarea } from "@/components/ui/textarea";
 import { useOpenKeyIssues } from "@/hooks/useOpenKeyIssues";
+import { Checkbox } from "@/components/ui/checkbox";
+import { planCompanionCheckout, companionsStillOnSite } from "@/lib/companionCheckout";
 
 const OVERSTAY_THRESHOLD_MS = 8 * 3600000; // 8 hours
 
@@ -39,7 +41,17 @@ interface CheckOutSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   visitors: Visitor[];
-  onCheckOut: (id: string, reason?: string, timeOverride?: string) => void;
+  onCheckOut: (
+    id: string,
+    reason?: string,
+    timeOverride?: string,
+    companionOutcome?: {
+      companionDetails: CompanionDetail[];
+      remainingCompanions: number;
+      everyoneLeft: boolean;
+      note?: string;
+    }
+  ) => void;
   /** Pre-select a specific visitor (from table row action) */
   preSelectedVisitorId?: string | null;
   onPreSelectedClear?: () => void;
@@ -65,6 +77,7 @@ export function CheckOutSheet({
   const [successDuration, setSuccessDuration] = useState("");
   const [bulkTimeOverride, setBulkTimeOverride] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [leavingCompanions, setLeavingCompanions] = useState<number[]>([]);
 
   const checkedInVisitors = useMemo(
     () => visitors.filter((v) => v.status === "checked-in" && v.type !== "resident"),
@@ -125,6 +138,10 @@ export function CheckOutSheet({
 
   const handleSelectVisitor = (visitor: Visitor) => {
     setSelectedVisitor(visitor);
+    // Everyone leaves together by default — the common case stays one tap.
+    setLeavingCompanions(
+      (visitor.companionDetails || []).map((c, i) => (c.checkedOutAt ? -1 : i)).filter((i) => i >= 0)
+    );
     setCheckoutReason("");
     setTimeOverride(null);
     setKeyAction(null);
@@ -144,7 +161,19 @@ export function CheckOutSheet({
       held.length > 0 && keyAction === "keep"
         ? ` · Key still out: ${held.map((h) => h.keyLabel).join(", ")}${keyKeepReason.trim() ? ` — ${keyKeepReason.trim()}` : ""}`
         : "";
-    await onCheckOut(selectedVisitor.id, `${checkoutReason}${keyNote}`.trim() || undefined, timeOverride || undefined);
+    const at = timeOverride
+      ? (() => { const d = new Date(); const [h, m] = timeOverride.split(":").map(Number); d.setHours(h, m, 0, 0); return d; })()
+      : new Date();
+    const outcome = onSiteCompanions.length > 0
+      ? planCompanionCheckout(selectedVisitor, leavingCompanions, true, at)
+      : undefined;
+    const companionNote = outcome && outcome.remainingCompanions > 0 ? ` · ${outcome.note}` : "";
+    await onCheckOut(
+      selectedVisitor.id,
+      `${checkoutReason}${keyNote}${companionNote}`.trim() || undefined,
+      timeOverride || undefined,
+      outcome
+    );
     setCheckingOut(null);
     setSuccessName(name);
     setSuccessDuration(dur);
@@ -160,6 +189,7 @@ export function CheckOutSheet({
 
   const handleBack = () => {
     setSelectedVisitor(null);
+    setLeavingCompanions([]);
     setCheckoutReason("");
     setTimeOverride(null);
     setKeyAction(null);
@@ -184,6 +214,11 @@ export function CheckOutSheet({
     : [];
 
   const companions: CompanionDetail[] = selectedVisitor?.companionDetails || [];
+  const onSiteCompanions = companionsStillOnSite(selectedVisitor);
+  const stayingBehind = onSiteCompanions.length -
+    companions.filter((c, i) => !c.checkedOutAt && leavingCompanions.includes(i)).length;
+  const toggleCompanion = (i: number) =>
+    setLeavingCompanions((prev) => (prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]));
 
   return (
     <>
