@@ -48,6 +48,9 @@ export interface Visitor {
   qrCode?: string;
   personQr?: string;
   groupId?: string;
+  /** Residents this person came to see (proper link, not just free text). */
+  visitedResidentIds?: string[];
+
 
 }
 
