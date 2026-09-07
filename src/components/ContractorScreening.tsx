@@ -6,12 +6,20 @@ import { Badge } from "@/components/ui/badge";
 import { useSuppliers, Supplier } from "@/hooks/useSuppliers";
 import { Search, Check, Building2, Shield, HardHat, FileCheck, AlertTriangle, Syringe, ShieldAlert, CalendarClock, Loader2 } from "lucide-react";
 import {
-  getSupplierCredentials,
+  buildComplianceChecklist,
   evaluateContractorGate,
   UNSUPERVISED_ACCESS_KEY,
   ESCORT_REASON_KEY,
 } from "@/lib/contractorCredentials";
 import { useCredentialTypes, useSupplierCredentials } from "@/hooks/useContractorEnforcement";
+import {
+  findContractorPerson,
+  upsertContractorPerson,
+  usePersonCredentials,
+  useContractorEntryPolicy,
+  type ContractorPerson,
+} from "@/hooks/useContractorPeople";
+import { ComplianceChecklist } from "@/components/contractor/ComplianceChecklist";
 import { useToast } from "@/hooks/use-toast";
 
 // AU screening template
