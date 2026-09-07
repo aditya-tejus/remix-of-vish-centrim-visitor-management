@@ -19,6 +19,7 @@ import { useActiveHealthQuestions, useActiveVaccinationFields } from "@/hooks/us
 import { useCompanionFields } from "@/hooks/useFormFields";
 import { useActiveLeaveTypes } from "@/hooks/useLeaveTypes";
 import { format } from "date-fns";
+import { useOpenKeyIssues } from "@/hooks/useOpenKeyIssues";
 import { supabase } from "@/integrations/supabase/client";
 import { ContractorScreening } from "@/components/ContractorScreening";
 import { Supplier } from "@/hooks/useSuppliers";
@@ -99,6 +100,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
   const [healthAnswers, setHealthAnswers] = useState<Record<string, any>>({});
   const [overrideReason, setOverrideReason] = useState("");
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
+  const { overdueForName, policy: keyPolicy } = useOpenKeyIssues();
 
   const [branchTcUrl, setBranchTcUrl] = useState<string | null>(null);
   const [branchPrivacyUrl, setBranchPrivacyUrl] = useState<string | null>(null);
@@ -364,7 +366,15 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
   const overrideValid = overrideReason.trim().length >= 3;
   // Contractor credential gate: only the highest-risk credential blocks check-in
   const contractorBlocked = isContractor && contractorGate.blocked;
-  const canSubmit = privacyAcknowledged && !contractorBlocked && (!screeningFlagged || overrideValid);
+
+  // Outstanding keys/fobs gate
+  const overdueKeys = useMemo(
+    () => (isResident ? [] : overdueForName(`${formData.firstName} ${formData.surname}`.trim())),
+    [overdueForName, formData.firstName, formData.surname, isResident]
+  );
+  const keyBlocked = keyPolicy.enforcement === "block" && overdueKeys.length > 0 && !overrideValid;
+  const canSubmit =
+    privacyAcknowledged && !contractorBlocked && !keyBlocked && (!screeningFlagged || overrideValid);
 
 
   // Render health questions shared component
@@ -678,6 +688,27 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType }: AddVi
             )}
           </div>
         )}
+        {overdueKeys.length > 0 && keyPolicy.enforcement !== "off" && (
+          <div className={`rounded-xl border p-3 space-y-1 ${keyPolicy.enforcement === "block" ? "border-destructive/30 bg-destructive/10" : "border-warning/30 bg-warning/10"}`}>
+            <p className="text-xs font-bold text-foreground">
+              {keyPolicy.enforcement === "block" ? "Outstanding key or fob — not returned" : "Still holding a key or fob"}
+            </p>
+            <ul className="text-[11px] text-muted-foreground space-y-0.5">
+              {overdueKeys.map((i) => (
+                <li key={i.id}>
+                  {i.keyLabel}{i.propertyLabel ? ` · ${i.propertyLabel}` : ""}
+                  {i.expectedReturn ? ` · due ${format(i.expectedReturn, "hh:mm a dd MMM")}` : ""}
+                </li>
+              ))}
+            </ul>
+            {keyPolicy.enforcement === "block" && (
+              <p className="text-[11px] text-destructive">
+                Take the item back in the Keys Register, or record a reason below to let them in anyway.
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="space-y-2">
           <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 cursor-pointer" onClick={() => setPrivacyAcknowledged(!privacyAcknowledged)}>
             <Checkbox checked={privacyAcknowledged} onCheckedChange={(c) => setPrivacyAcknowledged(c === true)} />
