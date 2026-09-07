@@ -618,6 +618,7 @@ export type Database = {
           created_at: string
           expected_return: string | null
           id: string
+          is_permanent: boolean
           issued_at: string
           issued_by: string
           issued_to_name: string
@@ -636,6 +637,7 @@ export type Database = {
           created_at?: string
           expected_return?: string | null
           id?: string
+          is_permanent?: boolean
           issued_at?: string
           issued_by: string
           issued_to_name: string
@@ -654,6 +656,7 @@ export type Database = {
           created_at?: string
           expected_return?: string | null
           id?: string
+          is_permanent?: boolean
           issued_at?: string
           issued_by?: string
           issued_to_name?: string
@@ -847,8 +850,11 @@ export type Database = {
           is_active: boolean
           key_label: string
           key_type: string
+          lost_at: string | null
+          lost_notes: string | null
           notes: string | null
           property_label: string | null
+          replaced_by_key_id: string | null
           resident_name: string | null
           resident_visitor_id: string | null
           status: string
@@ -864,8 +870,11 @@ export type Database = {
           is_active?: boolean
           key_label: string
           key_type?: string
+          lost_at?: string | null
+          lost_notes?: string | null
           notes?: string | null
           property_label?: string | null
+          replaced_by_key_id?: string | null
           resident_name?: string | null
           resident_visitor_id?: string | null
           status?: string
@@ -881,8 +890,11 @@ export type Database = {
           is_active?: boolean
           key_label?: string
           key_type?: string
+          lost_at?: string | null
+          lost_notes?: string | null
           notes?: string | null
           property_label?: string | null
+          replaced_by_key_id?: string | null
           resident_name?: string | null
           resident_visitor_id?: string | null
           status?: string
@@ -896,6 +908,13 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_keys_replaced_by_key_id_fkey"
+            columns: ["replaced_by_key_id"]
+            isOneToOne: false
+            referencedRelation: "property_keys"
             referencedColumns: ["id"]
           },
           {
