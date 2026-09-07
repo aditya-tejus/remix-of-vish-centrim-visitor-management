@@ -6,6 +6,8 @@ import { SettingsNav, SettingsSection } from "@/components/settings/SettingsNav"
 import { PersonTypeSettings } from "@/components/settings/PersonTypeSettings";
 import { PresenceTab } from "@/components/settings/PresenceTab";
 import { PrintingTab } from "@/components/settings/PrintingTab";
+import { KeysPolicyTab } from "@/components/settings/KeysPolicyTab";
+
 import { ComplianceTab } from "@/components/settings/ComplianceTab";
 import { IntegrationTab } from "@/components/settings/IntegrationTab";
 import { AuditTrailTab } from "@/components/settings/AuditTrailTab";
