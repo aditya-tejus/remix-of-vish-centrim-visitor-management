@@ -712,6 +712,7 @@ export default function KioskCheckIn() {
                 selectedSupplier={flow.selectedSupplier}
                 onSupplierChange={flow.setSelectedSupplier}
                 compact={false}
+                onBlockedChange={(blocked, reason) => flow.setContractorGate({ blocked, reason })}
               />
             </div>
             <div className="flex gap-3 pt-2">
