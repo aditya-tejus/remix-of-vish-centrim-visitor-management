@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useVisitors } from "@/hooks/useVisitors";
 import { useVisitorHistory } from "@/hooks/useVisitorHistory";
 import { useResidents } from "@/hooks/useResidents";
+import { ContractorCompliancePanel } from "@/components/contractor/ContractorCompliancePanel";
 import { ScreeningAnswers } from "@/components/ScreeningAnswers";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
