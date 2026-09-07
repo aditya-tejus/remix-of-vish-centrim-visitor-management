@@ -257,8 +257,9 @@ export function useKioskCheckInFlow() {
     returningOptions,
     personQr,
     setPersonQr,
-
+    steps,
     activeFormFields,
+
     healthQuestions,
     vaccinationFields,
     residents,
