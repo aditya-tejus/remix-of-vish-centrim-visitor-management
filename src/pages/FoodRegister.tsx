@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useResidents } from "@/hooks/useResidents";
 import { useFoodRegister } from "@/hooks/useFoodRegister";
 import { AddFoodDialog } from "@/components/food/AddFoodDialog";
-import { FoodPrivacyNotice } from "@/components/FoodPrivacyNotice";
+
 import { FoodRecord, foodTypeLabel } from "@/lib/foodRegister";
 import { format } from "date-fns";
 import { Download, Plus, Search, UtensilsCrossed, X } from "lucide-react";
@@ -139,7 +139,7 @@ export default function FoodRegisterPage() {
               </CardContent>
             </Card>
 
-            <FoodPrivacyNotice />
+
 
             <Card className="rounded-xl">
               <CardContent className="p-0">
