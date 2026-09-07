@@ -31,6 +31,9 @@ interface StepScreeningProps {
   selectedSupplier: Supplier | null;
   setSelectedSupplier: (supplier: Supplier | null) => void;
   onBlockedChange?: (blocked: boolean, reason: string | null) => void;
+  workerFirstName?: string;
+  workerSurname?: string;
+  workerMobile?: string;
 }
 
 export function StepScreening({
@@ -47,6 +50,9 @@ export function StepScreening({
   selectedSupplier,
   setSelectedSupplier,
   onBlockedChange,
+  workerFirstName = "",
+  workerSurname = "",
+  workerMobile = "",
 }: StepScreeningProps) {
   const isContractor = selectedType === "contractor";
 
@@ -58,6 +64,9 @@ export function StepScreening({
         onAnswersChange={setContractorScreeningAnswers}
         selectedSupplier={selectedSupplier}
         onSupplierChange={setSelectedSupplier}
+        workerFirstName={workerFirstName}
+        workerSurname={workerSurname}
+        workerMobile={workerMobile}
         onBlockedChange={onBlockedChange}
       />
     );
