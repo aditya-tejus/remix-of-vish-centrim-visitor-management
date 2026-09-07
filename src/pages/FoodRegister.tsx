@@ -139,7 +139,7 @@ export default function FoodRegisterPage() {
               </CardContent>
             </Card>
 
-            <FoodPrivacyNotice />
+
 
             <Card className="rounded-xl">
               <CardContent className="p-0">
