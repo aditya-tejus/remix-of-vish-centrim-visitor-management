@@ -68,6 +68,13 @@ export default function VisitList() {
 
   const { isOverstayed } = useOverstayPolicy();
 
+  // Counts follow the selected tab and search, but not the status filter,
+  // so the numbers never disagree with what the desk sees.
+  const tabVisitors = useMemo(
+    () => (activeTab === "all" ? searchedVisitors : searchedVisitors.filter((v) => v.type === activeTab)),
+    [searchedVisitors, activeTab]
+  );
+
   // Status filter from the counter row
   const displayVisitors = useMemo(() => {
     if (!activeFilter || activeFilter === "all") return searchedVisitors;
