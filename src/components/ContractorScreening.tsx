@@ -294,7 +294,7 @@ export function ContractorScreening({
         <div className="space-y-2">
           {questions.map((q) => {
             const answer = answers[q.id];
-            const Icon = q.icon;
+            const Icon = (q as { icon?: React.ComponentType<{ className?: string }> }).icon;
 
             if (q.type === "yesno") {
               const isYes = answer === true;
