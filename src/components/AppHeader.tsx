@@ -2,11 +2,15 @@ import { useState, useEffect } from "react";
 import centrimLogo from "@/assets/centrim-life-logo.png";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { NotificationBell } from "@/components/NotificationBell";
-import { Clock, Users } from "lucide-react";
+import { Clock, Users, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useHealthAlerts } from "@/hooks/useHealthAlerts";
 import { useOccupancy } from "@/hooks/useOccupancy";
+import { useOutbreakMode } from "@/hooks/useOutbreakMode";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+
 
 
 interface AppHeaderProps {
