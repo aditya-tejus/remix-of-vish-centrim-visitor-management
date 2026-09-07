@@ -7,19 +7,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import type { Resident } from "@/hooks/useResidents";
-import { ChevronDown, DoorOpen, Mail, Car, CreditCard, KeyRound, MoreHorizontal } from "lucide-react";
+import { ChevronDown, DoorOpen, Mail, Car, CreditCard, KeyRound, Nfc, MoreHorizontal } from "lucide-react";
 
 export const KEY_TYPES = [
   { value: "property", label: "Front door", icon: DoorOpen },
   { value: "mailbox", label: "Mailbox", icon: Mail },
   { value: "garage", label: "Garage / shed", icon: Car },
-  { value: "fob", label: "Access fob", icon: CreditCard },
+  { value: "fob", label: "Access fob", icon: Nfc },
+  { value: "card", label: "Swipe card", icon: CreditCard },
   { value: "master", label: "Master key", icon: KeyRound },
   { value: "other", label: "Other", icon: MoreHorizontal },
 ];
 
 export const keyTypeLabel = (value: string) =>
   KEY_TYPES.find((t) => t.value === value)?.label || value;
+
 
 interface Props {
   open: boolean;
