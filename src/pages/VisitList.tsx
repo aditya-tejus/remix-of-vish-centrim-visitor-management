@@ -55,7 +55,15 @@ export default function VisitList() {
     [visitors, selectedDate]
   );
 
-  // Search filter
+  // Search filter — includes the resident being visited, so typing a resident's
+  // name brings up everyone who came to see them.
+  const { residents } = useResidents();
+  const residentNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    residents.forEach((r) => { map[r.visitorId] = `${r.name} ${r.room} ${r.wing}`.toLowerCase(); });
+    return map;
+  }, [residents]);
+
   const searchedVisitors = useMemo(() => {
     if (!searchQuery.trim()) return filteredVisitors;
     const q = searchQuery.toLowerCase();
@@ -63,9 +71,10 @@ export default function VisitList() {
       `${v.firstName} ${v.surname}`.toLowerCase().includes(q) ||
       v.mobile.toLowerCase().includes(q) ||
       (v.whomToVisit || "").toLowerCase().includes(q) ||
-      (v.email || "").toLowerCase().includes(q)
+      (v.email || "").toLowerCase().includes(q) ||
+      (v.visitedResidentIds || []).some((id) => (residentNameById[id] || "").includes(q))
     );
-  }, [filteredVisitors, searchQuery]);
+  }, [filteredVisitors, searchQuery, residentNameById]);
 
   const { isOverstayed } = useOverstayPolicy();
 
