@@ -24,7 +24,15 @@ Three real problems confirmed in the current data and screens:
 ### Resident side of the same story
 - On a resident's record, add a "Visitors" section listing who visited them and when, drawn from the same link — this is the workflow currently missing entirely.
 
+### Checking out with companions
+Today the desk checkout silently assumes everyone leaves together (it just states "2 companions will also be checked out"), and the kiosk checkout never mentions companions at all. Both change:
+- When the person arrived with companions, checkout asks plainly whether everyone is leaving or only some. Each companion is listed with a tick, all ticked by default, so the common case is still one tap.
+- If only some leave, the visit stays open with the remaining companions and a corrected count; those who left are recorded with their departure time — so the on-site count and evacuation roll call stay true.
+- The same question appears on the kiosk checkout screen using the large kiosk cards.
+- The visit record then shows who left and when, instead of one blanket check-out time.
+
 ## Technical notes
+
 
 - Store the resident link on check-in: populate `visitors.visited_resident_ids` from the resident chosen in the web check-in sheet and the kiosk flow, keeping `whom_to_visit` as the display text. No schema change needed.
 - One-off backfill: match existing non-empty `whom_to_visit` text to resident records by name and fill `visited_resident_ids` where unambiguous.
