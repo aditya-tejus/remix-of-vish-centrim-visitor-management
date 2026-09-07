@@ -737,28 +737,40 @@ export default function KioskCheckIn() {
             <h2 className="text-2xl font-bold text-foreground text-center">Anyone Accompanying You?</h2>
             <p className="text-base text-muted-foreground text-center">Are there additional visitors in your group?</p>
 
-            {flow.hasCompanions === null && (
-              <div className="flex gap-4 justify-center pt-2">
-                <button
-                  onClick={() => flow.setHasCompanions(true)}
-                  className="flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-border bg-card/80 shadow-sm active:scale-[0.96] active:border-primary/50 transition-all min-w-[140px]"
-                >
-                  <div className="h-14 w-14 rounded-2xl bg-primary/15 flex items-center justify-center">
-                    <Users className="h-7 w-7 text-primary" />
-                  </div>
-                  <span className="text-lg font-bold text-foreground">Yes</span>
-                </button>
-                <button
-                  onClick={() => { flow.setHasCompanions(false); goNext(); }}
-                  className="flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-border bg-card/80 shadow-sm active:scale-[0.96] active:border-primary/50 transition-all min-w-[140px]"
-                >
-                  <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center">
-                    <UserRound className="h-7 w-7 text-muted-foreground" />
-                  </div>
-                  <span className="text-lg font-bold text-foreground">No, just me</span>
-                </button>
-              </div>
-            )}
+            {/* Answer stays visible and changeable */}
+            <div className="flex gap-4 justify-center pt-2">
+              <button
+                onClick={() => {
+                  flow.setHasCompanions(true);
+                  if (flow.companions.length === 0) {
+                    flow.setCompanions([{ id: crypto.randomUUID(), firstName: "", surname: "", email: "", mobile: "" }]);
+                  }
+                }}
+                className={`flex flex-col items-center gap-3 p-6 rounded-2xl border-2 shadow-sm active:scale-[0.96] transition-all min-w-[140px] ${
+                  flow.hasCompanions === true ? "border-primary bg-primary/10" : "border-border bg-card/80"
+                }`}
+              >
+                <div className="h-14 w-14 rounded-2xl bg-primary/15 flex items-center justify-center">
+                  <Users className="h-7 w-7 text-primary" />
+                </div>
+                <span className="text-lg font-bold text-foreground">Yes</span>
+              </button>
+              <button
+                onClick={() => {
+                  flow.setHasCompanions(false);
+                  flow.setCompanions([]);
+                }}
+                className={`flex flex-col items-center gap-3 p-6 rounded-2xl border-2 shadow-sm active:scale-[0.96] transition-all min-w-[140px] ${
+                  flow.hasCompanions === false ? "border-primary bg-primary/10" : "border-border bg-card/80"
+                }`}
+              >
+                <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center">
+                  <UserRound className="h-7 w-7 text-muted-foreground" />
+                </div>
+                <span className="text-lg font-bold text-foreground">No, just me</span>
+              </button>
+            </div>
+
 
             {flow.hasCompanions && (
               <div className="space-y-3">
