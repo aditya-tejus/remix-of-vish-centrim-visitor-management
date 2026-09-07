@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Visitor } from "@/types/visitor";
+import { useOverstayPolicy } from "@/hooks/useOverstayPolicy";
 import { LogIn, LogOut, AlertTriangle, ShieldCheck, Clock } from "lucide-react";
 
 interface StatDef {
@@ -18,24 +19,29 @@ interface TabContextStatsProps {
   activeFilter?: string | null;
 }
 
-function getStats(tab: string, visitors: Visitor[], allVisitors: Visitor[]): StatDef[] {
+function getStats(
+  tab: string,
+  visitors: Visitor[],
+  allVisitors: Visitor[],
+  isOverstayed: (v: Visitor) => boolean
+): StatDef[] {
   const onSite = visitors.filter(v => v.status === "checked-in").length;
   const checkedOut = visitors.filter(v => v.status === "checked-out").length;
-  const overstayed = visitors.filter(v => v.status === "checked-in" && Date.now() - v.checkInTime.getTime() > 8 * 3600000).length;
+  const overstayed = visitors.filter(isOverstayed).length;
 
   switch (tab) {
     case "all":
       return [
         { label: "On-site", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
-        { label: "Checked Out", value: checkedOut, icon: <LogOut className="h-3.5 w-3.5" />, accent: "text-muted-foreground", filterKey: "checked-out" },
-        { label: "Overstayed", value: overstayed, icon: <AlertTriangle className="h-3.5 w-3.5" />, accent: "text-destructive", filterKey: "overstayed" },
+        { label: "Left", value: checkedOut, icon: <LogOut className="h-3.5 w-3.5" />, accent: "text-muted-foreground", filterKey: "checked-out" },
+        { label: "Overdue", value: overstayed, icon: <AlertTriangle className="h-3.5 w-3.5" />, accent: "text-destructive", filterKey: "overstayed" },
       ];
 
     case "visitor":
       return [
         { label: "On-site", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
-        { label: "Checked Out", value: checkedOut, icon: <LogOut className="h-3.5 w-3.5" />, accent: "text-muted-foreground", filterKey: "checked-out" },
-        { label: "Overstayed", value: overstayed, icon: <AlertTriangle className="h-3.5 w-3.5" />, accent: "text-destructive", filterKey: "overstayed" },
+        { label: "Left", value: checkedOut, icon: <LogOut className="h-3.5 w-3.5" />, accent: "text-muted-foreground", filterKey: "checked-out" },
+        { label: "Overdue", value: overstayed, icon: <AlertTriangle className="h-3.5 w-3.5" />, accent: "text-destructive", filterKey: "overstayed" },
       ];
 
     case "contractor": {
@@ -46,15 +52,15 @@ function getStats(tab: string, visitors: Visitor[], allVisitors: Visitor[]): Sta
       return [
         { label: "On-site", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
         { label: "Pending DBS", value: pendingDBS, icon: <ShieldCheck className="h-3.5 w-3.5" />, accent: "text-warning", filterKey: "pending-dbs" },
-        { label: "Overstayed", value: overstayed, icon: <AlertTriangle className="h-3.5 w-3.5" />, accent: "text-destructive", filterKey: "overstayed" },
+        { label: "Overdue", value: overstayed, icon: <AlertTriangle className="h-3.5 w-3.5" />, accent: "text-destructive", filterKey: "overstayed" },
       ];
     }
 
     case "volunteer":
       return [
         { label: "On-site", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
-        { label: "Checked Out", value: checkedOut, icon: <LogOut className="h-3.5 w-3.5" />, accent: "text-muted-foreground", filterKey: "checked-out" },
-        { label: "Overstayed", value: overstayed, icon: <AlertTriangle className="h-3.5 w-3.5" />, accent: "text-destructive", filterKey: "overstayed" },
+        { label: "Left", value: checkedOut, icon: <LogOut className="h-3.5 w-3.5" />, accent: "text-muted-foreground", filterKey: "checked-out" },
+        { label: "Overdue", value: overstayed, icon: <AlertTriangle className="h-3.5 w-3.5" />, accent: "text-destructive", filterKey: "overstayed" },
       ];
 
     case "staff":
@@ -69,7 +75,11 @@ function getStats(tab: string, visitors: Visitor[], allVisitors: Visitor[]): Sta
 }
 
 export function TabContextStats({ tab, visitors, allVisitors, onFilter, activeFilter }: TabContextStatsProps) {
-  const stats = useMemo(() => getStats(tab, visitors, allVisitors), [tab, visitors, allVisitors]);
+  const { isOverstayed } = useOverstayPolicy();
+  const stats = useMemo(
+    () => getStats(tab, visitors, allVisitors, isOverstayed),
+    [tab, visitors, allVisitors, isOverstayed]
+  );
 
   if (stats.length === 0) return null;
 

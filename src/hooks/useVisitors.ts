@@ -1,3 +1,4 @@
+import { fetchOverstayHours, isOverstayedSync } from "@/hooks/useOverstayPolicy";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Visitor, CompanionDetail } from "@/types/visitor";
@@ -100,6 +101,9 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     setLoading(false);
   }, [publicMode]);
 
+
+  // Load the per-type "too long on site" thresholds once so counts everywhere agree.
+  useEffect(() => { fetchOverstayHours(); }, []);
 
   useEffect(() => {
     fetchVisitors();
@@ -289,7 +293,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
 
   const checkOutAllOverstayed = async () => {
     const overstayed = visitors.filter(
-      (v) => v.status === "checked-in" && Date.now() - v.checkInTime.getTime() > 8 * 3600000
+      isOverstayedSync
     );
     if (overstayed.length === 0) return;
     const ids = overstayed.map((v) => v.id);
@@ -307,7 +311,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
   const checkedInCount = visitors.filter((v) => v.status === "checked-in").length;
   const totalToday = visitors.length;
   const overstayedCount = visitors.filter(
-    (v) => v.status === "checked-in" && Date.now() - v.checkInTime.getTime() > 8 * 3600000
+    isOverstayedSync
   ).length;
 
   return {

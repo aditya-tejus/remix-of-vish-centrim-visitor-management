@@ -1,3 +1,4 @@
+import { isOverstayedSync } from "@/hooks/useOverstayPolicy";
 import { useState, useMemo, useEffect } from "react";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
@@ -42,11 +43,13 @@ interface CheckOutSheetProps {
   /** Pre-select a specific visitor (from table row action) */
   preSelectedVisitorId?: string | null;
   onPreSelectedClear?: () => void;
+  /** End-of-shift clearing: several people selected on the visit list at once. */
+  bulkVisitorIds?: string[];
 }
 
 export function CheckOutSheet({
   open, onOpenChange, visitors, onCheckOut,
-  preSelectedVisitorId, onPreSelectedClear,
+  preSelectedVisitorId, onPreSelectedClear, bulkVisitorIds = [],
 }: CheckOutSheetProps) {
   const [search, setSearch] = useState("");
   const [checkingOut, setCheckingOut] = useState<string | null>(null);
@@ -60,6 +63,8 @@ export function CheckOutSheet({
   const [keyKeepReason, setKeyKeepReason] = useState("");
   const [successName, setSuccessName] = useState("");
   const [successDuration, setSuccessDuration] = useState("");
+  const [bulkTimeOverride, setBulkTimeOverride] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const checkedInVisitors = useMemo(
     () => visitors.filter((v) => v.status === "checked-in" && v.type !== "resident"),
@@ -98,8 +103,23 @@ export function CheckOutSheet({
     return `${hrs}h ${mins % 60}m`;
   };
 
-  const isOverstayed = (v: Visitor) =>
-    Date.now() - v.checkInTime.getTime() > OVERSTAY_THRESHOLD_MS;
+  const isOverstayed = (v: Visitor) => isOverstayedSync(v);
+
+  const bulkVisitors = useMemo(
+    () => checkedInVisitors.filter((v) => bulkVisitorIds.includes(v.id)),
+    [checkedInVisitors, bulkVisitorIds]
+  );
+
+  const handleBulkCheckOut = async () => {
+    setBulkBusy(true);
+    for (const v of bulkVisitors) {
+      await onCheckOut(v.id, "Checked out by reception", bulkTimeOverride || undefined);
+    }
+    setBulkBusy(false);
+    setBulkTimeOverride(null);
+    onPreSelectedClear?.();
+    onOpenChange(false);
+  };
 
   const keysFor = (visitorId: string) => openIssues.filter((i) => i.visitorId === visitorId);
 
@@ -207,6 +227,47 @@ export function CheckOutSheet({
                 >
                   Check out another
                 </Button>
+              </div>
+            ) : bulkVisitors.length > 1 ? (
+              /* Bulk clear — end of shift */
+              <div className="p-5 space-y-4">
+                <div className="rounded-xl border border-border p-4 space-y-1">
+                  <p className="text-[15px] font-semibold text-foreground">
+                    Check out {bulkVisitors.length} people
+                  </p>
+                  <p className="text-[13px] text-muted-foreground">
+                    Everyone below will be marked as having left. Adjust the time if they actually left earlier.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-border divide-y divide-border">
+                  {bulkVisitors.map((v) => (
+                    <div key={v.id} className="flex items-center justify-between px-3 py-2.5">
+                      <div className="min-w-0">
+                        <p className="text-[14px] font-medium text-foreground truncate">
+                          {v.firstName} {v.surname}
+                        </p>
+                        <p className="text-[12px] text-muted-foreground">
+                          In {format(v.checkInTime, "hh:mm a")} · {getDuration(v.checkInTime)}
+                          {keysFor(v.id).length > 0 ? " · key still out" : ""}
+                        </p>
+                      </div>
+                      {keysFor(v.id).length > 0 && <KeyRound className="h-4 w-4 text-warning shrink-0" />}
+                    </div>
+                  ))}
+                </div>
+
+                <TimeOverride value={bulkTimeOverride} onChange={setBulkTimeOverride} label="Time they left" />
+
+                <div className="flex gap-2">
+                  <Button variant="outline" className="flex-1" onClick={() => { onPreSelectedClear?.(); onOpenChange(false); }}>
+                    Cancel
+                  </Button>
+                  <Button className="flex-1 gap-1.5" onClick={handleBulkCheckOut} disabled={bulkBusy}>
+                    {bulkBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+                    Check out {bulkVisitors.length}
+                  </Button>
+                </div>
               </div>
             ) : !selectedVisitor ? (
               /* Step 1: Search & Select */

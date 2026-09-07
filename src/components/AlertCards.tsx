@@ -1,3 +1,4 @@
+import { isOverstayedSync } from "@/hooks/useOverstayPolicy";
 import { Clock, RefreshCw, UserX, ClipboardCheck, CalendarCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Visitor } from "@/types/visitor";
@@ -31,7 +32,7 @@ export function AlertCards({
   onFilterOverstayed, onFilterDrafts, onFilterOverdue, onFilterPending, onFilterReturnsToday,
 }: AlertCardsProps) {
   const overstayed = visitors.filter(
-    (v) => v.status === "checked-in" && v.type !== "resident" && Date.now() - v.checkInTime.getTime() > 8 * 3600000
+    (v) => v.type !== "resident" && isOverstayedSync(v)
   );
 
   const overdueResidents = visitors.filter(

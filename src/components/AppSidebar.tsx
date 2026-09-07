@@ -1,3 +1,4 @@
+import { isOverstayedSync } from "@/hooks/useOverstayPolicy";
 import centrimLogo from "@/assets/centrim-life-logo.png";
 import {
   Users, Settings, BarChart3,
@@ -62,7 +63,7 @@ export function AppSidebar() {
   ).length;
 
   const todayOverstayed = todayNonResidents.filter(
-    (v) => v.status === "checked-in" && Date.now() - v.checkInTime.getTime() > 8 * 3600000
+    isOverstayedSync
   ).length;
 
   const residentsAwayCount = visitors.filter(

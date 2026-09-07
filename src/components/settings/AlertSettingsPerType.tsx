@@ -19,6 +19,7 @@ export function AlertSettingsPerType({ personType }: Props) {
   const [emailRecipients, setEmailRecipients] = useState<string[]>([]);
   const [newEmail, setNewEmail] = useState("");
   const [saving, setSaving] = useState(false);
+  const [overstayHours, setOverstayHours] = useState("8");
 
   const prefix = `alerts_${personType}`;
 
@@ -31,6 +32,7 @@ export function AlertSettingsPerType({ personType }: Props) {
         `${prefix}_watchlist_enabled`, `${prefix}_email_recipients`,
         "alerts_overdue_enabled", "alerts_overdue_threshold_mins",
         "alerts_watchlist_enabled", "alerts_email_recipients",
+        `overstay_hours_${personType}`,
       ])
       .then(({ data }) => {
         if (data) {
@@ -42,6 +44,7 @@ export function AlertSettingsPerType({ personType }: Props) {
           try {
             setEmailRecipients(JSON.parse(map[`${prefix}_email_recipients`] ?? map.alerts_email_recipients ?? "[]"));
           } catch { setEmailRecipients([]); }
+          setOverstayHours(map[`overstay_hours_${personType}`] ?? "8");
         }
       });
   }, [personType]);
@@ -61,6 +64,7 @@ export function AlertSettingsPerType({ personType }: Props) {
       { key: `${prefix}_overdue_threshold_mins`, value: overdueThreshold },
       { key: `${prefix}_watchlist_enabled`, value: watchlistEnabled ? "true" : "false" },
       { key: `${prefix}_email_recipients`, value: JSON.stringify(emailRecipients) },
+      { key: `overstay_hours_${personType}`, value: String(Math.max(1, Number(overstayHours) || 8)) },
     ];
     for (const s of settings) {
       await supabase.from("settings").upsert(s, { onConflict: "key" });
@@ -91,6 +95,25 @@ export function AlertSettingsPerType({ personType }: Props) {
           </div>
         )}
       </div>
+
+      <div className="rounded-lg border border-border p-4 space-y-3">
+        <div>
+          <p className="text-sm font-medium text-foreground">Still on site after</p>
+          <p className="text-xs text-muted-foreground">
+            How long is too long for this person type before the desk is warned. Shown as "Overdue" on the visit list.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            min={1}
+            value={overstayHours}
+            onChange={(e) => setOverstayHours(e.target.value)}
+            className="h-8 w-24 text-sm"
+          />
+          <span className="text-xs text-muted-foreground">hours</span>
+        </div>
+
 
       <div className="rounded-lg border border-border p-4">
         <div className="flex items-center justify-between">
