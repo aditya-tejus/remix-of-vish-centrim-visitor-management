@@ -225,6 +225,121 @@ export type Database = {
           },
         ]
       }
+      contractor_question_answers: {
+        Row: {
+          answer: Json | null
+          answered_at: string
+          answered_by: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          person_id: string | null
+          question_id: string
+          supplier_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          answer?: Json | null
+          answered_at?: string
+          answered_by?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          person_id?: string | null
+          question_id: string
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          answer?: Json | null
+          answered_at?: string
+          answered_by?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          person_id?: string | null
+          question_id?: string
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_question_answers_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_question_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_question_answers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_min"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contractor_questions: {
+        Row: {
+          answered_by: string
+          blocks_on_no: boolean
+          created_at: string
+          id: string
+          input_type: string
+          is_active: boolean
+          jurisdiction: string
+          key: string
+          label: string
+          options: Json | null
+          owner_scope: string
+          required: boolean
+          sort_order: number
+          updated_at: string
+          validity_days: number | null
+        }
+        Insert: {
+          answered_by?: string
+          blocks_on_no?: boolean
+          created_at?: string
+          id?: string
+          input_type?: string
+          is_active?: boolean
+          jurisdiction?: string
+          key: string
+          label: string
+          options?: Json | null
+          owner_scope?: string
+          required?: boolean
+          sort_order?: number
+          updated_at?: string
+          validity_days?: number | null
+        }
+        Update: {
+          answered_by?: string
+          blocks_on_no?: boolean
+          created_at?: string
+          id?: string
+          input_type?: string
+          is_active?: boolean
+          jurisdiction?: string
+          key?: string
+          label?: string
+          options?: Json | null
+          owner_scope?: string
+          required?: boolean
+          sort_order?: number
+          updated_at?: string
+          validity_days?: number | null
+        }
+        Relationships: []
+      }
       credential_types: {
         Row: {
           created_at: string
