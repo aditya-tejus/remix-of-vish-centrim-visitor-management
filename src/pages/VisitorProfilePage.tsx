@@ -447,24 +447,7 @@ export default function VisitorProfilePage() {
                         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                           <Shield className="h-3 w-3" /> Screening Responses
                         </p>
-                        <div className="rounded-lg border border-border divide-y divide-border">
-                          {Object.entries(visitor.healthAnswers).map(([questionKey, answer]) => {
-                            const displayAnswer = typeof answer === "boolean"
-                              ? (answer ? "Yes" : "No")
-                              : String(answer || "—");
-                            const isRisk = answer === true;
-                            return (
-                              <div key={questionKey} className="flex items-start justify-between gap-3 px-3 py-2.5">
-                                <p className="text-xs text-foreground flex-1">
-                                  {questionKey.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
-                                </p>
-                                <span className={`text-xs font-semibold shrink-0 ${isRisk ? "text-destructive" : "text-success"}`}>
-                                  {displayAnswer}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
+                        <ScreeningAnswers answers={visitor.healthAnswers} />
                       </div>
                     )}
 
