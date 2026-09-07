@@ -64,7 +64,7 @@ export function useKioskCheckInFlow() {
     supabase
       .from("settings")
       .select("key, value")
-      .in("key", [`tc_content_${selectedType}`, "jurisdiction", "kiosk_resident_lookup_mode", `kiosk_resident_lookup_mode_${selectedType}`, "kiosk_staff_lookup_mode", `kiosk_staff_lookup_mode_${selectedType}`, "outbreak_mode", "badge_printing_enabled"])
+      .in("key", [`tc_content_${selectedType}`, "jurisdiction", "kiosk_resident_lookup_mode", `kiosk_resident_lookup_mode_${selectedType}`, "kiosk_staff_lookup_mode", `kiosk_staff_lookup_mode_${selectedType}`, "outbreak_mode", "badge_printing_enabled", `kiosk_returning_mobile_${selectedType}`, `kiosk_returning_qr_${selectedType}`, `kiosk_returning_name_${selectedType}`, `kiosk_suggest_last_resident_${selectedType}`])
       .then(({ data }) => {
         const tc = data?.find((d) => d.key === `tc_content_${selectedType}`);
         const jur = data?.find((d) => d.key === "jurisdiction");
@@ -82,28 +82,63 @@ export function useKioskCheckInFlow() {
         setBadgePrintingEnabled(data?.find((d) => d.key === "badge_printing_enabled")?.value === "true");
         if (rlmValue === "show_all" || rlmValue === "search_first") setResidentLookupMode(rlmValue);
         if (slmValue === "search_first" || slmValue === "by_department" || slmValue === "free_text") setStaffLookupMode(slmValue);
+        const isOn = (key: string) => data?.find((d) => d.key === key)?.value === "true";
+        setReturningOptions({
+          mobile: isOn(`kiosk_returning_mobile_${selectedType}`),
+          qr: isOn(`kiosk_returning_qr_${selectedType}`),
+          name: isOn(`kiosk_returning_name_${selectedType}`),
+          suggestResident: isOn(`kiosk_suggest_last_resident_${selectedType}`),
+        });
       });
   }, [selectedType]);
 
-  // Returning visitor search
-  const searchReturningVisitor = useCallback(async (firstName: string, surname: string) => {
-    if (!firstName.trim() || !surname.trim()) return null;
-    // Uses a restricted database helper — the kiosk cannot read the visitor table directly
-    const { data } = await supabase.rpc("kiosk_prefill_visitor" as any, {
-      p_first: firstName.trim(),
-      p_last: surname.trim(),
-    });
-    const prev = Array.isArray(data) ? (data[0] as any) : null;
-    if (prev) {
+  // Returning visitor lookup — restricted database helper that returns at most one
+  // person's own saved details. The kiosk never reads the visitor table directly.
+  const lookupReturningVisitor = useCallback(
+    async (params: { firstName?: string; surname?: string; mobile?: string; qr?: string }) => {
+      const hasName = !!params.firstName?.trim() && !!params.surname?.trim();
+      const hasMobile = (params.mobile || "").replace(/\D/g, "").length >= 6;
+      const hasQr = !!params.qr?.trim();
+      if (!hasName && !hasMobile && !hasQr) return null;
+
+      const { data } = await supabase.rpc("kiosk_returning_lookup" as any, {
+        p_first: hasName ? params.firstName!.trim() : null,
+        p_last: hasName ? params.surname!.trim() : null,
+        p_mobile: hasMobile ? params.mobile!.trim() : null,
+        p_qr: hasQr ? params.qr!.trim().toUpperCase() : null,
+      });
+      const prev = Array.isArray(data) ? (data[0] as any) : null;
+      if (!prev) return null;
       return {
+        firstName: prev.first_name || "",
+        surname: prev.surname || "",
         email: prev.email || "",
         mobile: prev.mobile || "",
         address: prev.address || "",
         whomToVisit: prev.whom_to_visit || "",
+        lastResidentId: Array.isArray(prev.visited_resident_ids) ? prev.visited_resident_ids[0] || null : null,
+        personQr: prev.person_qr || null,
+        lastVisit: prev.last_visit || null,
       };
-    }
-    return null;
-  }, []);
+    },
+    []
+  );
+
+  // Legacy name-only prefill used on the details step
+  const searchReturningVisitor = useCallback(
+    async (firstName: string, surname: string) => {
+      const match = await lookupReturningVisitor({ firstName, surname });
+      if (!match) return null;
+      return {
+        email: match.email,
+        mobile: match.mobile,
+        address: match.address,
+        whomToVisit: match.whomToVisit,
+      };
+    },
+    [lookupReturningVisitor]
+  );
+
 
 
   // Build dynamic step pipeline
