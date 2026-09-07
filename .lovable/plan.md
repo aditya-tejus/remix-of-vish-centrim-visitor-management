@@ -1,57 +1,74 @@
-# Visitor list and visitor profile — operational rework
+# Visit list and visitor profile — rebuilt around the front desk day
 
-Both screens carry too much detail and not enough of what the front desk actually needs. This rework puts times and actions first, moves audit detail out of the way, and makes the overstay rule configurable per person type.
+Rewritten from how reception and a village manager actually work a shift, not from what data we happen to hold.
 
-## 1. Visit list
+## The four moments these screens have to serve
 
-**Times first, duration second**
-- Columns become: Person · **In** · **Out** · Duration · Visiting · Companions · Action.
-- "Out" always shows the check-out time (or a clear "On site" marker while they are still here), instead of being hidden inside the status cell.
-- Duration stays but as quiet supporting text, not the emphasised value.
+1. **Someone is standing at the desk.** Find them or check them in fast, without reading a table.
+2. **Something is happening now.** Who is on site, who has a key, who is flagged, who has been here too long.
+3. **End of shift / handover.** Clear the stragglers, hand over what matters in one page.
+4. **Someone rings up or an auditor asks.** "Was Mrs Patel's son here on Tuesday?" — find the person and their history in seconds.
 
-**One set of counters, not two**
-- The three large summary cards at the top and the repeated strip under the tabs currently show the same On-site / Checked out / Overstayed numbers. Keep a single compact counter row directly above the table, still clickable as filters, with the active filter shown as a chip.
+The current screens serve none of these first. The list opens on *everything logged today* with duration in the spotlight and check-out times buried. The profile opens on compliance paperwork with eight buttons across the top.
 
-**At-a-glance risk in the row**
-- Overdue key or fob, watchlist/safeguarding flag, and overstay all show as small markers on the person's row so nothing needs a click to be noticed.
+## 1. Visit list — "who is on site right now"
 
-**Faster daily actions**
-- Row action button stays visible (not hover-only) and reads Check Out / Sign Out / Depart by type.
-- Tick boxes for multi-select with a "Check out selected" action for end-of-day clearing.
-- Delete moves to the bottom of the row menu, separated, and keeps its confirmation.
+**Default to the live picture**
+- The list opens on **On site**, not on everything today. A second tab shows everyone today, and the date picker still lets you go back.
+- Reason: at 11am nobody needs the twelve people who already left; they need the nine still in the building.
 
-**Overstay per person type**
-- New settings under each person type: overstay hours (visitor, contractor, volunteer, staff), defaulting to today's 8 hours.
-- The list, the counters, the sidebar badge and the overstay alerts all read that per-type value instead of the hard-coded 8 hours.
+**Times, not stopwatch**
+- Columns: Person · **In** · **Out** · Visiting · Companions · Action.
+- Check-out time is a real column, always visible. Duration drops to quiet grey text under the in-time — useful, never the headline.
 
-## 2. Visitor profile
+**One counter row**
+- The big cards and the strip under the tabs repeat the same three numbers. One compact clickable row stays: On site · Left · Overdue.
 
-Keep both views, with clear roles.
+**What a manager must see without clicking**
+- Overdue key or fob, watchlist/safeguarding flag, and overstay show as small markers on the person's row.
+- Contractor rows show their company and whether an escort is required.
 
-**Quick panel** (slide-out from the visitors list)
-- Who they are: name, type, status, phone, who they visit, companions, any watchlist flag.
-- Act now: Check out, Issue or return key, Print badge, Open full profile.
-- Last five visits as plain lines (date · in–out · visiting). No nested expanders.
+**End of shift**
+- Tick boxes and "Check out selected" so the desk can clear the board in one action, each with the manual time override already built.
+- The Handover print picks up the same live view.
 
-**Full profile page**
-- Header keeps only the everyday actions: Check In (pre-filled with this person's details), Check Out, Print badge, and a single "More" menu holding Edit, CSV, PDF, Feedback and Delete.
-- Top of page: a live visit strip — in time, out time, duration, visiting, keys held, expected departure — with the action buttons beside it.
-- Then: contact and companions.
-- Then: visit history, showing frequency ("12 visits, last on 3 Sep"), each row expandable for that visit's detail.
-- Compliance evidence (screening answers, consent, temperature, retention date, vaccination) moves into a collapsed "Compliance record" section, open on demand for audits.
-- Sections with no data are hidden rather than showing rows of dashes.
+**Overstay that matches reality**
+- One fixed 8 hours suits nobody: a family visit at 4 hours is unusual, a contractor at 8 hours is normal, a volunteer sits in between.
+- Overstay hours become a per-person-type setting (default 8h), used by the list, counters, sidebar badge and the overdue alerts.
 
-**Fixes to current behaviour**
-- "Quick Check-In" today opens an empty check-in form; it will open pre-filled with this person's details and still re-ask the check-in questions.
-- "Quick Check-Out" today checks the person out instantly with no confirmation and no time adjustment; it will use the same check-out sheet as everywhere else, including the manual time override.
-- Delete Profile is currently always shown; it will be limited to admins.
+**Safer everyday actions**
+- The check-out button on each row is always visible and reads Check Out / Sign Out / Depart by type.
+- Delete moves to the bottom of the row menu, separated, still confirmed.
+
+## 2. Visitor profile — "act, recognise, remember"
+
+Two views, each with one job.
+
+**Quick panel** (from the list — for the person at the desk)
+- Recognise: name, type, status, phone, who they normally visit, companions, any flag.
+- Act: Check out · Issue or return key · Print badge · Open full profile.
+- Remember: last five visits as plain lines (date · in–out · who they saw).
+- No nested expanders, no compliance grid.
+
+**Full profile page** (for the phone call, the complaint, the audit)
+- Header keeps only Check In (pre-filled), Check Out, Print badge, and one "More" menu holding Edit, CSV, PDF, Feedback, Delete.
+- A live visit strip at the top: in, out, visiting, companions, keys held, expected departure — with the actions beside it.
+- Then who they are: contact, companions, relationship to the resident they visit.
+- Then the pattern that matters operationally: "12 visits · usually Tue and Sat afternoons · last here 3 Sep", followed by the visit list, each row expandable for that visit's detail.
+- Compliance evidence (screening answers, consent, temperature, retention, vaccination) collapses into a "Compliance record" section, opened when someone actually needs it.
+- Empty sections are hidden instead of showing rows of dashes.
+
+**Three things that are currently wrong**
+- "Quick Check-In" opens a blank form — it will open pre-filled with this person's details and still re-ask the check-in questions.
+- "Quick Check-Out" checks the person out instantly with no confirmation and no time correction — it will use the same check-out sheet as everywhere else.
+- "Delete Profile" is shown to everyone — it will be admin only.
 
 ## Technical notes
 
-- `VisitorTable.tsx`: column set per type reworked (In / Out / Duration), row markers from `useOpenKeyIssues` and watchlist, selection state plus bulk checkout callback, action button always visible.
-- `VisitList.tsx`: remove the large `countCards` block, keep `TabContextStats` as the single counter row, keep date nav, search and command bar as-is.
-- New `src/hooks/useOverstayPolicy.ts` reading `overstay_hours_{person_type}` from `settings` with an 8-hour fallback; used by `VisitList.tsx`, `TabContextStats.tsx`, `VisitorTable.tsx`, `useVisitors.ts` (`overstayedCount`, overdue alerts) and `AppSidebar`.
-- `PersonTypeSettings.tsx`: overstay hours field added to the existing Alerts & Thresholds section per type; saves audit entry as other settings do.
-- `VisitorProfile.tsx` (sheet) simplified to the quick-panel content with a link to `/visitors/:id`.
-- `VisitorProfilePage.tsx` restructured: header actions condensed into a `DropdownMenu`, live visit strip, collapsed compliance block via `Collapsible`, `AddVisitDialog` receives a prefill prop, quick check-out routed through `CheckOutSheet`, `isAdmin` derived from the `user_roles` admin check rather than hard-coded `true`.
-- No database schema change; overstay settings are rows in the existing `settings` table.
+- `VisitorTable.tsx`: per-type columns reworked to In / Out / Duration-as-subtext, row markers sourced from `useOpenKeyIssues` and the watchlist, selection state and a bulk check-out callback, action button always visible.
+- `VisitList.tsx`: default view state set to on-site, large `countCards` block removed, `TabContextStats` kept as the single counter row, date nav / search / command bar unchanged, bulk check-out wired to `CheckOutSheet`.
+- New `src/hooks/useOverstayPolicy.ts` reading `overstay_hours_{person_type}` from `settings` (8h fallback), consumed by `VisitList.tsx`, `TabContextStats.tsx`, `VisitorTable.tsx`, `useVisitors.ts` (`overstayedCount` and overdue alerts) and `AppSidebar`.
+- `PersonTypeSettings.tsx`: overstay hours added to each type's Alerts & Thresholds section, saved with the usual audit entry.
+- `VisitorProfile.tsx` (sheet) reduced to the quick-panel content with a link through to `/visitors/:id`.
+- `VisitorProfilePage.tsx` restructured: condensed header actions, live visit strip, `Collapsible` compliance block, prefill prop passed to `AddVisitDialog`, quick check-out routed through `CheckOutSheet`, `isAdmin` derived from the admin role check instead of hard-coded `true`.
+- No database schema change; overstay values are rows in the existing `settings` table.
