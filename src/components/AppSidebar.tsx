@@ -82,6 +82,8 @@ export function AppSidebar() {
         { title: "Residents", path: "/residents", badge: residentsAwayCount || null, badgeVariant: "amber" },
         { title: "Visitor Profiles", path: "/visitors" },
         { title: "Food Register", path: "/food-register" },
+        { title: "Keys Register", path: "/keys" },
+
         { title: "Evacuation Report", path: "/evacuation" },
       ],
     },

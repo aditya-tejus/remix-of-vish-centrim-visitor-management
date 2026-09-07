@@ -46,6 +46,12 @@ export default function KioskCheckIn() {
   const [visitingMode, setVisitingMode] = useState<"resident" | "staff" | null>(null);
   const [staffFreeText, setStaffFreeText] = useState("");
   const [returningChecked, setReturningChecked] = useState(false);
+  const [returningMobile, setReturningMobile] = useState("");
+  const [returningCode, setReturningCode] = useState("");
+  const [returningBusy, setReturningBusy] = useState(false);
+  const [returningNotFound, setReturningNotFound] = useState(false);
+  const [returningMatch, setReturningMatch] = useState<any>(null);
+
 
   const currentIdx = flow.steps.findIndex((s) => s.id === step);
 
@@ -81,24 +87,54 @@ export default function KioskCheckIn() {
     if (prevIdx >= 0) setStep(flow.steps[prevIdx].id);
   };
 
-  // Returning visitor auto-fill
+  // Returning visitor auto-fill by name (only when enabled in settings)
   const handleNameBlur = async () => {
-    if (returningChecked) return;
+    if (!flow.returningOptions.name || returningChecked) return;
     const firstName = flow.formValues.firstName?.trim();
     const surname = flow.formValues.surname?.trim();
     if (!firstName || !surname) return;
     setReturningChecked(true);
-    const prev = await flow.searchReturningVisitor(firstName, surname);
-    if (prev) {
-      flow.setReturningVisitor(prev);
-      flow.setFormValues((fv: Record<string, string>) => ({
-        ...fv,
-        email: fv.email || prev.email,
-        mobile: fv.mobile || prev.mobile,
-      }));
-      toast({ title: "Welcome back!", description: "We've pre-filled your details from your last visit." });
+    const prev = await flow.lookupReturningVisitor({ firstName, surname });
+    if (prev) setReturningMatch(prev);
+  };
+
+  // Returning visitor lookup by mobile or personal card code
+  const handleReturningLookup = async (params: { mobile?: string; qr?: string }) => {
+    setReturningBusy(true);
+    setReturningNotFound(false);
+    const match = await flow.lookupReturningVisitor(params);
+    setReturningBusy(false);
+    if (match) {
+      setReturningMatch(match);
+    } else {
+      setReturningNotFound(true);
     }
   };
+
+  const handleReturningConfirm = () => {
+    const match = returningMatch;
+    if (!match) return;
+    flow.setReturningVisitor(match);
+    flow.setPersonQr(match.personQr || null);
+    flow.setFormValues((fv: Record<string, string>) => ({
+      ...fv,
+      firstName: fv.firstName || match.firstName,
+      surname: fv.surname || match.surname,
+      email: fv.email || match.email,
+      mobile: fv.mobile || match.mobile,
+      address: fv.address || match.address,
+    }));
+    setReturningMatch(null);
+    setReturningChecked(true);
+    toast({ title: "Welcome back!", description: "We've pre-filled your details from your last visit." });
+  };
+
+  const handleReturningReject = () => {
+    setReturningMatch(null);
+    setReturningChecked(true);
+    setReturningNotFound(false);
+  };
+
 
   // Filtered residents/staff for visiting step
   const filteredVisiting = useMemo(() => {
@@ -121,6 +157,9 @@ export default function KioskCheckIn() {
     const allHealthClear = Object.values(flow.healthAnswers).every((v) => v === false);
     const groupId = flow.companions.length > 0 ? crypto.randomUUID() : undefined;
     const primaryQr = crypto.randomUUID().slice(0, 12).toUpperCase();
+    // Permanent per-person card code — reused when a returning visitor is recognised
+    const personQr = flow.personQr || primaryQr;
+
 
     // Add primary visitor
     addVisitor({
@@ -144,7 +183,9 @@ export default function KioskCheckIn() {
       contractorScreening: flow.selectedType === "contractor" ? flow.contractorAnswers : undefined,
       supplierId: flow.selectedSupplier?.id || undefined,
       qrCode: primaryQr,
+      personQr,
       groupId,
+
     });
 
     // Add companion visitors as independent records
@@ -222,6 +263,11 @@ export default function KioskCheckIn() {
     setStep("type");
     setSubmitted(false);
     setReturningChecked(false);
+    setReturningMatch(null);
+    setReturningMobile("");
+    setReturningCode("");
+    setReturningNotFound(false);
+
     setVisitingSearch("");
     setVisitingMode(null);
     setCheckedInQrCode(null);
@@ -301,12 +347,80 @@ export default function KioskCheckIn() {
           <motion.div key="details" {...anim} className="space-y-4">
             <h2 className="text-2xl font-bold text-foreground text-center">Your Details</h2>
 
+            {/* Returning visitor fast lane */}
+            {!flow.returningVisitor && (flow.returningOptions.mobile || flow.returningOptions.qr) && !returningMatch && (
+              <div className="rounded-2xl border-2 border-border bg-card/80 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <RotateCcw className="h-5 w-5 text-primary" />
+                  <p className="text-base font-bold text-foreground">Been here before?</p>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  We'll fill in your details so you don't have to type them again.
+                </p>
+                {flow.returningOptions.mobile && (
+                  <div className="flex gap-2">
+                    <Input
+                      value={returningMobile}
+                      onChange={(e) => setReturningMobile(e.target.value)}
+                      placeholder="Your mobile number"
+                      inputMode="tel"
+                      type="tel"
+                      className="h-14 text-lg flex-1"
+                    />
+                    <Button onClick={() => void handleReturningLookup({ mobile: returningMobile })} disabled={returningBusy} className="h-14 px-5 text-base">
+                      Find me
+                    </Button>
+                  </div>
+                )}
+                {flow.returningOptions.qr && (
+                  <div className="flex gap-2">
+                    <Input
+                      value={returningCode}
+                      onChange={(e) => setReturningCode(e.target.value.toUpperCase())}
+                      placeholder="Visitor card code"
+                      className="h-14 text-lg flex-1 tracking-widest"
+                    />
+                    <Button variant="secondary" onClick={() => void handleReturningLookup({ qr: returningCode })} disabled={returningBusy} className="h-14 px-5 text-base border border-border">
+                      <QrCode className="h-5 w-5" />
+                    </Button>
+                  </div>
+                )}
+                {returningNotFound && (
+                  <p className="text-sm text-muted-foreground">
+                    We couldn't find you — no problem, just fill in your details below.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Match confirmation */}
+            {returningMatch && (
+              <div className="rounded-2xl border-2 border-success/30 bg-success/5 p-4 space-y-3">
+                <p className="text-base font-bold text-foreground">Is this you?</p>
+                <div className="space-y-1 text-sm">
+                  <p className="text-lg font-bold text-foreground">{returningMatch.firstName} {returningMatch.surname}</p>
+                  {returningMatch.mobile && <p className="text-muted-foreground">{returningMatch.mobile}</p>}
+                  {returningMatch.email && <p className="text-muted-foreground">{returningMatch.email}</p>}
+                  {returningMatch.whomToVisit && <p className="text-muted-foreground">Last visited {returningMatch.whomToVisit}</p>}
+                </div>
+                <div className="flex gap-3">
+                  <Button variant="secondary" onClick={handleReturningReject} className="flex-1 h-12 text-base border border-border">
+                    Not me
+                  </Button>
+                  <Button onClick={handleReturningConfirm} className="flex-1 h-12 text-base">
+                    That's me
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {flow.returningVisitor && (
               <div className="rounded-xl border-2 border-success/20 bg-success/5 p-3 flex items-center gap-2 text-sm text-success">
                 <UserSearch className="h-4 w-4 shrink-0" />
                 <span className="font-medium">Welcome back! Details pre-filled from your last visit.</span>
               </div>
             )}
+
 
             <div className="grid grid-cols-2 gap-3">
               <KioskInput
@@ -386,6 +500,33 @@ export default function KioskCheckIn() {
         {step === "visiting" && (
           <motion.div key="visiting" {...anim} className="space-y-4">
             <h2 className="text-2xl font-bold text-foreground text-center">Who Are You Visiting?</h2>
+
+            {/* One-tap shortcut for regulars */}
+            {flow.returningOptions.suggestResident && flow.returningVisitor?.whomToVisit && !flow.formValues.whomToVisit && (
+              <button
+                onClick={() => {
+                  const suggestion = flow.returningVisitor.whomToVisit;
+                  const residentId =
+                    flow.returningVisitor.lastResidentId ||
+                    flow.residents.find((r) => r.name === suggestion)?.visitorId ||
+                    null;
+                  flow.updateField("whomToVisit", suggestion);
+                  flow.setVisitedResidentId(residentId);
+                  if (residentId && (flow.selectedType === "visitor" || flow.selectedType === "volunteer")) {
+                    setStep("food");
+                  } else {
+                    goNext();
+                  }
+                }}
+                className="w-full rounded-2xl border-2 border-primary/40 bg-primary/5 p-4 text-left active:scale-[0.98] transition-all"
+              >
+                <p className="text-sm text-muted-foreground">Same as last time?</p>
+                <p className="text-lg font-bold text-foreground">Here to see {flow.returningVisitor.whomToVisit}</p>
+                <p className="text-sm text-primary font-semibold mt-1">Tap to continue</p>
+              </button>
+            )}
+
+
 
             <div className="flex gap-3 justify-center">
               <button
@@ -596,28 +737,40 @@ export default function KioskCheckIn() {
             <h2 className="text-2xl font-bold text-foreground text-center">Anyone Accompanying You?</h2>
             <p className="text-base text-muted-foreground text-center">Are there additional visitors in your group?</p>
 
-            {flow.hasCompanions === null && (
-              <div className="flex gap-4 justify-center pt-2">
-                <button
-                  onClick={() => flow.setHasCompanions(true)}
-                  className="flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-border bg-card/80 shadow-sm active:scale-[0.96] active:border-primary/50 transition-all min-w-[140px]"
-                >
-                  <div className="h-14 w-14 rounded-2xl bg-primary/15 flex items-center justify-center">
-                    <Users className="h-7 w-7 text-primary" />
-                  </div>
-                  <span className="text-lg font-bold text-foreground">Yes</span>
-                </button>
-                <button
-                  onClick={() => { flow.setHasCompanions(false); goNext(); }}
-                  className="flex flex-col items-center gap-3 p-6 rounded-2xl border-2 border-border bg-card/80 shadow-sm active:scale-[0.96] active:border-primary/50 transition-all min-w-[140px]"
-                >
-                  <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center">
-                    <UserRound className="h-7 w-7 text-muted-foreground" />
-                  </div>
-                  <span className="text-lg font-bold text-foreground">No, just me</span>
-                </button>
-              </div>
-            )}
+            {/* Answer stays visible and changeable */}
+            <div className="flex gap-4 justify-center pt-2">
+              <button
+                onClick={() => {
+                  flow.setHasCompanions(true);
+                  if (flow.companions.length === 0) {
+                    flow.setCompanions([{ id: crypto.randomUUID(), firstName: "", surname: "", email: "", mobile: "" }]);
+                  }
+                }}
+                className={`flex flex-col items-center gap-3 p-6 rounded-2xl border-2 shadow-sm active:scale-[0.96] transition-all min-w-[140px] ${
+                  flow.hasCompanions === true ? "border-primary bg-primary/10" : "border-border bg-card/80"
+                }`}
+              >
+                <div className="h-14 w-14 rounded-2xl bg-primary/15 flex items-center justify-center">
+                  <Users className="h-7 w-7 text-primary" />
+                </div>
+                <span className="text-lg font-bold text-foreground">Yes</span>
+              </button>
+              <button
+                onClick={() => {
+                  flow.setHasCompanions(false);
+                  flow.setCompanions([]);
+                }}
+                className={`flex flex-col items-center gap-3 p-6 rounded-2xl border-2 shadow-sm active:scale-[0.96] transition-all min-w-[140px] ${
+                  flow.hasCompanions === false ? "border-primary bg-primary/10" : "border-border bg-card/80"
+                }`}
+              >
+                <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center">
+                  <UserRound className="h-7 w-7 text-muted-foreground" />
+                </div>
+                <span className="text-lg font-bold text-foreground">No, just me</span>
+              </button>
+            </div>
+
 
             {flow.hasCompanions && (
               <div className="space-y-3">
@@ -684,19 +837,23 @@ export default function KioskCheckIn() {
             )}
 
             <div className="flex gap-3 pt-2">
-              <Button variant="secondary" onClick={() => { if (flow.hasCompanions !== null && flow.companions.length === 0) { flow.setHasCompanions(null); } else { goBack(); } }} className="flex-1 h-14 text-base gap-2 border border-border">
+              <Button variant="secondary" onClick={goBack} className="flex-1 h-14 text-base gap-2 border border-border">
                 <ArrowLeft className="h-5 w-5" /> Back
               </Button>
-              {flow.hasCompanions && (
-                <Button
-                  onClick={goNext}
-                  disabled={flow.companions.length > 0 && flow.companions.some((c) => !c.firstName.trim() || !c.surname.trim())}
-                  className="flex-1 h-14 text-base gap-2"
-                >
-                  {flow.companions.length === 0 ? "Skip" : "Next"} <ArrowRight className="h-5 w-5" />
-                </Button>
-              )}
+              <Button
+                onClick={goNext}
+                disabled={
+                  flow.hasCompanions === null ||
+                  (flow.hasCompanions === true &&
+                    (flow.companions.length === 0 ||
+                      flow.companions.some((c) => !c.firstName.trim() || !c.surname.trim())))
+                }
+                className="flex-1 h-14 text-base gap-2"
+              >
+                Next <ArrowRight className="h-5 w-5" />
+              </Button>
             </div>
+
           </motion.div>
         )}
 

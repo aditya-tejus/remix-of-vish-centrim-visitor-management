@@ -612,6 +612,82 @@ export type Database = {
         }
         Relationships: []
       }
+      key_issues: {
+        Row: {
+          condition_notes: string | null
+          created_at: string
+          expected_return: string | null
+          id: string
+          issued_at: string
+          issued_by: string
+          issued_to_name: string
+          issued_to_type: string
+          key_id: string
+          notes: string | null
+          returned_at: string | null
+          returned_to: string | null
+          supplier_id: string | null
+          updated_at: string
+          visitor_id: string | null
+        }
+        Insert: {
+          condition_notes?: string | null
+          created_at?: string
+          expected_return?: string | null
+          id?: string
+          issued_at?: string
+          issued_by: string
+          issued_to_name: string
+          issued_to_type?: string
+          key_id: string
+          notes?: string | null
+          returned_at?: string | null
+          returned_to?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+          visitor_id?: string | null
+        }
+        Update: {
+          condition_notes?: string | null
+          created_at?: string
+          expected_return?: string | null
+          id?: string
+          issued_at?: string
+          issued_by?: string
+          issued_to_name?: string
+          issued_to_type?: string
+          key_id?: string
+          notes?: string | null
+          returned_at?: string | null
+          returned_to?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+          visitor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "key_issues_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "property_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "key_issues_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_min"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "key_issues_visitor_id_fkey"
+            columns: ["visitor_id"]
+            isOneToOne: false
+            referencedRelation: "visitors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leave_requests: {
         Row: {
           comments: string | null
@@ -751,6 +827,82 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      property_keys: {
+        Row: {
+          branch_id: string | null
+          copy_number: number
+          created_at: string
+          id: string
+          is_active: boolean
+          key_label: string
+          key_type: string
+          notes: string | null
+          property_label: string | null
+          resident_name: string | null
+          resident_visitor_id: string | null
+          status: string
+          storage_location: string | null
+          updated_at: string
+          wing_id: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          copy_number?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key_label: string
+          key_type?: string
+          notes?: string | null
+          property_label?: string | null
+          resident_name?: string | null
+          resident_visitor_id?: string | null
+          status?: string
+          storage_location?: string | null
+          updated_at?: string
+          wing_id?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          copy_number?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key_label?: string
+          key_type?: string
+          notes?: string | null
+          property_label?: string | null
+          resident_name?: string | null
+          resident_visitor_id?: string | null
+          status?: string
+          storage_location?: string | null
+          updated_at?: string
+          wing_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_keys_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_keys_resident_visitor_id_fkey"
+            columns: ["resident_visitor_id"]
+            isOneToOne: false
+            referencedRelation: "visitors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_keys_wing_id_fkey"
+            columns: ["wing_id"]
+            isOneToOne: false
+            referencedRelation: "wings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       resident_details: {
         Row: {
@@ -1212,6 +1364,7 @@ export type Database = {
           leave_type: string | null
           legal_hold: boolean
           mobile: string
+          person_qr: string | null
           print_status: string | null
           privacy_acknowledged: boolean | null
           qr_code: string | null
@@ -1252,6 +1405,7 @@ export type Database = {
           leave_type?: string | null
           legal_hold?: boolean
           mobile: string
+          person_qr?: string | null
           print_status?: string | null
           privacy_acknowledged?: boolean | null
           qr_code?: string | null
@@ -1292,6 +1446,7 @@ export type Database = {
           leave_type?: string | null
           legal_hold?: boolean
           mobile?: string
+          person_qr?: string | null
           print_status?: string | null
           privacy_acknowledged?: boolean | null
           qr_code?: string | null
@@ -1388,6 +1543,25 @@ export type Database = {
           address: string
           email: string
           mobile: string
+          whom_to_visit: string
+        }[]
+      }
+      kiosk_returning_lookup: {
+        Args: {
+          p_first?: string
+          p_last?: string
+          p_mobile?: string
+          p_qr?: string
+        }
+        Returns: {
+          address: string
+          email: string
+          first_name: string
+          last_visit: string
+          mobile: string
+          person_qr: string
+          surname: string
+          visited_resident_ids: string[]
           whom_to_visit: string
         }[]
       }
