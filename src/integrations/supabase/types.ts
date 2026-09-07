@@ -112,39 +112,158 @@ export type Database = {
         }
         Relationships: []
       }
+      contractor_credentials: {
+        Row: {
+          created_at: string
+          credential_type_id: string
+          document_path: string | null
+          expiry_date: string | null
+          id: string
+          person_id: string
+          reference: string | null
+          updated_at: string
+          uploaded_at: string | null
+          uploaded_by: string | null
+          verification_status: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          credential_type_id: string
+          document_path?: string | null
+          expiry_date?: string | null
+          id?: string
+          person_id: string
+          reference?: string | null
+          updated_at?: string
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          credential_type_id?: string
+          document_path?: string | null
+          expiry_date?: string | null
+          id?: string
+          person_id?: string
+          reference?: string | null
+          updated_at?: string
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_credentials_credential_type_id_fkey"
+            columns: ["credential_type_id"]
+            isOneToOne: false
+            referencedRelation: "credential_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_credentials_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contractor_people: {
+        Row: {
+          created_at: string
+          email: string | null
+          first_name: string
+          id: string
+          is_active: boolean
+          mobile: string | null
+          notes: string | null
+          person_qr: string | null
+          supplier_id: string | null
+          surname: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          first_name: string
+          id?: string
+          is_active?: boolean
+          mobile?: string | null
+          notes?: string | null
+          person_qr?: string | null
+          supplier_id?: string | null
+          surname: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          first_name?: string
+          id?: string
+          is_active?: boolean
+          mobile?: string | null
+          notes?: string | null
+          person_qr?: string | null
+          supplier_id?: string | null
+          surname?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_people_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_min"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credential_types: {
         Row: {
           created_at: string
+          holder_scope: string
           id: string
           is_active: boolean
           is_required: boolean
           jurisdiction: string
           key: string
           label: string
+          requires_document: boolean
           short_label: string
           sort_order: number
           updated_at: string
         }
         Insert: {
           created_at?: string
+          holder_scope?: string
           id?: string
           is_active?: boolean
           is_required?: boolean
           jurisdiction?: string
           key: string
           label: string
+          requires_document?: boolean
           short_label: string
           sort_order?: number
           updated_at?: string
         }
         Update: {
           created_at?: string
+          holder_scope?: string
           id?: string
           is_active?: boolean
           is_required?: boolean
           jurisdiction?: string
           key?: string
           label?: string
+          requires_document?: boolean
           short_label?: string
           sort_order?: number
           updated_at?: string
@@ -1418,6 +1537,8 @@ export type Database = {
           checkout_reason: string | null
           comments: string | null
           companion_details: Json | null
+          compliance_status: string | null
+          contractor_person_id: string | null
           contractor_screening: Json | null
           created_at: string
           email: string
@@ -1459,6 +1580,8 @@ export type Database = {
           checkout_reason?: string | null
           comments?: string | null
           companion_details?: Json | null
+          compliance_status?: string | null
+          contractor_person_id?: string | null
           contractor_screening?: Json | null
           created_at?: string
           email: string
@@ -1500,6 +1623,8 @@ export type Database = {
           checkout_reason?: string | null
           comments?: string | null
           companion_details?: Json | null
+          compliance_status?: string | null
+          contractor_person_id?: string | null
           contractor_screening?: Json | null
           created_at?: string
           email?: string
@@ -1535,6 +1660,13 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visitors_contractor_person_id_fkey"
+            columns: ["contractor_person_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_people"
             referencedColumns: ["id"]
           },
           {

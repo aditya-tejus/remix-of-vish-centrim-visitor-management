@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useVisitors } from "@/hooks/useVisitors";
 import { useVisitorHistory } from "@/hooks/useVisitorHistory";
 import { useResidents } from "@/hooks/useResidents";
+import { ContractorCompliancePanel } from "@/components/contractor/ContractorCompliancePanel";
 import { ScreeningAnswers } from "@/components/ScreeningAnswers";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
@@ -468,6 +469,18 @@ export default function VisitorProfilePage() {
                         <ScreeningAnswers answers={visitor.healthAnswers} />
                       </div>
                     )}
+
+                    {/* Contractor compliance documents */}
+                    {visitor.type === "contractor" && (
+                      <ContractorCompliancePanel
+                        firstName={visitor.firstName}
+                        surname={visitor.surname}
+                        mobile={visitor.mobile}
+                        supplierId={(visitor as any).supplierId ?? null}
+                      />
+                    )}
+
+
 
                     {/* Vaccination Info */}
                     {(visitor.influenzaVaccineDate || visitor.covidVaccineStatus !== undefined) && (

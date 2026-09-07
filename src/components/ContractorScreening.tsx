@@ -6,12 +6,20 @@ import { Badge } from "@/components/ui/badge";
 import { useSuppliers, Supplier } from "@/hooks/useSuppliers";
 import { Search, Check, Building2, Shield, HardHat, FileCheck, AlertTriangle, Syringe, ShieldAlert, CalendarClock, Loader2 } from "lucide-react";
 import {
-  getSupplierCredentials,
+  buildComplianceChecklist,
   evaluateContractorGate,
   UNSUPERVISED_ACCESS_KEY,
   ESCORT_REASON_KEY,
 } from "@/lib/contractorCredentials";
 import { useCredentialTypes, useSupplierCredentials } from "@/hooks/useContractorEnforcement";
+import {
+  findContractorPerson,
+  upsertContractorPerson,
+  usePersonCredentials,
+  useContractorEntryPolicy,
+  type ContractorPerson,
+} from "@/hooks/useContractorPeople";
+import { ComplianceChecklist } from "@/components/contractor/ComplianceChecklist";
 import { useToast } from "@/hooks/use-toast";
 
 // AU screening template
@@ -43,6 +51,14 @@ interface ContractorScreeningProps {
   compact?: boolean;
   /** Reports whether credential status currently holds up check-in */
   onBlockedChange?: (blocked: boolean, reason: string | null) => void;
+  /** The individual tradesperson — personal checks are looked up against them */
+  workerFirstName?: string;
+  workerSurname?: string;
+  workerMobile?: string;
+  /** Unattended kiosk: self-uploads only, no staff confirmation */
+  kiosk?: boolean;
+  /** Reports the matched contractor person record so check-in can store it */
+  onPersonChange?: (personId: string | null) => void;
 }
 
 export function ContractorScreening({
@@ -53,17 +69,59 @@ export function ContractorScreening({
   onSupplierChange,
   compact = true,
   onBlockedChange,
+  workerFirstName = "",
+  workerSurname = "",
+  workerMobile = "",
+  kiosk = false,
+  onPersonChange,
 }: ContractorScreeningProps) {
   const { suppliers } = useSuppliers();
   const { toast } = useToast();
-  const [savingCredential, setSavingCredential] = useState<string | null>(null);
   const [supplierSearch, setSupplierSearch] = useState("");
   const [showSupplierList, setShowSupplierList] = useState(false);
+  const [person, setPerson] = useState<ContractorPerson | null>(null);
 
   const questions = jurisdiction === "AU" ? auScreeningQuestions : ukScreeningQuestions;
 
   const { activeTypes } = useCredentialTypes();
   const { records, save } = useSupplierCredentials(selectedSupplier?.id);
+  const entryPolicy = useContractorEntryPolicy();
+  const { records: personRecords, save: savePersonCredential, verify } = usePersonCredentials(person?.id);
+
+  const nameKey = `${workerFirstName.trim().toLowerCase()}|${workerSurname.trim().toLowerCase()}|${workerMobile.replace(/\D/g, "")}`;
+
+  // Find (or create) the individual worker so their own police check / DBS can
+  // be shown. Company details stay on the supplier record.
+  useEffect(() => {
+    let cancelled = false;
+    const first = workerFirstName.trim();
+    const last = workerSurname.trim();
+    if (!first || !last) {
+      setPerson(null);
+      onPersonChange?.(null);
+      return;
+    }
+    (async () => {
+      const found = await findContractorPerson({ firstName: first, surname: last, mobile: workerMobile });
+      if (cancelled) return;
+      if (found) {
+        setPerson(found);
+        onPersonChange?.(found.id);
+        return;
+      }
+      const created = await upsertContractorPerson({
+        firstName: first,
+        surname: last,
+        mobile: workerMobile || null,
+        supplierId: selectedSupplier?.id || null,
+      });
+      if (cancelled) return;
+      setPerson(created);
+      onPersonChange?.(created?.id ?? null);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nameKey, selectedSupplier?.id]);
 
   const filteredSuppliers = useMemo(() => {
     if (!supplierSearch.trim()) return suppliers;
@@ -83,16 +141,25 @@ export function ContractorScreening({
       : null;
   const escortReason: string = answers[ESCORT_REASON_KEY] || "";
 
-  const credentials = getSupplierCredentials(jurisdiction, activeTypes, records);
+  const credentials = buildComplianceChecklist({
+    jurisdiction,
+    types: activeTypes,
+    supplierRecords: records,
+    personRecords,
+  });
   const anyRequired = credentials.some((c) => c.blocking);
   const gate = evaluateContractorGate({
     jurisdiction,
     supplierName: selectedSupplier?.name ?? null,
     types: activeTypes,
-    records,
+    checklist: credentials,
     unsupervisedAccess: unsupervisedAnswer,
     escortReason,
+    entryPolicy,
+    personIdentified: !!person,
   });
+  const allClear = credentials.length > 0 && credentials.every((c) => c.state === "valid" || c.state === "expiring");
+  const actionNeeded = credentials.filter((c) => c.state !== "valid" && c.state !== "expiring");
 
   const allRequiredAnswered = questions
     .filter((q) => q.required)
@@ -118,30 +185,15 @@ export function ContractorScreening({
     onBlockedChangeRef.current?.(gate.blocked, gate.reason);
   }, [gate.blocked, gate.reason]);
 
-  const saveCredential = async (typeId: string, field: "expiry_date" | "reference", value: string) => {
-    if (!selectedSupplier) return;
-    setSavingCredential(`${typeId}:${field}`);
+  const verifyCredential = async (typeId: string, expiry?: string | null) => {
     try {
-      await save(typeId, { [field]: value || null } as any);
+      await verify(typeId, "Staff", expiry ?? undefined);
     } catch {
-      toast({ title: "Could not save", description: "The credential details were not saved.", variant: "destructive" });
-    } finally {
-      setSavingCredential(null);
+      toast({ title: "Could not confirm", variant: "destructive" });
     }
   };
 
-  const stateStyles: Record<string, string> = {
-    valid: "border-success/30 bg-success/5",
-    expiring: "border-warning/40 bg-warning/5",
-    expired: "border-destructive/40 bg-destructive/5",
-    missing: "border-destructive/40 bg-destructive/5",
-  };
-  const stateLabel: Record<string, string> = {
-    valid: "Verified",
-    expiring: "Expiring soon",
-    expired: "Expired",
-    missing: "Not recorded",
-  };
+
 
   return (
     <div className="space-y-4">
@@ -272,52 +324,47 @@ export function ContractorScreening({
         )}
       </div>
 
-      {/* Credential verification — dynamic list configured in Settings */}
-      {selectedSupplier && credentials.length > 0 && (
+      {/* Compliance status — show where they stand, only ask when something is missing */}
+      {credentials.length > 0 && (
         <div className="space-y-2">
           <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
             <CalendarClock className="h-3.5 w-3.5" />
-            Credential Verification
+            Compliance status
           </Label>
-          {credentials.map((c) => (
-            <div key={c.typeId} className={`rounded-xl border-2 p-3 space-y-2 ${stateStyles[c.state]}`}>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[12px] font-semibold text-foreground">
-                  {c.label}
-                  {c.blocking && <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wider text-destructive">Required</span>}
+
+          {allClear ? (
+            <div className="rounded-xl border-2 border-success/30 bg-success/5 p-3 flex items-center gap-2.5">
+              <Check className="h-5 w-5 text-success shrink-0" />
+              <div>
+                <p className="text-[13px] font-semibold text-success">All checks current — good to continue</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {credentials.map((c) => `${c.shortLabel}${c.expiry ? ` to ${c.expiry}` : ""}`).join(" · ")}
                 </p>
-                <Badge variant="outline" className="text-[10px] font-bold shrink-0">
-                  {stateLabel[c.state]}
-                  {c.state === "expiring" && c.daysToExpiry !== null && ` · ${c.daysToExpiry}d`}
-                </Badge>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1">
-                  <Label className="text-[10px] text-muted-foreground">Expiry date</Label>
-                  <Input
-                    type="date"
-                    defaultValue={c.expiry || ""}
-                    onBlur={(e) => e.target.value !== (c.expiry || "") && saveCredential(c.typeId, "expiry_date", e.target.value)}
-                    className="rounded-lg h-9 text-sm"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[10px] text-muted-foreground">Document reference</Label>
-                  <Input
-                    defaultValue={c.reference || ""}
-                    placeholder="Certificate / clearance no."
-                    onBlur={(e) => e.target.value !== (c.reference || "") && saveCredential(c.typeId, "reference", e.target.value)}
-                    className="rounded-lg h-9 text-sm"
-                  />
-                </div>
-              </div>
-              {savingCredential?.startsWith(c.typeId) ? (
-                <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Saving…</p>
-              ) : null}
             </div>
-          ))}
+          ) : (
+            <>
+              {actionNeeded.length > 0 && (
+                <p className="text-[11px] text-muted-foreground">
+                  {kiosk
+                    ? "Please attach the item below so a staff member can confirm it."
+                    : "Attach the document and confirm it once you have seen the original."}
+                </p>
+              )}
+              <ComplianceChecklist
+                checklist={credentials}
+                personId={person?.id ?? null}
+                kiosk={kiosk}
+                large={!compact}
+                onSavePerson={async (typeId, fields) => { await savePersonCredential(typeId, fields as any); }}
+                onSaveCompany={async (typeId, fields) => { await save(typeId, fields); }}
+                onVerify={kiosk ? undefined : verifyCredential}
+              />
+            </>
+          )}
         </div>
       )}
+
 
       {gate.reason && (
         <div className={`rounded-xl border-2 p-3 flex items-start gap-2 ${gate.blocked ? "border-destructive/40 bg-destructive/5" : "border-amber-500/40 bg-amber-500/5"}`}>
