@@ -34,15 +34,15 @@ function getStats(
   switch (tab) {
     case "all":
       return [
-        { label: "On-site", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
-        { label: "Left", value: checkedOut, icon: <LogOut className="h-3.5 w-3.5" />, accent: "text-muted-foreground", filterKey: "checked-out" },
+        { label: "On site now", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
+        { label: "Left today", value: checkedOut, icon: <LogOut className="h-3.5 w-3.5" />, accent: "text-muted-foreground", filterKey: "checked-out" },
         { label: "Overdue", value: overstayed, icon: <AlertTriangle className="h-3.5 w-3.5" />, accent: "text-destructive", filterKey: "overstayed" },
       ];
 
     case "visitor":
       return [
-        { label: "On-site", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
-        { label: "Left", value: checkedOut, icon: <LogOut className="h-3.5 w-3.5" />, accent: "text-muted-foreground", filterKey: "checked-out" },
+        { label: "On site now", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
+        { label: "Left today", value: checkedOut, icon: <LogOut className="h-3.5 w-3.5" />, accent: "text-muted-foreground", filterKey: "checked-out" },
         { label: "Overdue", value: overstayed, icon: <AlertTriangle className="h-3.5 w-3.5" />, accent: "text-destructive", filterKey: "overstayed" },
       ];
 
@@ -52,7 +52,7 @@ function getStats(
         return v.status === "checked-in" && (!screening || !screening.dbsCheck);
       }).length;
       return [
-        { label: "On-site", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
+        { label: "On site now", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
         { label: "Pending DBS", value: pendingDBS, icon: <ShieldCheck className="h-3.5 w-3.5" />, accent: "text-warning", filterKey: "pending-dbs" },
         { label: "Overdue", value: overstayed, icon: <AlertTriangle className="h-3.5 w-3.5" />, accent: "text-destructive", filterKey: "overstayed" },
       ];
@@ -60,14 +60,14 @@ function getStats(
 
     case "volunteer":
       return [
-        { label: "On-site", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
-        { label: "Left", value: checkedOut, icon: <LogOut className="h-3.5 w-3.5" />, accent: "text-muted-foreground", filterKey: "checked-out" },
+        { label: "On site now", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
+        { label: "Left today", value: checkedOut, icon: <LogOut className="h-3.5 w-3.5" />, accent: "text-muted-foreground", filterKey: "checked-out" },
         { label: "Overdue", value: overstayed, icon: <AlertTriangle className="h-3.5 w-3.5" />, accent: "text-destructive", filterKey: "overstayed" },
       ];
 
     case "staff":
       return [
-        { label: "On-site", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
+        { label: "On site now", value: onSite, icon: <LogIn className="h-3.5 w-3.5" />, accent: "text-success", filterKey: "checked-in" },
         { label: "On Shift", value: onSite, icon: <Clock className="h-3.5 w-3.5" />, accent: "text-info" },
       ];
 
