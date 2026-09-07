@@ -2,9 +2,8 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { useSuppliers, Supplier } from "@/hooks/useSuppliers";
-import { Search, Check, Building2, Shield, HardHat, FileCheck, AlertTriangle, Syringe, ShieldAlert, CalendarClock, Loader2 } from "lucide-react";
+import { Search, Check, Building2, AlertTriangle, ShieldAlert, CalendarClock, ClipboardCheck } from "lucide-react";
 import {
   buildComplianceChecklist,
   evaluateContractorGate,
@@ -21,26 +20,10 @@ import {
 } from "@/hooks/useContractorPeople";
 import { ComplianceChecklist } from "@/components/contractor/ComplianceChecklist";
 import { useToast } from "@/hooks/use-toast";
+import { useContractorQuestions, type ContractorQuestion } from "@/hooks/useContractorQuestions";
 
-// AU screening template
-const auScreeningQuestions = [
-  { id: "swms", label: "Safe Work Method Statement (SWMS) provided?", type: "yesno" as const, required: true, icon: FileCheck },
-  { id: "ppe", label: "Wearing appropriate PPE (hard hat, hi-vis, steel caps)?", type: "yesno" as const, required: true, icon: HardHat },
-  { id: "permits", label: "Holds current work permits / licences?", type: "yesno" as const, required: true, icon: Shield },
-  { id: "induction", label: "Completed site induction?", type: "yesno" as const, required: true, icon: Shield },
-  { id: "infection_control", label: "No signs of illness or infection?", type: "yesno" as const, required: true, icon: Syringe },
-  { id: "work_area", label: "Work area / scope of works", type: "text" as const, required: true, placeholder: "e.g. Room 12 bathroom renovation" },
-];
-
-// UK screening template
-const ukScreeningQuestions = [
-  { id: "rams", label: "Risk Assessment & Method Statement (RAMS) provided?", type: "yesno" as const, required: true, icon: FileCheck },
-  { id: "ppe", label: "Wearing appropriate PPE?", type: "yesno" as const, required: true, icon: HardHat },
-  { id: "permits", label: "Required permits / CSCS card valid?", type: "yesno" as const, required: true, icon: Shield },
-  { id: "safeguarding", label: "Completed safeguarding awareness?", type: "yesno" as const, required: true, icon: Shield },
-  { id: "infection_control", label: "No signs of illness or infection?", type: "yesno" as const, required: true, icon: Syringe },
-  { id: "work_area", label: "Work area / scope of works", type: "text" as const, required: true, placeholder: "e.g. Kitchen refurbishment, East Wing" },
-];
+/** The one question that decides how hard a missing credential bites */
+const UNSUPERVISED_QUESTION_KEY = "unsupervised_access";
 
 interface ContractorScreeningProps {
   jurisdiction: "AU" | "UK";
@@ -79,9 +62,9 @@ export function ContractorScreening({
   const { toast } = useToast();
   const [supplierSearch, setSupplierSearch] = useState("");
   const [showSupplierList, setShowSupplierList] = useState(false);
+  const [changingSupplier, setChangingSupplier] = useState(false);
   const [person, setPerson] = useState<ContractorPerson | null>(null);
-
-  const questions = jurisdiction === "AU" ? auScreeningQuestions : ukScreeningQuestions;
+  const [recognisedSupplier, setRecognisedSupplier] = useState(false);
 
   const { activeTypes } = useCredentialTypes();
   const { records, save } = useSupplierCredentials(selectedSupplier?.id);
@@ -123,6 +106,25 @@ export function ContractorScreening({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nameKey, selectedSupplier?.id]);
 
+  // We already know who they work for — fill it in instead of asking again.
+  useEffect(() => {
+    if (selectedSupplier || changingSupplier) return;
+    const known = person?.supplier_id ? suppliers.find((s) => s.id === person.supplier_id) : null;
+    if (known) {
+      setRecognisedSupplier(true);
+      onSupplierChange(known);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [person?.supplier_id, suppliers, selectedSupplier, changingSupplier]);
+
+  const {
+    onFile,
+    outstanding,
+    visitQuestions,
+    answerFor,
+    saveAnswer,
+  } = useContractorQuestions({ jurisdiction, supplierId: selectedSupplier?.id ?? null, personId: person?.id ?? null });
+
   const filteredSuppliers = useMemo(() => {
     if (!supplierSearch.trim()) return suppliers;
     const q = supplierSearch.toLowerCase();
@@ -134,6 +136,21 @@ export function ContractorScreening({
   const setAnswer = (id: string, value: any) => {
     onAnswersChange({ ...answers, [id]: value });
   };
+
+  const answerKeyOf = (q: ContractorQuestion) =>
+    q.key === UNSUPERVISED_QUESTION_KEY ? UNSUPERVISED_ACCESS_KEY : q.key;
+
+  const handleAnswer = (q: ContractorQuestion, value: any) => {
+    setAnswer(answerKeyOf(q), value);
+    if (q.owner_scope !== "visit") {
+      void saveAnswer(q, value, kiosk ? "Kiosk" : "Staff");
+    }
+  };
+
+  // Staff-only questions never appear on an unattended kiosk.
+  const visible = (q: ContractorQuestion) => !kiosk || q.answered_by !== "staff";
+  const askNow = [...outstanding, ...visitQuestions].filter(visible);
+  const staffPending = [...outstanding, ...visitQuestions].filter((q) => kiosk && q.answered_by === "staff" && q.required);
 
   const unsupervisedAnswer: boolean | null =
     answers[UNSUPERVISED_ACCESS_KEY] === true ? true
@@ -147,31 +164,41 @@ export function ContractorScreening({
     supplierRecords: records,
     personRecords,
   });
-  const anyRequired = credentials.some((c) => c.blocking);
   const gate = evaluateContractorGate({
     jurisdiction,
     supplierName: selectedSupplier?.name ?? null,
     types: activeTypes,
     checklist: credentials,
-    unsupervisedAccess: unsupervisedAnswer,
-    escortReason,
+    // On the kiosk the resident-access question is a reception task — entry is
+    // flagged rather than stopped, and staff finish it at the desk.
+    unsupervisedAccess: kiosk ? false : unsupervisedAnswer,
+    escortReason: kiosk ? "Reception to confirm resident access" : escortReason,
     entryPolicy,
     personIdentified: !!person,
   });
   const allClear = credentials.length > 0 && credentials.every((c) => c.state === "valid" || c.state === "expiring");
   const actionNeeded = credentials.filter((c) => c.state !== "valid" && c.state !== "expiring");
 
-  const allRequiredAnswered = questions
-    .filter((q) => q.required)
-    .every((q) => {
-      const val = answers[q.id];
-      if (q.type === "yesno") return val === true || val === false;
-      return val !== undefined && val !== "";
-    });
-
-  const failedChecks = questions.filter(
-    (q) => q.type === "yesno" && answers[q.id] === false
+  const unanswered = askNow.filter((q) => {
+    if (!q.required) return false;
+    const v = answers[answerKeyOf(q)];
+    if (q.input_type === "yesno") return v !== true && v !== false;
+    return v === undefined || v === "";
+  });
+  const failedChecks = askNow.filter(
+    (q) => q.input_type === "yesno" && answers[answerKeyOf(q)] === false
   );
+  const blockingNo = failedChecks.filter((q) => q.blocks_on_no);
+
+  const questionReason =
+    unanswered.length > 0
+      ? "Please answer the remaining screening questions."
+      : blockingNo.length > 0
+      ? `${blockingNo.map((q) => q.label.replace(/\?$/, "")).join("; ")} — please see a staff member.`
+      : null;
+
+  const blocked = gate.blocked || questionReason !== null;
+  const reason = gate.blocked ? gate.reason : questionReason ?? gate.reason;
 
   // Report the gate upward only when it actually changes — the callback is
   // usually an inline arrow, so it must stay out of the dependency list.
@@ -179,11 +206,11 @@ export function ContractorScreening({
   const onBlockedChangeRef = useRef(onBlockedChange);
   onBlockedChangeRef.current = onBlockedChange;
   useEffect(() => {
-    const signature = `${gate.blocked}|${gate.reason ?? ""}`;
+    const signature = `${blocked}|${reason ?? ""}`;
     if (signature === lastReported.current) return;
     lastReported.current = signature;
-    onBlockedChangeRef.current?.(gate.blocked, gate.reason);
-  }, [gate.blocked, gate.reason]);
+    onBlockedChangeRef.current?.(blocked, reason);
+  }, [blocked, reason]);
 
   const verifyCredential = async (typeId: string, expiry?: string | null) => {
     try {
@@ -193,40 +220,37 @@ export function ContractorScreening({
     }
   };
 
-
-
-  return (
-    <div className="space-y-4">
-      {/* Unsupervised resident access — asked first, it decides what the credentials mean */}
+  const yesNo = (q: ContractorQuestion) => {
+    const value = answers[answerKeyOf(q)];
+    const isYes = value === true;
+    const isNo = value === false;
+    return (
       <div
-        className={`rounded-xl border-2 p-3 space-y-3 ${
-          unsupervisedAnswer === true ? "border-warning/40 bg-warning/5"
-            : unsupervisedAnswer === false ? "border-success/30 bg-success/5"
-            : gate.needsAnswer ? "border-destructive/40 bg-destructive/5"
+        key={q.id}
+        className={`rounded-xl border-2 p-3 transition-all ${
+          isYes ? "border-success/30 bg-success/5"
+            : isNo ? "border-destructive/30 bg-destructive/5"
             : "border-border"
         }`}
       >
-        <div className="flex items-center gap-3">
-          <div className="h-7 w-7 rounded-lg bg-muted flex items-center justify-center shrink-0">
-            <ShieldAlert className="h-3.5 w-3.5 text-muted-foreground" />
-          </div>
-          <p className="text-[12px] text-foreground flex-1">
-            Will they have unsupervised access to residents?
-            {anyRequired && <span className="text-destructive ml-0.5">*</span>}
+        <div className={kiosk ? "space-y-3" : "flex items-center gap-3"}>
+          <p className={`text-foreground flex-1 ${kiosk ? "text-base font-medium" : "text-[12px]"}`}>
+            {q.label}
+            {q.required && <span className="text-destructive ml-0.5">*</span>}
           </p>
-          <div className="flex gap-1.5 shrink-0">
+          <div className={`flex gap-2 shrink-0 ${kiosk ? "" : "gap-1.5"}`}>
             <button
-              onClick={() => setAnswer(UNSUPERVISED_ACCESS_KEY, true)}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
-                unsupervisedAnswer === true ? "bg-warning text-warning-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-warning/20"
+              onClick={() => handleAnswer(q, true)}
+              className={`rounded-lg font-bold transition-all ${kiosk ? "flex-1 h-14 text-base" : "px-3 py-1.5 text-[11px]"} ${
+                isYes ? "bg-success text-success-foreground shadow-sm" : "bg-muted text-muted-foreground"
               }`}
             >
               Yes
             </button>
             <button
-              onClick={() => setAnswer(UNSUPERVISED_ACCESS_KEY, false)}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
-                unsupervisedAnswer === false ? "bg-success text-success-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-success/20"
+              onClick={() => handleAnswer(q, false)}
+              className={`rounded-lg font-bold transition-all ${kiosk ? "flex-1 h-14 text-base" : "px-3 py-1.5 text-[11px]"} ${
+                isNo ? "bg-destructive text-destructive-foreground shadow-sm" : "bg-muted text-muted-foreground"
               }`}
             >
               No
@@ -234,8 +258,8 @@ export function ContractorScreening({
           </div>
         </div>
 
-        {unsupervisedAnswer === false && (
-          <div className="space-y-1">
+        {q.key === UNSUPERVISED_QUESTION_KEY && isNo && !kiosk && (
+          <div className="space-y-1 mt-3">
             <Label className="text-[10px] text-muted-foreground">
               Escorted by / why there is no resident contact
               {gate.needsEscortReason && <span className="text-destructive ml-0.5">*</span>}
@@ -249,11 +273,15 @@ export function ContractorScreening({
           </div>
         )}
       </div>
+    );
+  };
 
-      {/* Supplier autocomplete */}
+  return (
+    <div className="space-y-4">
+      {/* Company — recognised from the worker's record wherever possible */}
       <div className="space-y-2">
         <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-          Supplier / Company
+          Company
         </Label>
         {selectedSupplier ? (
           <div className="rounded-xl border border-success/30 bg-success/5 p-3">
@@ -265,14 +293,19 @@ export function ContractorScreening({
                 <div>
                   <p className="text-sm font-semibold text-foreground">{selectedSupplier.name}</p>
                   <p className="text-[11px] text-muted-foreground">
-                    {jurisdiction === "AU" && selectedSupplier.abn && `ABN: ${selectedSupplier.abn}`}
-                    {jurisdiction === "UK" && selectedSupplier.company_number && `Co. No: ${selectedSupplier.company_number}`}
-                    {selectedSupplier.contact_name && ` · ${selectedSupplier.contact_name}`}
+                    {recognisedSupplier ? "From your last visit" : "Selected"}
+                    {jurisdiction === "AU" && selectedSupplier.abn && ` · ABN: ${selectedSupplier.abn}`}
+                    {jurisdiction === "UK" && selectedSupplier.company_number && ` · Co. No: ${selectedSupplier.company_number}`}
                   </p>
                 </div>
               </div>
               <button
-                onClick={() => { onSupplierChange(null); setShowSupplierList(true); }}
+                onClick={() => {
+                  setChangingSupplier(true);
+                  setRecognisedSupplier(false);
+                  onSupplierChange(null);
+                  setShowSupplierList(true);
+                }}
                 className="text-[11px] text-primary hover:underline font-semibold"
               >
                 Change
@@ -287,21 +320,26 @@ export function ContractorScreening({
                 value={supplierSearch}
                 onChange={(e) => { setSupplierSearch(e.target.value); setShowSupplierList(true); }}
                 onFocus={() => setShowSupplierList(true)}
-                placeholder="Search supplier name or ABN..."
-                className="pl-10 h-10 rounded-xl text-sm"
+                placeholder="Search company name..."
+                className={`pl-10 rounded-xl ${kiosk ? "h-14 text-base" : "h-10 text-sm"}`}
               />
             </div>
             {showSupplierList && (
               <div className="max-h-[180px] overflow-y-auto rounded-xl border border-border bg-card shadow-sm">
                 {filteredSuppliers.length === 0 ? (
                   <div className="p-3 text-center text-[12px] text-muted-foreground">
-                    No suppliers found — type to continue as ad-hoc
+                    No companies found — continue as a one-off visit
                   </div>
                 ) : (
                   filteredSuppliers.map((s) => (
                     <button
                       key={s.id}
-                      onClick={() => { onSupplierChange(s); setShowSupplierList(false); setSupplierSearch(""); }}
+                      onClick={() => {
+                        onSupplierChange(s);
+                        setShowSupplierList(false);
+                        setSupplierSearch("");
+                        setRecognisedSupplier(false);
+                      }}
                       className="w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors border-b border-border last:border-0"
                     >
                       <div className="flex items-center gap-2.5">
@@ -324,170 +362,118 @@ export function ContractorScreening({
         )}
       </div>
 
-      {/* Compliance status — show where they stand, only ask when something is missing */}
-      {credentials.length > 0 && (
+      {/* Already on file — shown, never re-asked */}
+      {(allClear || onFile.length > 0) && (
+        <div className="rounded-xl border border-success/30 bg-success/5 p-3 space-y-1">
+          <div className="flex items-center gap-2">
+            <Check className="h-4 w-4 text-success shrink-0" />
+            <p className="text-[13px] font-semibold text-success">Already on file</p>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            {[
+              ...credentials
+                .filter((c) => c.state === "valid" || c.state === "expiring")
+                .map((c) => `${c.shortLabel}${c.expiry ? ` to ${c.expiry}` : ""}`),
+              ...onFile.map((q) => {
+                const a = answerFor(q);
+                const v = a?.answer;
+                return `${q.label.replace(/\?$/, "")}${v === true ? ": Yes" : v === false ? ": No" : typeof v === "string" && v ? `: ${v}` : ""}`;
+              }),
+            ].join(" · ")}
+          </p>
+        </div>
+      )}
+
+      {/* Anything missing or out of date */}
+      {actionNeeded.length > 0 && (
         <div className="space-y-2">
           <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
             <CalendarClock className="h-3.5 w-3.5" />
-            Compliance status
+            Needs attention
           </Label>
-
-          {allClear ? (
-            <div className="rounded-xl border-2 border-success/30 bg-success/5 p-3 flex items-center gap-2.5">
-              <Check className="h-5 w-5 text-success shrink-0" />
-              <div>
-                <p className="text-[13px] font-semibold text-success">All checks current — good to continue</p>
-                <p className="text-[11px] text-muted-foreground">
-                  {credentials.map((c) => `${c.shortLabel}${c.expiry ? ` to ${c.expiry}` : ""}`).join(" · ")}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <>
-              {actionNeeded.length > 0 && (
-                <p className="text-[11px] text-muted-foreground">
-                  {kiosk
-                    ? "Please attach the item below so a staff member can confirm it."
-                    : "Attach the document and confirm it once you have seen the original."}
-                </p>
-              )}
-              <ComplianceChecklist
-                checklist={credentials}
-                personId={person?.id ?? null}
-                kiosk={kiosk}
-                large={!compact}
-                onSavePerson={async (typeId, fields) => { await savePersonCredential(typeId, fields as any); }}
-                onSaveCompany={async (typeId, fields) => { await save(typeId, fields); }}
-                onVerify={kiosk ? undefined : verifyCredential}
-              />
-            </>
-          )}
+          <p className="text-[11px] text-muted-foreground">
+            {kiosk
+              ? "Please attach the item below so a staff member can confirm it."
+              : "Attach the document and confirm it once you have seen the original."}
+          </p>
+          <ComplianceChecklist
+            checklist={credentials}
+            personId={person?.id ?? null}
+            kiosk={kiosk}
+            large={!compact}
+            onSavePerson={async (typeId, fields) => { await savePersonCredential(typeId, fields as any); }}
+            onSaveCompany={async (typeId, fields) => { await save(typeId, fields); }}
+            onVerify={kiosk ? undefined : verifyCredential}
+          />
         </div>
       )}
 
-
-      {gate.reason && (
-        <div className={`rounded-xl border-2 p-3 flex items-start gap-2 ${gate.blocked ? "border-destructive/40 bg-destructive/5" : "border-amber-500/40 bg-amber-500/5"}`}>
-          <ShieldAlert className={`h-4 w-4 shrink-0 mt-0.5 ${gate.blocked ? "text-destructive" : "text-amber-600"}`} />
-          <div>
-            <p className={`text-[12px] font-bold ${gate.blocked ? "text-destructive" : "text-amber-700"}`}>
-              {gate.blocked ? (gate.needsAnswer ? "Answer required" : "Check-in blocked") : "Credential warning — staff review"}
-            </p>
-            <p className={`text-[11px] ${gate.blocked ? "text-destructive/80" : "text-amber-700/80"}`}>{gate.reason}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Jurisdiction badge */}
-      <div className="flex items-center gap-2">
-        <Badge variant="outline" className="text-[10px] font-bold">
-          {jurisdiction === "AU" ? "🇦🇺 Australia" : "🇬🇧 United Kingdom"}
-        </Badge>
-        <span className="text-[11px] text-muted-foreground">
-          {jurisdiction === "AU" ? "SWMS / WHS screening" : "RAMS / H&S screening"}
-        </span>
-      </div>
-
-      {/* Screening questions — compact staff view */}
-      <div className="space-y-2">
-        <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-          <Shield className="h-3.5 w-3.5" />
-          Contractor Screening
-        </Label>
-
-        {failedChecks.length > 0 && (
-          <div className="rounded-xl border border-warning/40 bg-warning/5 p-3 flex items-start gap-2">
-            <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-            <div>
-              <p className="text-[12px] font-semibold text-destructive">Staff review required (not blocking)</p>
-              <p className="text-[11px] text-destructive/80">
-                {failedChecks.map((q) => q.label.split("?")[0]).join("; ")}
-              </p>
-            </div>
-          </div>
-        )}
-
+      {/* Questions still to answer today */}
+      {askNow.length > 0 && (
         <div className="space-y-2">
-          {questions.map((q) => {
-            const answer = answers[q.id];
-            const Icon = (q as { icon?: React.ComponentType<{ className?: string }> }).icon;
-
-            if (q.type === "yesno") {
-              const isYes = answer === true;
-              const isNo = answer === false;
-              return (
-                <div
-                  key={q.id}
-                  className={`rounded-xl border-2 p-3 transition-all ${
-                    isYes ? "border-success/30 bg-success/5"
-                      : isNo ? "border-destructive/30 bg-destructive/5"
-                      : "border-border"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    {Icon && (
-                      <div className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 ${
-                        isYes ? "bg-success/10 text-success"
-                          : isNo ? "bg-destructive/10 text-destructive"
-                          : "bg-muted text-muted-foreground"
-                      }`}>
-                        <Icon className="h-3.5 w-3.5" />
-                      </div>
-                    )}
-                    <p className="text-[12px] text-foreground flex-1">
-                      {q.label}
-                      {q.required && <span className="text-destructive ml-0.5">*</span>}
-                    </p>
-                    <div className="flex gap-1.5 shrink-0">
-                      <button
-                        onClick={() => setAnswer(q.id, true)}
-                        className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
-                          isYes ? "bg-success text-success-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-success/20"
-                        }`}
-                      >
-                        Yes
-                      </button>
-                      <button
-                        onClick={() => setAnswer(q.id, false)}
-                        className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
-                          isNo ? "bg-destructive text-destructive-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-destructive/20"
-                        }`}
-                      >
-                        No
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            }
-
-            if (q.type === "text") {
-              return (
+          <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <ClipboardCheck className="h-3.5 w-3.5" />
+            {askNow.length === 1 ? "One quick check" : `${askNow.length} quick checks`}
+          </Label>
+          <div className="space-y-2">
+            {askNow.map((q) =>
+              q.input_type === "yesno" ? (
+                yesNo(q)
+              ) : (
                 <div key={q.id} className="space-y-1">
-                  <Label className="text-[11px]">
+                  <Label className={kiosk ? "text-sm" : "text-[11px]"}>
                     {q.label}
                     {q.required && <span className="text-destructive ml-0.5">*</span>}
                   </Label>
                   <Input
-                    value={answer || ""}
-                    onChange={(e) => setAnswer(q.id, e.target.value)}
-                    placeholder={q.placeholder || ""}
-                    className="rounded-lg h-9 text-sm"
+                    value={answers[answerKeyOf(q)] || ""}
+                    onChange={(e) => setAnswer(answerKeyOf(q), e.target.value)}
+                    onBlur={(e) => {
+                      if (q.owner_scope !== "visit") void saveAnswer(q, e.target.value, kiosk ? "Kiosk" : "Staff");
+                    }}
+                    className={`rounded-lg ${kiosk ? "h-14 text-base" : "h-9 text-sm"}`}
                   />
                 </div>
-              );
-            }
-
-            return null;
-          })}
+              )
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Completion indicator */}
-      {allRequiredAnswered && failedChecks.length === 0 && !gate.reason && (
+      {failedChecks.length > 0 && blockingNo.length === 0 && (
+        <div className="rounded-xl border border-warning/40 bg-warning/5 p-3 flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+          <p className="text-[11px] text-foreground">
+            A staff member will review: {failedChecks.map((q) => q.label.replace(/\?$/, "")).join("; ")}
+          </p>
+        </div>
+      )}
+
+      {staffPending.length > 0 && (
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 flex items-start gap-2">
+          <ShieldAlert className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+          <p className="text-[11px] text-foreground">
+            Reception will finish {staffPending.length === 1 ? "one item" : `${staffPending.length} items`} with you when you arrive at the desk.
+          </p>
+        </div>
+      )}
+
+      {reason && (
+        <div className={`rounded-xl border-2 p-3 flex items-start gap-2 ${blocked ? "border-destructive/40 bg-destructive/5" : "border-amber-500/40 bg-amber-500/5"}`}>
+          <ShieldAlert className={`h-4 w-4 shrink-0 mt-0.5 ${blocked ? "text-destructive" : "text-amber-600"}`} />
+          <div>
+            <p className={`text-[12px] font-bold ${blocked ? "text-destructive" : "text-amber-700"}`}>
+              {blocked ? "Please see a staff member" : "Staff review"}
+            </p>
+            <p className={`text-[11px] ${blocked ? "text-destructive/80" : "text-amber-700/80"}`}>{reason}</p>
+          </div>
+        </div>
+      )}
+
+      {!blocked && !reason && askNow.length === 0 && (
         <div className="rounded-xl border border-success/30 bg-success/5 p-3 flex items-center gap-2">
           <Check className="h-4 w-4 text-success" />
-          <p className="text-[12px] font-semibold text-success">All screening checks passed</p>
+          <p className="text-[12px] font-semibold text-success">Nothing else needed — good to continue</p>
         </div>
       )}
     </div>

@@ -13,6 +13,7 @@ import { AutomationSettingsPerType } from "@/components/settings/AutomationSetti
 
 import { ResidentLeaveSettingsTab } from "@/components/settings/ResidentLeaveSettingsTab";
 import { ContractorEnforcementTab } from "@/components/settings/ContractorEnforcementTab";
+import { ContractorQuestionsTab } from "@/components/settings/ContractorQuestionsTab";
 import { ResidentPrivacyTab } from "@/components/settings/ResidentPrivacyTab";
 import { StaffPrivacyTab } from "@/components/settings/StaffPrivacyTab";
 import { ReturningVisitorTab } from "@/components/settings/ReturningVisitorTab";
@@ -74,6 +75,7 @@ function getSections(type: string): SectionConfig[] {
   if (type === "contractor") {
     sections.push(
       { id: "credential-enforcement", label: "Credential Enforcement", icon: ShieldCheck, component: <ContractorEnforcementTab /> },
+      { id: "contractor-questions", label: "Screening Questions", icon: ClipboardList, component: <ContractorQuestionsTab /> },
     );
   }
 
