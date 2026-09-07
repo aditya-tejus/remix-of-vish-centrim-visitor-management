@@ -501,6 +501,33 @@ export default function KioskCheckIn() {
           <motion.div key="visiting" {...anim} className="space-y-4">
             <h2 className="text-2xl font-bold text-foreground text-center">Who Are You Visiting?</h2>
 
+            {/* One-tap shortcut for regulars */}
+            {flow.returningOptions.suggestResident && flow.returningVisitor?.whomToVisit && !flow.formValues.whomToVisit && (
+              <button
+                onClick={() => {
+                  const suggestion = flow.returningVisitor.whomToVisit;
+                  const residentId =
+                    flow.returningVisitor.lastResidentId ||
+                    flow.residents.find((r) => r.name === suggestion)?.visitorId ||
+                    null;
+                  flow.updateField("whomToVisit", suggestion);
+                  flow.setVisitedResidentId(residentId);
+                  if (residentId && (flow.selectedType === "visitor" || flow.selectedType === "volunteer")) {
+                    setStep("food");
+                  } else {
+                    goNext();
+                  }
+                }}
+                className="w-full rounded-2xl border-2 border-primary/40 bg-primary/5 p-4 text-left active:scale-[0.98] transition-all"
+              >
+                <p className="text-sm text-muted-foreground">Same as last time?</p>
+                <p className="text-lg font-bold text-foreground">Here to see {flow.returningVisitor.whomToVisit}</p>
+                <p className="text-sm text-primary font-semibold mt-1">Tap to continue</p>
+              </button>
+            )}
+
+
+
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => { setVisitingMode("resident"); setVisitingSearch(""); }}
