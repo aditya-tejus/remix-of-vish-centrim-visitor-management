@@ -113,6 +113,9 @@ export function AlertSettingsPerType({ personType }: Props) {
           />
           <span className="text-xs text-muted-foreground">hours</span>
         </div>
+      </div>
+
+
 
 
       <div className="rounded-lg border border-border p-4">
