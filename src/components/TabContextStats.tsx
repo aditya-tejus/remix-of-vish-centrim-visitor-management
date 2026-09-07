@@ -17,6 +17,8 @@ interface TabContextStatsProps {
   allVisitors: Visitor[];
   onFilter?: (key: string) => void;
   activeFilter?: string | null;
+  /** "strip" = thin inline row, "cards" = compact cards at the top of the page */
+  variant?: "strip" | "cards";
 }
 
 function getStats(
