@@ -87,24 +87,54 @@ export default function KioskCheckIn() {
     if (prevIdx >= 0) setStep(flow.steps[prevIdx].id);
   };
 
-  // Returning visitor auto-fill
+  // Returning visitor auto-fill by name (only when enabled in settings)
   const handleNameBlur = async () => {
-    if (returningChecked) return;
+    if (!flow.returningOptions.name || returningChecked) return;
     const firstName = flow.formValues.firstName?.trim();
     const surname = flow.formValues.surname?.trim();
     if (!firstName || !surname) return;
     setReturningChecked(true);
-    const prev = await flow.searchReturningVisitor(firstName, surname);
-    if (prev) {
-      flow.setReturningVisitor(prev);
-      flow.setFormValues((fv: Record<string, string>) => ({
-        ...fv,
-        email: fv.email || prev.email,
-        mobile: fv.mobile || prev.mobile,
-      }));
-      toast({ title: "Welcome back!", description: "We've pre-filled your details from your last visit." });
+    const prev = await flow.lookupReturningVisitor({ firstName, surname });
+    if (prev) setReturningMatch(prev);
+  };
+
+  // Returning visitor lookup by mobile or personal card code
+  const handleReturningLookup = async (params: { mobile?: string; qr?: string }) => {
+    setReturningBusy(true);
+    setReturningNotFound(false);
+    const match = await flow.lookupReturningVisitor(params);
+    setReturningBusy(false);
+    if (match) {
+      setReturningMatch(match);
+    } else {
+      setReturningNotFound(true);
     }
   };
+
+  const handleReturningConfirm = () => {
+    const match = returningMatch;
+    if (!match) return;
+    flow.setReturningVisitor(match);
+    flow.setPersonQr(match.personQr || null);
+    flow.setFormValues((fv: Record<string, string>) => ({
+      ...fv,
+      firstName: fv.firstName || match.firstName,
+      surname: fv.surname || match.surname,
+      email: fv.email || match.email,
+      mobile: fv.mobile || match.mobile,
+      address: fv.address || match.address,
+    }));
+    setReturningMatch(null);
+    setReturningChecked(true);
+    toast({ title: "Welcome back!", description: "We've pre-filled your details from your last visit." });
+  };
+
+  const handleReturningReject = () => {
+    setReturningMatch(null);
+    setReturningChecked(true);
+    setReturningNotFound(false);
+  };
+
 
   // Filtered residents/staff for visiting step
   const filteredVisiting = useMemo(() => {
