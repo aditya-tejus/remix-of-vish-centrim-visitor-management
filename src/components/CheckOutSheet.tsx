@@ -90,6 +90,9 @@ export function CheckOutSheet({
       const found = checkedInVisitors.find((v) => v.id === preSelectedVisitorId);
       if (found) {
         setSelectedVisitor(found);
+        setLeavingCompanions(
+          (found.companionDetails || []).map((c, i) => (c.checkedOutAt ? -1 : i)).filter((i) => i >= 0)
+        );
         setCheckoutReason("");
       }
     }
@@ -554,35 +557,60 @@ export function CheckOutSheet({
                   label="Adjust check-out time"
                 />
 
-                {/* Companions */}
-                {companions.length > 0 && (
+                {/* Who is leaving? */}
+                {onSiteCompanions.length > 0 && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-1.5">
                       <Users className="h-3.5 w-3.5 text-muted-foreground" />
                       <label className="text-[12px] font-medium text-muted-foreground">
-                        {companions.length} companion{companions.length !== 1 ? "s" : ""} will also be checked out
+                        Who is leaving? Everyone is ticked — untick anyone staying on.
                       </label>
                     </div>
                     <div className="rounded-xl border border-border divide-y divide-border overflow-hidden">
-                      {companions.map((c, i) => (
-                        <div key={i} className="px-3.5 py-2.5 flex items-center justify-between">
-                          <div className="flex items-center gap-2.5">
-                            <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
-                              {(c.name || "?")[0]?.toUpperCase()}
-                            </div>
-                            <div>
-                              <p className="text-[13px] font-medium text-foreground">{c.name || `Person ${i + 1}`}</p>
-                              {c.relation && (
-                                <p className="text-[11px] text-muted-foreground">{c.relation}</p>
-                              )}
-                            </div>
+                      <div className="px-3.5 py-2.5 flex items-center justify-between bg-muted/40">
+                        <div className="flex items-center gap-2.5">
+                          <Checkbox checked disabled />
+                          <div>
+                            <p className="text-[13px] font-medium text-foreground">
+                              {selectedVisitor.firstName} {selectedVisitor.surname}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">Main visitor</p>
                           </div>
-                          {c.phone && (
-                            <span className="text-[11px] text-muted-foreground">{c.phone}</span>
-                          )}
                         </div>
-                      ))}
+                      </div>
+                      {companions.map((c, i) =>
+                        c.checkedOutAt ? (
+                          <div key={i} className="px-3.5 py-2.5 flex items-center justify-between opacity-60">
+                            <p className="text-[13px] text-foreground">{c.name || `Person ${i + 1}`}</p>
+                            <span className="text-[11px] text-muted-foreground">
+                              Left {format(new Date(c.checkedOutAt), "hh:mm a")}
+                            </span>
+                          </div>
+                        ) : (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => toggleCompanion(i)}
+                            className="w-full px-3.5 py-2.5 flex items-center justify-between text-left active:scale-[0.995] transition"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <Checkbox checked={leavingCompanions.includes(i)} />
+                              <div>
+                                <p className="text-[13px] font-medium text-foreground">{c.name || `Person ${i + 1}`}</p>
+                                {c.relation && <p className="text-[11px] text-muted-foreground">{c.relation}</p>}
+                              </div>
+                            </div>
+                            {c.phone && <span className="text-[11px] text-muted-foreground">{c.phone}</span>}
+                          </button>
+                        )
+                      )}
                     </div>
+                    {stayingBehind > 0 && (
+                      <p className="text-[12px] text-warning flex items-center gap-1.5">
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        {stayingBehind} staying on site — this visit stays open for them.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
