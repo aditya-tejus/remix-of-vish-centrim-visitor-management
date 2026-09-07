@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { isContractorBlocked } from "@/lib/contractorCredentials";
+import { isContractorBlocked, UNSUPERVISED_ACCESS_KEY, type CredentialKey } from "@/lib/contractorCredentials";
+import { MANDATORY_CREDENTIALS_KEY, parseMandatoryCredentials } from "@/hooks/useContractorEnforcement";
 import { useFormFields, FormField } from "@/hooks/useFormFields";
 import { useActiveHealthQuestions, useActiveVaccinationFields } from "@/hooks/useHealthQuestions";
 import { useResidents } from "@/hooks/useResidents";
@@ -23,7 +24,7 @@ export function useKioskCheckInFlow() {
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [tcContent, setTcContent] = useState<string | null>(null);
   const [jurisdiction, setJurisdiction] = useState<"AU" | "UK">("UK");
-  const [credentialEnforcement, setCredentialEnforcement] = useState<"warn" | "block">("warn");
+  const [mandatoryCredentials, setMandatoryCredentials] = useState<CredentialKey[]>([]);
   const [residentLookupMode, setResidentLookupMode] = useState<"show_all" | "search_first">("search_first");
   const [staffLookupMode, setStaffLookupMode] = useState<"search_first" | "by_department" | "free_text">("search_first");
   const [contractorAnswers, setContractorAnswers] = useState<Record<string, any>>({});
@@ -62,7 +63,7 @@ export function useKioskCheckInFlow() {
     supabase
       .from("settings")
       .select("key, value")
-      .in("key", [`tc_content_${selectedType}`, "jurisdiction", "kiosk_resident_lookup_mode", `kiosk_resident_lookup_mode_${selectedType}`, "kiosk_staff_lookup_mode", `kiosk_staff_lookup_mode_${selectedType}`, "contractor_credential_enforcement", "outbreak_mode", "badge_printing_enabled"])
+      .in("key", [`tc_content_${selectedType}`, "jurisdiction", "kiosk_resident_lookup_mode", `kiosk_resident_lookup_mode_${selectedType}`, "kiosk_staff_lookup_mode", `kiosk_staff_lookup_mode_${selectedType}`, MANDATORY_CREDENTIALS_KEY, "outbreak_mode", "badge_printing_enabled"])
       .then(({ data }) => {
         const tc = data?.find((d) => d.key === `tc_content_${selectedType}`);
         const jur = data?.find((d) => d.key === "jurisdiction");
@@ -76,8 +77,7 @@ export function useKioskCheckInFlow() {
         const slmValue = slmSpecific?.value || slmGlobal?.value;
         setTcContent(tc?.value || null);
         if (jur?.value === "AU" || jur?.value === "UK") setJurisdiction(jur.value);
-        const enf = data?.find((d) => d.key === "contractor_credential_enforcement");
-        if (enf?.value === "warn" || enf?.value === "block") setCredentialEnforcement(enf.value);
+        setMandatoryCredentials(parseMandatoryCredentials(data?.find((d) => d.key === MANDATORY_CREDENTIALS_KEY)?.value));
         setOutbreakMode(data?.find((d) => d.key === "outbreak_mode")?.value === "true");
         setBadgePrintingEnabled(data?.find((d) => d.key === "badge_printing_enabled")?.value === "true");
         if (rlmValue === "show_all" || rlmValue === "search_first") setResidentLookupMode(rlmValue);
@@ -206,8 +206,8 @@ export function useKioskCheckInFlow() {
     setPrivacyAcknowledged,
     tcContent,
     jurisdiction,
-    contractorBlocked: selectedType === "contractor" && isContractorBlocked(jurisdiction, selectedSupplier, credentialEnforcement).blocked,
-    contractorBlockReason: selectedType === "contractor" ? isContractorBlocked(jurisdiction, selectedSupplier, credentialEnforcement).reason : null,
+    contractorBlocked: selectedType === "contractor" && isContractorBlocked(jurisdiction, selectedSupplier, mandatoryCredentials, contractorAnswers[UNSUPERVISED_ACCESS_KEY] === true).blocked,
+    contractorBlockReason: selectedType === "contractor" ? isContractorBlocked(jurisdiction, selectedSupplier, mandatoryCredentials, contractorAnswers[UNSUPERVISED_ACCESS_KEY] === true).reason : null,
     contractorAnswers,
     setContractorAnswers,
     selectedSupplier,

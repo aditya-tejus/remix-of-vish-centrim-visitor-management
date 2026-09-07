@@ -5,7 +5,8 @@ import { useCompanionFields } from "@/hooks/useFormFields";
 import { useResidents } from "@/hooks/useResidents";
 import { useStaffMembers } from "@/hooks/useStaffMembers";
 import { supabase } from "@/integrations/supabase/client";
-import { isContractorBlocked } from "@/lib/contractorCredentials";
+import { isContractorBlocked, UNSUPERVISED_ACCESS_KEY, type CredentialKey } from "@/lib/contractorCredentials";
+import { MANDATORY_CREDENTIALS_KEY, parseMandatoryCredentials } from "@/hooks/useContractorEnforcement";
 import { Supplier } from "@/hooks/useSuppliers";
 import { FoodFormState, emptyFoodForm, isFoodFormValid } from "@/components/food/FoodFormFields";
 
@@ -63,7 +64,7 @@ export function useCheckInFlow(open: boolean) {
   const [contractorScreeningAnswers, setContractorScreeningAnswers] = useState<Record<string, any>>({});
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [jurisdiction, setJurisdiction] = useState<"AU" | "UK">("AU");
-  const [credentialEnforcement, setCredentialEnforcement] = useState<"warn" | "block">("warn");
+  const [mandatoryCredentials, setMandatoryCredentials] = useState<CredentialKey[]>([]);
   const [branchTcUrl, setBranchTcUrl] = useState<string | null>(null);
   const [branchPrivacyUrl, setBranchPrivacyUrl] = useState<string | null>(null);
   const [tcContent, setTcContent] = useState<string | null>(null);
@@ -130,7 +131,7 @@ export function useCheckInFlow(open: boolean) {
       .select("key, value")
       .in("key", [
         "branch_tc_url", "branch_privacy_url", "show_branch_docs_in_form", "jurisdiction",
-        "contractor_credential_enforcement", "badge_printing_enabled",
+        MANDATORY_CREDENTIALS_KEY, "badge_printing_enabled",
         `tc_content_${selectedType}`,
       ])
       .then(({ data }) => {
@@ -143,7 +144,7 @@ export function useCheckInFlow(open: boolean) {
           setTcContent(map[`tc_content_${selectedType}`] || null);
           if (map.jurisdiction === "UK" || map.jurisdiction === "AU") setJurisdiction(map.jurisdiction);
           setBadgePrintingEnabled(map.badge_printing_enabled === "true");
-          if (map.contractor_credential_enforcement === "block" || map.contractor_credential_enforcement === "warn") setCredentialEnforcement(map.contractor_credential_enforcement);
+          setMandatoryCredentials(parseMandatoryCredentials(map[MANDATORY_CREDENTIALS_KEY]));
         }
       });
   }, [selectedType]);
@@ -245,7 +246,12 @@ export function useCheckInFlow(open: boolean) {
   const overrideValid = overrideReason.trim().length >= 3;
 
   const contractorGate = selectedType === "contractor"
-    ? isContractorBlocked(jurisdiction as "AU" | "UK", selectedSupplier, credentialEnforcement)
+    ? isContractorBlocked(
+        jurisdiction as "AU" | "UK",
+        selectedSupplier,
+        mandatoryCredentials,
+        contractorScreeningAnswers[UNSUPERVISED_ACCESS_KEY] === true
+      )
     : { blocked: false, reason: null };
   const contractorBlocked = contractorGate.blocked;
 
