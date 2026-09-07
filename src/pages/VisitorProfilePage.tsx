@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useVisitors } from "@/hooks/useVisitors";
 import { useVisitorHistory } from "@/hooks/useVisitorHistory";
@@ -76,6 +76,24 @@ export default function VisitorProfilePage() {
   const { visits: fullHistory } = useVisitorHistory(visitor);
   const { residents } = useResidents();
   const [expandedVisit, setExpandedVisit] = useState<string | null>(null);
+  const [residentVisitors, setResidentVisitors] = useState<any[]>([]);
+
+  // For residents: who has come in to see them.
+  useEffect(() => {
+    let active = true;
+    if (!visitor || visitor.type !== "resident") { setResidentVisitors([]); return; }
+    (async () => {
+      const { data } = await supabase
+        .from("visitors")
+        .select("id, first_name, surname, type, check_in_time, check_out_time, status, whom_to_visit, visited_resident_ids")
+        .neq("type", "resident")
+        .or(`visited_resident_ids.cs.{${visitor.id}},whom_to_visit.ilike.${visitor.firstName} ${visitor.surname}`)
+        .order("check_in_time", { ascending: false })
+        .limit(50);
+      if (active) setResidentVisitors(data || []);
+    })();
+    return () => { active = false; };
+  }, [visitor?.id, visitor?.type, visitor?.firstName, visitor?.surname]);
 
   if (!visitor) {
     return (
@@ -638,6 +656,43 @@ export default function VisitorProfilePage() {
                       })}
                     </div>
                   </div>
+
+                  {isResident && (
+                    <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                          <Users className="h-3 w-3" /> Visitors for this resident
+                        </p>
+                        <span className="text-[10px] text-muted-foreground font-medium">{residentVisitors.length}</span>
+                      </div>
+                      {residentVisitors.length === 0 ? (
+                        <p className="text-[12px] text-muted-foreground">No visits recorded yet.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {residentVisitors.map((rv) => (
+                            <button
+                              key={rv.id}
+                              onClick={() => navigate(`/visitors/${rv.id}`)}
+                              className="w-full text-left rounded-lg border border-border p-3 hover:border-primary/40 transition-colors"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-semibold text-foreground">{rv.first_name} {rv.surname}</span>
+                                {rv.status === "checked-in" ? (
+                                  <span className="text-[10px] font-medium text-success">On site</span>
+                                ) : (
+                                  <span className="text-[10px] text-muted-foreground">Left</span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-muted-foreground mt-0.5">
+                                {format(new Date(rv.check_in_time), "dd MMM yyyy · hh:mm a")}
+                                {rv.check_out_time ? ` – ${format(new Date(rv.check_out_time), "hh:mm a")}` : ""}
+                              </p>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
