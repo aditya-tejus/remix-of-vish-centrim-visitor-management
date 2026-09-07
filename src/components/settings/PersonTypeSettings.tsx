@@ -74,6 +74,7 @@ function getSections(type: string): SectionConfig[] {
   if (type === "contractor") {
     sections.push(
       { id: "credential-enforcement", label: "Credential Enforcement", icon: ShieldCheck, component: <ContractorEnforcementTab /> },
+      { id: "contractor-questions", label: "Screening Questions", icon: ClipboardList, component: <ContractorQuestionsTab /> },
     );
   }
 
