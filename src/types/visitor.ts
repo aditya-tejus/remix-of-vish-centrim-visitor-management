@@ -5,8 +5,11 @@ export interface CompanionDetail {
   phone?: string;
   email?: string;
   relation?: string;
+  /** ISO time this companion left, when they leave separately from the main visitor. */
+  checkedOutAt?: string;
   [key: string]: string | undefined;
 }
+
 
 export interface Visitor {
   id: string;
