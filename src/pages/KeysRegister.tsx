@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { supabase } from "@/integrations/supabase/client";
 import { useKeys, PropertyKey, KeyStatus } from "@/hooks/useKeys";
 import { useResidents } from "@/hooks/useResidents";
 import { useWings } from "@/hooks/useWings";
@@ -265,6 +266,19 @@ export default function KeysRegister() {
       overdue: k.overdue,
       reference: k.id.slice(0, 8).toUpperCase(),
     });
+    void (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const { data: profile } = auth.user
+        ? await supabase.from("profiles").select("display_name").eq("user_id", auth.user.id).maybeSingle()
+        : { data: null as any };
+      await supabase.from("audit_log").insert({
+        action: "key_card_printed",
+        performed_by: profile?.display_name || auth.user?.email || "Unknown staff",
+        user_id: auth.user?.id ?? null,
+        records_affected: 1,
+        details: { key: k.keyLabel, holder: k.currentIssue?.issuedToName ?? null },
+      });
+    })();
   };
 
   const holderName = (k: PropertyKey) => k.currentIssue?.issuedToName || "";
