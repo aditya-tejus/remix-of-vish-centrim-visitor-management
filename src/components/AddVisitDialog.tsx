@@ -289,6 +289,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType, prefill
       checkInTime: isResident ? new Date() : new Date(),
       checkOutTime: isResident ? new Date() : null,
       whomToVisit: formData.selectPerson, address: formData.address,
+      visitedResidentIds: selectedResident ? [selectedResident.id] : undefined,
       status: isResident ? "checked-out" : "checked-in",
       healthDeclaration: allHealthClear && formData.healthDeclaration,
       additionalVisitors: companions.length,

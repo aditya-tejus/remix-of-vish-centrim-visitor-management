@@ -185,6 +185,7 @@ export default function KioskCheckIn() {
       qrCode: primaryQr,
       personQr,
       groupId,
+      visitedResidentIds: flow.visitedResidentId ? [flow.visitedResidentId] : undefined,
 
     });
 
@@ -209,6 +210,7 @@ export default function KioskCheckIn() {
         acknowledgedPrivacy: flow.privacyAcknowledged,
         qrCode: compQr,
         groupId,
+        visitedResidentIds: flow.visitedResidentId ? [flow.visitedResidentId] : undefined,
       });
     });
 

@@ -23,6 +23,7 @@ import { format } from "date-fns";
 import { exportVisitorsToCSV, exportVisitorToPDF } from "@/lib/exportVisitors";
 import { useToast } from "@/hooks/use-toast";
 import { CheckInReturnDialog } from "@/components/CheckInReturnDialog";
+import { useResidents } from "@/hooks/useResidents";
 
 
 interface VisitorTableProps {
@@ -93,6 +94,20 @@ export function VisitorTable({
   const { openIssues } = useOpenKeyIssues();
   const { checkVisitor } = useWatchlist();
   const { isOverstayed, hoursFor } = useOverstayPolicy();
+  const { residents } = useResidents();
+
+  /** Resolve the person being visited to a real resident record where we can. */
+  const residentFor = (visitor: Visitor) => {
+    const byId = visitor.visitedResidentIds?.[0];
+    if (byId) {
+      const found = residents.find((r) => r.visitorId === byId);
+      if (found) return found;
+    }
+    const name = (visitor.whomToVisit || "").trim().toLowerCase();
+    if (!name) return null;
+    const matches = residents.filter((r) => r.name.toLowerCase() === name);
+    return matches.length === 1 ? matches[0] : null;
+  };
 
   // Tick every 30s so live durations stay honest
   useEffect(() => {
@@ -252,13 +267,32 @@ export function VisitorTable({
         <TableCell className="py-3">
           {visitor.whomToVisit ? (
             <div className="flex flex-col">
-              <span className="text-[13px] text-foreground">{visitor.whomToVisit}</span>
-              <span className="text-[11px] text-muted-foreground">
-                {visitor.type === "staff" ? "Department" : visitor.type === "contractor" ? "Staff" : "Resident"}
-              </span>
+              {(() => {
+                const res = residentFor(visitor);
+                return res ? (
+                  <>
+                    <button
+                      className="text-[13px] text-primary hover:underline text-left"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/visitors/${res.visitorId}`); }}
+                    >
+                      {res.name}
+                    </button>
+                    <span className="text-[11px] text-muted-foreground">
+                      {[res.room, res.wing].filter(Boolean).join(" · ") || "Resident"}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-[13px] text-foreground">{visitor.whomToVisit}</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {visitor.type === "staff" ? "Department" : visitor.type === "contractor" ? "Staff" : "Resident"}
+                    </span>
+                  </>
+                );
+              })()}
             </div>
           ) : (
-            <span className="text-[13px] text-muted-foreground">—</span>
+            <span className="text-[12px] text-muted-foreground italic">Not recorded</span>
           )}
         </TableCell>
 

@@ -18,6 +18,8 @@ import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { TimeOverride } from "@/components/TimeOverride";
 import { Textarea } from "@/components/ui/textarea";
 import { useOpenKeyIssues } from "@/hooks/useOpenKeyIssues";
+import { Checkbox } from "@/components/ui/checkbox";
+import { planCompanionCheckout, companionsStillOnSite } from "@/lib/companionCheckout";
 
 const OVERSTAY_THRESHOLD_MS = 8 * 3600000; // 8 hours
 
@@ -39,7 +41,17 @@ interface CheckOutSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   visitors: Visitor[];
-  onCheckOut: (id: string, reason?: string, timeOverride?: string) => void;
+  onCheckOut: (
+    id: string,
+    reason?: string,
+    timeOverride?: string,
+    companionOutcome?: {
+      companionDetails: CompanionDetail[];
+      remainingCompanions: number;
+      everyoneLeft: boolean;
+      note?: string;
+    }
+  ) => void;
   /** Pre-select a specific visitor (from table row action) */
   preSelectedVisitorId?: string | null;
   onPreSelectedClear?: () => void;
@@ -65,6 +77,7 @@ export function CheckOutSheet({
   const [successDuration, setSuccessDuration] = useState("");
   const [bulkTimeOverride, setBulkTimeOverride] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [leavingCompanions, setLeavingCompanions] = useState<number[]>([]);
 
   const checkedInVisitors = useMemo(
     () => visitors.filter((v) => v.status === "checked-in" && v.type !== "resident"),
@@ -77,6 +90,9 @@ export function CheckOutSheet({
       const found = checkedInVisitors.find((v) => v.id === preSelectedVisitorId);
       if (found) {
         setSelectedVisitor(found);
+        setLeavingCompanions(
+          (found.companionDetails || []).map((c, i) => (c.checkedOutAt ? -1 : i)).filter((i) => i >= 0)
+        );
         setCheckoutReason("");
       }
     }
@@ -125,6 +141,10 @@ export function CheckOutSheet({
 
   const handleSelectVisitor = (visitor: Visitor) => {
     setSelectedVisitor(visitor);
+    // Everyone leaves together by default — the common case stays one tap.
+    setLeavingCompanions(
+      (visitor.companionDetails || []).map((c, i) => (c.checkedOutAt ? -1 : i)).filter((i) => i >= 0)
+    );
     setCheckoutReason("");
     setTimeOverride(null);
     setKeyAction(null);
@@ -144,7 +164,19 @@ export function CheckOutSheet({
       held.length > 0 && keyAction === "keep"
         ? ` · Key still out: ${held.map((h) => h.keyLabel).join(", ")}${keyKeepReason.trim() ? ` — ${keyKeepReason.trim()}` : ""}`
         : "";
-    await onCheckOut(selectedVisitor.id, `${checkoutReason}${keyNote}`.trim() || undefined, timeOverride || undefined);
+    const at = timeOverride
+      ? (() => { const d = new Date(); const [h, m] = timeOverride.split(":").map(Number); d.setHours(h, m, 0, 0); return d; })()
+      : new Date();
+    const outcome = onSiteCompanions.length > 0
+      ? planCompanionCheckout(selectedVisitor, leavingCompanions, true, at)
+      : undefined;
+    const companionNote = outcome && outcome.remainingCompanions > 0 ? ` · ${outcome.note}` : "";
+    await onCheckOut(
+      selectedVisitor.id,
+      `${checkoutReason}${keyNote}${companionNote}`.trim() || undefined,
+      timeOverride || undefined,
+      outcome
+    );
     setCheckingOut(null);
     setSuccessName(name);
     setSuccessDuration(dur);
@@ -160,6 +192,7 @@ export function CheckOutSheet({
 
   const handleBack = () => {
     setSelectedVisitor(null);
+    setLeavingCompanions([]);
     setCheckoutReason("");
     setTimeOverride(null);
     setKeyAction(null);
@@ -184,6 +217,11 @@ export function CheckOutSheet({
     : [];
 
   const companions: CompanionDetail[] = selectedVisitor?.companionDetails || [];
+  const onSiteCompanions = companionsStillOnSite(selectedVisitor);
+  const stayingBehind = onSiteCompanions.length -
+    companions.filter((c, i) => !c.checkedOutAt && leavingCompanions.includes(i)).length;
+  const toggleCompanion = (i: number) =>
+    setLeavingCompanions((prev) => (prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]));
 
   return (
     <>
@@ -519,35 +557,60 @@ export function CheckOutSheet({
                   label="Adjust check-out time"
                 />
 
-                {/* Companions */}
-                {companions.length > 0 && (
+                {/* Who is leaving? */}
+                {onSiteCompanions.length > 0 && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-1.5">
                       <Users className="h-3.5 w-3.5 text-muted-foreground" />
                       <label className="text-[12px] font-medium text-muted-foreground">
-                        {companions.length} companion{companions.length !== 1 ? "s" : ""} will also be checked out
+                        Who is leaving? Everyone is ticked — untick anyone staying on.
                       </label>
                     </div>
                     <div className="rounded-xl border border-border divide-y divide-border overflow-hidden">
-                      {companions.map((c, i) => (
-                        <div key={i} className="px-3.5 py-2.5 flex items-center justify-between">
-                          <div className="flex items-center gap-2.5">
-                            <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary shrink-0">
-                              {(c.name || "?")[0]?.toUpperCase()}
-                            </div>
-                            <div>
-                              <p className="text-[13px] font-medium text-foreground">{c.name || `Person ${i + 1}`}</p>
-                              {c.relation && (
-                                <p className="text-[11px] text-muted-foreground">{c.relation}</p>
-                              )}
-                            </div>
+                      <div className="px-3.5 py-2.5 flex items-center justify-between bg-muted/40">
+                        <div className="flex items-center gap-2.5">
+                          <Checkbox checked disabled />
+                          <div>
+                            <p className="text-[13px] font-medium text-foreground">
+                              {selectedVisitor.firstName} {selectedVisitor.surname}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">Main visitor</p>
                           </div>
-                          {c.phone && (
-                            <span className="text-[11px] text-muted-foreground">{c.phone}</span>
-                          )}
                         </div>
-                      ))}
+                      </div>
+                      {companions.map((c, i) =>
+                        c.checkedOutAt ? (
+                          <div key={i} className="px-3.5 py-2.5 flex items-center justify-between opacity-60">
+                            <p className="text-[13px] text-foreground">{c.name || `Person ${i + 1}`}</p>
+                            <span className="text-[11px] text-muted-foreground">
+                              Left {format(new Date(c.checkedOutAt), "hh:mm a")}
+                            </span>
+                          </div>
+                        ) : (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => toggleCompanion(i)}
+                            className="w-full px-3.5 py-2.5 flex items-center justify-between text-left active:scale-[0.995] transition"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <Checkbox checked={leavingCompanions.includes(i)} />
+                              <div>
+                                <p className="text-[13px] font-medium text-foreground">{c.name || `Person ${i + 1}`}</p>
+                                {c.relation && <p className="text-[11px] text-muted-foreground">{c.relation}</p>}
+                              </div>
+                            </div>
+                            {c.phone && <span className="text-[11px] text-muted-foreground">{c.phone}</span>}
+                          </button>
+                        )
+                      )}
                     </div>
+                    {stayingBehind > 0 && (
+                      <p className="text-[12px] text-warning flex items-center gap-1.5">
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        {stayingBehind} staying on site — this visit stays open for them.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

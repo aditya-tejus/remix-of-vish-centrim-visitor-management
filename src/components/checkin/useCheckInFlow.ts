@@ -288,6 +288,8 @@ export function useCheckInFlow(open: boolean) {
       retentionExpiry: new Date(Date.now() + 86400000 * 60),
       acknowledgedPrivacy: privacyAcknowledged,
       healthAnswers: { ...healthAnswers, ...contractorScreeningAnswers },
+      // Proper link to the resident being visited, not just the typed name
+      visitedResidentIds: selectedResident ? [selectedResident.id] : undefined,
     };
   };
 

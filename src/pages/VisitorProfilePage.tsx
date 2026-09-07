@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useVisitors } from "@/hooks/useVisitors";
+import { useVisitorHistory } from "@/hooks/useVisitorHistory";
+import { useResidents } from "@/hooks/useResidents";
+import { ScreeningAnswers } from "@/components/ScreeningAnswers";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -70,6 +73,27 @@ export default function VisitorProfilePage() {
   const [deleting, setDeleting] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const visitor = visitors.find((v) => v.id === id);
+  const { visits: fullHistory } = useVisitorHistory(visitor);
+  const { residents } = useResidents();
+  const [expandedVisit, setExpandedVisit] = useState<string | null>(null);
+  const [residentVisitors, setResidentVisitors] = useState<any[]>([]);
+
+  // For residents: who has come in to see them.
+  useEffect(() => {
+    let active = true;
+    if (!visitor || visitor.type !== "resident") { setResidentVisitors([]); return; }
+    (async () => {
+      const { data } = await supabase
+        .from("visitors")
+        .select("id, first_name, surname, type, check_in_time, check_out_time, status, whom_to_visit, visited_resident_ids")
+        .neq("type", "resident")
+        .or(`visited_resident_ids.cs.{${visitor.id}},whom_to_visit.ilike.${visitor.firstName} ${visitor.surname}`)
+        .order("check_in_time", { ascending: false })
+        .limit(50);
+      if (active) setResidentVisitors(data || []);
+    })();
+    return () => { active = false; };
+  }, [visitor?.id, visitor?.type, visitor?.firstName, visitor?.surname]);
 
   if (!visitor) {
     return (
@@ -89,17 +113,33 @@ export default function VisitorProfilePage() {
     );
   }
 
-  // Find all visits by same person
-  const visitHistory = visitors.filter(
+  // Every visit this person has ever made, not just today's records.
+  const localMatches = visitors.filter(
     (v) =>
       v.id !== visitor.id &&
       ((v.firstName === visitor.firstName && v.surname === visitor.surname) ||
         (v.email && v.email === visitor.email) ||
         (v.mobile && v.mobile === visitor.mobile))
   );
-  const allVisits = [visitor, ...visitHistory].sort(
+  const merged = new Map<string, any>();
+  [visitor, ...localMatches].forEach((v) => merged.set(v.id, v));
+  fullHistory.forEach((h) => { if (!merged.has(h.id)) merged.set(h.id, h); });
+  const allVisits = Array.from(merged.values()).sort(
     (a, b) => b.checkInTime.getTime() - a.checkInTime.getTime()
   );
+
+  /** Who was this visit for — a real resident record when we can match one. */
+  const residentForVisit = (v: any) => {
+    const id = v.visitedResidentIds?.[0];
+    if (id) {
+      const hit = residents.find((r) => r.visitorId === id);
+      if (hit) return hit;
+    }
+    const name = (v.whomToVisit || "").trim().toLowerCase();
+    if (!name) return null;
+    const matches = residents.find((r) => r.name.toLowerCase() === name);
+    return matches || null;
+  };
 
   const isResident = visitor.type === "resident";
   const isCheckedIn = visitor.status === "checked-in";
@@ -425,24 +465,7 @@ export default function VisitorProfilePage() {
                         <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
                           <Shield className="h-3 w-3" /> Screening Responses
                         </p>
-                        <div className="rounded-lg border border-border divide-y divide-border">
-                          {Object.entries(visitor.healthAnswers).map(([questionKey, answer]) => {
-                            const displayAnswer = typeof answer === "boolean"
-                              ? (answer ? "Yes" : "No")
-                              : String(answer || "—");
-                            const isRisk = answer === true;
-                            return (
-                              <div key={questionKey} className="flex items-start justify-between gap-3 px-3 py-2.5">
-                                <p className="text-xs text-foreground flex-1">
-                                  {questionKey.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
-                                </p>
-                                <span className={`text-xs font-semibold shrink-0 ${isRisk ? "text-destructive" : "text-success"}`}>
-                                  {displayAnswer}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
+                        <ScreeningAnswers answers={visitor.healthAnswers} />
                       </div>
                     )}
 
@@ -523,7 +546,8 @@ export default function VisitorProfilePage() {
                         return (
                           <div
                             key={v.id}
-                            className={`group rounded-lg border p-3 transition-colors ${
+                            onClick={() => setExpandedVisit(expandedVisit === v.id ? null : v.id)}
+                            className={`group rounded-lg border p-3 transition-colors cursor-pointer hover:border-primary/40 ${
                               v.id === visitor.id
                                 ? "border-primary/30 bg-primary/[0.03]"
                                 : "border-border bg-card"
@@ -569,12 +593,16 @@ export default function VisitorProfilePage() {
                                 <Timer className="h-3 w-3" />
                                 {duration}
                               </span>
-                              {v.whomToVisit && (
-                                <span className="flex items-center gap-1">
-                                  <User className="h-3 w-3" />
-                                  {v.whomToVisit}
-                                </span>
-                              )}
+                              {(() => {
+                                const res = residentForVisit(v);
+                                if (!res && !v.whomToVisit) return null;
+                                return (
+                                  <span className="flex items-center gap-1">
+                                    <User className="h-3 w-3" />
+                                    {res ? `${res.name}${res.room ? ` · ${res.room}` : ""}${res.wing ? ` · ${res.wing}` : ""}` : v.whomToVisit}
+                                  </span>
+                                );
+                              })()}
                               {v.additionalVisitors > 0 && (
                                 <span className="flex items-center gap-1">
                                   <Users className="h-3 w-3" />
@@ -582,11 +610,89 @@ export default function VisitorProfilePage() {
                                 </span>
                               )}
                             </div>
+
+                            {expandedVisit === v.id && (
+                              <div className="mt-3 pt-3 border-t border-border space-y-3" onClick={(e) => e.stopPropagation()}>
+                                {v.bodyTemperature != null && (
+                                  <p className="text-[11px] text-muted-foreground">
+                                    Temperature recorded: <span className="font-semibold text-foreground">{v.bodyTemperature}°C</span>
+                                  </p>
+                                )}
+                                {v.checkoutReason && (
+                                  <p className="text-[11px] text-muted-foreground">
+                                    Reason for leaving: <span className="text-foreground">{v.checkoutReason}</span>
+                                  </p>
+                                )}
+                                {Array.isArray(v.companionDetails) && v.companionDetails.length > 0 && (
+                                  <div className="space-y-1">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">People with them</p>
+                                    {v.companionDetails.map((c: any, i: number) => (
+                                      <p key={i} className="text-[11px] text-foreground">
+                                        {c.name || `Companion ${i + 1}`}
+                                        {c.relation ? ` · ${c.relation}` : ""}
+                                        <span className="text-muted-foreground">
+                                          {c.checkedOutAt ? ` · left ${format(new Date(c.checkedOutAt), "hh:mm a")}` : " · still on site"}
+                                        </span>
+                                      </p>
+                                    ))}
+                                  </div>
+                                )}
+                                {v.healthAnswers && Object.keys(v.healthAnswers).length > 0 && (
+                                  <div className="space-y-1">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Questions answered</p>
+                                    <ScreeningAnswers answers={v.healthAnswers} />
+                                  </div>
+                                )}
+                                {v.comments && (
+                                  <p className="text-[11px] text-muted-foreground">Notes: <span className="text-foreground">{v.comments}</span></p>
+                                )}
+                                {!v.healthAnswers || Object.keys(v.healthAnswers).length === 0 ? (
+                                  <p className="text-[11px] text-muted-foreground italic">No questions were recorded for this visit.</p>
+                                ) : null}
+                              </div>
+                            )}
                           </div>
                         );
                       })}
                     </div>
                   </div>
+
+                  {isResident && (
+                    <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                          <Users className="h-3 w-3" /> Visitors for this resident
+                        </p>
+                        <span className="text-[10px] text-muted-foreground font-medium">{residentVisitors.length}</span>
+                      </div>
+                      {residentVisitors.length === 0 ? (
+                        <p className="text-[12px] text-muted-foreground">No visits recorded yet.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {residentVisitors.map((rv) => (
+                            <button
+                              key={rv.id}
+                              onClick={() => navigate(`/visitors/${rv.id}`)}
+                              className="w-full text-left rounded-lg border border-border p-3 hover:border-primary/40 transition-colors"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-semibold text-foreground">{rv.first_name} {rv.surname}</span>
+                                {rv.status === "checked-in" ? (
+                                  <span className="text-[10px] font-medium text-success">On site</span>
+                                ) : (
+                                  <span className="text-[10px] text-muted-foreground">Left</span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-muted-foreground mt-0.5">
+                                {format(new Date(rv.check_in_time), "dd MMM yyyy · hh:mm a")}
+                                {rv.check_out_time ? ` – ${format(new Date(rv.check_out_time), "hh:mm a")}` : ""}
+                              </p>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

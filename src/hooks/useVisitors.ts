@@ -32,7 +32,9 @@ interface DbVisitor {
   accompanied_by: string | null;
   accompanied_by_name: string | null;
   qr_code: string | null;
+  person_qr: string | null;
   group_id: string | null;
+  visited_resident_ids: string[] | null;
 }
 
 function dbToVisitor(row: DbVisitor): Visitor {
@@ -63,7 +65,9 @@ function dbToVisitor(row: DbVisitor): Visitor {
     accompaniedByName: row.accompanied_by_name ?? undefined,
     healthAnswers: row.health_answers ?? undefined,
     qrCode: row.qr_code ?? undefined,
+    personQr: row.person_qr ?? undefined,
     groupId: row.group_id ?? undefined,
+    visitedResidentIds: row.visited_resident_ids ?? [],
   };
 }
 
@@ -153,6 +157,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       qr_code: visitor.qrCode ?? null,
       person_qr: visitor.personQr ?? null,
       group_id: visitor.groupId ?? null,
+      visited_resident_ids: visitor.visitedResidentIds?.length ? visitor.visitedResidentIds : null,
 
     };
 
@@ -249,15 +254,49 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     await supabase.from("visitors").update(updateData).eq("id", visitorId);
   };
 
-  const checkOutVisitor = async (id: string, reason?: string, timeOverride?: string) => {
+  const checkOutVisitor = async (
+    id: string,
+    reason?: string,
+    timeOverride?: string,
+    companionOutcome?: {
+      /** Omitted on the kiosk, which cannot read companion names. */
+      companionDetails?: CompanionDetail[];
+      remainingCompanions: number;
+      /** False when companions stay behind — the visit stays open for them. */
+      everyoneLeft: boolean;
+      note?: string;
+    }
+  ) => {
     const checkOutTime = timeOverride ? (() => { const now = new Date(); const [h, m] = timeOverride.split(":").map(Number); now.setHours(h, m, 0, 0); return now; })() : new Date();
+    const stillOpen = companionOutcome ? !companionOutcome.everyoneLeft : false;
+
     setVisitors((prev) =>
       prev.map((v) =>
-        v.id === id ? { ...v, checkOutTime, status: "checked-out" as const, checkoutReason: reason || null } : v
+        v.id === id
+          ? {
+              ...v,
+              checkOutTime: stillOpen ? v.checkOutTime : checkOutTime,
+              status: stillOpen ? ("checked-in" as const) : ("checked-out" as const),
+              checkoutReason: reason || null,
+              companionDetails: companionOutcome?.companionDetails ?? v.companionDetails,
+              additionalVisitors: companionOutcome
+                ? companionOutcome.remainingCompanions
+                : v.additionalVisitors,
+            }
+          : v
       )
     );
-    const updateData: Record<string, unknown> = { check_out_time: checkOutTime.toISOString(), status: "checked-out" };
+
+    const updateData: Record<string, unknown> = stillOpen
+      ? {}
+      : { check_out_time: checkOutTime.toISOString(), status: "checked-out" };
     if (reason) updateData.checkout_reason = reason;
+    if (companionOutcome) {
+      if (companionOutcome.companionDetails) {
+        updateData.companion_details = companionOutcome.companionDetails as any;
+      }
+      updateData.additional_visitors = companionOutcome.remainingCompanions;
+    }
     await supabase
       .from("visitors")
       .update(updateData)
