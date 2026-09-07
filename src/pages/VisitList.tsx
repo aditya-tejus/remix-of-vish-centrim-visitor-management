@@ -188,6 +188,16 @@ export default function VisitList() {
             </div>
           </div>
 
+          {/* Counters — the live picture, readable the moment the page opens */}
+          <TabContextStats
+            variant="cards"
+            tab={activeTab}
+            visitors={tabVisitors}
+            allVisitors={searchedVisitors}
+            onFilter={handleStatCardClick}
+            activeFilter={activeFilter}
+          />
+
           {/* Filter pill */}
           {activeFilter && activeFilter !== "all" && filterLabels[activeFilter] && (
             <div className="px-6 pb-1">
