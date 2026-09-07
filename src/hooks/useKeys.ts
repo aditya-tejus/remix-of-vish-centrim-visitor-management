@@ -10,6 +10,8 @@ export interface KeyIssue {
   issuedToType: string;
   visitorId: string | null;
   supplierId: string | null;
+  /** Set when the holder is a staff member picked from the staff list. */
+  issuedToStaffId: string | null;
   issuedAt: Date;
   issuedBy: string | null;
   expectedReturn: Date | null;
@@ -44,6 +46,7 @@ const mapIssue = (r: any): KeyIssue => ({
   issuedToType: r.issued_to_type,
   visitorId: r.visitor_id,
   supplierId: r.supplier_id,
+  issuedToStaffId: r.issued_to_staff_id ?? null,
   issuedAt: new Date(r.issued_at),
   issuedBy: r.issued_by,
   expectedReturn: r.expected_return ? new Date(r.expected_return) : null,
@@ -139,6 +142,7 @@ export function useKeys() {
     issuedToType: string;
     visitorId?: string | null;
     supplierId?: string | null;
+    issuedToStaffId?: string | null;
     expectedReturn?: Date | null;
     issuedBy?: string | null;
     notes?: string | null;
@@ -149,6 +153,7 @@ export function useKeys() {
       issued_to_type: input.issuedToType,
       visitor_id: input.visitorId || null,
       supplier_id: input.supplierId || null,
+      issued_to_staff_id: input.issuedToStaffId || null,
       expected_return: input.expectedReturn ? input.expectedReturn.toISOString() : null,
       issued_by: input.issuedBy || null,
       notes: input.notes || null,

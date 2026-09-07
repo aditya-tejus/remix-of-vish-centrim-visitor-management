@@ -1,0 +1,1 @@
+GRANT SELECT, INSERT, UPDATE ON public.visitors TO anon;
