@@ -23,6 +23,8 @@ import NotFound from "./pages/NotFound";
 // Phase 6-7 new pages
 import Residents from "./pages/Residents";
 import FoodRegister from "./pages/FoodRegister";
+import KeysRegister from "./pages/KeysRegister";
+
 import ReportsHome from "./pages/ReportsHome";
 import EvacuationReport from "./pages/EvacuationReport";
 import PresenceLog from "./pages/PresenceLog";
@@ -63,6 +65,8 @@ const App = () => (
             <Route path="/qr-fast-lane" element={<Navigate to="/" replace />} />
             <Route path="/residents" element={<Staff><Residents /></Staff>} />
             <Route path="/food-register" element={<Staff><FoodRegister /></Staff>} />
+            <Route path="/keys" element={<Staff><KeysRegister /></Staff>} />
+
             <Route path="/resident-leave" element={<Navigate to="/residents" replace />} />
             <Route path="/calendar" element={<Staff><CalendarPage /></Staff>} />
             <Route path="/gdpr" element={<Staff><GDPRPage /></Staff>} />
