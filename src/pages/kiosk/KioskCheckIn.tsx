@@ -21,7 +21,8 @@ import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
 import { useKioskCheckInFlow, KioskStepId } from "@/hooks/useKioskCheckInFlow";
 import {
   UserRound, Truck, Heart, ArrowLeft, ArrowRight, Shield, ScrollText,
-  AlertTriangle, Search, RotateCcw, UserSearch, QrCode, UserPlus, X, Users
+  AlertTriangle, Search, RotateCcw, UserSearch, QrCode, UserPlus, X, Users, ChevronDown, Check
+
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -51,6 +52,9 @@ export default function KioskCheckIn() {
   const [returningBusy, setReturningBusy] = useState(false);
   const [returningNotFound, setReturningNotFound] = useState(false);
   const [returningMatch, setReturningMatch] = useState<any>(null);
+  const [fastLaneOpen, setFastLaneOpen] = useState(false);
+  const [lookupMode, setLookupMode] = useState<"mobile" | "code">("mobile");
+
 
 
   const currentIdx = flow.steps.findIndex((s) => s.id === step);
@@ -357,67 +361,95 @@ export default function KioskCheckIn() {
           <motion.div key="details" {...anim} className="space-y-4">
             <h2 className="text-2xl font-bold text-foreground text-center">Your Details</h2>
 
-            {/* Returning visitor fast lane */}
+            {/* Returning visitor fast lane — collapsed offer, not a gate */}
             {!flow.returningVisitor && (flow.returningOptions.mobile || flow.returningOptions.qr) && !returningMatch && (
-              <div className="rounded-2xl border-2 border-border bg-card/80 p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <RotateCcw className="h-5 w-5 text-primary" />
-                  <p className="text-base font-bold text-foreground">Been here before?</p>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  We'll fill in your details so you don't have to type them again.
-                </p>
-                {flow.returningOptions.mobile && (
-                  <div className="flex gap-2">
+              fastLaneOpen ? (
+                <div className="rounded-2xl bg-muted/50 p-4 space-y-3">
+                  {flow.returningOptions.mobile && flow.returningOptions.qr && (
+                    <div className="flex gap-1 p-1 rounded-xl bg-background">
+                      {([["mobile", "Mobile"], ["code", "Visitor card"]] as const).map(([mode, label]) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => setLookupMode(mode)}
+                          className={`flex-1 h-10 rounded-lg text-sm font-semibold transition-colors ${
+                            lookupMode === mode ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {lookupMode === "mobile" ? (
                     <Input
                       value={returningMobile}
                       onChange={(e) => setReturningMobile(e.target.value)}
                       placeholder="Your mobile number"
                       inputMode="tel"
                       type="tel"
-                      className="h-14 text-lg flex-1"
+                      autoFocus
+                      className="h-14 text-lg"
                     />
-                    <Button onClick={() => void handleReturningLookup({ mobile: returningMobile })} disabled={returningBusy} className="h-14 px-5 text-base">
-                      Find me
-                    </Button>
-                  </div>
-                )}
-                {flow.returningOptions.qr && (
-                  <div className="flex gap-2">
+                  ) : (
                     <Input
                       value={returningCode}
                       onChange={(e) => setReturningCode(e.target.value.toUpperCase())}
                       placeholder="Visitor card code"
-                      className="h-14 text-lg flex-1 tracking-widest"
+                      autoFocus
+                      className="h-14 text-lg tracking-widest"
                     />
-                    <Button variant="secondary" onClick={() => void handleReturningLookup({ qr: returningCode })} disabled={returningBusy} className="h-14 px-5 text-base border border-border">
-                      <QrCode className="h-5 w-5" />
-                    </Button>
-                  </div>
-                )}
-                {returningNotFound && (
-                  <p className="text-sm text-muted-foreground">
-                    We couldn't find you — no problem, just fill in your details below.
-                  </p>
-                )}
-              </div>
+                  )}
+                  <Button
+                    onClick={() => void handleReturningLookup(lookupMode === "mobile" ? { mobile: returningMobile } : { qr: returningCode })}
+                    disabled={returningBusy}
+                    className="w-full h-14 text-base"
+                  >
+                    Find me
+                  </Button>
+                  {returningNotFound && (
+                    <p className="text-sm text-muted-foreground text-center">
+                      We couldn't find you — no problem, just fill in your details below.
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setFastLaneOpen(false)}
+                    className="w-full text-sm text-muted-foreground font-medium py-1"
+                  >
+                    Skip, I'll type my details
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setFastLaneOpen(true)}
+                  className="w-full h-14 px-4 rounded-xl bg-muted/50 flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
+                >
+                  <RotateCcw className="h-5 w-5 text-primary shrink-0" />
+                  <span className="flex-1 text-base font-medium text-foreground">Been here before? Tap to find your details</span>
+                  <ChevronDown className="h-5 w-5 text-muted-foreground shrink-0" />
+                </button>
+              )
             )}
 
             {/* Match confirmation */}
             {returningMatch && (
               <div className="rounded-2xl border-2 border-success/30 bg-success/5 p-4 space-y-3">
                 <p className="text-base font-bold text-foreground">Is this you?</p>
-                <div className="space-y-1 text-sm">
+                <div className="space-y-1">
                   <p className="text-lg font-bold text-foreground">{returningMatch.firstName} {returningMatch.surname}</p>
-                  {returningMatch.mobile && <p className="text-muted-foreground">{returningMatch.mobile}</p>}
-                  {returningMatch.email && <p className="text-muted-foreground">{returningMatch.email}</p>}
-                  {returningMatch.whomToVisit && <p className="text-muted-foreground">Last visited {returningMatch.whomToVisit}</p>}
+                  <p className="text-sm text-muted-foreground">
+                    {[returningMatch.mobile, returningMatch.whomToVisit && `Last visited ${returningMatch.whomToVisit}`]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
                 </div>
                 <div className="flex gap-3">
-                  <Button variant="secondary" onClick={handleReturningReject} className="flex-1 h-12 text-base border border-border">
+                  <Button variant="secondary" onClick={handleReturningReject} className="flex-1 h-14 text-base border border-border">
                     Not me
                   </Button>
-                  <Button onClick={handleReturningConfirm} className="flex-1 h-12 text-base">
+                  <Button onClick={handleReturningConfirm} className="flex-1 h-14 text-base">
                     That's me
                   </Button>
                 </div>
@@ -425,10 +457,10 @@ export default function KioskCheckIn() {
             )}
 
             {flow.returningVisitor && (
-              <div className="rounded-xl border-2 border-success/20 bg-success/5 p-3 flex items-center gap-2 text-sm text-success">
-                <UserSearch className="h-4 w-4 shrink-0" />
-                <span className="font-medium">Welcome back! Details pre-filled from your last visit.</span>
-              </div>
+              <p className="flex items-center gap-2 text-sm font-medium text-success">
+                <Check className="h-4 w-4 shrink-0" />
+                Welcome back — details pre-filled from your last visit.
+              </p>
             )}
 
 
@@ -437,7 +469,10 @@ export default function KioskCheckIn() {
                 label="First Name"
                 required
                 value={flow.formValues.firstName || ""}
-                onChange={(e) => flow.updateField("firstName", e.target.value)}
+                onChange={(e) => {
+                  if (fastLaneOpen && returningNotFound) setFastLaneOpen(false);
+                  flow.updateField("firstName", e.target.value);
+                }}
                 onBlur={handleNameBlur}
                 autoFocus
               />
@@ -449,6 +484,7 @@ export default function KioskCheckIn() {
                 onBlur={handleNameBlur}
               />
             </div>
+
 
             {flow.activeFormFields.map((field) => {
               if (field.field_key === "firstName" || field.field_key === "surname") return null;
