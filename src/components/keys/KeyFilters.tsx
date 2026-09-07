@@ -23,6 +23,7 @@ const STATUS_OPTIONS = [
   { value: "all", label: "All statuses" },
   { value: "available", label: "Available" },
   { value: "issued", label: "Issued out" },
+  { value: "permanent", label: "Permanently held" },
   { value: "overdue", label: "Overdue" },
   { value: "lost", label: "Lost" },
   { value: "retired", label: "Retired" },

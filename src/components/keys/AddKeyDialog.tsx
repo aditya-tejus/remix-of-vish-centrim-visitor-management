@@ -65,7 +65,7 @@ export function AddKeyDialog({ open, onOpenChange, residents, onAdd }: Props) {
 
   const submit = async () => {
     if (!target) {
-      toast({ title: "Choose what the key is for", variant: "destructive" });
+      toast({ title: "Choose what it is for", variant: "destructive" });
       return;
     }
     if (target === "shared" && !areaName.trim()) {
@@ -86,10 +86,10 @@ export function AddKeyDialog({ open, onOpenChange, residents, onAdd }: Props) {
     });
     setSaving(false);
     if (error) {
-      toast({ title: "Could not add the key", description: error.message, variant: "destructive" });
+      toast({ title: "Could not add it", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: count > 1 ? `${count} copies added` : "Key added to the register" });
+    toast({ title: count > 1 ? `${count} copies added` : "Added to the register" });
     reset();
     onOpenChange(false);
   };
@@ -98,13 +98,13 @@ export function AddKeyDialog({ open, onOpenChange, residents, onAdd }: Props) {
     <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
       <DialogContent className="rounded-xl">
         <DialogHeader>
-          <DialogTitle>Add a key</DialogTitle>
+          <DialogTitle>Add a key or fob</DialogTitle>
           <DialogDescription>Three quick answers — the rest is optional.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label>What is the key for?</Label>
+            <Label>What is it for?</Label>
             <Select value={target} onValueChange={setTarget}>
               <SelectTrigger><SelectValue placeholder="Resident, unit or shared area" /></SelectTrigger>
               <SelectContent>
@@ -127,7 +127,7 @@ export function AddKeyDialog({ open, onOpenChange, residents, onAdd }: Props) {
           </div>
 
           <div className="space-y-1.5">
-            <Label>What kind of key?</Label>
+            <Label>What kind of item?</Label>
             <div className="grid grid-cols-3 gap-2">
               {KEY_TYPES.map((t) => {
                 const active = keyType === t.value;
@@ -193,7 +193,7 @@ export function AddKeyDialog({ open, onOpenChange, residents, onAdd }: Props) {
           )}
 
           <Button onClick={submit} disabled={saving} className="w-full">
-            {saving ? "Adding…" : "Add key"}
+            {saving ? "Adding…" : "Add to register"}
           </Button>
         </div>
       </DialogContent>
