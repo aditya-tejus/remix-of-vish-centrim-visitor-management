@@ -9,15 +9,16 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useKeys, PropertyKey, KeyStatus } from "@/hooks/useKeys";
 import { useResidents } from "@/hooks/useResidents";
-import { useStaffMembers } from "@/hooks/useStaffMembers";
+import { useWings } from "@/hooks/useWings";
 import { useToast } from "@/hooks/use-toast";
+import { AddKeyDialog, keyTypeLabel } from "@/components/keys/AddKeyDialog";
+import { IssueKeySheet, IssuePrefill } from "@/components/keys/IssueKeySheet";
+import { KeyFilters, KeyFilterValues, EMPTY_FILTERS } from "@/components/keys/KeyFilters";
 import { format } from "date-fns";
-import { KeyRound, Plus, Search, History, ArrowLeftRight, AlertTriangle, UserCog } from "lucide-react";
+import { KeyRound, Plus, History, ArrowLeftRight, AlertTriangle, UserCog } from "lucide-react";
 
 const STATUS_STYLE: Record<KeyStatus, { label: string; className: string }> = {
   available: { label: "Available", className: "bg-success/10 text-success border-success/20" },
@@ -27,83 +28,115 @@ const STATUS_STYLE: Record<KeyStatus, { label: string; className: string }> = {
   retired: { label: "Retired", className: "bg-muted text-muted-foreground border-border" },
 };
 
-const KEY_TYPES = [
-  { value: "property", label: "Property / unit key" },
-  { value: "master", label: "Master key" },
-  { value: "mailbox", label: "Mailbox key" },
-  { value: "garage", label: "Garage / shed key" },
-  { value: "fob", label: "Access fob / card" },
-  { value: "other", label: "Other" },
-];
+const HOUR = 3600000;
 
 export default function KeysRegister() {
   const { keys, issues, loading, addKey, issueKey, returnKey, historyFor } = useKeys();
   const { residents } = useResidents();
-  const { staff } = useStaffMembers();
+  const { data: wings = [] } = useWings();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [addOpen, setAddOpen] = useState(false);
   const [issueFor, setIssueFor] = useState<PropertyKey | null>(null);
+  const [issuePrefill, setIssuePrefill] = useState<IssuePrefill | null>(null);
   const [returnFor, setReturnFor] = useState<PropertyKey | null>(null);
-  const [historyFor_, setHistoryFor] = useState<PropertyKey | null>(null);
-  const [holderFilter, setHolderFilter] = useState<string>("all");
+  const [historyKey, setHistoryKey] = useState<PropertyKey | null>(null);
   const [staffView, setStaffView] = useState<{ id: string | null; name: string } | null>(null);
+  const [returnForm, setReturnForm] = useState({ returnedTo: "", conditionNotes: "" });
 
-  // Add key form
-  const [form, setForm] = useState({
-    keyLabel: "", keyType: "property", propertyLabel: "", residentVisitorId: "none",
-    copyNumber: "", storageLocation: "", notes: "",
-  });
+  // ---- Filters, kept in the page address so a view can be shared ----
+  const filters: KeyFilterValues = {
+    q: searchParams.get("q") || "",
+    status: searchParams.get("status") || "all",
+    type: searchParams.get("type") || "all",
+    holder: searchParams.get("holder") || "all",
+    area: searchParams.get("area") || "all",
+    wing: searchParams.get("wing") || "all",
+    age: searchParams.get("age") || "all",
+  };
 
-  // Issue form
-  const [issueForm, setIssueForm] = useState({
-    issuedToName: "", issuedToType: "contractor", staffMemberId: "manual",
-    visitorId: "", expectedReturn: "", issuedBy: "", notes: "",
-  });
-
-  const resetIssueForm = () =>
-    setIssueForm({
-      issuedToName: "", issuedToType: "contractor", staffMemberId: "manual",
-      visitorId: "", expectedReturn: "", issuedBy: "", notes: "",
+  const patchFilters = (patch: Partial<KeyFilterValues>) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(patch).forEach(([k, v]) => {
+      if (!v || v === "all") next.delete(k);
+      else next.set(k, String(v));
     });
+    setSearchParams(next, { replace: true });
+  };
+
+  const clearFilters = () => {
+    const next = new URLSearchParams(searchParams);
+    Object.keys(EMPTY_FILTERS).forEach((k) => next.delete(k));
+    setSearchParams(next, { replace: true });
+  };
 
   // Pre-fill when arriving from a visit record ("Issue key" action)
   useEffect(() => {
     const name = searchParams.get("issueToName");
     if (!name) return;
-    setIssueForm((f) => ({
-      ...f,
-      issuedToName: name,
-      issuedToType: searchParams.get("issueToType") || "visitor",
-      visitorId: searchParams.get("issueTo") || "",
-      staffMemberId: "manual",
-    }));
-    setStatusFilter("available");
+    setIssuePrefill({
+      name,
+      type: searchParams.get("issueToType") || "visitor",
+      visitorId: searchParams.get("issueTo"),
+    });
+    const next = new URLSearchParams(searchParams);
+    next.delete("issueTo"); next.delete("issueToName"); next.delete("issueToType");
+    next.set("status", "available");
+    setSearchParams(next, { replace: true });
     toast({ title: `Pick a key to issue to ${name}` });
-    searchParams.delete("issueTo");
-    searchParams.delete("issueToName");
-    searchParams.delete("issueToType");
-    setSearchParams(searchParams, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Return form
-  const [returnForm, setReturnForm] = useState({ returnedTo: "", conditionNotes: "" });
+  const wingByVisitorId = useMemo(() => {
+    const map = new Map<string, string | null>();
+    residents.forEach((r) => map.set(r.visitorId, r.wingId));
+    return map;
+  }, [residents]);
+
+  const areas = useMemo(
+    () => [...new Set(keys.map((k) => k.propertyLabel).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    [keys]
+  );
+
+  const matchesAge = (k: PropertyKey) => {
+    if (filters.age === "all") return true;
+    const issue = k.currentIssue;
+    if (!issue) return false;
+    const now = Date.now();
+    switch (filters.age) {
+      case "due_today":
+        return !!issue.expectedReturn && new Date(issue.expectedReturn).toDateString() === new Date().toDateString();
+      case "overdue":
+        return k.overdue;
+      case "over_24h":
+        return now - issue.issuedAt.getTime() > 24 * HOUR;
+      case "over_week":
+        return now - issue.issuedAt.getTime() > 7 * 24 * HOUR;
+      default:
+        return true;
+    }
+  };
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = filters.q.trim().toLowerCase();
     return keys.filter((k) => {
-      if (statusFilter !== "all" && k.status !== statusFilter) return false;
-      if (holderFilter !== "all" && k.currentIssue?.issuedToType !== holderFilter) return false;
+      if (filters.status !== "all" && k.status !== filters.status) return false;
+      if (filters.type !== "all" && k.keyType !== filters.type) return false;
+      if (filters.holder !== "all" && k.currentIssue?.issuedToType !== filters.holder) return false;
+      if (filters.area !== "all" && k.propertyLabel !== filters.area) return false;
+      if (filters.wing !== "all") {
+        const wingId = k.residentVisitorId ? wingByVisitorId.get(k.residentVisitorId) : null;
+        if (wingId !== filters.wing) return false;
+      }
+      if (!matchesAge(k)) return false;
       if (!q) return true;
       return [k.keyLabel, k.propertyLabel, k.residentName, k.currentIssue?.issuedToName]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
     });
-  }, [keys, search, statusFilter, holderFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keys, searchParams, wingByVisitorId]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, PropertyKey[]>();
@@ -114,6 +147,17 @@ export default function KeysRegister() {
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [filtered]);
 
+  const out = useMemo(
+    () =>
+      keys
+        .filter((k) => k.currentIssue)
+        .sort((a, b) => {
+          if (a.overdue !== b.overdue) return a.overdue ? -1 : 1;
+          return b.currentIssue!.issuedAt.getTime() - a.currentIssue!.issuedAt.getTime();
+        }),
+    [keys]
+  );
+
   const counts = useMemo(() => ({
     total: keys.length,
     available: keys.filter((k) => k.status === "available").length,
@@ -122,57 +166,13 @@ export default function KeysRegister() {
     withStaff: keys.filter((k) => k.currentIssue?.issuedToType === "staff").length,
   }), [keys]);
 
-  const submitAdd = async () => {
-    if (!form.keyLabel.trim() || !form.propertyLabel.trim()) {
-      toast({ title: "Key name and property are required", variant: "destructive" });
-      return;
-    }
-    const resident = residents.find((r) => r.visitorId === form.residentVisitorId);
-    const error = await addKey({
-      keyLabel: form.keyLabel.trim(),
-      keyType: form.keyType,
-      propertyLabel: form.propertyLabel.trim(),
-      residentVisitorId: resident?.visitorId || null,
-      residentName: resident?.name || null,
-      copyNumber: form.copyNumber ? Number(form.copyNumber) : null,
-      storageLocation: form.storageLocation.trim() || null,
-      notes: form.notes.trim() || null,
-    });
-    if (error) {
-      toast({ title: "Could not add key", description: error.message, variant: "destructive" });
-      return;
-    }
-    toast({ title: "Key added to the register" });
-    setForm({ keyLabel: "", keyType: "property", propertyLabel: "", residentVisitorId: "none", copyNumber: "", storageLocation: "", notes: "" });
-    setAddOpen(false);
+  const openIssue = (k: PropertyKey) => {
+    setIssueFor(k);
   };
 
-  const submitIssue = async () => {
-    if (!issueFor) return;
-    const staffPicked = issueForm.issuedToType === "staff" && issueForm.staffMemberId !== "manual";
-    if (!staffPicked && !issueForm.issuedToName.trim()) {
-      toast({ title: "Who is the key going to?", variant: "destructive" });
-      return;
-    }
-    const selectedStaff = staff.find((s) => s.id === issueForm.staffMemberId);
-    const holderName = selectedStaff ? selectedStaff.name : issueForm.issuedToName.trim();
-    const error = await issueKey({
-      keyId: issueFor.id,
-      issuedToName: holderName,
-      issuedToType: issueForm.issuedToType,
-      visitorId: issueForm.visitorId || null,
-      issuedToStaffId: selectedStaff?.id || null,
-      expectedReturn: issueForm.expectedReturn ? new Date(issueForm.expectedReturn) : null,
-      issuedBy: issueForm.issuedBy.trim() || null,
-      notes: issueForm.notes.trim() || null,
-    });
-    if (error) {
-      toast({ title: "Could not issue key", description: error.message, variant: "destructive" });
-      return;
-    }
-    toast({ title: `${issueFor.keyLabel} issued to ${holderName}` });
-    resetIssueForm();
+  const closeIssue = () => {
     setIssueFor(null);
+    setIssuePrefill(null);
   };
 
   const submitReturn = async () => {
@@ -191,6 +191,8 @@ export default function KeysRegister() {
     setReturnForm({ returnedTo: "", conditionNotes: "" });
     setReturnFor(null);
   };
+
+  const holderName = (k: PropertyKey) => k.currentIssue?.issuedToName || "";
 
   return (
     <SidebarProvider>
@@ -221,49 +223,61 @@ export default function KeysRegister() {
               ))}
             </div>
 
-            {counts.overdue > 0 && (
-              <div className="flex items-center gap-2 rounded-xl border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
-                <AlertTriangle className="h-4 w-4 shrink-0" />
-                <span className="font-medium">
-                  {counts.overdue} {counts.overdue === 1 ? "key is" : "keys are"} past the expected return time.
-                </span>
-              </div>
+            {/* Keys out right now */}
+            {out.length > 0 && (
+              <Card className="rounded-xl">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-semibold text-foreground">Keys out right now</h2>
+                    {counts.overdue > 0 && (
+                      <span className="flex items-center gap-1 text-xs font-medium text-destructive">
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        {counts.overdue} past due
+                      </span>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    {out.slice(0, 8).map((k) => (
+                      <div
+                        key={k.id}
+                        className={`flex flex-wrap items-center gap-3 rounded-lg border p-2.5 ${
+                          k.overdue ? "border-destructive/30 bg-destructive/5" : "border-border"
+                        }`}
+                      >
+                        <KeyRound className={`h-4 w-4 ${k.overdue ? "text-destructive" : "text-muted-foreground"}`} />
+                        <span className="text-sm font-medium text-foreground">{k.keyLabel}</span>
+                        <span className="text-xs text-muted-foreground">{k.propertyLabel}</span>
+                        <span className="text-sm text-foreground">→ {holderName(k)}</span>
+                        <span className={`text-xs ml-auto ${k.overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                          Out since {format(k.currentIssue!.issuedAt, "hh:mm a dd MMM")}
+                          {k.currentIssue!.expectedReturn ? ` · due ${format(k.currentIssue!.expectedReturn, "hh:mm a dd MMM")}` : ""}
+                        </span>
+                        <Button size="sm" onClick={() => setReturnFor(k)}>Return</Button>
+                      </div>
+                    ))}
+                    {out.length > 8 && (
+                      <p className="text-xs text-muted-foreground">
+                        and {out.length - 8} more — use the “Issued out” filter to see them all.
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
             {/* Controls */}
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative flex-1 min-w-[220px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search key, property, resident or holder"
-                  className="pl-9"
+            <div className="flex items-start gap-3">
+              <div className="flex-1">
+                <KeyFilters
+                  values={filters}
+                  onChange={patchFilters}
+                  onClear={clearFilters}
+                  areas={areas}
+                  wings={wings.map((w) => ({ id: w.id, name: w.name }))}
+                  resultCount={filtered.length}
                 />
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="available">Available</SelectItem>
-                  <SelectItem value="issued">Issued out</SelectItem>
-                  <SelectItem value="overdue">Overdue</SelectItem>
-                  <SelectItem value="lost">Lost</SelectItem>
-                  <SelectItem value="retired">Retired</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={holderFilter} onValueChange={setHolderFilter}>
-                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Anyone holding</SelectItem>
-                  <SelectItem value="staff">Held by staff</SelectItem>
-                  <SelectItem value="contractor">Held by contractor</SelectItem>
-                  <SelectItem value="resident">Held by resident</SelectItem>
-                  <SelectItem value="family">Held by family</SelectItem>
-                  <SelectItem value="other">Held by other</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button onClick={() => setAddOpen(true)} className="gap-2">
+              <Button onClick={() => setAddOpen(true)} className="gap-2 shrink-0">
                 <Plus className="h-4 w-4" /> Add key
               </Button>
             </div>
@@ -286,7 +300,6 @@ export default function KeysRegister() {
                       <h2 className="text-sm font-semibold text-foreground">{property}</h2>
                       <span className="text-xs text-muted-foreground">
                         {propertyKeys.length} {propertyKeys.length === 1 ? "key" : "keys"}
-                        {propertyKeys[0]?.residentName ? ` · ${propertyKeys[0].residentName}` : ""}
                       </span>
                     </div>
                     <div className="grid gap-2">
@@ -304,7 +317,7 @@ export default function KeysRegister() {
                                   {k.copyNumber ? <span className="text-muted-foreground font-normal"> · copy {k.copyNumber}</span> : null}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  {KEY_TYPES.find((t) => t.value === k.keyType)?.label || k.keyType}
+                                  {keyTypeLabel(k.keyType)}
                                   {k.storageLocation ? ` · kept in ${k.storageLocation}` : ""}
                                 </p>
                               </div>
@@ -346,11 +359,11 @@ export default function KeysRegister() {
                                     <ArrowLeftRight className="h-3.5 w-3.5" /> Return
                                   </Button>
                                 ) : (
-                                  <Button size="sm" variant="secondary" onClick={() => setIssueFor(k)} className="gap-1 border border-border">
+                                  <Button size="sm" variant="secondary" onClick={() => openIssue(k)} className="gap-1 border border-border">
                                     <ArrowLeftRight className="h-3.5 w-3.5" /> Issue
                                   </Button>
                                 )}
-                                <Button size="sm" variant="ghost" onClick={() => setHistoryFor(k)} className="gap-1">
+                                <Button size="sm" variant="ghost" onClick={() => setHistoryKey(k)} className="gap-1">
                                   <History className="h-3.5 w-3.5" /> History
                                 </Button>
                               </div>
@@ -367,134 +380,14 @@ export default function KeysRegister() {
         </SidebarInset>
       </div>
 
-      {/* Add key */}
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="rounded-xl">
-          <DialogHeader>
-            <DialogTitle>Add a key</DialogTitle>
-            <DialogDescription>Record a key so it can be issued and tracked.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>Key name</Label>
-                <Input value={form.keyLabel} onChange={(e) => setForm({ ...form, keyLabel: e.target.value })} placeholder="Front door" />
-              </div>
-              <div className="space-y-1">
-                <Label>Key type</Label>
-                <Select value={form.keyType} onValueChange={(v) => setForm({ ...form, keyType: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {KEY_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label>Property / unit</Label>
-                <Input value={form.propertyLabel} onChange={(e) => setForm({ ...form, propertyLabel: e.target.value })} placeholder="Unit 12" />
-              </div>
-              <div className="space-y-1">
-                <Label>Copy number</Label>
-                <Input value={form.copyNumber} onChange={(e) => setForm({ ...form, copyNumber: e.target.value })} inputMode="numeric" placeholder="1" />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label>Resident (optional)</Label>
-              <Select value={form.residentVisitorId} onValueChange={(v) => setForm({ ...form, residentVisitorId: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No resident linked</SelectItem>
-                  {residents.map((r) => <SelectItem key={r.visitorId} value={r.visitorId}>{r.name}{r.room ? ` · ${r.room}` : ""}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label>Where it's kept</Label>
-              <Input value={form.storageLocation} onChange={(e) => setForm({ ...form, storageLocation: e.target.value })} placeholder="Reception key cabinet, hook 12" />
-            </div>
-            <div className="space-y-1">
-              <Label>Notes</Label>
-              <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
-            </div>
-            <Button onClick={submitAdd} className="w-full">Add key</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AddKeyDialog open={addOpen} onOpenChange={setAddOpen} residents={residents} onAdd={addKey} />
 
-      {/* Issue key */}
-      <Sheet open={!!issueFor} onOpenChange={(o) => !o && setIssueFor(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-[50vw] overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Issue {issueFor?.keyLabel}</SheetTitle>
-            <SheetDescription>{issueFor?.propertyLabel}{issueFor?.residentName ? ` · ${issueFor.residentName}` : ""}</SheetDescription>
-          </SheetHeader>
-          <div className="space-y-3 mt-4">
-            <div className="space-y-1">
-              <Label>They are a…</Label>
-              <Select
-                value={issueForm.issuedToType}
-                onValueChange={(v) => setIssueForm({ ...issueForm, issuedToType: v, staffMemberId: "manual" })}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="contractor">Contractor</SelectItem>
-                  <SelectItem value="staff">Staff member</SelectItem>
-                  <SelectItem value="resident">Resident</SelectItem>
-                  <SelectItem value="family">Family member</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {issueForm.issuedToType === "staff" ? (
-              <div className="space-y-1">
-                <Label>Which staff member?</Label>
-                <Select value={issueForm.staffMemberId} onValueChange={(v) => setIssueForm({ ...issueForm, staffMemberId: v })}>
-                  <SelectTrigger><SelectValue placeholder="Pick from the staff list" /></SelectTrigger>
-                  <SelectContent>
-                    {staff.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>{m.name}{m.role ? ` · ${m.role}` : ""}</SelectItem>
-                    ))}
-                    <SelectItem value="manual">Someone not on the list…</SelectItem>
-                  </SelectContent>
-                </Select>
-                {issueForm.staffMemberId === "manual" && (
-                  <Input
-                    className="mt-2"
-                    value={issueForm.issuedToName}
-                    onChange={(e) => setIssueForm({ ...issueForm, issuedToName: e.target.value })}
-                    placeholder="Name of the staff member"
-                  />
-                )}
-                <p className="text-xs text-muted-foreground">
-                  Staff keys are tracked here only — nothing is added to the visit log.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                <Label>Who is taking the key?</Label>
-                <Input value={issueForm.issuedToName} onChange={(e) => setIssueForm({ ...issueForm, issuedToName: e.target.value })} placeholder="Name of the person" />
-              </div>
-            )}
-
-            <div className="space-y-1">
-              <Label>Expected back</Label>
-              <Input type="datetime-local" value={issueForm.expectedReturn} onChange={(e) => setIssueForm({ ...issueForm, expectedReturn: e.target.value })} />
-            </div>
-            <div className="space-y-1">
-              <Label>Issued by</Label>
-              <Input value={issueForm.issuedBy} onChange={(e) => setIssueForm({ ...issueForm, issuedBy: e.target.value })} placeholder="Staff member handing it over" />
-            </div>
-            <div className="space-y-1">
-              <Label>Notes</Label>
-              <Textarea value={issueForm.notes} onChange={(e) => setIssueForm({ ...issueForm, notes: e.target.value })} rows={2} placeholder="Reason, job reference…" />
-            </div>
-            <Button onClick={submitIssue} className="w-full">Issue key</Button>
-          </div>
-        </SheetContent>
-      </Sheet>
+      <IssueKeySheet
+        keyRecord={issueFor}
+        prefill={issuePrefill}
+        onClose={closeIssue}
+        onIssue={issueKey}
+      />
 
       {/* Return key */}
       <Sheet open={!!returnFor} onOpenChange={(o) => !o && setReturnFor(null)}>
@@ -521,17 +414,17 @@ export default function KeysRegister() {
       </Sheet>
 
       {/* History */}
-      <Sheet open={!!historyFor_} onOpenChange={(o) => !o && setHistoryFor(null)}>
+      <Sheet open={!!historyKey} onOpenChange={(o) => !o && setHistoryKey(null)}>
         <SheetContent side="right" className="w-full sm:max-w-[50vw] overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>{historyFor_?.keyLabel} history</SheetTitle>
-            <SheetDescription>{historyFor_?.propertyLabel}</SheetDescription>
+            <SheetTitle>{historyKey?.keyLabel} history</SheetTitle>
+            <SheetDescription>{historyKey?.propertyLabel}</SheetDescription>
           </SheetHeader>
           <div className="space-y-2 mt-4">
-            {historyFor_ && historyFor(historyFor_.id).length === 0 && (
+            {historyKey && historyFor(historyKey.id).length === 0 && (
               <p className="text-sm text-muted-foreground">This key has never been issued.</p>
             )}
-            {historyFor_ && historyFor(historyFor_.id).map((i) => (
+            {historyKey && historyFor(historyKey.id).map((i) => (
               <div key={i.id} className="rounded-xl border border-border p-3 space-y-1">
                 <p className="text-sm font-medium text-foreground">{i.issuedToName} <span className="text-xs text-muted-foreground">({i.issuedToType}{i.issuedToType === "staff" ? ", no visit record" : ""})</span></p>
                 <p className="text-xs text-muted-foreground">Out {format(i.issuedAt, "hh:mm a dd MMM yyyy")}{i.issuedBy ? ` · by ${i.issuedBy}` : ""}</p>
