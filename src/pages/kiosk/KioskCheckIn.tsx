@@ -53,7 +53,8 @@ export default function KioskCheckIn() {
   const [returningNotFound, setReturningNotFound] = useState(false);
   const [returningMatch, setReturningMatch] = useState<any>(null);
   const [fastLaneOpen, setFastLaneOpen] = useState(false);
-  const [lookupMode, setLookupMode] = useState<"mobile" | "code">("mobile");
+  const [lookupModeRaw, setLookupMode] = useState<"mobile" | "code">("mobile");
+  const lookupMode: "mobile" | "code" = !flow.returningOptions.mobile ? "code" : !flow.returningOptions.qr ? "mobile" : lookupModeRaw;
 
 
 
