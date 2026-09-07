@@ -172,6 +172,12 @@ export function DataRetentionTab() {
           </TabsContent>
         ))}
       </Tabs>
+
+      <p className="mt-4 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+        Food Register records follow the <span className="font-medium text-foreground">Visitors</span> retention
+        period above. A food record linked to a person under legal hold is never auto-deleted.
+      </p>
     </div>
+
   );
 }
