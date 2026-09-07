@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AppHeader } from "@/components/AppHeader";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
@@ -13,9 +14,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useKeys, PropertyKey, KeyStatus } from "@/hooks/useKeys";
 import { useResidents } from "@/hooks/useResidents";
+import { useStaffMembers } from "@/hooks/useStaffMembers";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { KeyRound, Plus, Search, History, ArrowLeftRight, AlertTriangle } from "lucide-react";
+import { KeyRound, Plus, Search, History, ArrowLeftRight, AlertTriangle, UserCog } from "lucide-react";
 
 const STATUS_STYLE: Record<KeyStatus, { label: string; className: string }> = {
   available: { label: "Available", className: "bg-success/10 text-success border-success/20" },
@@ -35,9 +37,11 @@ const KEY_TYPES = [
 ];
 
 export default function KeysRegister() {
-  const { keys, loading, addKey, issueKey, returnKey, historyFor } = useKeys();
+  const { keys, issues, loading, addKey, issueKey, returnKey, historyFor } = useKeys();
   const { residents } = useResidents();
+  const { staff } = useStaffMembers();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -45,6 +49,8 @@ export default function KeysRegister() {
   const [issueFor, setIssueFor] = useState<PropertyKey | null>(null);
   const [returnFor, setReturnFor] = useState<PropertyKey | null>(null);
   const [historyFor_, setHistoryFor] = useState<PropertyKey | null>(null);
+  const [holderFilter, setHolderFilter] = useState<string>("all");
+  const [staffView, setStaffView] = useState<{ id: string | null; name: string } | null>(null);
 
   // Add key form
   const [form, setForm] = useState({
@@ -54,8 +60,35 @@ export default function KeysRegister() {
 
   // Issue form
   const [issueForm, setIssueForm] = useState({
-    issuedToName: "", issuedToType: "contractor", expectedReturn: "", issuedBy: "", notes: "",
+    issuedToName: "", issuedToType: "contractor", staffMemberId: "manual",
+    visitorId: "", expectedReturn: "", issuedBy: "", notes: "",
   });
+
+  const resetIssueForm = () =>
+    setIssueForm({
+      issuedToName: "", issuedToType: "contractor", staffMemberId: "manual",
+      visitorId: "", expectedReturn: "", issuedBy: "", notes: "",
+    });
+
+  // Pre-fill when arriving from a visit record ("Issue key" action)
+  useEffect(() => {
+    const name = searchParams.get("issueToName");
+    if (!name) return;
+    setIssueForm((f) => ({
+      ...f,
+      issuedToName: name,
+      issuedToType: searchParams.get("issueToType") || "visitor",
+      visitorId: searchParams.get("issueTo") || "",
+      staffMemberId: "manual",
+    }));
+    setStatusFilter("available");
+    toast({ title: `Pick a key to issue to ${name}` });
+    searchParams.delete("issueTo");
+    searchParams.delete("issueToName");
+    searchParams.delete("issueToType");
+    setSearchParams(searchParams, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Return form
   const [returnForm, setReturnForm] = useState({ returnedTo: "", conditionNotes: "" });
@@ -64,12 +97,13 @@ export default function KeysRegister() {
     const q = search.trim().toLowerCase();
     return keys.filter((k) => {
       if (statusFilter !== "all" && k.status !== statusFilter) return false;
+      if (holderFilter !== "all" && k.currentIssue?.issuedToType !== holderFilter) return false;
       if (!q) return true;
       return [k.keyLabel, k.propertyLabel, k.residentName, k.currentIssue?.issuedToName]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q));
     });
-  }, [keys, search, statusFilter]);
+  }, [keys, search, statusFilter, holderFilter]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, PropertyKey[]>();
@@ -85,6 +119,7 @@ export default function KeysRegister() {
     available: keys.filter((k) => k.status === "available").length,
     issued: keys.filter((k) => k.status === "issued").length,
     overdue: keys.filter((k) => k.status === "overdue").length,
+    withStaff: keys.filter((k) => k.currentIssue?.issuedToType === "staff").length,
   }), [keys]);
 
   const submitAdd = async () => {
@@ -114,14 +149,19 @@ export default function KeysRegister() {
 
   const submitIssue = async () => {
     if (!issueFor) return;
-    if (!issueForm.issuedToName.trim()) {
+    const staffPicked = issueForm.issuedToType === "staff" && issueForm.staffMemberId !== "manual";
+    if (!staffPicked && !issueForm.issuedToName.trim()) {
       toast({ title: "Who is the key going to?", variant: "destructive" });
       return;
     }
+    const selectedStaff = staff.find((s) => s.id === issueForm.staffMemberId);
+    const holderName = selectedStaff ? selectedStaff.name : issueForm.issuedToName.trim();
     const error = await issueKey({
       keyId: issueFor.id,
-      issuedToName: issueForm.issuedToName.trim(),
+      issuedToName: holderName,
       issuedToType: issueForm.issuedToType,
+      visitorId: issueForm.visitorId || null,
+      issuedToStaffId: selectedStaff?.id || null,
       expectedReturn: issueForm.expectedReturn ? new Date(issueForm.expectedReturn) : null,
       issuedBy: issueForm.issuedBy.trim() || null,
       notes: issueForm.notes.trim() || null,
@@ -130,8 +170,8 @@ export default function KeysRegister() {
       toast({ title: "Could not issue key", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: `${issueFor.keyLabel} issued to ${issueForm.issuedToName.trim()}` });
-    setIssueForm({ issuedToName: "", issuedToType: "contractor", expectedReturn: "", issuedBy: "", notes: "" });
+    toast({ title: `${issueFor.keyLabel} issued to ${holderName}` });
+    resetIssueForm();
     setIssueFor(null);
   };
 
@@ -164,12 +204,13 @@ export default function KeysRegister() {
 
           <main className="p-6 space-y-6">
             {/* Summary */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               {[
                 { label: "Keys on register", value: counts.total, tone: "text-foreground" },
                 { label: "In the cabinet", value: counts.available, tone: "text-success" },
                 { label: "Issued out", value: counts.issued, tone: "text-primary" },
                 { label: "Overdue back", value: counts.overdue, tone: "text-destructive" },
+                { label: "Held by staff", value: counts.withStaff, tone: "text-foreground" },
               ].map((s) => (
                 <Card key={s.label} className="rounded-xl">
                   <CardContent className="p-4">
@@ -209,6 +250,17 @@ export default function KeysRegister() {
                   <SelectItem value="overdue">Overdue</SelectItem>
                   <SelectItem value="lost">Lost</SelectItem>
                   <SelectItem value="retired">Retired</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={holderFilter} onValueChange={setHolderFilter}>
+                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Anyone holding</SelectItem>
+                  <SelectItem value="staff">Held by staff</SelectItem>
+                  <SelectItem value="contractor">Held by contractor</SelectItem>
+                  <SelectItem value="resident">Held by resident</SelectItem>
+                  <SelectItem value="family">Held by family</SelectItem>
+                  <SelectItem value="other">Held by other</SelectItem>
                 </SelectContent>
               </Select>
               <Button onClick={() => setAddOpen(true)} className="gap-2">
@@ -260,7 +312,21 @@ export default function KeysRegister() {
                                 {k.currentIssue ? (
                                   <>
                                     <p className="text-sm text-foreground">
-                                      With <span className="font-medium">{k.currentIssue.issuedToName}</span>
+                                      With{" "}
+                                      {k.currentIssue.issuedToType === "staff" ? (
+                                        <button
+                                          onClick={() => setStaffView({ id: k.currentIssue!.issuedToStaffId, name: k.currentIssue!.issuedToName })}
+                                          className="font-medium underline underline-offset-2 hover:text-primary"
+                                        >
+                                          {k.currentIssue.issuedToName}
+                                        </button>
+                                      ) : (
+                                        <span className="font-medium">{k.currentIssue.issuedToName}</span>
+                                      )}
+                                      <span className="text-xs text-muted-foreground">
+                                        {" "}· {k.currentIssue.issuedToType}
+                                        {k.currentIssue.issuedToType === "staff" ? " (no visit record)" : ""}
+                                      </span>
                                     </p>
                                     <p className={`text-xs ${k.overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
                                       Out since {format(k.currentIssue.issuedAt, "hh:mm a dd MMM")}
@@ -366,12 +432,11 @@ export default function KeysRegister() {
           </SheetHeader>
           <div className="space-y-3 mt-4">
             <div className="space-y-1">
-              <Label>Who is taking the key?</Label>
-              <Input value={issueForm.issuedToName} onChange={(e) => setIssueForm({ ...issueForm, issuedToName: e.target.value })} placeholder="Name of the person" />
-            </div>
-            <div className="space-y-1">
               <Label>They are a…</Label>
-              <Select value={issueForm.issuedToType} onValueChange={(v) => setIssueForm({ ...issueForm, issuedToType: v })}>
+              <Select
+                value={issueForm.issuedToType}
+                onValueChange={(v) => setIssueForm({ ...issueForm, issuedToType: v, staffMemberId: "manual" })}
+              >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="contractor">Contractor</SelectItem>
@@ -382,6 +447,38 @@ export default function KeysRegister() {
                 </SelectContent>
               </Select>
             </div>
+
+            {issueForm.issuedToType === "staff" ? (
+              <div className="space-y-1">
+                <Label>Which staff member?</Label>
+                <Select value={issueForm.staffMemberId} onValueChange={(v) => setIssueForm({ ...issueForm, staffMemberId: v })}>
+                  <SelectTrigger><SelectValue placeholder="Pick from the staff list" /></SelectTrigger>
+                  <SelectContent>
+                    {staff.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>{m.name}{m.role ? ` · ${m.role}` : ""}</SelectItem>
+                    ))}
+                    <SelectItem value="manual">Someone not on the list…</SelectItem>
+                  </SelectContent>
+                </Select>
+                {issueForm.staffMemberId === "manual" && (
+                  <Input
+                    className="mt-2"
+                    value={issueForm.issuedToName}
+                    onChange={(e) => setIssueForm({ ...issueForm, issuedToName: e.target.value })}
+                    placeholder="Name of the staff member"
+                  />
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Staff keys are tracked here only — nothing is added to the visit log.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <Label>Who is taking the key?</Label>
+                <Input value={issueForm.issuedToName} onChange={(e) => setIssueForm({ ...issueForm, issuedToName: e.target.value })} placeholder="Name of the person" />
+              </div>
+            )}
+
             <div className="space-y-1">
               <Label>Expected back</Label>
               <Input type="datetime-local" value={issueForm.expectedReturn} onChange={(e) => setIssueForm({ ...issueForm, expectedReturn: e.target.value })} />
@@ -436,7 +533,7 @@ export default function KeysRegister() {
             )}
             {historyFor_ && historyFor(historyFor_.id).map((i) => (
               <div key={i.id} className="rounded-xl border border-border p-3 space-y-1">
-                <p className="text-sm font-medium text-foreground">{i.issuedToName} <span className="text-xs text-muted-foreground">({i.issuedToType})</span></p>
+                <p className="text-sm font-medium text-foreground">{i.issuedToName} <span className="text-xs text-muted-foreground">({i.issuedToType}{i.issuedToType === "staff" ? ", no visit record" : ""})</span></p>
                 <p className="text-xs text-muted-foreground">Out {format(i.issuedAt, "hh:mm a dd MMM yyyy")}{i.issuedBy ? ` · by ${i.issuedBy}` : ""}</p>
                 <p className="text-xs text-muted-foreground">
                   {i.returnedAt
@@ -450,6 +547,58 @@ export default function KeysRegister() {
               </div>
             ))}
           </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Keys held by one staff member */}
+      <Sheet open={!!staffView} onOpenChange={(o) => !o && setStaffView(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-[50vw] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <UserCog className="h-4 w-4 text-primary" /> {staffView?.name}
+            </SheetTitle>
+            <SheetDescription>Keys this staff member holds, and everything they have taken before.</SheetDescription>
+          </SheetHeader>
+          {staffView && (() => {
+            const matches = (i: { issuedToStaffId: string | null; issuedToName: string }) =>
+              staffView.id ? i.issuedToStaffId === staffView.id : i.issuedToName === staffView.name;
+            const holding = keys.filter((k) => k.currentIssue && matches(k.currentIssue));
+            const past = issues.filter((i) => i.returnedAt && matches(i));
+            return (
+              <div className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Holding now</p>
+                  {holding.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No keys out at the moment.</p>
+                  ) : holding.map((k) => (
+                    <div key={k.id} className="rounded-xl border border-border p-3 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{k.keyLabel} · {k.propertyLabel}</p>
+                        <p className={`text-xs ${k.overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                          Out since {format(k.currentIssue!.issuedAt, "hh:mm a dd MMM")}
+                          {k.currentIssue!.expectedReturn ? ` · due ${format(k.currentIssue!.expectedReturn, "hh:mm a dd MMM")}` : ""}
+                        </p>
+                      </div>
+                      <Button size="sm" onClick={() => { setStaffView(null); setReturnFor(k); }}>Return</Button>
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Previously</p>
+                  {past.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No past key issues.</p>
+                  ) : past.slice(0, 20).map((i) => (
+                    <div key={i.id} className="rounded-xl border border-border p-3">
+                      <p className="text-sm text-foreground">{keys.find((k) => k.id === i.keyId)?.keyLabel || "Key"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(i.issuedAt, "hh:mm a dd MMM yyyy")} → {i.returnedAt ? format(i.returnedAt, "hh:mm a dd MMM yyyy") : "—"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </SheetContent>
       </Sheet>
     </SidebarProvider>

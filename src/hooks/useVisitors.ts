@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Visitor, CompanionDetail } from "@/types/visitor";
+import { toast } from "@/hooks/use-toast";
+
 
 interface DbVisitor {
   id: string;
@@ -168,14 +170,24 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       .insert(payload as any)
       .select("id, qr_code")
       .single()
-      .then(({ data }) => {
-        if (data) {
-          // Replace temp ID with real one
-          setVisitors((prev) =>
-            prev.map((v) => (v.id === tempId ? { ...v, id: (data as any).id } : v))
-          );
+      .then(({ data, error }) => {
+        if (error || !data) {
+          // Roll back the optimistic row and let the caller know it did not save
+          setVisitors((prev) => prev.filter((v) => v.id !== tempId));
+          toast({
+            title: "Could not save this check-in",
+            description: "Please ask a staff member for help.",
+            variant: "destructive",
+          });
+          console.error("Failed to save visitor record", error);
+          return;
         }
+        // Replace temp ID with real one
+        setVisitors((prev) =>
+          prev.map((v) => (v.id === tempId ? { ...v, id: (data as any).id } : v))
+        );
       });
+
 
 
     return newVisitor;

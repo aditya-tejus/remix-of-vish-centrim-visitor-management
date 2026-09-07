@@ -9,12 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Search, LogOut, Loader2, Clock, ArrowLeft, Users, Phone, Mail,
-  AlertTriangle, CheckCircle2, MapPin,
+  AlertTriangle, CheckCircle2, MapPin, KeyRound,
 } from "lucide-react";
 import { Visitor, CompanionDetail } from "@/types/visitor";
 import { format } from "date-fns";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { TimeOverride } from "@/components/TimeOverride";
+import { Textarea } from "@/components/ui/textarea";
+import { useOpenKeyIssues } from "@/hooks/useOpenKeyIssues";
 
 const OVERSTAY_THRESHOLD_MS = 8 * 3600000; // 8 hours
 
@@ -53,6 +55,9 @@ export function CheckOutSheet({
   const [checkoutReason, setCheckoutReason] = useState<string>("");
   const [timeOverride, setTimeOverride] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const { openIssues, recordReturn } = useOpenKeyIssues();
+  const [keyAction, setKeyAction] = useState<"return" | "keep" | null>(null);
+  const [keyKeepReason, setKeyKeepReason] = useState("");
   const [successName, setSuccessName] = useState("");
   const [successDuration, setSuccessDuration] = useState("");
 
@@ -96,10 +101,14 @@ export function CheckOutSheet({
   const isOverstayed = (v: Visitor) =>
     Date.now() - v.checkInTime.getTime() > OVERSTAY_THRESHOLD_MS;
 
+  const keysFor = (visitorId: string) => openIssues.filter((i) => i.visitorId === visitorId);
+
   const handleSelectVisitor = (visitor: Visitor) => {
     setSelectedVisitor(visitor);
     setCheckoutReason("");
     setTimeOverride(null);
+    setKeyAction(null);
+    setKeyKeepReason("");
   };
 
   const handleConfirmCheckOut = async () => {
@@ -107,7 +116,15 @@ export function CheckOutSheet({
     setCheckingOut(selectedVisitor.id);
     const name = `${selectedVisitor.firstName} ${selectedVisitor.surname}`;
     const dur = getDuration(selectedVisitor.checkInTime);
-    await onCheckOut(selectedVisitor.id, checkoutReason || undefined, timeOverride || undefined);
+    const held = keysFor(selectedVisitor.id);
+    if (held.length > 0 && keyAction === "return") {
+      for (const issue of held) await recordReturn(issue, "Reception (at check-out)");
+    }
+    const keyNote =
+      held.length > 0 && keyAction === "keep"
+        ? ` · Key still out: ${held.map((h) => h.keyLabel).join(", ")}${keyKeepReason.trim() ? ` — ${keyKeepReason.trim()}` : ""}`
+        : "";
+    await onCheckOut(selectedVisitor.id, `${checkoutReason}${keyNote}`.trim() || undefined, timeOverride || undefined);
     setCheckingOut(null);
     setSuccessName(name);
     setSuccessDuration(dur);
@@ -125,6 +142,8 @@ export function CheckOutSheet({
     setSelectedVisitor(null);
     setCheckoutReason("");
     setTimeOverride(null);
+    setKeyAction(null);
+    setKeyKeepReason("");
     onPreSelectedClear?.();
   };
 
@@ -269,6 +288,14 @@ export function CheckOutSheet({
                                       </span>
                                     </>
                                   )}
+                                  {keysFor(v.id).length > 0 && (
+                                    <>
+                                      <span>·</span>
+                                      <span className="flex items-center gap-0.5 text-warning font-semibold">
+                                        <KeyRound className="h-3 w-3" />Key out
+                                      </span>
+                                    </>
+                                  )}
                                 </div>
                               </div>
 
@@ -353,6 +380,57 @@ export function CheckOutSheet({
                         This visitor has been on-site for {getDuration(selectedVisitor.checkInTime)}, exceeding the standard visit window.
                       </p>
                     </div>
+                  </div>
+                )}
+
+                {/* Outstanding key warning */}
+                {keysFor(selectedVisitor.id).length > 0 && (
+                  <div className="rounded-xl border border-warning/40 bg-warning/5 p-3.5 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <KeyRound className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-[13px] font-semibold text-foreground">
+                          Still holding {keysFor(selectedVisitor.id).length === 1 ? "a key" : "keys"}
+                        </p>
+                        <p className="text-[12px] text-muted-foreground">
+                          {keysFor(selectedVisitor.id)
+                            .map((k) => `${k.keyLabel}${k.propertyLabel ? ` (${k.propertyLabel})` : ""}`)
+                            .join(", ")}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant={keyAction === "return" ? "default" : "secondary"}
+                        className="flex-1 border border-border"
+                        onClick={() => setKeyAction("return")}
+                      >
+                        Key handed back
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={keyAction === "keep" ? "default" : "secondary"}
+                        className="flex-1 border border-border"
+                        onClick={() => setKeyAction("keep")}
+                      >
+                        Staying out
+                      </Button>
+                    </div>
+                    {keyAction === "keep" && (
+                      <Textarea
+                        rows={2}
+                        value={keyKeepReason}
+                        onChange={(e) => setKeyKeepReason(e.target.value)}
+                        placeholder="Why is the key staying out? (e.g. returning tomorrow to finish the job)"
+                        className="text-[13px]"
+                      />
+                    )}
+                    {!keyAction && (
+                      <p className="text-[11px] text-muted-foreground">
+                        Check-out will still go ahead, but the key stays flagged as out.
+                      </p>
+                    )}
                   </div>
                 )}
 

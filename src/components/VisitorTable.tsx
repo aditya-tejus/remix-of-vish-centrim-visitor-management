@@ -9,7 +9,8 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, LogOut, Trash2, FileText, FileSpreadsheet, Users, MessageSquare } from "lucide-react";
+import { MoreHorizontal, LogOut, Trash2, FileText, FileSpreadsheet, Users, MessageSquare, KeyRound } from "lucide-react";
+import { useOpenKeyIssues } from "@/hooks/useOpenKeyIssues";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
@@ -103,6 +104,8 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
     staff: visitors.filter((v) => v.type === "staff"),
   };
 
+  const { openIssues } = useOpenKeyIssues();
+
   const handleSingleCSV = (visitor: Visitor) => {
     exportVisitorsToCSV([visitor], `visitor-${visitor.firstName}-${visitor.surname}.csv`);
     toast({ title: "CSV Exported", description: `Record for ${visitor.firstName} ${visitor.surname} exported.` });
@@ -131,6 +134,8 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
       default: return visitorColumns;
     }
   };
+
+  const keysForVisitor = (id: string) => openIssues.filter((i) => i.visitorId === id);
 
   const isOverstayed = (v: Visitor) => v.status === "checked-in" && Date.now() - v.checkInTime.getTime() > 8 * 3600000;
 
@@ -168,6 +173,17 @@ export function VisitorTable({ visitors, onCheckOut, onCheckInReturn, onDelete, 
                 <span className={`text-[11px] font-normal tracking-wide ${typeLabelStyles[visitor.type] || "text-muted-foreground"}`}>
                   {typeLabelsMap[visitor.type] || visitor.type}
                 </span>
+              )}
+              {keysForVisitor(visitor.id).length > 0 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); navigate("/keys"); }}
+                  className={`mt-0.5 inline-flex items-center gap-1 text-[11px] font-medium ${
+                    keysForVisitor(visitor.id).some((k) => k.overdue) ? "text-destructive" : "text-warning"
+                  }`}
+                >
+                  <KeyRound className="h-3 w-3" />
+                  Key issued · {keysForVisitor(visitor.id).map((k) => k.keyLabel).join(", ")}
+                </button>
               )}
             </div>
           </div>

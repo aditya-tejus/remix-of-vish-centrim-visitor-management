@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useOpenKeyIssues } from "@/hooks/useOpenKeyIssues";
 import { Visitor } from "@/types/visitor";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
@@ -12,7 +14,7 @@ import { format, differenceInMinutes, differenceInHours } from "date-fns";
 import {
   Phone, Mail, MapPin, Clock, User, Shield, Calendar, Users,
   ChevronDown, ChevronRight, Thermometer, FileCheck, Heart,
-  LogIn, Timer, MessageSquare, Syringe, Home,
+  LogIn, Timer, MessageSquare, Syringe, Home, KeyRound,
 } from "lucide-react";
 
 function formatDuration(start: Date, end: Date | null): string {
@@ -211,6 +213,8 @@ function VisitDetailPanel({ visit, isCurrent }: { visit: Visitor; isCurrent: boo
 
 export function VisitorProfile({ visitor, allVisitors, open, onOpenChange }: VisitorProfileProps) {
   const [expandedVisitId, setExpandedVisitId] = useState<string | null>(null);
+  const { openIssues } = useOpenKeyIssues();
+  const navigate = useNavigate();
 
   if (!visitor) return null;
 
@@ -220,6 +224,9 @@ export function VisitorProfile({ visitor, allVisitors, open, onOpenChange }: Vis
         (v.email && v.email === visitor.email) ||
         (v.mobile && v.mobile === visitor.mobile))
   );
+
+  const visitIds = new Set(visitHistory.map((v) => v.id));
+  const heldKeys = openIssues.filter((i) => i.visitorId && visitIds.has(i.visitorId));
 
   const allVisits = visitHistory.sort(
     (a, b) => b.checkInTime.getTime() - a.checkInTime.getTime()
@@ -284,6 +291,49 @@ export function VisitorProfile({ visitor, allVisitors, open, onOpenChange }: Vis
               )}
             </div>
           </div>
+
+          {/* Keys currently held */}
+          {(heldKeys.length > 0 || visitor.status === "checked-in") && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <KeyRound className="h-3 w-3" /> Keys
+              </p>
+              {heldKeys.map((k) => (
+                <button
+                  key={k.id}
+                  onClick={() => navigate("/keys")}
+                  className={`w-full text-left rounded-lg border p-2.5 transition-colors ${
+                    k.overdue ? "border-destructive/30 bg-destructive/5" : "border-warning/30 bg-warning/5"
+                  }`}
+                >
+                  <p className="text-xs font-semibold text-foreground">
+                    Key issued · {k.keyLabel}{k.propertyLabel ? ` · ${k.propertyLabel}` : ""}
+                  </p>
+                  <p className={`text-[11px] ${k.overdue ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                    Out since {format(k.issuedAt, "hh:mm a dd MMM")}
+                    {k.expectedReturn ? ` · due back ${format(k.expectedReturn, "hh:mm a dd MMM")}` : ""}
+                  </p>
+                </button>
+              ))}
+              {heldKeys.length === 0 && (
+                <p className="text-xs text-muted-foreground">No key issued on this visit.</p>
+              )}
+              {visitor.status === "checked-in" && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="w-full gap-1.5 border border-border"
+                  onClick={() =>
+                    navigate(
+                      `/keys?issueTo=${visitor.id}&issueToName=${encodeURIComponent(`${visitor.firstName} ${visitor.surname}`)}&issueToType=${visitor.type}`
+                    )
+                  }
+                >
+                  <KeyRound className="h-3.5 w-3.5" /> Issue key
+                </Button>
+              )}
+            </div>
+          )}
 
           <Separator />
 

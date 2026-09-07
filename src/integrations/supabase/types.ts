@@ -621,6 +621,7 @@ export type Database = {
           issued_at: string
           issued_by: string
           issued_to_name: string
+          issued_to_staff_id: string | null
           issued_to_type: string
           key_id: string
           notes: string | null
@@ -638,6 +639,7 @@ export type Database = {
           issued_at?: string
           issued_by: string
           issued_to_name: string
+          issued_to_staff_id?: string | null
           issued_to_type?: string
           key_id: string
           notes?: string | null
@@ -655,6 +657,7 @@ export type Database = {
           issued_at?: string
           issued_by?: string
           issued_to_name?: string
+          issued_to_staff_id?: string | null
           issued_to_type?: string
           key_id?: string
           notes?: string | null
@@ -665,6 +668,13 @@ export type Database = {
           visitor_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "key_issues_issued_to_staff_id_fkey"
+            columns: ["issued_to_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff_members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "key_issues_key_id_fkey"
             columns: ["key_id"]
