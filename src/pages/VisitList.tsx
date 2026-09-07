@@ -19,6 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format, isSameDay, addDays, subDays, isToday } from "date-fns";
 import { Visitor } from "@/types/visitor";
+import { useResidents } from "@/hooks/useResidents";
 import { useOverstayPolicy } from "@/hooks/useOverstayPolicy";
 import { VisitListQRDialog } from "@/components/VisitListQRDialog";
 import { HandoverPrintDialog } from "@/components/HandoverPrintDialog";
