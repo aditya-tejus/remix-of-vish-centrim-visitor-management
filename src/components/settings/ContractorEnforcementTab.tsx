@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
@@ -21,9 +21,40 @@ function slugify(label: string) {
   return label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 40);
 }
 
+const ENTRY_POLICY_LABEL: Record<string, string> = {
+  unsupervised: "Only stop them if they will be alone with residents",
+  provisional: "Let them in, but flagged as escorted until staff confirm",
+  reception: "Stop at the kiosk — a staff member must complete it",
+};
+
 export function ContractorEnforcementTab() {
   const { types, loading, refetch } = useCredentialTypes();
   const { toast } = useToast();
+  const [entryPolicy, setEntryPolicy] = useState<string>("unsupervised");
+
+  useEffect(() => {
+    supabase
+      .from("settings")
+      .select("value")
+      .eq("key", "contractor_entry_on_fail")
+      .maybeSingle()
+      .then(({ data }) => { if (data?.value) setEntryPolicy(data.value); });
+  }, []);
+
+  const saveEntryPolicy = async (value: string) => {
+    setEntryPolicy(value);
+    await supabase.from("settings").upsert({ key: "contractor_entry_on_fail", value }, { onConflict: "key" });
+    const { data: auth } = await supabase.auth.getUser();
+    await supabase.from("audit_log").insert({
+      action: "setting_changed",
+      performed_by: auth.user?.email || "Staff",
+      user_id: auth.user?.id ?? null,
+      records_affected: 1,
+      change_reason: "Contractor entry rule updated",
+      details: { key: "contractor_entry_on_fail", value } as any,
+    });
+    toast({ title: "Entry rule saved" });
+  };
   const [adding, setAdding] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [newShort, setNewShort] = useState("");
@@ -99,6 +130,24 @@ export function ContractorEnforcementTab() {
         </p>
       </div>
 
+      <div className="rounded-xl border border-border p-3 space-y-2">
+        <Label className="text-sm font-medium">
+          If a required check is missing, expired or not yet confirmed
+        </Label>
+        <Select value={entryPolicy} onValueChange={saveEntryPolicy}>
+          <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="unsupervised">{ENTRY_POLICY_LABEL.unsupervised}</SelectItem>
+            <SelectItem value="provisional">{ENTRY_POLICY_LABEL.provisional}</SelectItem>
+            <SelectItem value="reception">{ENTRY_POLICY_LABEL.reception}</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          A document a contractor uploads themselves never counts as valid until a staff member has seen the original
+          and confirmed it.
+        </p>
+      </div>
+
       <div className="space-y-2">
         {loading && <p className="text-xs text-muted-foreground">Loading…</p>}
         {!loading && types.length === 0 && (
@@ -111,7 +160,7 @@ export function ContractorEnforcementTab() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground">{t.label}</p>
                 <p className="text-xs text-muted-foreground">
-                  {JURISDICTION_LABEL[t.jurisdiction]} · short label “{t.short_label}”
+                  {JURISDICTION_LABEL[t.jurisdiction]} · {t.holder_scope === "person" ? "personal check" : "company check"} · short label “{t.short_label}”
                 </p>
               </div>
               <div className="flex items-center gap-1 shrink-0">
@@ -135,6 +184,23 @@ export function ContractorEnforcementTab() {
               <label className="flex items-center gap-2 cursor-pointer">
                 <Switch checked={t.is_active} onCheckedChange={(v) => patch(t.id, { is_active: v })} />
                 <span className="text-xs text-muted-foreground">{t.is_active ? "Active" : "Hidden"}</span>
+              </label>
+              <Select
+                value={t.holder_scope === "person" ? "person" : "company"}
+                onValueChange={(v) => patch(t.id, { holder_scope: v as "person" | "company" })}
+              >
+                <SelectTrigger className="h-8 w-[190px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="person">Held by the person</SelectItem>
+                  <SelectItem value="company">Held by the company</SelectItem>
+                </SelectContent>
+              </Select>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <Checkbox
+                  checked={t.requires_document === true}
+                  onCheckedChange={(v) => patch(t.id, { requires_document: v === true })}
+                />
+                <span className="text-xs text-foreground">Document must be on file</span>
               </label>
               <Select value={t.jurisdiction} onValueChange={(v) => patch(t.id, { jurisdiction: v as CredentialType["jurisdiction"] })}>
                 <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue /></SelectTrigger>
