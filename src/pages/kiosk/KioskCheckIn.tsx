@@ -157,6 +157,9 @@ export default function KioskCheckIn() {
     const allHealthClear = Object.values(flow.healthAnswers).every((v) => v === false);
     const groupId = flow.companions.length > 0 ? crypto.randomUUID() : undefined;
     const primaryQr = crypto.randomUUID().slice(0, 12).toUpperCase();
+    // Permanent per-person card code — reused when a returning visitor is recognised
+    const personQr = flow.personQr || primaryQr;
+
 
     // Add primary visitor
     addVisitor({
@@ -180,7 +183,9 @@ export default function KioskCheckIn() {
       contractorScreening: flow.selectedType === "contractor" ? flow.contractorAnswers : undefined,
       supplierId: flow.selectedSupplier?.id || undefined,
       qrCode: primaryQr,
+      personQr,
       groupId,
+
     });
 
     // Add companion visitors as independent records
