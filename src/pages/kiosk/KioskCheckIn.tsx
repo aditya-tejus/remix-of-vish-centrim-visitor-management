@@ -916,6 +916,10 @@ export default function KioskCheckIn() {
                 selectedSupplier={flow.selectedSupplier}
                 onSupplierChange={flow.setSelectedSupplier}
                 compact={false}
+                kiosk
+                workerFirstName={flow.formValues.firstName || ""}
+                workerSurname={flow.formValues.surname || ""}
+                workerMobile={flow.formValues.mobile || ""}
                 onBlockedChange={(blocked, reason) => flow.setContractorGate({ blocked, reason })}
               />
             </div>
