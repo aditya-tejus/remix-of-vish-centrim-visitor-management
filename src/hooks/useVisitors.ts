@@ -259,7 +259,8 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     reason?: string,
     timeOverride?: string,
     companionOutcome?: {
-      companionDetails: CompanionDetail[];
+      /** Omitted on the kiosk, which cannot read companion names. */
+      companionDetails?: CompanionDetail[];
       remainingCompanions: number;
       /** False when companions stay behind — the visit stays open for them. */
       everyoneLeft: boolean;
@@ -291,7 +292,9 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       : { check_out_time: checkOutTime.toISOString(), status: "checked-out" };
     if (reason) updateData.checkout_reason = reason;
     if (companionOutcome) {
-      updateData.companion_details = companionOutcome.companionDetails as any;
+      if (companionOutcome.companionDetails) {
+        updateData.companion_details = companionOutcome.companionDetails as any;
+      }
       updateData.additional_visitors = companionOutcome.remainingCompanions;
     }
     await supabase

@@ -13,7 +13,7 @@ import { KioskFeedbackScreen } from "@/components/kiosk/KioskFeedbackScreen";
 import { KioskSkeletonList } from "@/components/kiosk/KioskSkeleton";
 import { KioskErrorState } from "@/components/kiosk/KioskErrorState";
 
-type Phase = "search" | "confirm" | "feedback" | "done";
+type Phase = "search" | "companions" | "confirm" | "feedback" | "done";
 
 const OVERSTAY_MS = 8 * 3600000;
 
@@ -25,6 +25,7 @@ export default function KioskCheckOut() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<any>(null);
   const [doneName, setDoneName] = useState("");
+  const [stayingBehind, setStayingBehind] = useState(0);
 
   const checkedIn = useMemo(
     () => visitors.filter((v) => v.status === "checked-in" && v.type !== "resident"),
@@ -39,13 +40,25 @@ export default function KioskCheckOut() {
 
   const handleSelect = (v: any) => {
     setSelected(v);
-    setPhase("confirm");
+    setStayingBehind(0);
+    setPhase((v.additionalVisitors || 0) > 0 ? "companions" : "confirm");
   };
 
   const handleConfirm = async () => {
     if (!selected) return;
     const name = `${selected.firstName} ${selected.surname}`;
-    await checkOutVisitor(selected.id);
+    const companionCount = selected.additionalVisitors || 0;
+    await checkOutVisitor(
+      selected.id,
+      stayingBehind > 0 ? `Kiosk check-out — ${stayingBehind} still on site` : undefined,
+      undefined,
+      companionCount > 0
+        ? {
+            remainingCompanions: stayingBehind,
+            everyoneLeft: stayingBehind === 0,
+          }
+        : undefined
+    );
     setDoneName(name);
     setPhase("feedback");
     toast({ title: "Checked Out", description: `${name} has been checked out.` });
@@ -73,6 +86,67 @@ export default function KioskCheckOut() {
         visitorType={selected.type}
         onComplete={handleFeedbackComplete}
       />
+    );
+  }
+
+  if (phase === "companions" && selected) {
+    const companionCount = selected.additionalVisitors || 0;
+    const name = selected.firstName;
+    return (
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full space-y-6" role="region" aria-label="Who is leaving">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-foreground">Who is leaving?</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            You checked in with {companionCount} other {companionCount === 1 ? "person" : "people"}.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => { setStayingBehind(0); setPhase("confirm"); }}
+          className="w-full rounded-2xl border-2 border-warning/30 bg-card p-6 text-left active:scale-[0.99] transition"
+        >
+          <p className="text-xl font-bold text-foreground">All of us are leaving</p>
+          <p className="text-base text-muted-foreground mt-1">
+            {name} and {companionCount} {companionCount === 1 ? "other" : "others"}
+          </p>
+        </button>
+
+        <div className="rounded-2xl border-2 border-border bg-card p-6 space-y-4">
+          <p className="text-xl font-bold text-foreground">Some of us are staying</p>
+          <p className="text-base text-muted-foreground">How many people are staying on?</p>
+          <div className="flex items-center justify-center gap-6">
+            <Button
+              variant="secondary"
+              className="h-16 w-16 text-2xl border border-border"
+              onClick={() => setStayingBehind((n) => Math.max(0, n - 1))}
+              aria-label="Fewer staying"
+            >
+              −
+            </Button>
+            <span className="text-4xl font-bold text-foreground w-14 text-center">{stayingBehind}</span>
+            <Button
+              variant="secondary"
+              className="h-16 w-16 text-2xl border border-border"
+              onClick={() => setStayingBehind((n) => Math.min(companionCount, n + 1))}
+              aria-label="More staying"
+            >
+              +
+            </Button>
+          </div>
+          <Button
+            disabled={stayingBehind === 0}
+            onClick={() => setPhase("confirm")}
+            className="w-full h-14 text-base bg-warning hover:bg-warning/90 text-warning-foreground"
+          >
+            Continue
+          </Button>
+        </div>
+
+        <Button variant="secondary" onClick={() => setPhase("search")} className="w-full h-14 text-base gap-2 border border-border">
+          <ArrowLeft className="h-5 w-5" /> Back
+        </Button>
+      </motion.div>
     );
   }
 
@@ -110,6 +184,16 @@ export default function KioskCheckOut() {
                 {isOverstay && <span className="text-xs text-warning font-bold ml-1">OVERSTAY</span>}
               </span>
             </div>
+            {(selected.additionalVisitors || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Leaving now</span>
+                <span className="font-medium text-foreground">
+                  {stayingBehind > 0
+                    ? `${(selected.additionalVisitors || 0) - stayingBehind + 1} of ${(selected.additionalVisitors || 0) + 1} — ${stayingBehind} staying on`
+                    : "Everyone in your group"}
+                </span>
+              </div>
+            )}
             {selected.whomToVisit && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Visiting</span>
@@ -119,7 +203,7 @@ export default function KioskCheckOut() {
           </div>
         </div>
         <div className="flex gap-3">
-          <Button variant="secondary" onClick={() => setPhase("search")} className="flex-1 h-14 text-base gap-2 border border-border" aria-label="Cancel and go back">
+          <Button variant="secondary" onClick={() => setPhase((selected.additionalVisitors || 0) > 0 ? "companions" : "search")} className="flex-1 h-14 text-base gap-2 border border-border" aria-label="Cancel and go back">
             <ArrowLeft className="h-5 w-5" /> Cancel
           </Button>
           <Button onClick={handleConfirm} className="flex-1 h-14 text-base gap-2 bg-warning hover:bg-warning/90 text-warning-foreground" aria-label={`Check out ${name}`}>
