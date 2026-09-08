@@ -9,7 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { ShieldAlert, Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
 import { useCredentialTypes } from "@/hooks/useContractorEnforcement";
+import { useMandatoryCredentials } from "@/hooks/useMandatoryCredentials";
+import { useSite } from "@/contexts/SiteContext";
 import type { CredentialType } from "@/lib/contractorCredentials";
+
 
 const JURISDICTION_LABEL: Record<string, string> = {
   ALL: "All regions",
@@ -29,6 +32,9 @@ const ENTRY_POLICY_LABEL: Record<string, string> = {
 
 export function ContractorEnforcementTab() {
   const { types, loading, refetch } = useCredentialTypes();
+  const { mandatoryKeys, setForSite } = useMandatoryCredentials();
+  const { currentSite } = useSite();
+
   const { toast } = useToast();
   const [entryPolicy, setEntryPolicy] = useState<string>("unsupervised");
 
@@ -147,6 +153,44 @@ export function ContractorEnforcementTab() {
           and confirmed it.
         </p>
       </div>
+
+      {/* What this particular site insists on */}
+      <div className="rounded-xl border border-border p-3 space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <Label className="text-sm font-medium">Must be current at {currentSite?.name || "this site"}</Label>
+            <p className="text-xs text-muted-foreground">
+              Tick the checks this site insists on. Leave all unticked to follow the “Required” setting on each
+              credential below. These are your own policy choices, not legal requirements.
+            </p>
+          </div>
+          {mandatoryKeys && (
+            <Button variant="ghost" size="sm" onClick={() => setForSite(null)}>
+              Use the default list
+            </Button>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-3 pt-1">
+          {types.filter((t) => t.is_active).map((t) => {
+            const on = mandatoryKeys ? mandatoryKeys.includes(t.key) : t.is_required;
+            return (
+              <label key={t.id} className="flex items-center gap-2 cursor-pointer text-xs text-foreground">
+                <Checkbox
+                  checked={on}
+                  onCheckedChange={(v) => {
+                    const base = mandatoryKeys ?? types.filter((x) => x.is_required).map((x) => x.key);
+                    const next = v === true ? [...new Set([...base, t.key])] : base.filter((k) => k !== t.key);
+                    void setForSite(next);
+                  }}
+                />
+                {t.short_label || t.label}
+              </label>
+            );
+          })}
+        </div>
+      </div>
+
+
 
       <div className="space-y-2">
         {loading && <p className="text-xs text-muted-foreground">Loading…</p>}

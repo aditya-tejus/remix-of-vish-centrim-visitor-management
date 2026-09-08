@@ -1,11 +1,11 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useVisitors } from "@/hooks/useVisitors";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Search, LogOut, ArrowLeft, Clock, QrCode, KeyRound } from "lucide-react";
-import { useOpenKeyIssues } from "@/hooks/useOpenKeyIssues";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
@@ -27,8 +27,18 @@ export default function KioskCheckOut() {
   const [selected, setSelected] = useState<any>(null);
   const [doneName, setDoneName] = useState("");
   const [stayingBehind, setStayingBehind] = useState(0);
-  const { openIssues } = useOpenKeyIssues();
-  const heldKeys = selected ? openIssues.filter((i) => i.visitorId === selected.id) : [];
+  // The kiosk cannot read the keys register. It asks a narrow server check that
+  // returns counts only — never key labels, properties or holders.
+  const [heldCount, setHeldCount] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    const qr = selected?.qrCode || selected?.qr_code || selected?.personQr || null;
+    if (!qr) { setHeldCount(0); return; }
+    (supabase.rpc as any)("kiosk_open_key_holds", { p_person_qr: qr }).then(({ data }: any) => {
+      if (!cancelled) setHeldCount(Number(data?.[0]?.open_items ?? 0));
+    });
+    return () => { cancelled = true; };
+  }, [selected]);
 
   const checkedIn = useMemo(
     () => visitors.filter((v) => v.status === "checked-in" && v.type !== "resident"),
@@ -206,15 +216,15 @@ export default function KioskCheckOut() {
           </div>
         </div>
 
-        {heldKeys.length > 0 && (
+        {heldCount > 0 && (
           <div className="rounded-2xl border-2 border-warning/40 bg-warning/5 p-4 flex items-start gap-3 mb-4">
             <KeyRound className="h-6 w-6 text-warning shrink-0 mt-0.5" />
             <div>
               <p className="text-base font-semibold text-foreground">
-                Please hand back {heldKeys.length === 1 ? "the key" : "the keys"} before you leave
+                Please hand back {heldCount === 1 ? "the key or fob" : `the ${heldCount} keys or fobs`} before you leave
               </p>
               <p className="text-sm text-muted-foreground">
-                {heldKeys.map((k) => `${k.keyLabel}${k.propertyLabel ? ` (${k.propertyLabel})` : ""}`).join(", ")}
+                Reception will check them back in for you.
               </p>
             </div>
           </div>

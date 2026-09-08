@@ -1,0 +1,9 @@
+ALTER TYPE public.app_permission ADD VALUE IF NOT EXISTS 'contractor.view';
+ALTER TYPE public.app_permission ADD VALUE IF NOT EXISTS 'contractor.manage';
+ALTER TYPE public.app_permission ADD VALUE IF NOT EXISTS 'contractor.credentials.view';
+ALTER TYPE public.app_permission ADD VALUE IF NOT EXISTS 'contractor.credentials.manage';
+ALTER TYPE public.app_permission ADD VALUE IF NOT EXISTS 'keys.view';
+ALTER TYPE public.app_permission ADD VALUE IF NOT EXISTS 'keys.issue';
+ALTER TYPE public.app_permission ADD VALUE IF NOT EXISTS 'keys.return';
+ALTER TYPE public.app_permission ADD VALUE IF NOT EXISTS 'keys.manage';
+ALTER TYPE public.app_permission ADD VALUE IF NOT EXISTS 'keys.export';

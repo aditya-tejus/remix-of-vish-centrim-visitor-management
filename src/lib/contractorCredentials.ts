@@ -96,6 +96,13 @@ export function applicableCredentialTypes(
 }
 
 interface ChecklistInput {
+  /**
+   * Credential keys this site insists on. When omitted, the "Required" tick on
+   * the credential itself is used. Nothing here is treated as a legal
+   * requirement — it is the operator's own policy.
+   */
+  mandatoryKeys?: string[] | null;
+
   jurisdiction: Jurisdiction;
   types: CredentialType[];
   /** Company-wide records (insurance, trade licence) held against the supplier */
@@ -116,7 +123,9 @@ export function buildComplianceChecklist({
   types,
   supplierRecords = [],
   personRecords = [],
+  mandatoryKeys = null,
 }: ChecklistInput): CredentialCheck[] {
+
   return applicableCredentialTypes(jurisdiction, types).map((t) => {
     const scope = scopeOf(t);
     const personRec = personRecords.find((r) => r.credential_type_id === t.id);
@@ -140,7 +149,7 @@ export function buildComplianceChecklist({
       key: t.key,
       label: t.label,
       shortLabel: t.short_label,
-      blocking: t.is_required,
+      blocking: mandatoryKeys ? mandatoryKeys.includes(t.key) : t.is_required,
       scope,
       requiresDocument: t.requires_document === true,
       state,

@@ -1,8 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchKeyPolicy, KeyPolicy, DEFAULT_KEY_POLICY } from "@/hooks/useKeyPolicy";
+import { useSite } from "@/contexts/SiteContext";
 
-export type KeyStatus = "available" | "issued" | "permanent" | "overdue" | "lost" | "retired";
+export type KeyStatus =
+  | "available"
+  | "issued"
+  | "permanent"
+  | "overdue"
+  | "lost"
+  | "damaged"
+  | "awaiting_replacement"
+  | "retired";
 
 export interface KeyIssue {
   id: string;
@@ -43,6 +52,13 @@ export interface PropertyKey {
   lostAt: Date | null;
   lostNotes: string | null;
   replacedByKeyId: string | null;
+  /** Serial or engraved number, where the item carries one. */
+  serialNumber: string | null;
+  damagedAt: Date | null;
+  damagedNotes: string | null;
+  /** The lost or damaged item this copy was created to replace. */
+  replacesKeyId: string | null;
+  branchId: string | null;
 }
 
 const mapIssue = (r: any): KeyIssue => ({
@@ -69,7 +85,24 @@ export function isIssueOverdue(issue: { expectedReturn: Date | null; isPermanent
   return issue.expectedReturn.getTime() + graceMinutes * 60000 < now;
 }
 
+/** Records who did what to a key, so the register can always be explained. */
+async function logKeyAction(action: string, details: Record<string, unknown>, reason?: string | null) {
+  const { data: auth } = await supabase.auth.getUser();
+  const { data: profile } = auth.user
+    ? await supabase.from("profiles").select("display_name").eq("user_id", auth.user.id).maybeSingle()
+    : { data: null as any };
+  await supabase.from("audit_log").insert({
+    action,
+    performed_by: profile?.display_name || auth.user?.email || "Unknown staff",
+    user_id: auth.user?.id ?? null,
+    records_affected: 1,
+    change_reason: reason || null,
+    details: details as any,
+  });
+}
+
 export function useKeys() {
+  const { currentSiteId } = useSite();
   const [keys, setKeys] = useState<PropertyKey[]>([]);
   const [issues, setIssues] = useState<KeyIssue[]>([]);
   const [policy, setPolicy] = useState<KeyPolicy>(DEFAULT_KEY_POLICY);
@@ -78,14 +111,20 @@ export function useKeys() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     const [{ data: keyRows }, { data: issueRows }, keyPolicy] = await Promise.all([
-      (supabase.from("property_keys" as any) as any)
-        .select("*")
-        .eq("is_active", true)
-        .order("property_label", { ascending: true }),
-      (supabase.from("key_issues" as any) as any)
-        .select("*")
-        .order("issued_at", { ascending: false })
-        .limit(1000),
+      (() => {
+        let q = (supabase.from("property_keys" as any) as any)
+          .select("*")
+          .eq("is_active", true);
+        if (currentSiteId) q = q.eq("branch_id", currentSiteId);
+        return q.order("property_label", { ascending: true });
+      })(),
+      (() => {
+        let q = (supabase.from("key_issues" as any) as any).select("*");
+        if (currentSiteId) q = q.eq("branch_id", currentSiteId);
+        return q
+          .order("issued_at", { ascending: false })
+          .limit(1000);
+      })(),
       fetchKeyPolicy(),
     ]);
 
@@ -98,7 +137,7 @@ export function useKeys() {
       ((keyRows as any[]) || []).map((r) => {
         const open = allIssues.find((i) => i.keyId === r.id && !i.returnedAt) || null;
         const overdue = !!open && isIssueOverdue(open, keyPolicy.graceMinutes, now);
-        const status: KeyStatus = r.status === "lost" || r.status === "retired"
+        const status: KeyStatus = ["lost", "retired", "damaged", "awaiting_replacement"].includes(r.status)
           ? r.status
           : open
             ? (open.isPermanent ? "permanent" : overdue ? "overdue" : "issued")
@@ -120,11 +159,16 @@ export function useKeys() {
           lostAt: r.lost_at ? new Date(r.lost_at) : null,
           lostNotes: r.lost_notes ?? null,
           replacedByKeyId: r.replaced_by_key_id ?? null,
+          serialNumber: r.serial_number ?? null,
+          damagedAt: r.damaged_at ? new Date(r.damaged_at) : null,
+          damagedNotes: r.damaged_notes ?? null,
+          replacesKeyId: r.replaces_key_id ?? null,
+          branchId: r.branch_id ?? null,
         };
       })
     );
     setLoading(false);
-  }, []);
+  }, [currentSiteId]);
 
   useEffect(() => {
     fetchAll();
@@ -139,6 +183,7 @@ export function useKeys() {
     copyNumber?: number | null;
     storageLocation?: string | null;
     notes?: string | null;
+    serialNumber?: string | null;
     /** Create this many identical keys, numbered copy 1..n. */
     copies?: number;
   }) => {
@@ -151,13 +196,23 @@ export function useKeys() {
       resident_name: input.residentName || null,
       storage_location: input.storageLocation || null,
       notes: input.notes || null,
+      serial_number: input.serialNumber || null,
       status: "available",
+      ...(currentSiteId ? { branch_id: currentSiteId } : {}),
     };
     const rows = count > 1
       ? Array.from({ length: count }, (_, i) => ({ ...base, copy_number: i + 1 }))
       : [{ ...base, copy_number: input.copyNumber ?? null }];
 
     const { error } = await (supabase.from("property_keys" as any) as any).insert(rows);
+    if (!error) {
+      await logKeyAction("key_added", {
+        label: input.keyLabel,
+        type: input.keyType,
+        property: input.propertyLabel,
+        copies: count,
+      });
+    }
     await fetchAll();
     return error;
   };
@@ -186,9 +241,17 @@ export function useKeys() {
       is_permanent: !!input.isPermanent,
       issued_by: input.issuedBy || null,
       notes: input.notes || null,
+      ...(currentSiteId ? { branch_id: currentSiteId } : {}),
     });
     if (!error) {
       await (supabase.from("property_keys" as any) as any).update({ status: "issued" }).eq("id", input.keyId);
+      await logKeyAction("key_issued", {
+        key_id: input.keyId,
+        holder: input.issuedToName,
+        holder_type: input.issuedToType,
+        permanent: !!input.isPermanent,
+        due: input.expectedReturn?.toISOString() ?? null,
+      });
     }
     await fetchAll();
     return error;
@@ -210,6 +273,11 @@ export function useKeys() {
       .eq("id", input.issueId);
     if (!error) {
       await (supabase.from("property_keys" as any) as any).update({ status: "available" }).eq("id", input.keyId);
+      await logKeyAction("key_returned", {
+        key_id: input.keyId,
+        received_by: input.returnedTo || null,
+        condition: input.conditionNotes || null,
+      });
     }
     await fetchAll();
     return error;
@@ -280,7 +348,10 @@ export function useKeys() {
           storage_location: key.storageLocation,
           copy_number: nextCopy,
           notes: `Replacement for copy ${key.copyNumber ?? "—"} reported lost`,
+          serial_number: null,
+          replaces_key_id: key.id,
           status: "available",
+          ...(currentSiteId ? { branch_id: currentSiteId } : {}),
         })
         .select("id")
         .maybeSingle();
@@ -326,6 +397,76 @@ export function useKeys() {
     return error;
   };
 
+  /**
+   * Record an item as damaged. Optionally puts a fresh copy in the cabinet with
+   * the next copy number, exactly like a lost item.
+   */
+  const markDamaged = async (input: {
+    key: PropertyKey;
+    notes?: string | null;
+    replace?: boolean;
+    performedBy?: string | null;
+  }) => {
+    const { key } = input;
+    let replacementId: string | null = null;
+
+    if (input.replace) {
+      const siblings = keys.filter(
+        (k) =>
+          k.keyType === key.keyType &&
+          k.propertyLabel === key.propertyLabel &&
+          (k.residentVisitorId || null) === (key.residentVisitorId || null)
+      );
+      const nextCopy = Math.max(0, ...siblings.map((k) => k.copyNumber || 0)) + 1;
+      const { data, error: insertError } = await (supabase.from("property_keys" as any) as any)
+        .insert({
+          key_label: key.keyLabel,
+          key_type: key.keyType,
+          property_label: key.propertyLabel,
+          resident_visitor_id: key.residentVisitorId,
+          resident_name: key.residentName,
+          storage_location: key.storageLocation,
+          copy_number: nextCopy,
+          notes: `Replacement for copy ${key.copyNumber ?? "—"} reported damaged`,
+          replaces_key_id: key.id,
+          status: "available",
+          ...(currentSiteId ? { branch_id: currentSiteId } : {}),
+        })
+        .select("id")
+        .maybeSingle();
+      if (insertError) return insertError;
+      replacementId = (data as any)?.id ?? null;
+    }
+
+    if (key.currentIssue) {
+      await (supabase.from("key_issues" as any) as any)
+        .update({
+          returned_at: new Date().toISOString(),
+          condition_notes: `Returned damaged${input.notes ? `: ${input.notes}` : ""}`,
+        })
+        .eq("id", key.currentIssue.id);
+    }
+
+    const { error } = await (supabase.from("property_keys" as any) as any)
+      .update({
+        status: replacementId ? "damaged" : "awaiting_replacement",
+        damaged_at: new Date().toISOString(),
+        damaged_notes: input.notes || null,
+        replaced_by_key_id: replacementId,
+      })
+      .eq("id", key.id);
+
+    if (!error) {
+      await logKeyAction(
+        "key_reported_damaged",
+        { key: key.keyLabel, copy: key.copyNumber, replacement_created: !!replacementId },
+        input.notes || null
+      );
+    }
+    await fetchAll();
+    return error;
+  };
+
   const setKeyStatus = async (keyId: string, status: KeyStatus) => {
     await (supabase.from("property_keys" as any) as any).update({ status }).eq("id", keyId);
     await fetchAll();
@@ -336,6 +477,6 @@ export function useKeys() {
   return {
     keys, issues, loading, policy,
     refetch: fetchAll,
-    addKey, issueKey, returnKey, renewIssue, markLost, setKeyStatus, historyFor,
+    addKey, issueKey, returnKey, renewIssue, markLost, markDamaged, setKeyStatus, historyFor,
   };
 }
