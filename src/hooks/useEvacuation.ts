@@ -138,11 +138,14 @@ export function useEvacuationDrills(status?: string) {
     queryKey: ["evacuation-drills", status],
     queryFn: async () => {
       let query = supabase.from("evacuation_drills" as any).select("*").order("started_at", { ascending: false });
-      if (status) query = query.eq("status", status);
+      // "active" means the event is still being worked on, paused included.
+      if (status === "active") query = query.in("state", ["draft", "active", "paused"]);
+      else if (status) query = query.eq("state", status);
       const { data, error } = await query;
       if (error) throw error;
       return (data || []) as unknown as EvacuationDrill[];
     },
+
   });
 }
 
