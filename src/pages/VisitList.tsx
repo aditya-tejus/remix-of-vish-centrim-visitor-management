@@ -139,7 +139,7 @@ export default function VisitList() {
 
           {/* ZONE B — Page command bar */}
           <div className="sticky top-12 z-[9] border-b border-border bg-card/95 backdrop-blur-sm">
-            <div className="flex items-center justify-between px-6 py-2.5 gap-4">
+            <div className="flex flex-wrap items-center justify-between px-4 sm:px-6 py-2.5 gap-y-2 gap-x-4">
               {/* Left: clock + date nav */}
               <div className="flex items-center gap-3 shrink-0">
                 <span className="text-[13px] text-muted-foreground font-medium">
