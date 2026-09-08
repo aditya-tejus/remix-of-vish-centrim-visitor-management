@@ -135,7 +135,9 @@ export function useCheckInFlow(open: boolean) {
         "branch_tc_url", "branch_privacy_url", "show_branch_docs_in_form", "jurisdiction",
         "badge_printing_enabled",
         `tc_content_${selectedType}`,
+        `food_register_checkin_${selectedType}`,
       ])
+
       .then(({ data }) => {
         if (data) {
           const map: Record<string, string> = {};
