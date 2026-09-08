@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Lock, Save, ShieldCheck, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { PermissionMatrixCard } from "@/components/settings/PermissionMatrixCard";
 
 const lockableSections = [
   { key: "lock_presence", label: "Presence", description: "Jurisdiction and person type settings" },
@@ -65,6 +66,8 @@ export function LockGovernanceTab() {
   const lockedCount = Object.values(locks).filter(Boolean).length;
 
   return (
+    <>
+      <PermissionMatrixCard />
     <div className="space-y-6">
       <Card>
         <CardHeader>
@@ -141,5 +144,6 @@ export function LockGovernanceTab() {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }
