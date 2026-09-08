@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useOpenKeyIssues } from "@/hooks/useOpenKeyIssues";
+import { fetchKeyPolicy, DEFAULT_KEY_POLICY, type KeyPolicy } from "@/hooks/useKeyPolicy";
 import { useFormFields, FormField } from "@/hooks/useFormFields";
 import { useActiveHealthQuestions, useActiveVaccinationFields } from "@/hooks/useHealthQuestions";
 import { useResidents } from "@/hooks/useResidents";
@@ -27,7 +27,8 @@ export function useKioskCheckInFlow() {
   const [tcContent, setTcContent] = useState<string | null>(null);
   const [jurisdiction, setJurisdiction] = useState<"AU" | "UK">("UK");
   const [contractorGate, setContractorGate] = useState<{ blocked: boolean; reason: string | null }>({ blocked: false, reason: null });
-  const { overdueForName, policy: keyPolicy } = useOpenKeyIssues();
+  const [keyPolicy, setKeyPolicy] = useState<KeyPolicy>(DEFAULT_KEY_POLICY);
+  const [overdueKeyCount, setOverdueKeyCount] = useState(0);
   const [residentLookupMode, setResidentLookupMode] = useState<"show_all" | "search_first">("search_first");
   const [staffLookupMode, setStaffLookupMode] = useState<"search_first" | "by_department" | "free_text">("search_first");
   const [returningOptions, setReturningOptions] = useState({ mobile: false, qr: false, name: false, suggestResident: false });
@@ -253,8 +254,7 @@ export function useKioskCheckInFlow() {
   // Outstanding keys or fobs: at an unattended kiosk we ask the person to see
   // reception rather than silently letting them in.
   const fullName = `${(formValues.firstName || "").trim()} ${(formValues.surname || "").trim()}`.trim();
-  const overdueKeys = overdueForName(fullName);
-  const keyBlocked = keyPolicy.enforcement === "block" && overdueKeys.length > 0;
+  const keyBlocked = keyPolicy.enforcement === "block" && overdueKeyCount > 0;
 
   const foodStepValid = bringingFood === false || (bringingFood === true && isFoodFormValid(foodForm));
 
@@ -306,7 +306,7 @@ export function useKioskCheckInFlow() {
     highTemperature,
     screeningBlocked,
     screeningFlagged,
-    overdueKeys,
+    overdueKeyCount,
     keyBlocked,
     keyEnforcement: keyPolicy.enforcement,
     outbreakMode,
