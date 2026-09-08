@@ -2552,6 +2552,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      kiosk_check_in: {
+        Args: { p_payload: Json }
+        Returns: {
+          qr_code: string
+          visitor_id: string
+        }[]
+      }
       kiosk_check_out: {
         Args: { p_time?: string; p_visitor_id: string }
         Returns: boolean

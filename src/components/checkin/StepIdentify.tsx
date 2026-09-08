@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Check, Phone, QrCode, UserPlus } from "lucide-react";
 import { VisitorProfile } from "./useCheckInFlow";
 import { usePersonTypes } from "@/hooks/usePersonTypes";
+import { useEffect } from "react";
 
 const allTypeChips: { type: VisitorType; label: string; emoji: string; desc: string }[] = [
   { type: "visitor", label: "Visitor", emoji: "👋", desc: "Family, friends, guests" },
@@ -35,6 +36,12 @@ export function StepIdentify({
   const { deskTypes } = usePersonTypes();
   const enabled = new Set(deskTypes.map((t) => t.type as string));
   const typeChips = allTypeChips.filter((tc) => enabled.has(tc.type));
+  const onlyType = typeChips.length === 1 ? typeChips[0] : null;
+
+  // When the site only uses one visitor type, don't make staff choose it.
+  useEffect(() => {
+    if (onlyType && selectedType !== onlyType.type) onTypeChange(onlyType.type);
+  }, [onlyType, selectedType, onTypeChange]);
 
   return (
     <div className="space-y-6">
@@ -55,8 +62,8 @@ export function StepIdentify({
         </div>
       </div>
 
-      {/* Type chips */}
-      <div className="space-y-3">
+      {/* Type chips — hidden when the site only has one type enabled */}
+      <div className={`space-y-3 ${onlyType ? "hidden" : ""}`}>
         <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Visitor Type</p>
         <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
           {typeChips.map((tc) => (
