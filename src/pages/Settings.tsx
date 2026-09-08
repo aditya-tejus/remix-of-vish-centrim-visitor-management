@@ -32,14 +32,15 @@ export default function SettingsPage() {
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <SidebarInset className="flex-1">
-          <header className="sticky top-0 z-30 bg-card border-b border-border h-14 flex items-center px-6">
+          <header className="sticky top-0 z-30 bg-card border-b border-border h-14 flex items-center justify-between px-6">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
               <div>
                 <h1 className="text-xl font-bold text-foreground leading-tight">Settings</h1>
-                <p className="text-[13px] text-muted-foreground">Manage configuration for each person type and global system settings.</p>
+                <p className="text-[13px] text-muted-foreground">Decisions administrators make for this site.</p>
               </div>
             </div>
+            <SiteSwitcher compact />
           </header>
           <main className="p-6">
             <div className="flex gap-6">
@@ -50,6 +51,11 @@ export default function SettingsPage() {
 
               {/* Content */}
               <div className="flex-1 min-w-0 max-w-3xl">
+                <SettingsPageHeading
+                  title={SECTION_META[active].title}
+                  description={SECTION_META[active].description}
+                  scopes={SECTION_META[active].scopes}
+                />
                 {isPersonType && <PersonTypeSettings type={active} />}
                 {active === "person-types" && <PersonTypesTab />}
                 {active === "feedback" && <SurveyBuilder />}
