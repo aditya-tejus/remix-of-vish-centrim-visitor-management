@@ -33,3 +33,4 @@ Baseline recorded in the approved plan document.
 - Settings regrouped by administrator decisions with visible scope badges.
 - Shared loading/empty/error/permission/offline states added at `src/components/states`.
 - No schema, RLS, or workflow changes in this stage.
+- Stage 2 correction: `/` now opens the Visit List (daily operations); the workbench moved to `/today` with `/dashboard` and `/workbench` redirecting there. Sidebar shows Visit list and Today as primary items with correct active state.
