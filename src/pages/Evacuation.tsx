@@ -131,15 +131,24 @@ export default function Evacuation() {
 
   const ensureDrill = async (): Promise<EvacuationDrill> => {
     if (activeDrill) return activeDrill;
+    if (!can("emergency.activate")) {
+      throw new Error("You do not have permission to activate an emergency.");
+    }
     return await startDrill.mutateAsync({
-      title: `Roll call ${format(new Date(), "dd MMM yyyy HH:mm")}`,
+      title: `${eventClass === "drill" ? "Drill" : "Emergency"} ${format(new Date(), "dd MMM yyyy HH:mm")}`,
       people: onSite.map(seedOf),
+      eventClass,
+      eventType: eventClass === "drill" ? "drill" : "emergency",
     });
   };
 
-  /** Records an outcome for a group of people, creating the drill if needed. */
-  const setStatusFor = async (people: RollCallPerson[], status: AttendanceStatus) => {
+  /** Records an outcome for a group of people, creating the event if needed. */
+  const setStatusFor = async (people: RollCallPerson[], status: AttendanceStatus, reason?: string) => {
     if (people.length === 0) return;
+    if (!can("emergency.mark_safe")) {
+      toast({ title: "Not allowed", description: "You do not have permission to record roll call outcomes.", variant: "destructive" });
+      return;
+    }
     setBusy(true);
     try {
       const drill = await ensureDrill();
@@ -152,7 +161,7 @@ export default function Evacuation() {
       for (const p of people) {
         const attId = found.get(p.key);
         if (attId) {
-          if (status === "unaccounted") await markUnsafe.mutateAsync(attId);
+          if (status === "unaccounted") await markUnsafe.mutateAsync({ id: attId, reason });
           else await markSafe.mutateAsync({ id: attId, status, pointId: assemblyPoint || undefined, markedBy });
         } else {
           await addAttendee.mutateAsync({
@@ -171,10 +180,27 @@ export default function Evacuation() {
     }
   };
 
+  /** Undoing an outcome is a correction and always needs a reason. */
   const togglePerson = (p: RollCallPerson) => {
-    const current = statusOf(p);
-    void setStatusFor([p], current === "unaccounted" ? "safe" : "unaccounted");
+    if (accountedFor(p) || statusOf(p) !== "unaccounted") {
+      setCorrecting(p);
+      setCorrectionReason("");
+      return;
+    }
+    void setStatusFor([p], "safe");
   };
+
+  const confirmCorrection = async () => {
+    if (!correcting) return;
+    if (correctionReason.trim().length < 3) {
+      toast({ title: "Reason required", description: "Record why this entry is being changed.", variant: "destructive" });
+      return;
+    }
+    await setStatusFor([correcting], "unaccounted", correctionReason.trim());
+    setCorrecting(null);
+    setCorrectionReason("");
+  };
+
 
   const allAreas = useMemo(() => {
     const set = new Set<string>();
