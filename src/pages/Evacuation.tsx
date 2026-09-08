@@ -313,7 +313,7 @@ export default function Evacuation() {
     "Responsible staff": p.responsibleStaff,
 
     "On site since": p.checkInTime ? format(p.checkInTime, "dd/MM/yyyy HH:mm") : "",
-    Status: statusOf(p) === "safe" ? "Safe" : statusOf(p) === "evacuated_offsite" ? "Evacuated off-site" : "Not accounted for",
+    Status: ATTENDANCE_LABELS[statusOf(p)],
     "Marked at": statusByKey.get(p.key)?.at ? format(new Date(statusByKey.get(p.key)!.at!), "HH:mm") : "",
   }));
 
@@ -418,7 +418,7 @@ export default function Evacuation() {
   const renderPerson = (p: RollCallPerson) => {
 
     const status = statusOf(p);
-    const isSafe = status !== "unaccounted";
+    const isSafe = ACCOUNTED_STATUSES.includes(status);
     const marked = statusByKey.get(p.key);
     return (
       <div
@@ -487,7 +487,7 @@ export default function Evacuation() {
 
             {isSafe && marked?.at && (
               <p className="mt-1 text-[11px] text-success">
-                {status === "evacuated_offsite" ? "Evacuated off-site" : "Safe"} at {format(new Date(marked.at), "HH:mm")}
+                {ATTENDANCE_LABELS[status]} at {format(new Date(marked.at), "HH:mm")}
                 {points.find((pt) => pt.id === marked.point) ? ` · ${points.find((pt) => pt.id === marked.point)!.name}` : ""}
               </p>
             )}
