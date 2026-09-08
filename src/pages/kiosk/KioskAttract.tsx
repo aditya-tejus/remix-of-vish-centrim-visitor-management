@@ -102,6 +102,8 @@ export default function KioskAttract() {
           <div className="text-left">
             <p className="text-base font-medium text-foreground">Prefer your phone?</p>
             <p className="text-sm text-muted-foreground">Scan to check in<br />from your device</p>
+            <p className="text-[11px] text-muted-foreground/70 mt-1">Code refreshes every 5 minutes</p>
+
           </div>
         </div>
       </div>
