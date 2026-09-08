@@ -65,6 +65,7 @@ export default function VisitorProfilePage() {
   const { visitors, deleteVisitor, addVisitor, checkOutVisitor } = useVisitors();
   const { toast } = useToast();
   const { role } = useAuth();
+  const { currentSite, currentSiteId } = useSite();
   const isAdmin = role === "admin";
   const { openIssues } = useOpenKeyIssues();
   const { checkVisitor } = useWatchlist();

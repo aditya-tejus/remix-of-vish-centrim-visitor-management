@@ -38,6 +38,8 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [successName, setSuccessName] = useState("");
   const [successBadge, setSuccessBadge] = useState<BadgeData | null>(null);
+  const [createdVisitorId, setCreatedVisitorId] = useState<string | null>(null);
+  const { currentSite, currentSiteId } = useSite();
 
   const handleClose = () => {
     flow.resetForm();
@@ -48,6 +50,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
   const handleSubmit = () => {
     const visitor = flow.buildVisitor();
     const created = onAdd(visitor);
+    setCreatedVisitorId(created?.id ?? null);
     const fullName = `${flow.formData.firstName} ${flow.formData.surname}`.trim();
 
     // Food register entry (linked to the resident's real record id)
@@ -183,7 +186,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
               </div>
               {flow.badgePrintingEnabled && successBadge && (
                 <div className="flex gap-2.5 pt-2">
-                  <Button variant="outline" className="gap-2 rounded-xl" onClick={() => issueBadge(successBadge, { visitorId: createdIdRef.current, siteId: currentSiteId, siteName: currentSite?.name })}>
+                  <Button variant="outline" className="gap-2 rounded-xl" onClick={() => issueBadge(successBadge, { visitorId: createdVisitorId, siteId: currentSiteId, siteName: currentSite?.name })}>
                     <Printer className="h-4 w-4" /> Print Badge
                   </Button>
                   <Button className="rounded-xl" onClick={handleClose}>Done</Button>
