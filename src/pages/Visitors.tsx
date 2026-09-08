@@ -139,7 +139,7 @@ export default function Visitors() {
             </div>
 
             <Tabs defaultValue="visitors">
-              <TabsList className="inline-flex items-center bg-muted rounded-lg p-1 gap-0.5 h-auto">
+              <TabsList className="flex flex-wrap items-center justify-start bg-muted rounded-lg p-1 gap-0.5 h-auto">
                 <TabsTrigger value="visitors" className="rounded-md h-8 px-4 text-[13px] font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-1.5">
                   <User className="h-3.5 w-3.5" />Visitors
                   <span className="text-[10px] rounded-full px-1.5 py-0.5 font-semibold">{byType.visitor.length}</span>
