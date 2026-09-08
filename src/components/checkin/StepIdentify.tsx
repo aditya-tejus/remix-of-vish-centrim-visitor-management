@@ -31,6 +31,10 @@ export function StepIdentify({
   onSelectProfile,
   onNewPerson,
 }: StepIdentifyProps) {
+  const { deskTypes } = usePersonTypes();
+  const enabled = new Set(deskTypes.map((t) => t.type as string));
+  const typeChips = allTypeChips.filter((tc) => enabled.has(tc.type));
+
   return (
     <div className="space-y-6">
       {/* Search input */}
