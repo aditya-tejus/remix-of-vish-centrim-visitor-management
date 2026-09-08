@@ -271,7 +271,20 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       updateData.additional_visitors = details.companionDetails.length;
     }
 
+    if (publicMode) {
+      // Kiosk: narrow server function, no direct table write.
+      await supabase.rpc("kiosk_resident_leave" as any, {
+        p_visitor_id: visitorId,
+        p_time: now.toISOString(),
+        p_leave_type: details.leaveType ?? null,
+        p_expected_return: details.expectedReturnDate?.toISOString() ?? null,
+        p_accompanied_by_name: details.accompaniedByName ?? null,
+        p_reason: details.checkoutReason ?? null,
+      });
+      return;
+    }
     await supabase.from("visitors").update(updateData).eq("id", visitorId);
+
   };
 
   const checkOutVisitor = async (
