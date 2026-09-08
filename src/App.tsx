@@ -29,6 +29,7 @@ import FoodRegister from "./pages/FoodRegister";
 import KeysRegister from "./pages/KeysRegister";
 
 import ReportsHome from "./pages/ReportsHome";
+import OperationsReport from "./pages/OperationsReport";
 import EvacuationReport from "./pages/EvacuationReport";
 import PresenceLog from "./pages/PresenceLog";
 import VisitTrends from "./pages/VisitTrends";
@@ -89,6 +90,7 @@ const App = () => (
             <Route path="/reports" element={<Staff><ReportsHome /></Staff>} />
             <Route path="/reports/analytics" element={<Staff><ReportsPage /></Staff>} />
             <Route path="/reports/evacuation" element={<Staff><EvacuationReport /></Staff>} />
+            <Route path="/reports/on-site" element={<Staff><OperationsReport /></Staff>} />
             <Route path="/reports/presence" element={<Staff><PresenceLog /></Staff>} />
             <Route path="/reports/trends" element={<Staff><VisitTrends /></Staff>} />
             <Route path="/reports/feedback-responses" element={<Staff><FeedbackResponses /></Staff>} />

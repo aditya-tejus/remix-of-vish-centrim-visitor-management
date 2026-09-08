@@ -1,9 +1,16 @@
 import { useNavigate } from "react-router-dom";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { Shield, ClipboardList, TrendingUp, BarChart3, ArrowRight, MessageSquare } from "lucide-react";
+import { Shield, ClipboardList, TrendingUp, BarChart3, ArrowRight, MessageSquare, Users } from "lucide-react";
 
 const REPORT_CARDS = [
+  {
+    title: "Who is on site",
+    description: "Live presence, people over their expected time and visit history",
+    icon: Users,
+    path: "/reports/on-site",
+    color: "text-primary bg-primary/10",
+  },
   {
     title: "Evacuation Report",
     description: "History of evacuation drills and roll call results",
