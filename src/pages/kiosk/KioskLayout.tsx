@@ -65,6 +65,24 @@ export default function KioskLayout() {
         <main className="flex-1">
           <Outlet />
         </main>
+        {/* Discreet staff access — press and hold */}
+        <button
+          onMouseDown={startHold}
+          onMouseUp={cancelHold}
+          onMouseLeave={cancelHold}
+          onTouchStart={startHold}
+          onTouchEnd={cancelHold}
+          onContextMenu={(e) => e.preventDefault()}
+          className="fixed bottom-3 right-3 p-3 text-muted-foreground/20 active:text-muted-foreground/60"
+          aria-label="Staff access"
+        >
+          <ShieldCheck className="h-4 w-4" />
+        </button>
+        <KioskPinPad
+          open={pinOpen}
+          onOpenChange={setPinOpen}
+          onSuccess={() => { setPinOpen(false); navigate("/kiosk/evacuation"); }}
+        />
         <KioskIdleWarning
           open={showWarning}
           countdownSeconds={30}
@@ -72,6 +90,7 @@ export default function KioskLayout() {
           onTimeout={handleIdle}
         />
       </div>
+
     );
   }
 
