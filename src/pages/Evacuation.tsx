@@ -565,6 +565,20 @@ export default function Evacuation() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                {!activeDrill && (
+                  <Select value={eventClass} onValueChange={(v) => setEventClass(v as "drill" | "real")}>
+                    <SelectTrigger className="h-9 w-[150px] text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="real">Real emergency</SelectItem>
+                      <SelectItem value="drill">Practice drill</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+                {activeDrill && (
+                  <Button variant="outline" size="sm" disabled={busy} onClick={togglePause} className="h-9 text-xs">
+                    {activeDrill.state === "paused" ? "Resume" : "Pause"}
+                  </Button>
+                )}
                 {points.length > 0 && (
                   <Select value={assemblyPoint || "none"} onValueChange={(v) => setAssemblyPoint(v === "none" ? "" : v)}>
                     <SelectTrigger className="h-9 w-[190px] text-xs">
