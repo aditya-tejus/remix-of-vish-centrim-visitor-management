@@ -1699,6 +1699,27 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          permission: Database["public"]["Enums"]["app_permission"]
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          permission: Database["public"]["Enums"]["app_permission"]
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          permission?: Database["public"]["Enums"]["app_permission"]
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           id: string
@@ -2545,6 +2566,13 @@ export type Database = {
       current_user_site_ids: { Args: never; Returns: string[] }
       default_site_id: { Args: never; Returns: string }
       ensure_user_bootstrap: { Args: never; Returns: undefined }
+      has_permission: {
+        Args: {
+          _permission: Database["public"]["Enums"]["app_permission"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2676,6 +2704,15 @@ export type Database = {
           is_match: boolean
         }[]
       }
+      log_audit: {
+        Args: {
+          _action: string
+          _details?: Json
+          _reason?: string
+          _records?: number
+        }
+        Returns: string
+      }
       resolve_setting: {
         Args: {
           p_branch_id?: string
@@ -2692,6 +2729,22 @@ export type Database = {
       verify_kiosk_pin: { Args: { p_pin: string }; Returns: boolean }
     }
     Enums: {
+      app_permission:
+        | "presence.view"
+        | "checkin.create"
+        | "checkout.perform"
+        | "person.edit"
+        | "screening.view"
+        | "assistance.view"
+        | "credentials.view"
+        | "emergency.activate"
+        | "emergency.mark_safe"
+        | "emergency.export"
+        | "watchlist.manage"
+        | "privacy.manage"
+        | "data.export"
+        | "data.erase"
+        | "settings.administer"
       app_role: "admin" | "staff" | "user"
     }
     CompositeTypes: {
@@ -2820,6 +2873,23 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_permission: [
+        "presence.view",
+        "checkin.create",
+        "checkout.perform",
+        "person.edit",
+        "screening.view",
+        "assistance.view",
+        "credentials.view",
+        "emergency.activate",
+        "emergency.mark_safe",
+        "emergency.export",
+        "watchlist.manage",
+        "privacy.manage",
+        "data.export",
+        "data.erase",
+        "settings.administer",
+      ],
       app_role: ["admin", "staff", "user"],
     },
   },
