@@ -4,14 +4,30 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Users } from "lucide-react";
 import { usePersonTypes, PersonTypeConfigRow } from "@/hooks/usePersonTypes";
+import { useAuth } from "@/hooks/useAuth";
+import { useOperatingContext, siteScopedKey } from "@/contexts/OperatingContext";
+import { SettingExplainer } from "@/components/settings/SettingExplainer";
+
+const FLAGS: { key: keyof PersonTypeConfigRow; label: string; help: string }[] = [
+  { key: "kioskEnabled", label: "On kiosk", help: "Offered as a sign-in choice on the kiosk." },
+  { key: "deskEnabled", label: "At front desk", help: "Offered when staff sign someone in." },
+  { key: "staffVisible", label: "Visible to staff", help: "Appears in lists and filters." },
+  { key: "destinationRequired", label: "Must say who/where", help: "Destination is required at sign-in." },
+  { key: "screeningApplies", label: "Check-in questions", help: "Check-in questions are asked." },
+  { key: "privacyApplies", label: "Privacy agreement", help: "Privacy acknowledgement is asked." },
+  { key: "badgeApplies", label: "Badge and code", help: "A badge and personal code are issued." },
+  { key: "rollCallIncluded", label: "In roll call", help: "Counted in the emergency roll call." },
+];
 
 export function PersonTypesTab() {
   const { personTypes, loading, reload } = usePersonTypes();
+  const { role } = useAuth();
+  const { siteId, siteName, pack } = useOperatingContext();
   const [rows, setRows] = useState<PersonTypeConfigRow[]>([]);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  const canEdit = role === "admin" || role === "staff";
 
   useEffect(() => { if (!loading) setRows(personTypes); }, [loading, personTypes]);
 
@@ -20,79 +36,95 @@ export function PersonTypesTab() {
 
   const save = async () => {
     setSaving(true);
+    const k = (key: string) => siteScopedKey(key, siteId);
     const payload = rows.flatMap((r) => [
-      { key: `person_type_kiosk_${r.type}`, value: r.kioskEnabled ? "true" : "false" },
-      { key: `person_type_desk_${r.type}`, value: r.deskEnabled ? "true" : "false" },
-      { key: `person_type_label_${r.type}`, value: r.kioskLabel === r.label ? "" : r.kioskLabel.trim() },
+      { key: k(`person_type_kiosk_${r.type}`), value: r.kioskEnabled ? "true" : "false" },
+      { key: k(`person_type_desk_${r.type}`), value: r.deskEnabled ? "true" : "false" },
+      { key: k(`person_type_staffvisible_${r.type}`), value: r.staffVisible ? "true" : "false" },
+      { key: k(`person_type_destination_${r.type}`), value: r.destinationRequired ? "true" : "false" },
+      { key: k(`person_type_screening_${r.type}`), value: r.screeningApplies ? "true" : "false" },
+      { key: k(`person_type_privacy_${r.type}`), value: r.privacyApplies ? "true" : "false" },
+      { key: k(`person_type_badge_${r.type}`), value: r.badgeApplies ? "true" : "false" },
+      { key: k(`person_type_rollcall_${r.type}`), value: r.rollCallIncluded ? "true" : "false" },
+      { key: k(`person_type_label_${r.type}`), value: r.kioskLabel === r.label ? "" : r.kioskLabel.trim() },
     ]);
     await supabase.from("settings").upsert(payload, { onConflict: "key" });
     await supabase.from("audit_log").insert({
       action: "settings_update",
       performed_by: "Staff",
       records_affected: payload.length,
-      details: { setting: "person_types", value: rows.map((r) => ({ type: r.type, kiosk: r.kioskEnabled, desk: r.deskEnabled, label: r.kioskLabel })) } as any,
-      change_reason: "Person type availability and kiosk naming updated",
+      details: { setting: "person_types", site: siteName ?? "account default", value: rows.map((r) => ({ type: r.type, kiosk: r.kioskEnabled, desk: r.deskEnabled, label: r.kioskLabel })) } as any,
+      change_reason: "Person type availability and workflow rules updated",
     });
     await reload();
     setSaving(false);
-    toast({ title: "Person types saved" });
+    toast({ title: "Visitor types saved" });
   };
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/40">
-        <Users className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          Choose which types of people can sign in, and where. Turning a type off only hides it from new sign-ins — existing records, lists and reports are unchanged. The kiosk name is what people see on the kiosk screen; lists and reports keep the standard name.
-        </p>
-      </div>
+      <SettingExplainer
+        title="Visitor types"
+        controls="Which types of people can sign in, what the kiosk calls them, and which parts of the sign-in apply to each."
+        appliesTo={siteName ? `${siteName} only` : "This account"}
+        changeableBy="Administrators and senior staff."
+        inherited={`${pack.label} defaults, with your changes on top`}
+        kioskEffect="Turning a type off removes its tile from the kiosk straight away."
+        deskEffect="Turning a type off removes it from new sign-ins at the desk. Lists and reports keep the standard name."
+        existingRecords="People already signed in stay on the list and in every report."
+      />
 
       <div className="rounded-xl border border-border divide-y divide-border">
-        <div className="hidden sm:grid grid-cols-[1fr_90px_110px_1fr] gap-3 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-          <span>Type</span>
-          <span className="text-center">Kiosk</span>
-          <span className="text-center">Front desk</span>
-          <span>Kiosk name</span>
-        </div>
         {rows.map((r) => (
-          <div key={r.type} className="grid grid-cols-1 sm:grid-cols-[1fr_90px_110px_1fr] gap-3 px-4 py-3 items-center">
-            <div>
-              <p className="text-sm font-medium text-foreground">{r.label}</p>
-              <p className="text-xs text-muted-foreground">{r.description}</p>
-            </div>
-            <div className="flex sm:justify-center items-center gap-2">
-              <span className="sm:hidden text-xs text-muted-foreground">Kiosk</span>
-              <Switch checked={r.kioskEnabled} onCheckedChange={(v) => update(r.type, { kioskEnabled: v })} />
-            </div>
-            <div className="flex sm:justify-center items-center gap-2">
-              <span className="sm:hidden text-xs text-muted-foreground">Front desk</span>
-              {r.type === "resident" ? (
-                <span className="text-xs text-muted-foreground">n/a</span>
-              ) : (
-                <Switch
-                  checked={r.deskEnabled}
-                  disabled={r.type === "visitor"}
-                  onCheckedChange={(v) => update(r.type, { deskEnabled: v })}
+          <div key={r.type} className="p-4 space-y-3">
+            <div className="flex flex-wrap items-center gap-3 justify-between">
+              <div>
+                <p className="text-sm font-semibold text-foreground">{r.label}</p>
+                <p className="text-xs text-muted-foreground">{r.description}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Kiosk name</span>
+                <Input
+                  value={r.kioskLabel}
+                  placeholder={r.label}
+                  disabled={!canEdit}
+                  onChange={(e) => update(r.type, { kioskLabel: e.target.value })}
+                  className="h-9 w-44 text-sm"
                 />
-              )}
+              </div>
             </div>
-            <Input
-              value={r.kioskLabel}
-              placeholder={r.label}
-              onChange={(e) => update(r.type, { kioskLabel: e.target.value })}
-              className="h-9 text-sm"
-            />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2">
+              {FLAGS.map((f) => {
+                const disabled =
+                  !canEdit ||
+                  (r.type === "visitor" && f.key === "deskEnabled") ||
+                  (r.type === "resident" && (f.key === "deskEnabled" || f.key === "badgeApplies"));
+                return (
+                  <label key={String(f.key)} title={f.help} className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-2.5 py-2">
+                    <span className="text-xs text-foreground">{f.label}</span>
+                    <Switch
+                      checked={!!r[f.key]}
+                      disabled={disabled}
+                      onCheckedChange={(v) => update(r.type, { [f.key]: v } as Partial<PersonTypeConfigRow>)}
+                    />
+                  </label>
+                );
+              })}
+            </div>
           </div>
         ))}
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Visitors always stay available at the front desk. Residents are not a sign-in type — the switch controls the "Resident Leave" tile on the kiosk.
+        Visitors always stay available at the front desk. Staff are kept separate from visitors everywhere people can see —
+        they are never described as visitors. Residents are not a sign-in type: their switch controls the resident leave tile on the kiosk.
       </p>
 
-      <div className="flex justify-end">
-        <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save changes"}</Button>
-      </div>
+      {canEdit && (
+        <div className="flex justify-end">
+          <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save changes"}</Button>
+        </div>
+      )}
     </div>
   );
 }
