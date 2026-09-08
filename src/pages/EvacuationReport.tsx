@@ -123,12 +123,14 @@ export default function EvacuationReport() {
   const exportDrillCSV = async (d: DrillRecord) => {
     await loadAttendance(d.id);
     const rows = attendance[d.id] || (await supabase.from("evacuation_attendance").select("*").eq("drill_id", d.id)).data as any[] || [];
-    const headers = ["Name", "Type", areaLabel, roomLabel, "Assistance", "Phone", "Emergency contact", "Emergency phone", "Outcome", "Marked at", "Marked by"];
+    const headers = ["Name", "Type", areaLabel, roomLabel, "Assistance", "Phone", "Emergency contact", "Emergency phone", "With / visiting", "Responsible staff", "Outcome", "Marked at", "Marked by"];
     const body = rows.map((r: AttendanceRecord) => [
       r.person_name, r.person_type, r.area_label || "", r.room_label || "", r.assistance_level || "",
       r.contact_phone || "", r.emergency_contact_name || "", r.emergency_contact_phone || "",
+      r.associated_with || "", r.responsible_staff || "",
       statusText(r.status), r.marked_safe_at ? format(new Date(r.marked_safe_at), "dd/MM/yyyy HH:mm") : "", r.marked_by || "",
     ]);
+
     const csv = [
       [`"${d.title}"`].join(","),
       [`"Started ${format(new Date(d.started_at), "dd/MM/yyyy HH:mm")}"`].join(","),
