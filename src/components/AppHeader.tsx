@@ -3,7 +3,7 @@ import centrimLogo from "@/assets/centrim-life-logo.png";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { NotificationBell } from "@/components/NotificationBell";
 import { Clock, Users, ShieldAlert } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { SiteSwitcher } from "@/components/SiteSwitcher";
 import { format } from "date-fns";
 import { useHealthAlerts } from "@/hooks/useHealthAlerts";
 import { useOccupancy } from "@/hooks/useOccupancy";
@@ -153,12 +153,9 @@ export function AppHeader({
 
           <div className="w-px h-5 bg-border" />
 
-          {/* Facility badge */}
-          <div className="hidden lg:flex items-center gap-2 mx-1">
-            <span className="text-[13px] text-muted-foreground font-medium">Sydney Care Centre</span>
-            <Badge variant="outline" className="text-[10px] font-bold bg-primary/10 text-primary border-primary/30">
-              RAC
-            </Badge>
+          {/* Current site context */}
+          <div className="hidden lg:flex items-center mx-1">
+            <SiteSwitcher compact />
           </div>
 
           <div className="w-px h-5 bg-border" />
