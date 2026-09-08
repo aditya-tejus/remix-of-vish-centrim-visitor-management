@@ -498,23 +498,33 @@ export default function Evacuation() {
               size="sm"
               disabled={busy}
               variant={isSafe ? "outline" : "default"}
-              className={`h-9 min-w-[92px] text-xs ${!isSafe ? "bg-emerald-600 hover:bg-emerald-700 text-emerald-50" : ""}`}
+              className={`h-9 min-w-[110px] text-xs ${!isSafe ? "bg-emerald-600 hover:bg-emerald-700 text-emerald-50" : ""}`}
               onClick={() => togglePerson(p)}
             >
-              {isSafe ? "Undo" : "Safe"}
+              {isSafe ? "Correct" : "Safe"}
             </Button>
             {!isSafe && (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={busy}
-                className="h-8 min-w-[92px] text-[11px] gap-1"
-                onClick={() => setStatusFor([p], "evacuated_offsite")}
-              >
-                <Ambulance className="h-3 w-3" /> Off-site
-              </Button>
+              <>
+                <Button size="sm" variant="outline" disabled={busy} className="h-8 min-w-[110px] text-[11px] gap-1"
+                  onClick={() => setStatusFor([p], "safe_elsewhere")}>
+                  <MapPin className="h-3 w-3" /> Safe elsewhere
+                </Button>
+                <Button size="sm" variant="outline" disabled={busy} className="h-8 min-w-[110px] text-[11px]"
+                  onClick={() => setStatusFor([p], "not_located")}>
+                  Not located
+                </Button>
+                <Button size="sm" variant="outline" disabled={busy} className="h-8 min-w-[110px] text-[11px]"
+                  onClick={() => setStatusFor([p], "assistance_required")}>
+                  Needs help
+                </Button>
+                <Button size="sm" variant="outline" disabled={busy} className="h-8 min-w-[110px] text-[11px] gap-1"
+                  onClick={() => setStatusFor([p], "evacuated_offsite")}>
+                  <Ambulance className="h-3 w-3" /> Off-site
+                </Button>
+              </>
             )}
           </div>
+
         </div>
       </div>
     );
