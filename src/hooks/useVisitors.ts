@@ -125,6 +125,12 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
   useEffect(() => {
     fetchVisitors();
 
+    // The kiosk has no read access to the visitors table, so it cannot use realtime.
+    if (publicMode) {
+      const poll = setInterval(fetchVisitors, 20000);
+      return () => clearInterval(poll);
+    }
+
     // Realtime subscription
     const channel = supabase
       .channel("visitors-realtime")
@@ -140,6 +146,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     return () => {
       supabase.removeChannel(channel);
     };
+
   }, [fetchVisitors]);
 
   const addVisitor = (visitor: Omit<Visitor, "id">): Visitor => {
