@@ -14,6 +14,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useNavigate, useLocation } from "react-router-dom";
 import { useVisitors } from "@/hooks/useVisitors";
 import { useSite } from "@/contexts/SiteContext";
+import { useOperatingContext } from "@/contexts/OperatingContext";
 
 interface NavItem {
   title: string;
@@ -34,6 +35,7 @@ export function AppSidebar() {
   const location = useLocation();
   const { visitors } = useVisitors();
   const { currentSite } = useSite();
+  const { modules, terms } = useOperatingContext();
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -61,7 +63,7 @@ export function AppSidebar() {
       label: "People and movements",
       icon: DoorOpen,
       items: [
-        { title: "Residents", path: "/residents", icon: Home, badge: residentsAwayCount || null, badgeVariant: "amber" },
+        { title: terms.residentPlural, path: "/residents", icon: Home, badge: residentsAwayCount || null, badgeVariant: "amber" },
         { title: "Planner", path: "/calendar", icon: ClipboardList },
       ],
     },

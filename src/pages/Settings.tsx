@@ -7,6 +7,7 @@ import { SettingsPageHeading } from "@/components/settings/SettingsScope";
 import { SiteSwitcher } from "@/components/SiteSwitcher";
 import { PersonTypeSettings } from "@/components/settings/PersonTypeSettings";
 import { PersonTypesTab } from "@/components/settings/PersonTypesTab";
+import { OperatingContextTab } from "@/components/settings/OperatingContextTab";
 import { PresenceTab } from "@/components/settings/PresenceTab";
 import { PrintingTab } from "@/components/settings/PrintingTab";
 import { KeysPolicyTab } from "@/components/settings/KeysPolicyTab";
@@ -23,7 +24,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 const personTypes: SettingsSection[] = ["visitor", "contractor", "resident", "staff", "volunteer"];
 
 export default function SettingsPage() {
-  const [active, setActive] = useState<SettingsSection>("visitor");
+  const [active, setActive] = useState<SettingsSection>("context");
 
   const isPersonType = personTypes.includes(active);
 
@@ -57,6 +58,7 @@ export default function SettingsPage() {
                   scopes={SECTION_META[active].scopes}
                 />
                 {isPersonType && <PersonTypeSettings type={active} />}
+                {active === "context" && <OperatingContextTab />}
                 {active === "person-types" && <PersonTypesTab />}
                 {active === "feedback" && <SurveyBuilder />}
                 {active === "presence" && <PresenceTab />}
