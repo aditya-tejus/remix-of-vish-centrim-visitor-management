@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Visitor, CompanionDetail } from "@/types/visitor";
 import { toast } from "@/hooks/use-toast";
+import { policyFromRow } from "@/hooks/useReturnNotificationPolicy";
 
 
 interface DbVisitor {
@@ -323,6 +324,32 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
 
     }
     await supabase.from("visitors").update(updateData).eq("id", id);
+
+    // Record the safe-return confirmation for the audit trail when configured.
+    if (!publicMode) {
+      try {
+        const { data: rows } = await supabase.from("branch_notification_settings").select("*");
+        const policies = (rows || []).map(policyFromRow);
+        const policy = policies.find((p) => p.branchId === null) || policies[0];
+        if (policy?.safeReturnEnabled) {
+          const person = visitors.find((v) => v.id === id);
+          const named = [
+            ...policy.safeReturnStaff.map((s) => s.name),
+            ...policy.safeReturnEmails,
+            ...(policy.notifyNokOnReturn ? ["next-of-kin"] : []),
+          ];
+          await supabase.from("audit_log").insert({
+            action: "return_notification_sent",
+            performed_by: "System",
+            records_affected: 1,
+            change_reason: `Safe return confirmed${person ? ` for ${person.firstName} ${person.surname}` : ""}${named.length ? ` — notify ${named.join(", ")}` : ""}`,
+            details: { visitor_id: id, recipients: named } as any,
+          });
+        }
+      } catch {
+        // Audit logging must never block a resident return being recorded.
+      }
+    }
   };
 
   const deleteVisitor = async (id: string) => {

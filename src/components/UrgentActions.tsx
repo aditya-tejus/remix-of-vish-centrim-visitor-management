@@ -4,7 +4,13 @@ import { Visitor } from "@/types/visitor";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Clock, LogOut, X, ChevronRight, Ban, Bell, Home, ShieldAlert } from "lucide-react";
-import { formatDistanceToNow, format, isPast } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
+import {
+  useReturnNotificationPolicy,
+  isReturnOverdue,
+  isReturnEscalated,
+  recipientSummary,
+} from "@/hooks/useReturnNotificationPolicy";
 import { supabase } from "@/integrations/supabase/client";
 import { EscalateIncidentDialog } from "@/components/EscalateIncidentDialog";
 
@@ -28,20 +34,9 @@ interface ActionItem {
 export function UrgentActions({ visitors, onCheckOut, onCheckOutAllOverstayed }: UrgentActionsProps) {
   const navigate = useNavigate();
   const actions: ActionItem[] = [];
-  const [noReturnEnabled, setNoReturnEnabled] = useState(false);
   const [escalateTarget, setEscalateTarget] = useState<Visitor | null>(null);
-
-  useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase
-        .from("settings")
-        .select("value")
-        .eq("key", "no_return_notification_enabled")
-        .maybeSingle();
-      if (data) setNoReturnEnabled(data.value === "true");
-    };
-    load();
-  }, []);
+  const { policy } = useReturnNotificationPolicy();
+  const noReturnEnabled = policy?.overdueEnabled ?? false;
 
   // Overstayed visitors (8+ hours)
   visitors
@@ -109,14 +104,16 @@ export function UrgentActions({ visitors, onCheckOut, onCheckOutAllOverstayed }:
           v.status === "checked-out" &&
           v.returnNotificationOptIn &&
           v.expectedReturnDate &&
-          isPast(v.expectedReturnDate)
+          isReturnOverdue(v.expectedReturnDate, policy)
       )
       .forEach((v) => {
+        const escalated = isReturnEscalated(v.expectedReturnDate!, policy);
+        const named = recipientSummary(policy, "overdue");
         actions.push({
           id: `overdue-return-${v.id}`,
           visitorId: v.id,
-          title: `Resident Not Returned — Overdue`,
-          description: `${v.firstName} ${v.surname} was expected back by ${format(v.expectedReturnDate!, "dd MMM yyyy")} (${formatDistanceToNow(v.expectedReturnDate!, { addSuffix: true })}). Reason: ${v.checkoutReason || "Not specified"}.`,
+          title: escalated ? `Resident Not Returned — Escalated` : `Resident Not Returned — Overdue`,
+          description: `${v.firstName} ${v.surname} was expected back by ${format(v.expectedReturnDate!, "hh:mm a dd MMM")} (${formatDistanceToNow(v.expectedReturnDate!, { addSuffix: true })}). Reason: ${v.checkoutReason || "Not specified"}.${named ? ` Tell ${named}.` : ""}`,
           time: format(v.expectedReturnDate!, "dd MMM"),
           severity: "red",
           icon: Home,
