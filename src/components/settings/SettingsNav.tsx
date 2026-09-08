@@ -150,7 +150,7 @@ interface SettingsNavProps {
 
 export function SettingsNav({ active, onChange }: SettingsNavProps) {
   return (
-    <nav className="w-[220px] shrink-0 space-y-5" aria-label="Settings sections">
+    <nav className="w-full lg:w-[220px] shrink-0 space-y-5" aria-label="Settings sections">
       {SETTINGS_GROUPS.map((group) => (
         <div key={group.label} className="space-y-1">
           <p className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
