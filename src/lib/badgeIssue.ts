@@ -72,8 +72,23 @@ export async function issueBadge(data: BadgeData, opts: IssueBadgeOptions = {}) 
     ? data
     : { ...data, visiting: undefined, room: undefined };
 
+  // A badge already printed for this visit is a reprint, not a new issue.
+  let reprint = opts.reprint ?? false;
+  if (opts.reprint === undefined && opts.visitorId) {
+    const { data: row } = await supabase
+      .from("visitors")
+      .select("print_status")
+      .eq("id", opts.visitorId)
+      .maybeSingle();
+    reprint = !!row?.print_status && row.print_status !== "voided";
+  }
+
   await printBadgeAuto(payload);
-  await recordBadgeEvent(opts.reprint ? "reprinted" : "issued", {
+  await recordBadgeEvent(reprint ? "reprinted" : "issued", {
+    visitorId: opts.visitorId,
+    siteId: opts.siteId,
+    name: data.name,
+    personType: data.type,
     visitorId: opts.visitorId,
     siteId: opts.siteId,
     name: data.name,
