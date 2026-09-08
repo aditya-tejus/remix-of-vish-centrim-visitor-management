@@ -27,7 +27,7 @@ export function PersonTypesTab() {
   const [rows, setRows] = useState<PersonTypeConfigRow[]>([]);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
-  const canEdit = role === "admin" || role === "staff";
+  const canEdit = role === "admin";
 
   useEffect(() => { if (!loading) setRows(personTypes); }, [loading, personTypes]);
 
@@ -122,7 +122,7 @@ export function PersonTypesTab() {
 
       {canEdit && (
         <div className="flex justify-end">
-          <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save changes"}</Button>
+          <Button onClick={save} disabled={saving || !canEdit}>{saving ? "Saving…" : "Save changes"}</Button>
         </div>
       )}
     </div>
