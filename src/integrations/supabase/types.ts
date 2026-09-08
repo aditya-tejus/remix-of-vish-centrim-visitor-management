@@ -2920,6 +2920,20 @@ export type Database = {
     Functions: {
       current_user_site_ids: { Args: never; Returns: string[] }
       default_site_id: { Args: never; Returns: string }
+      effective_retention_policy: {
+        Args: { p_branch_id?: string; p_record_class: string }
+        Returns: {
+          branch_id: string
+          exception_reason: string
+          is_enabled: boolean
+          mode: string
+          policy_id: string
+          record_class: string
+          retention_unit: string
+          retention_value: number
+          scope: string
+        }[]
+      }
       ensure_user_bootstrap: { Args: never; Returns: undefined }
       has_permission: {
         Args: {
@@ -3131,7 +3145,7 @@ export type Database = {
         Returns: string
       }
       run_retention: {
-        Args: { p_record_class: string }
+        Args: { p_branch_id?: string; p_record_class: string }
         Returns: {
           affected: number
           skipped: number
