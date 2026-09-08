@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ReactNode } from "react";
 import { AuthProvider } from "@/hooks/useAuth";
 import { SiteProvider } from "@/contexts/SiteContext";
+import { OperatingContextProvider } from "@/contexts/OperatingContext";
 import { RequireAuth } from "@/components/RequireAuth";
 import AuthPage from "./pages/Auth";
 import VisitList from "./pages/VisitList";
@@ -56,6 +57,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <SiteProvider>
+          <OperatingContextProvider>
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
 
@@ -108,6 +110,7 @@ const App = () => (
 
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </OperatingContextProvider>
           </SiteProvider>
         </AuthProvider>
       </BrowserRouter>

@@ -65,14 +65,16 @@ export function AppSidebar() {
         { title: "Planner", path: "/calendar", icon: ClipboardList },
       ],
     },
-    {
-      label: "Registers",
-      icon: KeyRound,
-      items: [
-        { title: "Keys and fobs", path: "/keys", icon: KeyRound },
-        { title: "Food register", path: "/food-register", icon: UtensilsCrossed },
-      ],
-    },
+    ...(modules.keysRegister || modules.foodRegister
+      ? [{
+          label: "Registers",
+          icon: KeyRound,
+          items: [
+            ...(modules.keysRegister ? [{ title: "Keys and fobs", path: "/keys", icon: KeyRound }] : []),
+            ...(modules.foodRegister ? [{ title: "Food register", path: "/food-register", icon: UtensilsCrossed }] : []),
+          ],
+        }]
+      : []),
     {
       label: "Reports",
       icon: BarChart3,
