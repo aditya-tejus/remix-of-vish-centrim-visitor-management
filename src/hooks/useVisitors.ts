@@ -72,14 +72,6 @@ function dbToVisitor(row: DbVisitor): Visitor {
   };
 }
 
-/**
- * Columns the unauthenticated kiosk is allowed to read.
- * Sensitive PII (email, mobile, address, health answers, temperature, comments)
- * is not granted to the anon role at the database level.
- */
-const KIOSK_SAFE_COLUMNS =
-  "id, first_name, surname, type, status, check_in_time, check_out_time, whom_to_visit, qr_code, group_id, additional_visitors, expected_return_date, leave_type, accompanied_by_name, print_status, created_at";
-
 interface UseVisitorsOptions {
   /** Kiosk / unauthenticated context: request only non-sensitive columns. */
   publicMode?: boolean;
