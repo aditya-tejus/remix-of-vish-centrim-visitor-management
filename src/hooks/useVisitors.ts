@@ -330,10 +330,20 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       }
       updateData.additional_visitors = companionOutcome.remainingCompanions;
     }
-    await supabase
-      .from("visitors")
-      .update(updateData)
-      .eq("id", id);
+    if (publicMode) {
+      if (!stillOpen) {
+        await supabase.rpc("kiosk_check_out" as any, {
+          p_visitor_id: id,
+          p_time: checkOutTime.toISOString(),
+        });
+      }
+    } else {
+      await supabase
+        .from("visitors")
+        .update(updateData)
+        .eq("id", id);
+    }
+
   };
 
   const checkInReturn = async (id: string, returnComment?: string, timeOverride?: string) => {
