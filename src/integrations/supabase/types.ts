@@ -49,7 +49,7 @@ export type Database = {
       }
       branch_notification_settings: {
         Row: {
-          branch_id: string
+          branch_id: string | null
           created_at: string
           enabled: boolean
           id: string
@@ -59,7 +59,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          branch_id: string
+          branch_id?: string | null
           created_at?: string
           enabled?: boolean
           id?: string
@@ -69,7 +69,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          branch_id?: string
+          branch_id?: string | null
           created_at?: string
           enabled?: boolean
           id?: string
@@ -82,7 +82,7 @@ export type Database = {
           {
             foreignKeyName: "branch_notification_settings_branch_id_fkey"
             columns: ["branch_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "branches"
             referencedColumns: ["id"]
           },
