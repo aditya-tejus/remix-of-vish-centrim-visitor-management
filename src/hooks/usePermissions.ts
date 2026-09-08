@@ -18,7 +18,16 @@ export type Permission =
   | "privacy.manage"
   | "data.export"
   | "data.erase"
-  | "settings.administer";
+  | "settings.administer"
+  | "contractor.view"
+  | "contractor.manage"
+  | "contractor.credentials.view"
+  | "contractor.credentials.manage"
+  | "keys.view"
+  | "keys.issue"
+  | "keys.return"
+  | "keys.manage"
+  | "keys.export";
 
 export const PERMISSION_LABELS: Record<Permission, string> = {
   "presence.view": "See who is on site",
@@ -36,7 +45,17 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   "data.export": "Export visitor data",
   "data.erase": "Erase visitor data",
   "settings.administer": "Administer settings",
+  "contractor.view": "See contractor records",
+  "contractor.manage": "Add or edit contractor records",
+  "contractor.credentials.view": "See contractor compliance documents",
+  "contractor.credentials.manage": "Record and confirm contractor compliance",
+  "keys.view": "See the keys and fobs register",
+  "keys.issue": "Issue a key or fob",
+  "keys.return": "Take a key or fob back",
+  "keys.manage": "Add, replace or retire keys and fobs",
+  "keys.export": "Export the keys register",
 };
+
 
 export const ALL_PERMISSIONS = Object.keys(PERMISSION_LABELS) as Permission[];
 

@@ -1697,6 +1697,8 @@ export type Database = {
           branch_id: string | null
           copy_number: number
           created_at: string
+          damaged_at: string | null
+          damaged_notes: string | null
           id: string
           is_active: boolean
           key_label: string
@@ -1706,8 +1708,10 @@ export type Database = {
           notes: string | null
           property_label: string | null
           replaced_by_key_id: string | null
+          replaces_key_id: string | null
           resident_name: string | null
           resident_visitor_id: string | null
+          serial_number: string | null
           status: string
           storage_location: string | null
           updated_at: string
@@ -1717,6 +1721,8 @@ export type Database = {
           branch_id?: string | null
           copy_number?: number
           created_at?: string
+          damaged_at?: string | null
+          damaged_notes?: string | null
           id?: string
           is_active?: boolean
           key_label: string
@@ -1726,8 +1732,10 @@ export type Database = {
           notes?: string | null
           property_label?: string | null
           replaced_by_key_id?: string | null
+          replaces_key_id?: string | null
           resident_name?: string | null
           resident_visitor_id?: string | null
+          serial_number?: string | null
           status?: string
           storage_location?: string | null
           updated_at?: string
@@ -1737,6 +1745,8 @@ export type Database = {
           branch_id?: string | null
           copy_number?: number
           created_at?: string
+          damaged_at?: string | null
+          damaged_notes?: string | null
           id?: string
           is_active?: boolean
           key_label?: string
@@ -1746,8 +1756,10 @@ export type Database = {
           notes?: string | null
           property_label?: string | null
           replaced_by_key_id?: string | null
+          replaces_key_id?: string | null
           resident_name?: string | null
           resident_visitor_id?: string | null
+          serial_number?: string | null
           status?: string
           storage_location?: string | null
           updated_at?: string
@@ -1764,6 +1776,13 @@ export type Database = {
           {
             foreignKeyName: "property_keys_replaced_by_key_id_fkey"
             columns: ["replaced_by_key_id"]
+            isOneToOne: false
+            referencedRelation: "property_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_keys_replaces_key_id_fkey"
+            columns: ["replaces_key_id"]
             isOneToOne: false
             referencedRelation: "property_keys"
             referencedColumns: ["id"]
@@ -3017,6 +3036,13 @@ export type Database = {
           status: string
         }[]
       }
+      kiosk_open_key_holds: {
+        Args: { p_person_qr: string }
+        Returns: {
+          open_items: number
+          overdue_items: number
+        }[]
+      }
       kiosk_pin_is_set: { Args: never; Returns: boolean }
       kiosk_prefill_visitor: {
         Args: { p_first: string; p_last: string }
@@ -3172,6 +3198,15 @@ export type Database = {
         | "data.export"
         | "data.erase"
         | "settings.administer"
+        | "contractor.view"
+        | "contractor.manage"
+        | "contractor.credentials.view"
+        | "contractor.credentials.manage"
+        | "keys.view"
+        | "keys.issue"
+        | "keys.return"
+        | "keys.manage"
+        | "keys.export"
       app_role: "admin" | "staff" | "user"
     }
     CompositeTypes: {
@@ -3316,6 +3351,15 @@ export const Constants = {
         "data.export",
         "data.erase",
         "settings.administer",
+        "contractor.view",
+        "contractor.manage",
+        "contractor.credentials.view",
+        "contractor.credentials.manage",
+        "keys.view",
+        "keys.issue",
+        "keys.return",
+        "keys.manage",
+        "keys.export",
       ],
       app_role: ["admin", "staff", "user"],
     },

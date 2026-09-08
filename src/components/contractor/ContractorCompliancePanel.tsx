@@ -8,6 +8,7 @@ import { findContractorPerson, usePersonCredentials, type ContractorPerson } fro
 import { useJurisdiction } from "@/hooks/useJurisdiction";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useMandatoryCredentials } from "@/hooks/useMandatoryCredentials";
 
 interface Props {
   firstName: string;
@@ -37,11 +38,14 @@ export function ContractorCompliancePanel({ firstName, surname, mobile, supplier
     return () => { cancelled = true; };
   }, [firstName, surname, mobile]);
 
+  const { mandatoryKeys } = useMandatoryCredentials();
+
   const checklist = buildComplianceChecklist({
     jurisdiction: jurisdiction === "AU" ? "AU" : "UK",
     types: activeTypes,
     supplierRecords,
     personRecords,
+    mandatoryKeys,
   });
 
   if (checklist.length === 0) return null;

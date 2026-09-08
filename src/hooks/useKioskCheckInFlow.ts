@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useOpenKeyIssues } from "@/hooks/useOpenKeyIssues";
+import { fetchKeyPolicy, DEFAULT_KEY_POLICY, type KeyPolicy } from "@/hooks/useKeyPolicy";
 import { useFormFields, FormField } from "@/hooks/useFormFields";
 import { useActiveHealthQuestions, useActiveVaccinationFields } from "@/hooks/useHealthQuestions";
 import { useResidents } from "@/hooks/useResidents";
@@ -27,11 +27,26 @@ export function useKioskCheckInFlow() {
   const [tcContent, setTcContent] = useState<string | null>(null);
   const [jurisdiction, setJurisdiction] = useState<"AU" | "UK">("UK");
   const [contractorGate, setContractorGate] = useState<{ blocked: boolean; reason: string | null }>({ blocked: false, reason: null });
-  const { overdueForName, policy: keyPolicy } = useOpenKeyIssues();
+  const [keyPolicy, setKeyPolicy] = useState<KeyPolicy>(DEFAULT_KEY_POLICY);
+  const [overdueKeyCount, setOverdueKeyCount] = useState(0);
   const [residentLookupMode, setResidentLookupMode] = useState<"show_all" | "search_first">("search_first");
   const [staffLookupMode, setStaffLookupMode] = useState<"search_first" | "by_department" | "free_text">("search_first");
   const [returningOptions, setReturningOptions] = useState({ mobile: false, qr: false, name: false, suggestResident: false });
   const [personQr, setPersonQr] = useState<string | null>(null);
+
+  // The kiosk cannot read the keys register. It asks a narrow server check that
+  // answers with counts only, and only for a recognised person code.
+  useEffect(() => {
+    fetchKeyPolicy().then(setKeyPolicy);
+  }, []);
+  useEffect(() => {
+    let cancelled = false;
+    if (!personQr) { setOverdueKeyCount(0); return; }
+    (supabase.rpc as any)("kiosk_open_key_holds", { p_person_qr: personQr }).then(({ data }: any) => {
+      if (!cancelled) setOverdueKeyCount(Number(data?.[0]?.overdue_items ?? 0));
+    });
+    return () => { cancelled = true; };
+  }, [personQr]);
 
   const [contractorAnswers, setContractorAnswers] = useState<Record<string, any>>({});
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
@@ -253,8 +268,7 @@ export function useKioskCheckInFlow() {
   // Outstanding keys or fobs: at an unattended kiosk we ask the person to see
   // reception rather than silently letting them in.
   const fullName = `${(formValues.firstName || "").trim()} ${(formValues.surname || "").trim()}`.trim();
-  const overdueKeys = overdueForName(fullName);
-  const keyBlocked = keyPolicy.enforcement === "block" && overdueKeys.length > 0;
+  const keyBlocked = keyPolicy.enforcement === "block" && overdueKeyCount > 0;
 
   const foodStepValid = bringingFood === false || (bringingFood === true && isFoodFormValid(foodForm));
 
@@ -306,7 +320,7 @@ export function useKioskCheckInFlow() {
     highTemperature,
     screeningBlocked,
     screeningFlagged,
-    overdueKeys,
+    overdueKeyCount,
     keyBlocked,
     keyEnforcement: keyPolicy.enforcement,
     outbreakMode,

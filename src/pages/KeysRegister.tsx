@@ -22,6 +22,8 @@ import { format } from "date-fns";
 import { KeyRound, Plus, History, ArrowLeftRight, AlertTriangle, UserCog, CalendarClock, Printer, TriangleAlert } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { printKeyCardAuto } from "@/lib/printKeyCard";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PermissionDeniedState } from "@/components/states";
 
 const STATUS_STYLE: Record<KeyStatus, { label: string; className: string }> = {
   available: { label: "Available", className: "bg-success/10 text-success border-success/20" },
@@ -29,13 +31,20 @@ const STATUS_STYLE: Record<KeyStatus, { label: string; className: string }> = {
   permanent: { label: "Permanent", className: "bg-muted text-muted-foreground border-border" },
   overdue: { label: "Overdue", className: "bg-destructive/10 text-destructive border-destructive/20" },
   lost: { label: "Lost", className: "bg-destructive/10 text-destructive border-destructive/20" },
+  damaged: { label: "Damaged", className: "bg-warning/10 text-warning border-warning/20" },
+  awaiting_replacement: { label: "Awaiting replacement", className: "bg-warning/10 text-warning border-warning/20" },
   retired: { label: "Retired", className: "bg-muted text-muted-foreground border-border" },
 };
 
 const HOUR = 3600000;
 
 export default function KeysRegister() {
-  const { keys, issues, loading, addKey, issueKey, returnKey, renewIssue, markLost, historyFor } = useKeys();
+  const { keys, issues, loading, addKey, issueKey, returnKey, renewIssue, markLost, markDamaged, historyFor } = useKeys();
+  const { can, loading: permsLoading } = usePermissions();
+  const canView = can("keys.view");
+  const canIssue = can("keys.issue");
+  const canReturn = can("keys.return");
+  const canManage = can("keys.manage");
   const { residents } = useResidents();
   const { data: wings = [] } = useWings();
   const { toast } = useToast();
@@ -52,6 +61,8 @@ export default function KeysRegister() {
   const [renewForm, setRenewForm] = useState({ due: "", permanent: false, reason: "" });
   const [lostFor, setLostFor] = useState<PropertyKey | null>(null);
   const [lostForm, setLostForm] = useState({ notes: "", replace: true });
+  const [damagedFor, setDamagedFor] = useState<PropertyKey | null>(null);
+  const [damagedForm, setDamagedForm] = useState({ notes: "", replace: true });
 
   // ---- Filters, kept in the page address so a view can be shared ----
   const filters: KeyFilterValues = {
@@ -249,6 +260,21 @@ export default function KeysRegister() {
     setLostFor(null);
   };
 
+  const submitDamaged = async () => {
+    if (!damagedFor) return;
+    const error = await markDamaged({ key: damagedFor, notes: damagedForm.notes.trim() || null, replace: damagedForm.replace });
+    if (error) {
+      toast({ title: "Could not record the damage", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({
+      title: `${damagedFor.keyLabel} marked damaged`,
+      description: damagedForm.replace ? "A replacement copy has been added to the cabinet." : "Marked as awaiting replacement.",
+    });
+    setDamagedForm({ notes: "", replace: true });
+    setDamagedFor(null);
+  };
+
   const printCard = (k: PropertyKey) => {
     if (!k.currentIssue) return;
     printKeyCardAuto({
@@ -294,6 +320,10 @@ export default function KeysRegister() {
           />
 
           <main className="p-6 space-y-6">
+            {!permsLoading && !canView ? (
+              <PermissionDeniedState description="You do not have access to the keys and fobs register at this site. Ask an administrator if you need it." />
+            ) : (
+            <>
             {/* Summary */}
             <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
               {[
@@ -342,7 +372,7 @@ export default function KeysRegister() {
                           Out since {format(k.currentIssue!.issuedAt, "hh:mm a dd MMM")}
                           {k.currentIssue!.expectedReturn ? ` · due ${format(k.currentIssue!.expectedReturn, "hh:mm a dd MMM")}` : ""}
                         </span>
-                        <Button size="sm" onClick={() => setReturnFor(k)}>Return</Button>
+                        {canReturn && <Button size="sm" onClick={() => setReturnFor(k)}>Return</Button>}
                       </div>
                     ))}
                     {out.length > 8 && (
@@ -367,9 +397,11 @@ export default function KeysRegister() {
                   resultCount={filtered.length}
                 />
               </div>
-              <Button onClick={() => setAddOpen(true)} className="gap-2 shrink-0">
-                <Plus className="h-4 w-4" /> Add key
-              </Button>
+              {(canManage || canIssue) && (
+                <Button onClick={() => setAddOpen(true)} className="gap-2 shrink-0">
+                  <Plus className="h-4 w-4" /> Add key
+                </Button>
+              )}
             </div>
 
             {/* Grouped list */}
@@ -408,6 +440,7 @@ export default function KeysRegister() {
                                 </p>
                                 <p className="text-xs text-muted-foreground">
                                   {keyTypeLabel(k.keyType)}
+                                  {k.serialNumber ? ` · no. ${k.serialNumber}` : ""}
                                   {k.storageLocation ? ` · kept in ${k.storageLocation}` : ""}
                                 </p>
                               </div>
@@ -454,24 +487,35 @@ export default function KeysRegister() {
                               <div className="flex gap-2">
                                 {k.currentIssue ? (
                                   <>
-                                    <Button size="sm" onClick={() => setReturnFor(k)} className="gap-1">
-                                      <ArrowLeftRight className="h-3.5 w-3.5" /> Return
-                                    </Button>
-                                    <Button size="sm" variant="ghost" onClick={() => openRenew(k)} className="gap-1">
-                                      <CalendarClock className="h-3.5 w-3.5" /> Renew
-                                    </Button>
+                                    {canReturn && (
+                                      <Button size="sm" onClick={() => setReturnFor(k)} className="gap-1">
+                                        <ArrowLeftRight className="h-3.5 w-3.5" /> Return
+                                      </Button>
+                                    )}
+                                    {canIssue && (
+                                      <Button size="sm" variant="ghost" onClick={() => openRenew(k)} className="gap-1">
+                                        <CalendarClock className="h-3.5 w-3.5" /> Renew
+                                      </Button>
+                                    )}
                                     <Button size="sm" variant="ghost" onClick={() => printCard(k)} className="gap-1">
                                       <Printer className="h-3.5 w-3.5" /> Card
                                     </Button>
                                   </>
                                 ) : (
-                                  <Button size="sm" variant="secondary" onClick={() => openIssue(k)} className="gap-1 border border-border">
-                                    <ArrowLeftRight className="h-3.5 w-3.5" /> Issue
-                                  </Button>
+                                  canIssue && k.status !== "lost" && k.status !== "retired" && (
+                                    <Button size="sm" variant="secondary" onClick={() => openIssue(k)} className="gap-1 border border-border">
+                                      <ArrowLeftRight className="h-3.5 w-3.5" /> Issue
+                                    </Button>
+                                  )
                                 )}
-                                {k.status !== "lost" && (
+                                {canManage && k.status !== "lost" && (
                                   <Button size="sm" variant="ghost" onClick={() => { setLostForm({ notes: "", replace: true }); setLostFor(k); }} className="gap-1 text-destructive hover:text-destructive">
                                     <TriangleAlert className="h-3.5 w-3.5" /> Lost
+                                  </Button>
+                                )}
+                                {canManage && k.status !== "damaged" && k.status !== "lost" && (
+                                  <Button size="sm" variant="ghost" onClick={() => { setDamagedForm({ notes: "", replace: true }); setDamagedFor(k); }} className="gap-1">
+                                    <TriangleAlert className="h-3.5 w-3.5" /> Damaged
                                   </Button>
                                 )}
                                 <Button size="sm" variant="ghost" onClick={() => setHistoryKey(k)} className="gap-1">
@@ -486,6 +530,8 @@ export default function KeysRegister() {
                   </div>
                 ))}
               </div>
+            )}
+            </>
             )}
           </main>
         </SidebarInset>
@@ -607,6 +653,44 @@ export default function KeysRegister() {
               </span>
             </label>
             <Button variant="destructive" onClick={submitLost} className="w-full">Mark as lost</Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Report damaged */}
+      <Sheet open={!!damagedFor} onOpenChange={(o) => !o && setDamagedFor(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-[50vw] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Report {damagedFor?.keyLabel} damaged</SheetTitle>
+            <SheetDescription>
+              {damagedFor?.propertyLabel}
+              {damagedFor?.copyNumber ? ` · copy ${damagedFor.copyNumber}` : ""}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-1">
+              <Label>What is wrong with it?</Label>
+              <Textarea
+                rows={3}
+                value={damagedForm.notes}
+                onChange={(e) => setDamagedForm({ ...damagedForm, notes: e.target.value })}
+                placeholder="Fob no longer opens the door, key bent…"
+              />
+            </div>
+            <label className="flex items-start gap-2 text-sm text-foreground">
+              <Checkbox
+                className="mt-0.5"
+                checked={damagedForm.replace}
+                onCheckedChange={(v) => setDamagedForm({ ...damagedForm, replace: !!v })}
+              />
+              <span>
+                Add a replacement copy now
+                <span className="block text-xs text-muted-foreground">
+                  Leave this off to keep it listed as awaiting replacement.
+                </span>
+              </span>
+            </label>
+            <Button variant="destructive" onClick={submitDamaged} className="w-full">Mark as damaged</Button>
           </div>
         </SheetContent>
       </Sheet>

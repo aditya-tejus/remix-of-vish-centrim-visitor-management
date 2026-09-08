@@ -35,6 +35,7 @@ interface Props {
     residentName?: string | null;
     storageLocation?: string | null;
     notes?: string | null;
+    serialNumber?: string | null;
     copies?: number;
   }) => Promise<any>;
 }
@@ -49,6 +50,7 @@ export function AddKeyDialog({ open, onOpenChange, residents, onAdd }: Props) {
   const [storageLocation, setStorageLocation] = useState("");
   const [notes, setNotes] = useState("");
   const [customName, setCustomName] = useState("");
+  const [serialNumber, setSerialNumber] = useState("");
   const [saving, setSaving] = useState(false);
 
   const resident = residents.find((r) => r.visitorId === target);
@@ -60,7 +62,7 @@ export function AddKeyDialog({ open, onOpenChange, residents, onAdd }: Props) {
 
   const reset = () => {
     setTarget(""); setAreaName(""); setKeyType("property"); setCopies("1");
-    setMore(false); setStorageLocation(""); setNotes(""); setCustomName("");
+    setMore(false); setStorageLocation(""); setNotes(""); setCustomName(""); setSerialNumber("");
   };
 
   const submit = async () => {
@@ -81,6 +83,7 @@ export function AddKeyDialog({ open, onOpenChange, residents, onAdd }: Props) {
       residentVisitorId: resident?.visitorId || null,
       residentName: resident?.name || null,
       storageLocation: storageLocation.trim() || null,
+      serialNumber: serialNumber.trim() || null,
       notes: notes.trim() || null,
       copies: count,
     });
@@ -180,6 +183,10 @@ export function AddKeyDialog({ open, onOpenChange, residents, onAdd }: Props) {
               <div className="space-y-1">
                 <Label>Key name</Label>
                 <Input value={customName} onChange={(e) => setCustomName(e.target.value)} placeholder={suggestedName} />
+              </div>
+              <div className="space-y-1">
+                <Label>Serial or engraved number</Label>
+                <Input value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} placeholder="Only if the key or fob carries one" />
               </div>
               <div className="space-y-1">
                 <Label>Where it's kept</Label>

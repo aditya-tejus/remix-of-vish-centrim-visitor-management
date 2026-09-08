@@ -21,6 +21,9 @@ import {
 import { ComplianceChecklist } from "@/components/contractor/ComplianceChecklist";
 import { useToast } from "@/hooks/use-toast";
 import { useContractorQuestions, type ContractorQuestion } from "@/hooks/useContractorQuestions";
+import { fetchMandatoryCredentialKeys } from "@/hooks/useMandatoryCredentials";
+import { useOperatingContext } from "@/contexts/OperatingContext";
+
 
 /** The one question that decides how hard a missing credential bites */
 const UNSUPERVISED_QUESTION_KEY = "unsupervised_access";
@@ -70,6 +73,19 @@ export function ContractorScreening({
   const { records, save } = useSupplierCredentials(selectedSupplier?.id);
   const entryPolicy = useContractorEntryPolicy();
   const { records: personRecords, save: savePersonCredential, verify } = usePersonCredentials(person?.id);
+
+  // Which checks this site insists on. Falls back to the credential's own
+  // "Required" tick when the site has not set its own list.
+  const { siteId } = useOperatingContext();
+  const [siteMandatory, setSiteMandatory] = useState<string[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetchMandatoryCredentialKeys(siteId).then((keys) => {
+      if (!cancelled) setSiteMandatory(keys);
+    });
+    return () => { cancelled = true; };
+  }, [siteId]);
+
 
   const nameKey = `${workerFirstName.trim().toLowerCase()}|${workerSurname.trim().toLowerCase()}|${workerMobile.replace(/\D/g, "")}`;
 
@@ -163,7 +179,9 @@ export function ContractorScreening({
     types: activeTypes,
     supplierRecords: records,
     personRecords,
+    mandatoryKeys: siteMandatory,
   });
+
   const gate = evaluateContractorGate({
     jurisdiction,
     supplierName: selectedSupplier?.name ?? null,

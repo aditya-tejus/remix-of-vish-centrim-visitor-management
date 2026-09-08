@@ -90,3 +90,32 @@ Not granted to anon: `kiosk_emergency_gate` (internal), `kiosk_prefill_visitor` 
 4. No email/SMS delivery exists; notifications are in-app and audit only.
 5. Kiosk devices are not bound to a site by a device credential (`?site=` only).
 6. Emergency exports rely on browser print/CSV; no tamper-evident export format.
+
+## 6. Contractors and the keys / fobs register (Stage 6A)
+
+- **Action permissions.** Nine new permissions gate this area: `contractor.view`,
+  `contractor.manage`, `contractor.credentials.view`, `contractor.credentials.manage`,
+  `keys.view`, `keys.issue`, `keys.return`, `keys.manage`, `keys.export`. The register
+  shows a permission-denied panel to anyone without `keys.view`, and every action button
+  is gated by its own permission rather than by a broad "staff" role.
+- **Site isolation.** `property_keys` and `key_issues` carry `branch_id`; policies require
+  both the permission and `user_can_access_site(branch_id)`. The app filters reads by the
+  current site and stamps new rows with it.
+- **Credential policy is the operator's, not the law.** The credentials a site insists on
+  are stored per site in `contractor_mandatory_credentials@<site>`; wording throughout the
+  settings screen states these are the operator's own policy choices. Nothing is presented
+  as a legal requirement in either jurisdiction.
+- **Contractor evidence.** Supplier and person credential rows are now readable only with
+  `contractor.credentials.view` and writable only with `contractor.credentials.manage`;
+  person credentials additionally require access to that person's site. The kiosk may only
+  insert a self-uploaded credential with `verification_status = 'pending'` — it cannot
+  read, verify or amend evidence.
+- **Kiosk and keys.** The kiosk has no access to the keys tables. Check-in and check-out
+  call `kiosk_open_key_holds(p_person_qr)`, a SECURITY DEFINER function that matches a
+  person code and returns two numbers — open items and overdue items. It never returns key
+  labels, properties, holders or dates. Verified: both kiosk screens now make no denied
+  requests to `property_keys` or `key_issues`.
+- **Audit.** Adding, issuing, returning, extending, reporting lost and reporting damaged all
+  write an `audit_log` entry naming the staff member, the item and any reason given.
+- **Not covered.** Nothing verifies that a credential document is genuine; expiry dates and
+  references are staff-entered. Replacement items inherit no serial number by design.
