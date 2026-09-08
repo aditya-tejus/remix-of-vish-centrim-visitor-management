@@ -225,7 +225,7 @@ function Shell({ children, actions }: { children: React.ReactNode; actions?: Rea
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <SidebarInset className="flex-1">
+        <SidebarInset className="flex-1 min-w-0">
           <AppHeader
             title="Who is on site"
             subtitle="Live presence, people over their expected time, and visit history for this site."
