@@ -53,7 +53,8 @@ export function AppSidebar() {
       icon: Users,
       items: [
         { title: "Visit list", path: "/visit-list", icon: ListChecks, badge: activeVisitorCount || null, badgeVariant: "blue" },
-        { title: "Overdue", path: "/reports/presence", icon: Layers, badge: todayOverstayed || null, badgeVariant: "red" },
+        { title: "Overdue", path: "/visit-list", icon: Layers, badge: todayOverstayed || null, badgeVariant: "red" },
+        { title: "Presence log", path: "/reports/presence", icon: ClipboardList },
         { title: "Visitor profiles", path: "/visitors", icon: IdCard },
       ],
     },
@@ -108,9 +109,9 @@ export function AppSidebar() {
   return (
     <Sidebar className="border-r-0">
       <SidebarHeader className="px-5 py-4">
-        <div className="flex items-center gap-3">
-          <img src={centrimLogo} alt="Centrim Life" className="h-10 object-contain" />
-          <span className="rounded bg-sidebar-primary/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-sidebar-primary">
+        <div className="flex min-w-0 items-center gap-2">
+          <img src={centrimLogo} alt="Centrim Life" className="h-9 min-w-0 flex-1 object-contain object-left" />
+          <span className="shrink-0 rounded bg-sidebar-primary/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-sidebar-primary">
             Visitors
           </span>
         </div>
