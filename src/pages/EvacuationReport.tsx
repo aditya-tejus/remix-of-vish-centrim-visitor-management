@@ -38,7 +38,10 @@ interface AttendanceRecord {
   emergency_contact_phone: string | null;
   area_label: string | null;
   room_label: string | null;
+  responsible_staff: string | null;
+  associated_with: string | null;
 }
+
 
 export default function EvacuationReport() {
   const [drills, setDrills] = useState<DrillRecord[]>([]);
@@ -46,7 +49,38 @@ export default function EvacuationReport() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [attendance, setAttendance] = useState<Record<string, AttendanceRecord[]>>({});
   const { isUK } = useJurisdiction();
-  const { areaLabel, roomLabel } = useSiteStructure();
+  const { areaLabel, roomLabel, structure } = useSiteStructure();
+  const isVillageView = structure === "rv" || structure === "mixed";
+
+  /** Stage, then property — a couple sharing one villa sits under one heading. */
+  const groupRows = (rows: AttendanceRecord[]) => {
+    const areas = new Map<string, AttendanceRecord[]>();
+    rows.forEach((r) => {
+      const a = r.area_label || "No area recorded";
+      if (!areas.has(a)) areas.set(a, []);
+      areas.get(a)!.push(r);
+    });
+    return [...areas.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([area, list]) => {
+        const units = new Map<string, AttendanceRecord[]>();
+        list.forEach((r) => {
+          const u = r.room_label || "";
+          if (!units.has(u)) units.set(u, []);
+          units.get(u)!.push(r);
+        });
+        return {
+          area,
+          wardens: [...new Set(list.map((r) => r.responsible_staff).filter(Boolean))] as string[],
+          accounted: list.filter((r) => r.status !== "unaccounted").length,
+          total: list.length,
+          units: [...units.entries()]
+            .sort(([a], [b]) => (parseInt(a.replace(/\D/g, "")) || 0) - (parseInt(b.replace(/\D/g, "")) || 0) || a.localeCompare(b))
+            .map(([unit, people]) => ({ unit, people })),
+        };
+      });
+  };
+
 
   const complianceNote = isUK
     ? "Evidence for the Regulatory Reform (Fire Safety) Order 2005 and CQC Regulation 12 (safe care and treatment). Retain fire drill and roll call records for inspection."
@@ -89,12 +123,14 @@ export default function EvacuationReport() {
   const exportDrillCSV = async (d: DrillRecord) => {
     await loadAttendance(d.id);
     const rows = attendance[d.id] || (await supabase.from("evacuation_attendance").select("*").eq("drill_id", d.id)).data as any[] || [];
-    const headers = ["Name", "Type", areaLabel, roomLabel, "Assistance", "Phone", "Emergency contact", "Emergency phone", "Outcome", "Marked at", "Marked by"];
+    const headers = ["Name", "Type", areaLabel, roomLabel, "Assistance", "Phone", "Emergency contact", "Emergency phone", "With / visiting", "Responsible staff", "Outcome", "Marked at", "Marked by"];
     const body = rows.map((r: AttendanceRecord) => [
       r.person_name, r.person_type, r.area_label || "", r.room_label || "", r.assistance_level || "",
       r.contact_phone || "", r.emergency_contact_name || "", r.emergency_contact_phone || "",
+      r.associated_with || "", r.responsible_staff || "",
       statusText(r.status), r.marked_safe_at ? format(new Date(r.marked_safe_at), "dd/MM/yyyy HH:mm") : "", r.marked_by || "",
     ]);
+
     const csv = [
       [`"${d.title}"`].join(","),
       [`"Started ${format(new Date(d.started_at), "dd/MM/yyyy HH:mm")}"`].join(","),
@@ -127,6 +163,8 @@ export default function EvacuationReport() {
       table{width:100%;border-collapse:collapse;font-size:11px}
       th,td{padding:5px 7px;border-bottom:1px solid #e5e7eb;text-align:left}
       th{background:#fef2f2;color:#dc2626}
+      tr.grp td{background:#f3f4f6}
+
       .reason{margin:12px 0;padding:8px;border:1px solid #fca5a5;background:#fef2f2;font-size:12px;border-radius:6px}
       .footer{margin-top:18px;font-size:10px;color:#6b7280;border-top:1px solid #e5e7eb;padding-top:8px}
     </style></head><body>
@@ -139,14 +177,21 @@ export default function EvacuationReport() {
       <div><strong>Time to account</strong><br>${minutesToAccount(d) != null ? `${minutesToAccount(d)} min` : "In progress"}</div>
     </div>
     ${d.unaccounted_reason ? `<div class="reason"><strong>Exceptions recorded:</strong> ${d.unaccounted_reason}</div>` : ""}
-    <table><thead><tr><th>Name</th><th>Type</th><th>${areaLabel}</th><th>${roomLabel}</th><th>Assistance</th><th>Phone</th><th>Emergency contact</th><th>Outcome</th><th>Marked</th></tr></thead>
-    <tbody>${rows.map((r) => `<tr>
-      <td>${r.person_name}</td><td>${r.person_type}</td><td>${r.area_label || "—"}</td><td>${r.room_label || "—"}</td>
-      <td>${r.assistance_level || "—"}</td><td>${r.contact_phone || "—"}</td>
-      <td>${r.emergency_contact_name ? `${r.emergency_contact_name} ${r.emergency_contact_phone || ""}` : "—"}</td>
-      <td>${statusText(r.status)}</td>
-      <td>${r.marked_safe_at ? format(new Date(r.marked_safe_at), "HH:mm") : "—"}${r.marked_by ? `<br><small>${r.marked_by}</small>` : ""}</td>
-    </tr>`).join("")}</tbody></table>
+    <table><thead><tr><th>Name</th><th>Type</th><th>${roomLabel}</th><th>Assistance</th><th>Phone</th><th>Emergency contact</th><th>With / visiting</th><th>Responsible</th><th>Outcome</th><th>Marked</th></tr></thead>
+    <tbody>${groupRows(rows).map((g) => `
+      <tr class="grp"><td colspan="10"><strong>${g.area}</strong> — ${g.accounted} of ${g.total} accounted for${g.wardens.length ? ` · responsible: ${g.wardens.join(", ")}` : ""}</td></tr>
+      ${g.units.map((u) => u.people.map((r, i) => `<tr>
+        <td>${r.person_name}</td><td>${r.person_type}</td>
+        <td>${i === 0 ? (u.unit || "—") : ""}</td>
+        <td>${r.assistance_level || "—"}</td><td>${r.contact_phone || "—"}</td>
+        <td>${r.emergency_contact_name ? `${r.emergency_contact_name} ${r.emergency_contact_phone || ""}` : "—"}</td>
+        <td>${r.associated_with || "—"}</td>
+        <td>${r.responsible_staff || "—"}</td>
+        <td>${statusText(r.status)}</td>
+        <td>${r.marked_safe_at ? format(new Date(r.marked_safe_at), "HH:mm") : "—"}${r.marked_by ? `<br><small>${r.marked_by}</small>` : ""}</td>
+      </tr>`).join("")).join("")}
+    `).join("")}</tbody></table>
+
     <div class="footer">${complianceNote}<br>Generated by Centrim Life • ${format(new Date(), "dd MMM yyyy HH:mm")} • CONFIDENTIAL</div>
     </body></html>`;
     const w = window.open("", "_blank");
@@ -229,29 +274,51 @@ export default function EvacuationReport() {
                         {rows.length === 0 ? (
                           <p className="text-[13px] text-muted-foreground">No attendance records for this roll call.</p>
                         ) : (
-                          <div className="space-y-1.5">
-                            {rows.map((r) => (
-                              <div key={r.id} className={`rounded-lg border px-3 py-2 ${r.status === "unaccounted" ? "border-destructive/30 bg-destructive/5" : "border-border"}`}>
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                                  <span className="text-[13px] font-medium text-foreground">{r.person_name}</span>
-                                  <Badge variant="outline" className="text-[10px] capitalize">{r.person_type}</Badge>
-                                  {r.room_label && <span className="text-[12px] text-muted-foreground">{r.room_label}</span>}
-                                  {r.area_label && <span className="text-[12px] text-primary">{r.area_label}</span>}
-                                  {r.assistance_level && <span className="text-[12px] text-muted-foreground">{r.assistance_level}</span>}
-                                  {r.contact_phone && <span className="text-[12px] text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" />{r.contact_phone}</span>}
-                                  {r.emergency_contact_phone && (
-                                    <span className="text-[12px] text-muted-foreground">{r.emergency_contact_name || "Emergency"}: {r.emergency_contact_phone}</span>
+                          <div className="space-y-4">
+                            {groupRows(rows).map((g) => (
+                              <div key={g.area} className="space-y-1.5">
+                                <div className="flex flex-wrap items-baseline gap-2">
+                                  <span className="text-[13px] font-semibold text-foreground">{g.area}</span>
+                                  <span className="text-[11px] text-muted-foreground">{g.accounted} of {g.total} accounted for</span>
+                                  {g.wardens.length > 0 && (
+                                    <span className="text-[11px] text-muted-foreground">· Responsible: {g.wardens.join(", ")}</span>
                                   )}
-                                  <span className={`ml-auto text-[12px] font-medium ${r.status === "unaccounted" ? "text-destructive" : "text-success"}`}>
-                                    {r.status === "evacuated_offsite" && <Ambulance className="inline h-3 w-3 mr-1" />}
-                                    {statusText(r.status)}
-                                    {r.marked_safe_at ? ` · ${format(new Date(r.marked_safe_at), "HH:mm")}` : ""}
-                                    {r.marked_by ? ` · ${r.marked_by}` : ""}
-                                  </span>
                                 </div>
+                                {g.units.map((u) => (
+                                  <div key={u.unit || "none"} className="space-y-1.5">
+                                    {isVillageView && u.unit && (
+                                      <div className="px-1 text-[11px] font-medium text-muted-foreground">
+                                        {u.unit} — {u.people.length} {u.people.length === 1 ? "person" : "people"}
+                                      </div>
+                                    )}
+                                    {u.people.map((r) => (
+                                      <div key={r.id} className={`rounded-lg border px-3 py-2 ${r.status === "unaccounted" ? "border-destructive/30 bg-destructive/5" : "border-border"}`}>
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                          <span className="text-[13px] font-medium text-foreground">{r.person_name}</span>
+                                          <Badge variant="outline" className="text-[10px] capitalize">{r.person_type}</Badge>
+                                          {r.room_label && <span className="text-[12px] text-muted-foreground">{r.room_label}</span>}
+                                          {r.assistance_level && <span className="text-[12px] text-muted-foreground">{r.assistance_level}</span>}
+                                          {r.contact_phone && <span className="text-[12px] text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" />{r.contact_phone}</span>}
+                                          {r.emergency_contact_phone && (
+                                            <span className="text-[12px] text-muted-foreground">{r.emergency_contact_name || "Emergency"}: {r.emergency_contact_phone}</span>
+                                          )}
+                                          {r.associated_with && <span className="text-[12px] text-muted-foreground">{r.associated_with}</span>}
+                                          {r.responsible_staff && <span className="text-[12px] text-muted-foreground">Warden: {r.responsible_staff}</span>}
+                                          <span className={`ml-auto text-[12px] font-medium ${r.status === "unaccounted" ? "text-destructive" : "text-success"}`}>
+                                            {r.status === "evacuated_offsite" && <Ambulance className="inline h-3 w-3 mr-1" />}
+                                            {statusText(r.status)}
+                                            {r.marked_safe_at ? ` · ${format(new Date(r.marked_safe_at), "HH:mm")}` : ""}
+                                            {r.marked_by ? ` · ${r.marked_by}` : ""}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ))}
                               </div>
                             ))}
                           </div>
+
                         )}
                       </div>
                     )}

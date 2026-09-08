@@ -40,6 +40,9 @@ export interface EvacuationAttendance {
   emergency_contact_phone: string | null;
   area_label: string | null;
   room_label: string | null;
+  responsible_staff: string | null;
+  associated_with: string | null;
+
   evacuation_point_id: string | null;
   status: string;
   marked_safe_at: string | null;
@@ -59,7 +62,10 @@ export interface RollCallSeed {
   emergencyContactPhone?: string;
   area?: string;
   room?: string;
+  responsibleStaff?: string;
+  associatedWith?: string;
 }
+
 
 export type AttendanceStatus = "safe" | "unaccounted" | "evacuated_offsite";
 
@@ -77,8 +83,11 @@ function seedColumns(p: RollCallSeed) {
     emergency_contact_phone: p.emergencyContactPhone || null,
     area_label: p.area || null,
     room_label: p.room || null,
+    responsible_staff: p.responsibleStaff || null,
+    associated_with: p.associatedWith || null,
   };
 }
+
 
 export function useEvacuationPoints() {
   return useQuery({
