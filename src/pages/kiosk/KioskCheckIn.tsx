@@ -19,6 +19,8 @@ import { printBadgeAuto } from "@/lib/printBadge";
 import { KioskSuccessScreen } from "@/components/kiosk/KioskSuccessScreen";
 import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
 import { useKioskCheckInFlow, KioskStepId } from "@/hooks/useKioskCheckInFlow";
+import { isKioskQrTokenValid } from "@/lib/kioskQrToken";
+
 import {
   UserRound, Truck, Heart, ArrowLeft, ArrowRight, Shield, ScrollText,
   AlertTriangle, Search, RotateCcw, UserSearch, QrCode, UserPlus, X, Users, ChevronDown, Check
