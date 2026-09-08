@@ -269,7 +269,7 @@ export default function KioskCheckIn() {
     toast({ title: "Checked In", description: `Welcome, ${flow.formValues.firstName}!${flow.companions.length > 0 ? ` (+${flow.companions.length} companion${flow.companions.length > 1 ? "s" : ""})` : ""}` });
   }, [flow, addVisitor, toast]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (flow.keyBlocked) {
       toast({
         title: "Please see reception",
