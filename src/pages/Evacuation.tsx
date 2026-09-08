@@ -55,7 +55,9 @@ export default function Evacuation() {
   const { visitors } = useVisitors();
   const { residents } = useResidents();
   const { user } = useAuth();
-  const { areaLabel, roomLabel } = useSiteStructure();
+  const { areaLabel, roomLabel, structure } = useSiteStructure();
+  const isVillageView = structure === "rv" || structure === "mixed";
+
   const { isUK } = useJurisdiction();
   const { toast } = useToast();
 
