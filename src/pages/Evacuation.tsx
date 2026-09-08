@@ -20,7 +20,10 @@ import {
   EvacuationDrill,
   RollCallSeed,
   AttendanceStatus,
+  ATTENDANCE_LABELS,
+  ACCOUNTED_STATUSES,
 } from "@/hooks/useEvacuation";
+import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import {
   AlertTriangle, CheckCircle2, Search, Shield, Clock, Users, Download, Printer,
