@@ -27,7 +27,7 @@ export default function OperationsReport() {
   const { visitors, loading, error } = useVisitors();
   const { can, loading: permsLoading } = usePermissions();
   const { currentSite, currentSiteId } = useSite();
-  const { rows: personTypes } = usePersonTypes();
+  const { personTypes } = usePersonTypes();
   const { toast } = useToast();
 
   const [tab, setTab] = useState<Tab>("onsite");
@@ -127,7 +127,7 @@ export default function OperationsReport() {
                     <SelectTrigger className="h-9 w-[170px] text-[13px] rounded-lg"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All types</SelectItem>
-                      {personTypes.filter((t) => t.enabled).map((t) => (
+                      {personTypes.filter((t) => t.deskEnabled).map((t) => (
                         <SelectItem key={t.type} value={t.type}>{t.label}</SelectItem>
                       ))}
                     </SelectContent>
