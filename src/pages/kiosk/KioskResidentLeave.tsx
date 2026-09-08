@@ -293,7 +293,12 @@ export default function KioskResidentLeave() {
         {filteredResidents.length === 0 ? (
             <div className="text-center py-12 space-y-3">
               <Search className="h-12 w-12 text-muted-foreground/40 mx-auto" />
-              <p className="text-muted-foreground text-lg">No residents found</p>
+              <p className="text-muted-foreground text-lg">
+                {searchFirst && room.trim().length < 3
+                  ? "Type the room number or at least 3 letters of the name"
+                  : "No residents found"}
+              </p>
+
             </div>
         ) : (
           filteredResidents.map((r) => (
