@@ -2,6 +2,7 @@ import { VisitorType } from "@/types/visitor";
 import { Input } from "@/components/ui/input";
 import { Search, Check, Phone, QrCode, UserPlus } from "lucide-react";
 import { VisitorProfile } from "./useCheckInFlow";
+import { usePersonTypes } from "@/hooks/usePersonTypes";
 
 const allTypeChips: { type: VisitorType; label: string; emoji: string; desc: string }[] = [
   { type: "visitor", label: "Visitor", emoji: "👋", desc: "Family, friends, guests" },
@@ -57,7 +58,7 @@ export function StepIdentify({
       {/* Type chips */}
       <div className="space-y-3">
         <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Visitor Type</p>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
           {typeChips.map((tc) => (
             <button
               key={tc.type}
