@@ -119,3 +119,21 @@ Not granted to anon: `kiosk_emergency_gate` (internal), `kiosk_prefill_visitor` 
   write an `audit_log` entry naming the staff member, the item and any reason given.
 - **Not covered.** Nothing verifies that a credential document is genuine; expiry dates and
   references are staff-entered. Replacement items inherit no serial number by design.
+
+## Stage 6B additions
+
+- Badge printing records `badge_issued` / `badge_reprinted` / `badge_voided` in `audit_log`
+  with visitor id, person type and site. The site setting `badge_show_destination` removes
+  the resident name and room from printed badges where privacy requires it.
+- All CSV exports added in this stage (`operations`, `food_register_export`,
+  `keys_register_export`) go through `exportCsvAudited`, which records the action, site,
+  scope note and row count. Exports remain browser downloads and are not tamper-evident.
+- Food register reads and writes are site-scoped; rows created before site scoping have a
+  null site and remain visible to avoid silent data loss.
+- Notification delivery state is explicit and honest: no external channel is configured, so
+  the only reachable state is "In-app only". No delivery is claimed anywhere in the UI.
+- Anonymous kiosk requests were re-checked after these changes: the kiosk check-in route
+  reads only `settings` and the narrow kiosk RPCs; it does not read `key_issues`,
+  `property_keys` or `food_register` directly.
+- Linter unchanged from the Stage 6A baseline: 45 warnings (1 extension in public,
+  16 anonymous SECURITY DEFINER kiosk functions, 28 signed-in SECURITY DEFINER functions).

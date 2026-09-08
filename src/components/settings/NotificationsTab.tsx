@@ -1,17 +1,41 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Bell, Info } from "lucide-react";
+import { currentDeliveryStatus, DELIVERY_LABELS } from "@/lib/notificationDelivery";
 
 export function NotificationsTab() {
+  const delivery = currentDeliveryStatus();
+
   return (
     <div className="space-y-6">
       <Card className="border-warning/30 bg-warning/[0.04]">
         <CardHeader>
-          <CardTitle className="text-base">Email and text sending is not switched on</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            Email and text sending is not switched on
+            <Badge variant="outline" className="text-[10px] border-warning/40 text-warning">{delivery.label}</Badge>
+          </CardTitle>
           <CardDescription className="text-xs">
             Alerts are raised in the app and written to the record with who should have been told and when. Nothing is
             emailed or texted out yet, so treat the recipient lists below as the plan, not as proof anyone was contacted.
           </CardDescription>
         </CardHeader>
+        <CardContent className="pt-0">
+          <p className="text-xs text-muted-foreground">{delivery.detail}</p>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {(["created", "queued", "delivered", "failed", "not_configured"] as const).map((state) => (
+              <Badge
+                key={state}
+                variant="outline"
+                className={`text-[10px] ${state === delivery.state ? "border-primary/40 text-primary" : "text-muted-foreground opacity-60"}`}
+              >
+                {DELIVERY_LABELS[state]}
+              </Badge>
+            ))}
+          </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Only the highlighted state is possible today. The others become available when a sending channel is connected.
+          </p>
+        </CardContent>
       </Card>
 
       <Card>

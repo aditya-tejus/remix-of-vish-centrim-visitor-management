@@ -112,3 +112,30 @@ Baseline recorded in the approved plan document.
 - [ ] Credential documents are not verified against any issuing authority.
 - [ ] `keys.export` exists as a permission but there is no dedicated export file yet.
 - [ ] Everything under "Still open" above Stage 5 remains open.
+
+## Stage 6B — badges/QR, conditional food register, notifications, reporting
+
+Done
+- Badges: one badge model (the visit). `src/lib/badgeIssue.ts` wraps the existing print
+  view, applies the site privacy rule `badge_show_destination` (drops resident/room when
+  off), decides issued vs reprinted from `visitors.print_status`, supports void, and writes
+  `badge_issued` / `badge_reprinted` / `badge_voided` to the audit trail. Browser print
+  dialog only — no printer hardware integration is claimed. Setting added to Printing tab.
+- Food register: site-scoped reads (legacy rows without a site stay visible), site stamped
+  on every write (kiosk, front desk, manual), error state on the page, and an audited CSV
+  export. Still gated per person type by `food_register_checkin_{type}` and absent from
+  check-in when off. This is the local prototype register, not a Centrim Dining replacement.
+- Notifications: honest delivery states (created / queued / delivered / failed / not
+  configured) in `src/lib/notificationDelivery.ts`, surfaced in the Notifications settings
+  tab. No external channel is configured, so only "In-app only" is possible.
+- Reporting: `/reports/on-site` — who is on site, people over their expected time, and visit
+  history by date and person type. Site-scoped, `presence.view` to open, `data.export` to
+  download, export written to the audit trail via `src/lib/exportAudit.ts`.
+- Keys/fobs export implemented behind `keys.export` with an audited CSV (closes the Stage 6A gap).
+
+Open
+- No email/SMS/push/Teams adapter; nothing is actually sent.
+- Exports are browser downloads and are not tamper-evident.
+- Contractor credential document verification still manual.
+- Security linter unchanged at 45 warnings (1 extension, 16 anonymous, 28 signed-in
+  SECURITY DEFINER functions) — same intentional set documented in docs/SECURITY_REVIEW.md.

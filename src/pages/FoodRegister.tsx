@@ -13,6 +13,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useResidents } from "@/hooks/useResidents";
 import { useFoodRegister } from "@/hooks/useFoodRegister";
 import { AddFoodDialog } from "@/components/food/AddFoodDialog";
+import { exportCsvAudited } from "@/lib/exportAudit";
+import { ErrorState } from "@/components/states";
+import { useSite } from "@/contexts/SiteContext";
 
 import { FoodRecord, foodTypeLabel } from "@/lib/foodRegister";
 import { format } from "date-fns";
@@ -20,6 +23,7 @@ import { Download, Plus, Search, UtensilsCrossed, X } from "lucide-react";
 
 export default function FoodRegisterPage() {
   const { residents } = useResidents();
+  const { currentSite, currentSiteId } = useSite();
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [residentVisitorId, setResidentVisitorId] = useState("all");
@@ -39,7 +43,7 @@ export default function FoodRegisterPage() {
     [from, to, residentVisitorId, visitorName, search]
   );
 
-  const { records, loading, refetch } = useFoodRegister(filters);
+  const { records, loading, error, refetch } = useFoodRegister(filters);
 
   const hasFilters = !!(from || to || residentVisitorId !== "all" || visitorName || search);
   const clearFilters = () => {
@@ -47,27 +51,27 @@ export default function FoodRegisterPage() {
   };
 
   // Export respects whichever filters are currently applied (exports exactly what's listed).
-  const exportCsv = () => {
-    const header = ["Date & Time", "Resident", "Food", "Food Type", "Brought By", "Shared With", "Notes", "Source"];
-    const rows = records.map((r) => [
-      format(r.recordedAt, "hh:mm a dd MMM yyyy"),
-      r.residentName,
-      r.foodDescription,
-      foodTypeLabel(r.foodType),
-      r.broughtByName,
-      r.sharedWithOthers ? (r.sharedResidentNames.join("; ") || "Yes") : "No",
-      r.notes || "",
-      r.source === "manual" ? "Added by staff" : "Check-in",
-    ]);
-    const csv = [header, ...rows]
-      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `food-register-${format(new Date(), "yyyy-MM-dd")}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const exportCsv = async () => {
+    await exportCsvAudited(
+      ["Date & Time", "Resident", "Food", "Food Type", "Brought By", "Shared With", "Notes", "Source"],
+      records.map((r) => [
+        format(r.recordedAt, "hh:mm a dd MMM yyyy"),
+        r.residentName,
+        r.foodDescription,
+        foodTypeLabel(r.foodType),
+        r.broughtByName,
+        r.sharedWithOthers ? (r.sharedResidentNames.join("; ") || "Yes") : "No",
+        r.notes || "",
+        r.source === "manual" ? "Added by staff" : "Check-in",
+      ]),
+      {
+        filenamePrefix: "food-register",
+        auditAction: "food_register_export",
+        siteId: currentSiteId,
+        siteName: currentSite?.name ?? null,
+        scopeNote: hasFilters ? "Filtered view" : "All records in view",
+      }
+    );
   };
 
   return (
@@ -140,6 +144,8 @@ export default function FoodRegisterPage() {
             </Card>
 
 
+
+            {error && <ErrorState description={error} onRetry={refetch} />}
 
             <Card className="rounded-xl">
               <CardContent className="p-0">

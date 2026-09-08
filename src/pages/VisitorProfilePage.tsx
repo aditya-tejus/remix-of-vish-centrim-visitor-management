@@ -33,7 +33,8 @@ import { EditVisitorDialog } from "@/components/EditVisitorDialog";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { AddVisitDialog } from "@/components/AddVisitDialog";
 import { VisitorBadge } from "@/components/VisitorBadge";
-import { printBadgeAuto } from "@/lib/printBadge";
+import { issueBadge } from "@/lib/badgeIssue";
+import { useSite } from "@/contexts/SiteContext";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -64,6 +65,7 @@ export default function VisitorProfilePage() {
   const { visitors, deleteVisitor, addVisitor, checkOutVisitor } = useVisitors();
   const { toast } = useToast();
   const { role } = useAuth();
+  const { currentSite, currentSiteId } = useSite();
   const isAdmin = role === "admin";
   const { openIssues } = useOpenKeyIssues();
   const { checkVisitor } = useWatchlist();
@@ -214,7 +216,7 @@ export default function VisitorProfilePage() {
                   variant="print"
                   onPrint={() => {
                     const res = residentForVisit(visitor);
-                    printBadgeAuto({
+                    issueBadge({
                       name: `${visitor.firstName} ${visitor.surname}`.trim(),
                       type: visitor.type,
                       visiting: res?.name || visitor.whomToVisit || undefined,
@@ -222,7 +224,7 @@ export default function VisitorProfilePage() {
                       room: [res?.room, res?.wing].filter(Boolean).join(" · ") || undefined,
                       qrValue: visitor.personQr || visitor.qrCode || visitor.id,
                       date: visitor.checkInTime,
-                    });
+                    }, { visitorId: visitor.id, siteId: currentSiteId, siteName: currentSite?.name });
                   }}
                 />
 

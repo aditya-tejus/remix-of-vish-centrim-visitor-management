@@ -20,13 +20,14 @@ export function PrintingTab() {
   const [labelPrinterMode, setLabelPrinterMode] = useState("standard");
   const [includePhoto, setIncludePhoto] = useState(true);
   const [includeQr, setIncludeQr] = useState(true);
+  const [showDestination, setShowDestination] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     supabase
       .from("settings")
       .select("key, value")
-      .in("key", ["badge_printing_enabled", "print_on_checkin", "printer_model", "printer_ip", "label_size", "label_printer_mode", "badge_include_photo", "badge_include_qr"])
+      .in("key", ["badge_printing_enabled", "print_on_checkin", "printer_model", "printer_ip", "label_size", "label_printer_mode", "badge_include_photo", "badge_include_qr", "badge_show_destination"])
       .then(({ data }) => {
         if (data) {
           const map: Record<string, string> = {};
@@ -39,6 +40,7 @@ export function PrintingTab() {
           setLabelPrinterMode(map.label_printer_mode === "label" ? "label" : "standard");
           setIncludePhoto(map.badge_include_photo !== "false");
           setIncludeQr(map.badge_include_qr !== "false");
+          setShowDestination(map.badge_show_destination !== "false");
         }
       });
   }, []);
@@ -54,6 +56,7 @@ export function PrintingTab() {
       { key: "label_printer_mode", value: labelPrinterMode },
       { key: "badge_include_photo", value: includePhoto ? "true" : "false" },
       { key: "badge_include_qr", value: includeQr ? "true" : "false" },
+      { key: "badge_show_destination", value: showDestination ? "true" : "false" },
     ];
     for (const s of settings) {
       await supabase.from("settings").upsert(s, { onConflict: "key" });
@@ -72,6 +75,16 @@ export function PrintingTab() {
           <CardDescription className="text-xs">Configure visitor badge printing on check-in. Print failures will not block check-in — staff will see a toast with a reprint option.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="rounded-lg border border-border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-foreground">Show who they are visiting on the badge</p>
+                <p className="text-xs text-muted-foreground">Turn this off where resident names and rooms must not appear on a printed badge</p>
+              </div>
+              <Switch checked={showDestination} onCheckedChange={setShowDestination} />
+            </div>
+          </div>
+
           <div className="rounded-lg border border-border p-4">
             <div className="flex items-center justify-between">
               <div>
