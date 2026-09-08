@@ -95,6 +95,8 @@ const App = () => (
               <Route path="checkout" element={<KioskCheckOut />} />
               <Route path="resident-leave" element={<KioskResidentLeave />} />
               <Route path="qr-scan" element={<KioskQRScan />} />
+              <Route path="evacuation" element={<KioskEvacuation />} />
+
             </Route>
 
             <Route path="*" element={<NotFound />} />
