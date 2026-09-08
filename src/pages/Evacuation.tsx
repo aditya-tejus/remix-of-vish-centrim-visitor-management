@@ -302,8 +302,10 @@ export default function Evacuation() {
 
   const printList = () => {
     const date = format(new Date(), "dd MMMM yyyy, HH:mm");
-    const body = groups.map((g) => `
-      <tr class="grp"><td colspan="7">${g.label} — ${g.people.length} people</td></tr>
+    const body = groups.map((g) => {
+      const wardens = [...new Set(g.people.map((p) => p.responsibleStaff).filter(Boolean))];
+      return `
+      <tr class="grp"><td colspan="8">${g.label} — ${g.people.length} people${wardens.length ? ` · responsible: ${wardens.join(", ")}` : ""}</td></tr>
       ${g.people.map((p) => {
         const s = statusOf(p);
         return `<tr class="${s === "unaccounted" ? "danger" : "safe"}">
@@ -313,10 +315,13 @@ export default function Evacuation() {
         <td>${p.assistance.label}${p.assistance.aids.length ? `<br><small>${p.assistance.aids.join(", ")}</small>` : ""}${p.assistance.flags.length ? `<br><small>${p.assistance.flags.join(", ")}</small>` : ""}</td>
         <td>${p.phone || "—"}</td>
         <td>${p.emergencyContactName ? `${p.emergencyContactName}<br>${p.emergencyContactPhone || ""}` : "—"}</td>
+        <td>${p.associatedWith.length ? p.associatedWith.join("<br>") : "—"}</td>
         <td>${s === "unaccounted" ? "Not accounted for" : s === "safe" ? "Safe" : "Evacuated off-site"}</td>
       </tr>`;
       }).join("")}
-    `).join("");
+    `;
+    }).join("");
+
 
     const offSiteRows = offSite.map((p) => `<tr>
       <td>☑</td><td><strong>${p.name}</strong>${p.room ? `<br><small>${p.room}</small>` : ""}</td>
