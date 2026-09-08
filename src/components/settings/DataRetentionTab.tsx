@@ -125,9 +125,9 @@ function RetentionPicker({ settingsKey, typeLabel, extended = false }: { setting
           <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
           <p className="text-xs text-muted-foreground">
             {retentionPeriod === "never" ? (
-              <>{typeLabel} records are never deleted automatically.</>
+              <>{typeLabel} records are kept until someone removes them.</>
             ) : (
-              <>{typeLabel} records older than <span className="font-semibold text-foreground">{retentionPeriod} days</span> are automatically and securely deleted.</>
+              <>Intended period: {typeLabel} records older than <span className="font-semibold text-foreground">{retentionPeriod} days</span> may be cleared. Nothing is removed automatically — an administrator runs the clean-up from Settings &gt; Compliance.</>
             )}{" "}Records on legal hold are always kept.
           </p>
         </div>
@@ -149,7 +149,7 @@ export function DataRetentionTab() {
         </div>
         <div>
           <h2 className="font-semibold text-foreground">Data Retention Policy</h2>
-          <p className="text-xs text-muted-foreground">Configure retention periods per visitor type. Records are automatically deleted after each period.</p>
+          <p className="text-xs text-muted-foreground">Your intended retention period per visitor type. Clean-up is run by an administrator in Settings &gt; Compliance; nothing is deleted on a schedule.</p>
         </div>
       </div>
 
@@ -174,8 +174,8 @@ export function DataRetentionTab() {
       </Tabs>
 
       <p className="mt-4 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-        Food Register records follow the <span className="font-medium text-foreground">Visitors</span> retention
-        period above. A food record linked to a person under legal hold is never auto-deleted.
+        Food Register records follow the <span className="font-medium text-foreground">Visitors</span> period above.
+        A record linked to a person on legal or safeguarding hold is always skipped.
       </p>
     </div>
 
