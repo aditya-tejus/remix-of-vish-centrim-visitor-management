@@ -472,7 +472,7 @@ export default function KeysRegister() {
                               <div className={`h-9 w-9 rounded-lg flex items-center justify-center border ${style.className}`}>
                                 <KeyRound className="h-4 w-4" />
                               </div>
-                              <div className="min-w-[180px] flex-1">
+                              <div className="sm:min-w-[180px] flex-1 min-w-0">
                                 <p className="text-sm font-semibold text-foreground">
                                   {k.keyLabel}
                                   {k.copyNumber ? <span className="text-muted-foreground font-normal"> · copy {k.copyNumber}</span> : null}
