@@ -249,7 +249,7 @@ export function VisitorTable({
           </div>
         </TableCell>
 
-        {/* Out — always a real column */}
+        {/* Out — actual time once left, expected time while on site */}
         <TableCell className="py-3">
           {visitor.checkOutTime ? (
             <div className="flex flex-col">
@@ -257,11 +257,18 @@ export function VisitorTable({
               <span className="text-[11px] text-muted-foreground">{format(visitor.checkOutTime, "dd MMM")}</span>
             </div>
           ) : (
-            <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-success">
-              <span className="h-1.5 w-1.5 rounded-full bg-success" /> On site
-            </span>
+            <div className="flex flex-col">
+              <span className={`inline-flex items-center gap-1.5 text-[12px] font-medium ${overstayed ? "text-destructive" : "text-success"}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${overstayed ? "bg-destructive" : "bg-success"}`} />
+                {overstayed ? "Overdue" : "On site"}
+              </span>
+              <span className="text-[11px] text-muted-foreground">
+                Due {format(new Date(visitor.checkInTime.getTime() + hoursFor(visitor.type) * 3600000), "hh:mm a")}
+              </span>
+            </div>
           )}
         </TableCell>
+
 
         {/* Visiting / Department / Company */}
         <TableCell className="py-3">

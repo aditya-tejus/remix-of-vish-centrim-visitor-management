@@ -34,3 +34,12 @@ Baseline recorded in the approved plan document.
 - Shared loading/empty/error/permission/offline states added at `src/components/states`.
 - No schema, RLS, or workflow changes in this stage.
 - Stage 2 correction: `/` now opens the Visit List (daily operations); the workbench moved to `/today` with `/dashboard` and `/workbench` redirecting there. Sidebar shows Visit list and Today as primary items with correct active state.
+
+## Stage 3 — Core daily visitor workflow (complete)
+- Kiosk check-in now goes through the restricted `kiosk_check_in` server function; anon table access to `visitors` removed (verified: direct select/insert denied).
+- `sync_visit_from_visitor()` mirrors legacy visitor rows into people/visits/visit_parties, with individual companion checkout timestamps.
+- New visit statuses: draft, auto-checked-out, cancelled, incomplete.
+- Visitor List: expected checkout / overdue column, loading, error and offline states with retry.
+- Staff check-in skips person-type screen when only one type is enabled.
+- Kiosk confirm step guarded against double-tap duplicate check-ins.
+- Known limitations: kiosk key-overdue blocking is inert (kiosk can no longer read key tables — needs a purpose-specific RPC); external notification delivery still not implemented; 36 Supabase linter warnings remain (mostly SECURITY DEFINER functions, incl. the intentional anon kiosk RPCs).

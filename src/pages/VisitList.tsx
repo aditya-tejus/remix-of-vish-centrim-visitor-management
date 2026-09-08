@@ -24,10 +24,12 @@ import { useOverstayPolicy } from "@/hooks/useOverstayPolicy";
 import { VisitListQRDialog } from "@/components/VisitListQRDialog";
 import { HandoverPrintDialog } from "@/components/HandoverPrintDialog";
 import { TabContextStats } from "@/components/TabContextStats";
+import { LoadingState, ErrorState, OfflineState } from "@/components/states";
 
 export default function VisitList() {
   const navigate = useNavigate();
-  const { visitors, addVisitor, checkOutVisitor, checkInReturn, deleteVisitor, overstayedCount } = useVisitors();
+  const { visitors, loading, error, refresh, addVisitor, checkOutVisitor, checkInReturn, deleteVisitor, overstayedCount } = useVisitors();
+  const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [checkOutSheetOpen, setCheckOutSheetOpen] = useState(false);
   const [checkOutPreSelectedId, setCheckOutPreSelectedId] = useState<string | null>(null);
@@ -40,6 +42,14 @@ export default function VisitList() {
   const [handoverOpen, setHandoverOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [bulkCheckOutIds, setBulkCheckOutIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const up = () => setOnline(true);
+    const down = () => setOnline(false);
+    window.addEventListener("online", up);
+    window.addEventListener("offline", down);
+    return () => { window.removeEventListener("online", up); window.removeEventListener("offline", down); };
+  }, []);
 
   // Keyboard shortcuts
   useKeyboardShortcuts({
@@ -230,6 +240,18 @@ export default function VisitList() {
 
           {/* ZONE D — Table */}
           <main className="px-6 pb-16 pt-2">
+            {!online ? (
+              <OfflineState
+                description="You are offline. The list below may be out of date — check-ins will save once the connection returns."
+              />
+            ) : loading && visitors.length === 0 ? (
+              <LoadingState rows={6} label="Loading today's visits" />
+            ) : error ? (
+              <ErrorState
+                description={error}
+                action={<Button variant="outline" onClick={() => refresh()}>Try again</Button>}
+              />
+            ) : (
             <VisitorTable
               visitors={displayVisitors}
               onCheckOut={handleCheckOutFromTable}
@@ -242,6 +264,7 @@ export default function VisitList() {
               onFilter={setActiveFilter}
               activeFilter={activeFilter}
             />
+            )}
           </main>
 
           <KeyboardShortcutBar />

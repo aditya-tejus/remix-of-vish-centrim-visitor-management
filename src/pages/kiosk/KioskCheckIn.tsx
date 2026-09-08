@@ -184,7 +184,12 @@ export default function KioskCheckIn() {
 
   const [checkedInQrCode, setCheckedInQrCode] = useState<string | null>(null);
 
+  const submittingRef = useRef(false);
+
   const doCheckIn = useCallback(() => {
+    // Guard against a second tap creating a duplicate arrival record
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     const allHealthClear = Object.values(flow.healthAnswers).every((v) => v === false);
     const groupId = flow.companions.length > 0 ? crypto.randomUUID() : undefined;
     const primaryQr = crypto.randomUUID().slice(0, 12).toUpperCase();
@@ -300,6 +305,7 @@ export default function KioskCheckIn() {
 
   const handleComplete = useCallback(() => navigate("/kiosk/home"), [navigate]);
   const handleStartOver = () => {
+    submittingRef.current = false;
     flow.reset();
     setStep("type");
     setSubmitted(false);
@@ -1254,7 +1260,7 @@ export default function KioskCheckIn() {
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={!flow.privacyAcknowledged}
+                disabled={!flow.privacyAcknowledged || submitted}
                 className="flex-1 h-14 text-base gap-2 bg-success hover:bg-success/90 text-success-foreground"
               >
                 ✓ Complete Check In

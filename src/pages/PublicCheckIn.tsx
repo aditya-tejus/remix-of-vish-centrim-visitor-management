@@ -44,20 +44,22 @@ export default function PublicCheckIn() {
   const allHealthAnswered = healthQuestions.every((q) => healthAnswers[q.id] !== undefined);
 
   const handleSubmit = async () => {
-    const { error } = await supabase.from("visitors").insert({
-      first_name: formData.firstName,
-      surname: formData.surname,
-      email: formData.email,
-      mobile: formData.mobile,
-      type: selectedType,
-      whom_to_visit: formData.whomToVisit,
-      address: formData.address,
-      comments: formData.comments,
-      body_temperature: formData.bodyTemperature ? parseFloat(formData.bodyTemperature) : null,
-      health_declaration: Object.values(healthAnswers).every((v) => v === false),
-      health_answers: healthAnswers,
-      privacy_acknowledged: privacyAcknowledged,
-      status: "checked-in",
+    // Public arrivals go through the restricted server function — no table access.
+    const { error } = await supabase.rpc("kiosk_check_in" as any, {
+      p_payload: {
+        first_name: formData.firstName,
+        surname: formData.surname,
+        email: formData.email,
+        mobile: formData.mobile,
+        type: selectedType,
+        whom_to_visit: formData.whomToVisit,
+        address: formData.address,
+        comments: formData.comments,
+        body_temperature: formData.bodyTemperature || null,
+        health_declaration: Object.values(healthAnswers).every((v) => v === false),
+        health_answers: healthAnswers,
+        privacy_acknowledged: privacyAcknowledged,
+      } as any,
     });
     if (!error) setSubmitted(true);
   };

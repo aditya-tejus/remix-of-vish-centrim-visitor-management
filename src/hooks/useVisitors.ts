@@ -81,13 +81,17 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
   const { publicMode = false } = options;
   const [visitors, setVisitors] = useState<Visitor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchVisitors = useCallback(async () => {
     // Kiosk (unauthenticated) reads go through a narrow server function that returns
     // presence only — never visit history or personal details.
     if (publicMode) {
       const { data, error } = await supabase.rpc("kiosk_presence_list" as any);
-      if (!error && data) {
+      if (error) {
+        setError("We could not reach the system. Please try again.");
+      } else if (data) {
+        setError(null);
         setVisitors((data as unknown as DbVisitor[]).map(dbToVisitor));
       }
       setLoading(false);
@@ -103,7 +107,10 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       .or(`check_in_time.gte.${todayStart.toISOString()},status.eq.checked-in,and(type.eq.resident,status.eq.checked-out)`)
       .order("check_in_time", { ascending: false })
       .limit(500);
-    if (!error && data) {
+    if (error) {
+      setError("We could not load today's visits. Please try again.");
+    } else if (data) {
+      setError(null);
       setVisitors((data as unknown as DbVisitor[]).map(dbToVisitor));
     }
     setLoading(false);
@@ -185,29 +192,45 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       });
     }
 
-    // Insert into DB — only ask back for columns the caller is allowed to read
+    const failed = (error: unknown) => {
+      // Roll back the optimistic row and let the caller know it did not save
+      setVisitors((prev) => prev.filter((v) => v.id !== tempId));
+      toast({
+        title: "Could not save this check-in",
+        description: "Please check the connection and try again, or ask a staff member for help.",
+        variant: "destructive",
+      });
+      console.error("Failed to save visitor record", error);
+    };
+
+    if (publicMode) {
+      // Kiosk: purpose-specific server function. The kiosk has no table access.
+      supabase
+        .rpc("kiosk_check_in" as any, { p_payload: payload as any })
+        .then(({ data, error }) => {
+          const row = Array.isArray(data) ? (data[0] as any) : (data as any);
+          if (error || !row?.visitor_id) return failed(error);
+          setVisitors((prev) =>
+            prev.map((v) => (v.id === tempId ? { ...v, id: row.visitor_id } : v))
+          );
+        });
+      return newVisitor;
+    }
+
+    // Staff: direct insert, guarded by site-scoped policies
     supabase
       .from("visitors")
       .insert(payload as any)
       .select("id, qr_code")
       .single()
       .then(({ data, error }) => {
-        if (error || !data) {
-          // Roll back the optimistic row and let the caller know it did not save
-          setVisitors((prev) => prev.filter((v) => v.id !== tempId));
-          toast({
-            title: "Could not save this check-in",
-            description: "Please ask a staff member for help.",
-            variant: "destructive",
-          });
-          console.error("Failed to save visitor record", error);
-          return;
-        }
+        if (error || !data) return failed(error);
         // Replace temp ID with real one
         setVisitors((prev) =>
           prev.map((v) => (v.id === tempId ? { ...v, id: (data as any).id } : v))
         );
       });
+
 
 
 
@@ -425,6 +448,8 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
   return {
     visitors,
     loading,
+    error,
+    refresh: fetchVisitors,
     addVisitor,
     markResidentAway,
     checkOutVisitor,

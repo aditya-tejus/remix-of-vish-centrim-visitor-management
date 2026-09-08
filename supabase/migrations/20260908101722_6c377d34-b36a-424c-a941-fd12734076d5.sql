@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.sync_visit_from_visitor() FROM PUBLIC, anon, authenticated;
