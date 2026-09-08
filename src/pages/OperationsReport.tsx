@@ -159,6 +159,7 @@ export default function OperationsReport() {
                   description={tab === "history" ? "Try widening the date range." : undefined}
                 />
               ) : (
+                <div className="w-full overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
