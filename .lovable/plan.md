@@ -1,6 +1,6 @@
-# Kiosk privacy, printable badges, rotating QR, and staff logins
+# Kiosk privacy, printable badges, rotating QR, and PIN-protected evacuation on the kiosk
 
-Four fixes, all small and independent.
+Four changes, all independent.
 
 ## 1. Resident privacy setting is ignored on the kiosk leave/return screen
 
@@ -26,18 +26,20 @@ It reuses the existing badge print layout, so it works with both a normal printe
 
 The QR on the kiosk welcome screen (for checking in from your phone) currently never changes. It will regenerate every 5 minutes with a fresh short-lived token in the link, so a photographed code stops working. Links older than the window land on the kiosk check-in page with a "please scan the code again" message.
 
-## 4. Staff logins with limited permissions
+## 4. Emergency roll call on the kiosk, behind a staff PIN
 
-Staff already sign in with their own account and a role of admin or staff. Today both roles can do everything.
+A small, discreet icon in the kiosk footer. Pressing and holding it (or tapping it several times) opens a numeric PIN pad. With the correct PIN, the kiosk shows the live evacuation roll call and staff can action it there.
 
-As requested: **staff can change settings, but cannot edit or delete visitor records.** Admins keep full access. (If you'd rather have it the other way round, say so and I'll flip it.)
-- Editing a visitor's details and deleting records become admin-only, both in the screen (buttons hidden/disabled with a short "Admins only" note) and enforced in the database so it cannot be bypassed.
-- Checking people in and out stays available to staff — that is daily work, not editing a record.
-- Kiosk self-service stays as it is: visitors can only check themselves in or out, never change an existing record.
+- PIN is set in Settings (Evacuation / Emergency section), stored securely and never shown in the kiosk screen; 5 wrong attempts locks the pad for 60 seconds.
+- After unlocking, the kiosk shows the same roll call used on the desktop: everyone on site grouped by stage/wing then villa/room, with each person on their own line, assistance needs, phone and next of kin.
+- Staff can start a drill/evacuation if none is running, mark people safe with one large tap, mark unaccounted, and see live "X of Y accounted for" progress per area. Every action records the time; the PIN session is attributed to a staff name chosen on unlock.
+- Big touch targets, no hovers, and a clear Exit that returns to the welcome screen. The kiosk idle timeout is paused while the roll call is open so it never closes mid-evacuation.
 
 ## Technical notes
 
 - `src/pages/kiosk/KioskResidentLeave.tsx`: read `kiosk_resident_lookup_mode_resident` with fallback to `kiosk_resident_lookup_mode`; gate `filteredResidents` / `filteredAway` behind a 3-char query in `search_first`.
-- New `src/components/PrintBadgeButton.tsx` (or extend `VisitorBadge` print path) feeding `printBadgeAuto` with mobile, room/wing resolved from `visitedResidentIds` via `useResidents`, and the QR value `visitor.personQr || visitor.qrCode || visitor.id`; add QR rendering to the badge markup in `src/lib/printBadge.ts`. Wire into `VisitorProfilePage.tsx` and the `CheckInSheet` confirmation.
-- `src/pages/kiosk/KioskAttract.tsx`: 5-minute interval regenerating a `?t=<epoch-bucket>` token; `KioskCheckIn` validates the bucket age and shows a re-scan notice if stale.
-- RLS: split `visitors` UPDATE/DELETE policies so full-record updates and deletes require `has_role(auth.uid(),'admin')`, while check-in/check-out writes remain open to `authenticated`; settings writes stay open to admin and staff. UI gating via `useAuth().role`.
+- Badge: extend `src/lib/printBadge.ts` markup with mobile, room/wing and a QR image; resolve room/wing from `visitedResidentIds` via `useResidents`; QR value `visitor.personQr || visitor.qrCode || visitor.id`. Wire into `VisitorProfilePage.tsx` and the `CheckInSheet` confirmation.
+- `src/pages/kiosk/KioskAttract.tsx`: 5-minute interval regenerating a `?t=<epoch-bucket>` token; `KioskCheckIn` validates bucket age and shows a re-scan notice if stale.
+- New `src/pages/kiosk/KioskEvacuation.tsx` + `src/components/kiosk/KioskPinPad.tsx`, route `/kiosk/evacuation`, trigger rendered in `KioskLayout` footer. Reuses `buildRollCall` from `src/lib/evacuation.ts` and `useEvacuation` for drill create/attendance updates.
+- PIN: stored as a salted hash in `settings` (`kiosk_staff_pin_hash`), verified through a `SECURITY DEFINER` function so the hash is never sent to the kiosk; attempts logged to `audit_log`.
+- Evacuation writes from the kiosk run under the anonymous kiosk session, so `evacuation_drills` / `evacuation_attendance` policies need a check that these paths stay limited to drill creation and status marking.
