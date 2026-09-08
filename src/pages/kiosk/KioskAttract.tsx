@@ -15,7 +15,14 @@ export default function KioskAttract() {
     return () => clearInterval(interval);
   }, []);
 
-  const publicCheckinUrl = `${window.location.origin}/kiosk/checkin`;
+  // Rotating phone check-in code — refreshes every 5 minutes.
+  const [qrToken, setQrToken] = useState(() => createKioskQrToken());
+  useEffect(() => {
+    const id = setInterval(() => setQrToken(createKioskQrToken()), 30 * 1000);
+    return () => clearInterval(id);
+  }, []);
+  const publicCheckinUrl = `${window.location.origin}/kiosk/checkin?k=${qrToken}`;
+
 
   const handleStart = useCallback(() => navigate("/kiosk/home"), [navigate]);
 
