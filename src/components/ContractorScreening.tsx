@@ -58,7 +58,7 @@ export function ContractorScreening({
   kiosk = false,
   onPersonChange,
 }: ContractorScreeningProps) {
-  const { suppliers } = useSuppliers();
+  const { suppliers } = useSuppliers({ publicMode: kiosk });
   const { toast } = useToast();
   const [supplierSearch, setSupplierSearch] = useState("");
   const [showSupplierList, setShowSupplierList] = useState(false);

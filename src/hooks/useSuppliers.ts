@@ -19,11 +19,34 @@ export interface Supplier {
   insurance_reference?: string | null;
 }
 
-export function useSuppliers() {
+interface UseSuppliersOptions {
+  /** Kiosk / unauthenticated context: supplier name only, no credential data. */
+  publicMode?: boolean;
+}
+
+export function useSuppliers({ publicMode = false }: UseSuppliersOptions = {}) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchSuppliers = useCallback(async () => {
+    if (publicMode) {
+      const { data } = await supabase.rpc("kiosk_supplier_directory" as any);
+      if (data) {
+        setSuppliers(
+          (data as any[]).map((s) => ({
+            id: s.id,
+            name: s.name,
+            abn: null,
+            company_number: null,
+            contact_name: null,
+            contact_phone: null,
+            contact_email: null,
+          }))
+        );
+      }
+      setLoading(false);
+      return;
+    }
     const { data } = await supabase
       .from("suppliers_min")
       .select("*")
@@ -31,7 +54,7 @@ export function useSuppliers() {
       .order("name");
     if (data) setSuppliers(data as Supplier[]);
     setLoading(false);
-  }, []);
+  }, [publicMode]);
 
   useEffect(() => {
     fetchSuppliers();
