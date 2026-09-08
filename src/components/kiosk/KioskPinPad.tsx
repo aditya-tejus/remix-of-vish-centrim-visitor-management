@@ -44,9 +44,10 @@ export function KioskPinPad({ open, onOpenChange, onSuccess }: KioskPinPadProps)
       return;
     }
     if (data === true) {
+      const verified = pin;
       setAttempts(0);
       reset();
-      onSuccess();
+      onSuccess(verified);
       return;
     }
     const next = attempts + 1;
