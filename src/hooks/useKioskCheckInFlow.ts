@@ -174,7 +174,7 @@ export function useKioskCheckInFlow() {
     }
     pipeline.push({ id: "confirm", label: "Review" });
     return pipeline;
-  }, [selectedType, healthQuestions.length, tcContent, visitedResidentId]);
+  }, [selectedType, healthQuestions.length, tcContent, visitedResidentId, foodStepEnabled]);
 
   const updateField = (key: string, value: string) => {
     setFormValues((prev) => ({ ...prev, [key]: value }));
