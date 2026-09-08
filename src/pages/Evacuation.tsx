@@ -187,8 +187,8 @@ export default function Evacuation() {
     }
     if (filterType !== "all") list = list.filter((p) => p.type === filterType);
     if (filterArea !== "all") list = list.filter((p) => p.area === filterArea);
-    if (filterStatus === "safe") list = list.filter((p) => statusOf(p) !== "unaccounted");
-    else if (filterStatus === "unaccounted") list = list.filter((p) => statusOf(p) === "unaccounted");
+    if (filterStatus === "safe") list = list.filter((p) => accountedFor(p));
+    else if (filterStatus === "unaccounted") list = list.filter((p) => !accountedFor(p));
     return list;
   }, [onSite, searchQuery, filterType, filterArea, filterStatus, statusByKey]);
 
@@ -205,7 +205,7 @@ export default function Evacuation() {
       if (groupBy === "area") push(p.area || (p.type === "resident" ? UNASSIGNED_AREA : `${p.typeLabel}s`), p);
       else if (groupBy === "assistance") push(p.assistance.level, p);
       else if (groupBy === "type") push(`${p.typeLabel}s`, p);
-      else push(statusOf(p) === "unaccounted" ? "Not accounted for" : "Accounted for", p);
+      else push(!accountedFor(p) ? "Not accounted for" : "Accounted for", p);
     });
 
     let entries = [...map.entries()];
@@ -221,29 +221,29 @@ export default function Evacuation() {
     return entries.map(([k, people]) => ({ label: k, people: sortPeople(people) }));
   }, [filtered, groupBy, statusByKey]);
 
-  const safeCount = onSite.filter((p) => statusOf(p) !== "unaccounted").length;
+  const safeCount = onSite.filter((p) => accountedFor(p)).length;
   const unaccountedCount = onSite.length - safeCount;
   const offSiteCount = offSite.length;
 
   const markGroupSafe = async (g: Group) => {
-    const pending = g.people.filter((p) => statusOf(p) === "unaccounted");
+    const pending = g.people.filter((p) => !accountedFor(p));
     if (pending.length === 0) return;
     await setStatusFor(pending, "safe");
     toast({ title: `${g.label} accounted for`, description: `${pending.length} people marked safe.` });
   };
 
   const markAllSafe = async () => {
-    const pending = onSite.filter((p) => statusOf(p) === "unaccounted");
+    const pending = onSite.filter((p) => !accountedFor(p));
     await setStatusFor(pending, "safe");
     toast({ title: "All marked safe", description: `${pending.length} people marked as safe.` });
   };
 
   const resetAll = async () => {
-    await setStatusFor(onSite.filter((p) => statusOf(p) !== "unaccounted"), "unaccounted");
+    await setStatusFor(onSite.filter((p) => accountedFor(p)), "unaccounted");
   };
 
   const jumpToNext = () => {
-    const next = filtered.find((p) => statusOf(p) === "unaccounted");
+    const next = filtered.find((p) => !accountedFor(p));
     if (!next) return;
     document.getElementById(`person-${next.key}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
@@ -598,7 +598,7 @@ export default function Evacuation() {
               </div>
             ) : (
               groups.map((g) => {
-                const pending = g.people.filter((p) => statusOf(p) === "unaccounted").length;
+                const pending = g.people.filter((p) => !accountedFor(p)).length;
                 const done = g.people.length - pending;
                 const wardens = [...new Set(g.people.map((p) => p.responsibleStaff).filter(Boolean))];
                 return (
@@ -631,11 +631,11 @@ export default function Evacuation() {
                                 <span className="text-[11px] text-muted-foreground">
                                   {b.people.length} {b.people.length === 1 ? "person" : "people"}
                                 </span>
-                                {b.people.every((p) => statusOf(p) !== "unaccounted") ? (
+                                {b.people.every((p) => accountedFor(p)) ? (
                                   <span className="text-[11px] font-medium text-success">all accounted for</span>
                                 ) : (
                                   <span className="text-[11px] font-medium text-destructive">
-                                    {b.people.filter((p) => statusOf(p) === "unaccounted").length} still to find
+                                    {b.people.filter((p) => !accountedFor(p)).length} still to find
                                   </span>
                                 )}
                               </div>
