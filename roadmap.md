@@ -1,15 +1,27 @@
-# Roadmap
+# Centrim Life Visitor Management — staged reset
 
-## Stage 0 — Audit baseline
-- [x] Full audit of routes, data, mocks, settings scope, risks (report delivered in chat)
+## Stage 0 — Audit (done)
+Baseline recorded in the approved plan document.
 
-## Stage 1 — Shared contract and safe foundation (in progress)
-- [ ] A. Site/tenancy foundation: organisations, sites (reuse `branches`), areas (reuse `wings`), site_id on operational tables, legacy/unassigned backfill, current-site context for staff
-- [ ] B. Shared-module boundary: typed service interfaces + explicitly named temporary local adapters (residents, staff/roles, properties/areas, suppliers/contractor people, documents, notifications, audit, auth/permissions)
-- [ ] C. Domain boundary: `people` identity vs `visits`, visit parties for companions/groups, stable IDs for site/person type/visit status/destination; compatibility layer over `visitors`
-- [ ] D. Access control and kiosk safety: remove broad anonymous policies, narrow kiosk RPCs, authenticated staff writes, site scope enforced in policies, replace unsalted MD5 kiosk PIN with salted hash
-- [ ] E. Settings scope: typed settings model with jurisdiction/org/site/area/person-type/role scope + inheritance helpers
-- [ ] F. Audit and verification: audit events for config/security changes, typecheck/lint/build, access tests, report residual linter warnings
+## Stage 1 — Shared contract and safe foundation (done, with documented blockers)
+- [x] A. Site/tenancy foundation: organisations, branches as sites, wings as areas,
+      `branch_id` on operational tables, `user_site_access`, legacy placeholder site,
+      `SiteProvider` current-site context.
+- [x] B. Typed Centrim Life contracts + explicitly named `LocalPrototype*` adapters
+      (`src/services/`), documented in `docs/INTEGRATION_CONTRACTS.md`.
+- [x] C. Domain boundary: `people`, `visits`, `visit_parties`, person type / visit status
+      reference tables, compatibility view. No tables dropped.
+- [x] D. Access control: anonymous access removed from sensitive tables; kiosk moved to
+      narrow RPCs; bcrypt kiosk PIN with legacy upgrade.
+- [x] E. Settings scope: `settings_scoped`, `resolve_setting`, `src/lib/settingsScope.ts`.
+- [x] F. Typecheck and build pass; migration audit events recorded.
 
-## Constraints for Stage 1
-- No visual redesign, no new features, no destructive drops, no irreversible migration, no hardcoded customer/site/user identifiers.
+### Stage 1 open items carried to Stage 2
+- [ ] Kiosk visitor creation still inserts into `visitors`; move behind a `kiosk_check_in` function.
+- [ ] Kiosk contractor screening should rely solely on `kiosk_contractor_lookup` outstanding
+      checks instead of credential tables.
+- [ ] Kiosk evacuation still reads through shared hooks after PIN entry.
+- [ ] Notifications have no delivery channel — intent is recorded in audit only.
+- [ ] 34 Supabase linter warnings remain: 1 extension in public, 13 anon-executable and
+      20 authenticated-executable SECURITY DEFINER functions (kiosk RPCs and RLS helpers).
+- [ ] Real Centrim Life integration APIs, kiosk-to-site binding and retention rules unknown.
