@@ -297,7 +297,26 @@ export default function KioskCheckIn() {
     alertedRef.current = false;
   };
 
+  if (staleQr) {
+    return (
+      <div className="w-full max-w-md mx-auto text-center space-y-5 py-10">
+        <div className="h-16 w-16 rounded-2xl bg-warning/15 text-warning flex items-center justify-center mx-auto">
+          <QrCode className="h-8 w-8" />
+        </div>
+        <h2 className="text-2xl font-bold text-foreground">This code has expired</h2>
+        <p className="text-base text-muted-foreground">
+          The check-in code on the screen refreshes every 5 minutes. Please scan the current code again,
+          or use the kiosk to check in.
+        </p>
+        <Button className="h-14 w-full text-base" onClick={() => { window.location.href = "/kiosk/checkin"; }}>
+          Check in on this kiosk
+        </Button>
+      </div>
+    );
+  }
+
   if (submitted) {
+
     return (
       <KioskSuccessScreen
         title={`Welcome, ${flow.formValues.firstName}!`}
