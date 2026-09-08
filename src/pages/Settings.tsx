@@ -12,6 +12,8 @@ import { ComplianceTab } from "@/components/settings/ComplianceTab";
 import { IntegrationTab } from "@/components/settings/IntegrationTab";
 import { AuditTrailTab } from "@/components/settings/AuditTrailTab";
 import { LockGovernanceTab } from "@/components/settings/LockGovernanceTab";
+import { KioskStaffPinCard } from "@/components/settings/KioskStaffPinCard";
+
 import { SurveyBuilder } from "@/components/feedback/SurveyBuilder";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
