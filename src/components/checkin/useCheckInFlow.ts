@@ -71,6 +71,8 @@ export function useCheckInFlow(open: boolean) {
   // Food register (visitors/volunteers visiting a resident)
   const [bringingFood, setBringingFood] = useState<boolean | null>(null);
   const [foodForm, setFoodForm] = useState<FoodFormState>(emptyFoodForm);
+  const [foodStepEnabled, setFoodStepEnabled] = useState(true);
+
 
   // Dynamic settings-driven fields
   const { data: dbQuestions = [] } = useActiveHealthQuestions(selectedType as any);
@@ -94,9 +96,11 @@ export function useCheckInFlow(open: boolean) {
     [residentItems, formData.selectPerson]
   );
   const foodStepApplies =
+    foodStepEnabled &&
     (selectedType === "visitor" || selectedType === "volunteer") &&
     formData.whomToVisit === "Resident" &&
     !!selectedResident;
+
 
   // Assemble step pipeline dynamically
   const steps = useMemo<StepId[]>(() => {
