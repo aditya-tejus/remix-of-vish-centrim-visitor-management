@@ -90,27 +90,53 @@ export type Database = {
       }
       branches: {
         Row: {
+          code: string | null
           created_at: string
           id: string
           is_active: boolean
+          is_legacy_placeholder: boolean
+          jurisdiction: string | null
           name: string
+          organisation_id: string | null
+          site_structure: string | null
+          timezone: string | null
           updated_at: string
         }
         Insert: {
+          code?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
+          is_legacy_placeholder?: boolean
+          jurisdiction?: string | null
           name: string
+          organisation_id?: string | null
+          site_structure?: string | null
+          timezone?: string | null
           updated_at?: string
         }
         Update: {
+          code?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
+          is_legacy_placeholder?: boolean
+          jurisdiction?: string | null
           name?: string
+          organisation_id?: string | null
+          site_structure?: string | null
+          timezone?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "branches_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contractor_credentials: {
         Row: {
@@ -177,6 +203,7 @@ export type Database = {
       }
       contractor_people: {
         Row: {
+          branch_id: string | null
           created_at: string
           email: string | null
           first_name: string
@@ -190,6 +217,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string
           email?: string | null
           first_name: string
@@ -203,6 +231,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          branch_id?: string | null
           created_at?: string
           email?: string | null
           first_name?: string
@@ -216,6 +245,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "contractor_people_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "contractor_people_supplier_id_fkey"
             columns: ["supplier_id"]
@@ -390,6 +426,7 @@ export type Database = {
           area_label: string | null
           assistance_level: string | null
           associated_with: string | null
+          branch_id: string | null
           companion_index: number | null
           contact_phone: string | null
           created_at: string
@@ -413,6 +450,7 @@ export type Database = {
           area_label?: string | null
           assistance_level?: string | null
           associated_with?: string | null
+          branch_id?: string | null
           companion_index?: number | null
           contact_phone?: string | null
           created_at?: string
@@ -436,6 +474,7 @@ export type Database = {
           area_label?: string | null
           assistance_level?: string | null
           associated_with?: string | null
+          branch_id?: string | null
           companion_index?: number | null
           contact_phone?: string | null
           created_at?: string
@@ -457,6 +496,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "evacuation_attendance_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "evacuation_attendance_drill_id_fkey"
             columns: ["drill_id"]
             isOneToOne: false
@@ -474,8 +520,22 @@ export type Database = {
             foreignKeyName: "evacuation_attendance_parent_visitor_id_fkey"
             columns: ["parent_visitor_id"]
             isOneToOne: false
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["legacy_visitor_id"]
+          },
+          {
+            foreignKeyName: "evacuation_attendance_parent_visitor_id_fkey"
+            columns: ["parent_visitor_id"]
+            isOneToOne: false
             referencedRelation: "visitors"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evacuation_attendance_visitor_id_fkey"
+            columns: ["visitor_id"]
+            isOneToOne: false
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["legacy_visitor_id"]
           },
           {
             foreignKeyName: "evacuation_attendance_visitor_id_fkey"
@@ -489,6 +549,7 @@ export type Database = {
       evacuation_drills: {
         Row: {
           accounted_for: number
+          branch_id: string | null
           created_at: string
           ended_at: string | null
           event_type: string
@@ -503,6 +564,7 @@ export type Database = {
         }
         Insert: {
           accounted_for?: number
+          branch_id?: string | null
           created_at?: string
           ended_at?: string | null
           event_type?: string
@@ -517,6 +579,7 @@ export type Database = {
         }
         Update: {
           accounted_for?: number
+          branch_id?: string | null
           created_at?: string
           ended_at?: string | null
           event_type?: string
@@ -529,10 +592,19 @@ export type Database = {
           total_people?: number
           unaccounted_reason?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "evacuation_drills_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       evacuation_points: {
         Row: {
+          branch_id: string | null
           created_at: string
           description: string | null
           id: string
@@ -543,6 +615,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -553,6 +626,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          branch_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -562,7 +636,15 @@ export type Database = {
           sort_order?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "evacuation_points_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       feedback_questions: {
         Row: {
@@ -656,6 +738,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "feedback_surveys"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_responses_visitor_id_fkey"
+            columns: ["visitor_id"]
+            isOneToOne: false
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["legacy_visitor_id"]
           },
           {
             foreignKeyName: "feedback_responses_visitor_id_fkey"
@@ -778,8 +867,22 @@ export type Database = {
             foreignKeyName: "food_register_resident_visitor_id_fkey"
             columns: ["resident_visitor_id"]
             isOneToOne: false
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["legacy_visitor_id"]
+          },
+          {
+            foreignKeyName: "food_register_resident_visitor_id_fkey"
+            columns: ["resident_visitor_id"]
+            isOneToOne: false
             referencedRelation: "visitors"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_register_visitor_id_fkey"
+            columns: ["visitor_id"]
+            isOneToOne: false
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["legacy_visitor_id"]
           },
           {
             foreignKeyName: "food_register_visitor_id_fkey"
@@ -891,6 +994,7 @@ export type Database = {
       }
       key_issues: {
         Row: {
+          branch_id: string | null
           condition_notes: string | null
           created_at: string
           expected_return: string | null
@@ -910,6 +1014,7 @@ export type Database = {
           visitor_id: string | null
         }
         Insert: {
+          branch_id?: string | null
           condition_notes?: string | null
           created_at?: string
           expected_return?: string | null
@@ -929,6 +1034,7 @@ export type Database = {
           visitor_id?: string | null
         }
         Update: {
+          branch_id?: string | null
           condition_notes?: string | null
           created_at?: string
           expected_return?: string | null
@@ -949,6 +1055,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "key_issues_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "key_issues_issued_to_staff_id_fkey"
             columns: ["issued_to_staff_id"]
             isOneToOne: false
@@ -968,6 +1081,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "suppliers_min"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "key_issues_visitor_id_fkey"
+            columns: ["visitor_id"]
+            isOneToOne: false
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["legacy_visitor_id"]
           },
           {
             foreignKeyName: "key_issues_visitor_id_fkey"
@@ -1004,6 +1124,7 @@ export type Database = {
       }
       leave_requests: {
         Row: {
+          branch_id: string | null
           comments: string | null
           companions: Json | null
           created_at: string
@@ -1025,6 +1146,7 @@ export type Database = {
           visitor_id: string | null
         }
         Insert: {
+          branch_id?: string | null
           comments?: string | null
           companions?: Json | null
           created_at?: string
@@ -1046,6 +1168,7 @@ export type Database = {
           visitor_id?: string | null
         }
         Update: {
+          branch_id?: string | null
           comments?: string | null
           companions?: Json | null
           created_at?: string
@@ -1067,6 +1190,20 @@ export type Database = {
           visitor_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "leave_requests_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_visitor_id_fkey"
+            columns: ["visitor_id"]
+            isOneToOne: false
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["legacy_visitor_id"]
+          },
           {
             foreignKeyName: "leave_requests_visitor_id_fkey"
             columns: ["visitor_id"]
@@ -1109,6 +1246,150 @@ export type Database = {
           name?: string
           sort_order?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      organisations: {
+        Row: {
+          code: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          is_legacy_placeholder: boolean
+          jurisdiction: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_legacy_placeholder?: boolean
+          jurisdiction?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_legacy_placeholder?: boolean
+          jurisdiction?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      people: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          default_person_type: string | null
+          email: string | null
+          external_id: string | null
+          external_source: string | null
+          first_name: string
+          id: string
+          is_active: boolean
+          legacy_visitor_id: string | null
+          mobile: string | null
+          organisation_id: string | null
+          person_qr: string | null
+          surname: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          default_person_type?: string | null
+          email?: string | null
+          external_id?: string | null
+          external_source?: string | null
+          first_name: string
+          id?: string
+          is_active?: boolean
+          legacy_visitor_id?: string | null
+          mobile?: string | null
+          organisation_id?: string | null
+          person_qr?: string | null
+          surname: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          default_person_type?: string | null
+          email?: string | null
+          external_id?: string | null
+          external_source?: string | null
+          first_name?: string
+          id?: string
+          is_active?: boolean
+          legacy_visitor_id?: string | null
+          mobile?: string | null
+          organisation_id?: string | null
+          person_qr?: string | null
+          surname?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "people_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "people_default_person_type_fkey"
+            columns: ["default_person_type"]
+            isOneToOne: false
+            referencedRelation: "person_types"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "people_legacy_visitor_id_fkey"
+            columns: ["legacy_visitor_id"]
+            isOneToOne: false
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["legacy_visitor_id"]
+          },
+          {
+            foreignKeyName: "people_legacy_visitor_id_fkey"
+            columns: ["legacy_visitor_id"]
+            isOneToOne: false
+            referencedRelation: "visitors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "people_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      person_types: {
+        Row: {
+          is_active: boolean
+          key: string
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          is_active?: boolean
+          key: string
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          is_active?: boolean
+          key?: string
+          label?: string
+          sort_order?: number
         }
         Relationships: []
       }
@@ -1222,6 +1503,13 @@ export type Database = {
             foreignKeyName: "property_keys_resident_visitor_id_fkey"
             columns: ["resident_visitor_id"]
             isOneToOne: false
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["legacy_visitor_id"]
+          },
+          {
+            foreignKeyName: "property_keys_resident_visitor_id_fkey"
+            columns: ["resident_visitor_id"]
+            isOneToOne: false
             referencedRelation: "visitors"
             referencedColumns: ["id"]
           },
@@ -1236,6 +1524,7 @@ export type Database = {
       }
       resident_details: {
         Row: {
+          branch_id: string | null
           care_level: string | null
           created_at: string | null
           destination_categories: string[] | null
@@ -1256,6 +1545,7 @@ export type Database = {
           wing_id: string | null
         }
         Insert: {
+          branch_id?: string | null
           care_level?: string | null
           created_at?: string | null
           destination_categories?: string[] | null
@@ -1276,6 +1566,7 @@ export type Database = {
           wing_id?: string | null
         }
         Update: {
+          branch_id?: string | null
           care_level?: string | null
           created_at?: string | null
           destination_categories?: string[] | null
@@ -1297,6 +1588,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "resident_details_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resident_details_visitor_id_fkey"
+            columns: ["visitor_id"]
+            isOneToOne: true
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["legacy_visitor_id"]
+          },
+          {
             foreignKeyName: "resident_details_visitor_id_fkey"
             columns: ["visitor_id"]
             isOneToOne: true
@@ -1314,6 +1619,7 @@ export type Database = {
       }
       resident_incidents: {
         Row: {
+          branch_id: string | null
           created_at: string
           description: string
           expected_return_date: string | null
@@ -1331,6 +1637,7 @@ export type Database = {
           visitor_id: string | null
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string
           description: string
           expected_return_date?: string | null
@@ -1348,6 +1655,7 @@ export type Database = {
           visitor_id?: string | null
         }
         Update: {
+          branch_id?: string | null
           created_at?: string
           description?: string
           expected_return_date?: string | null
@@ -1365,6 +1673,20 @@ export type Database = {
           visitor_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "resident_incidents_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resident_incidents_visitor_id_fkey"
+            columns: ["visitor_id"]
+            isOneToOne: false
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["legacy_visitor_id"]
+          },
           {
             foreignKeyName: "resident_incidents_visitor_id_fkey"
             columns: ["visitor_id"]
@@ -1394,6 +1716,76 @@ export type Database = {
           value?: string
         }
         Relationships: []
+      }
+      settings_scoped: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          id: string
+          jurisdiction: string | null
+          key: string
+          organisation_id: string | null
+          person_type: string | null
+          role: string | null
+          scope_type: string
+          updated_at: string
+          updated_by: string | null
+          value: string
+          wing_id: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          id?: string
+          jurisdiction?: string | null
+          key: string
+          organisation_id?: string | null
+          person_type?: string | null
+          role?: string | null
+          scope_type: string
+          updated_at?: string
+          updated_by?: string | null
+          value: string
+          wing_id?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          id?: string
+          jurisdiction?: string | null
+          key?: string
+          organisation_id?: string | null
+          person_type?: string | null
+          role?: string | null
+          scope_type?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: string
+          wing_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "settings_scoped_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settings_scoped_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settings_scoped_wing_id_fkey"
+            columns: ["wing_id"]
+            isOneToOne: false
+            referencedRelation: "wings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       staff_members: {
         Row: {
@@ -1495,6 +1887,7 @@ export type Database = {
           abn: string | null
           acws_expiry_date: string | null
           acws_reference: string | null
+          branch_id: string | null
           company_number: string | null
           contact_email: string | null
           contact_name: string | null
@@ -1513,6 +1906,7 @@ export type Database = {
           abn?: string | null
           acws_expiry_date?: string | null
           acws_reference?: string | null
+          branch_id?: string | null
           company_number?: string | null
           contact_email?: string | null
           contact_name?: string | null
@@ -1531,6 +1925,7 @@ export type Database = {
           abn?: string | null
           acws_expiry_date?: string | null
           acws_reference?: string | null
+          branch_id?: string | null
           company_number?: string | null
           contact_email?: string | null
           contact_name?: string | null
@@ -1545,7 +1940,15 @@ export type Database = {
           name?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_min_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -1564,6 +1967,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_site_access: {
+        Row: {
+          branch_id: string
+          created_at: string
+          id: string
+          is_default: boolean
+          user_id: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          user_id: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_site_access_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vaccination_fields: {
         Row: {
@@ -1604,6 +2039,92 @@ export type Database = {
           sort_order?: number
           updated_at?: string
           visitor_type?: string
+        }
+        Relationships: []
+      }
+      visit_parties: {
+        Row: {
+          check_in_time: string
+          check_out_time: string | null
+          created_at: string
+          display_name: string
+          id: string
+          is_primary: boolean
+          person_id: string | null
+          relationship: string | null
+          updated_at: string
+          visit_id: string
+        }
+        Insert: {
+          check_in_time?: string
+          check_out_time?: string | null
+          created_at?: string
+          display_name: string
+          id?: string
+          is_primary?: boolean
+          person_id?: string | null
+          relationship?: string | null
+          updated_at?: string
+          visit_id: string
+        }
+        Update: {
+          check_in_time?: string
+          check_out_time?: string | null
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_primary?: boolean
+          person_id?: string | null
+          relationship?: string | null
+          updated_at?: string
+          visit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visit_parties_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_parties_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["person_id"]
+          },
+          {
+            foreignKeyName: "visit_parties_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["visit_id"]
+          },
+          {
+            foreignKeyName: "visit_parties_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      visit_statuses: {
+        Row: {
+          is_open: boolean
+          key: string
+          label: string
+        }
+        Insert: {
+          is_open?: boolean
+          key: string
+          label: string
+        }
+        Update: {
+          is_open?: boolean
+          key?: string
+          label?: string
         }
         Relationships: []
       }
@@ -1823,6 +2344,131 @@ export type Database = {
           },
         ]
       }
+      visits: {
+        Row: {
+          branch_id: string
+          check_in_time: string
+          check_out_time: string | null
+          created_at: string
+          destination_label: string | null
+          destination_resident_person_id: string | null
+          destination_wing_id: string | null
+          group_id: string | null
+          id: string
+          legacy_visitor_id: string | null
+          person_id: string | null
+          person_type: string
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          check_in_time?: string
+          check_out_time?: string | null
+          created_at?: string
+          destination_label?: string | null
+          destination_resident_person_id?: string | null
+          destination_wing_id?: string | null
+          group_id?: string | null
+          id?: string
+          legacy_visitor_id?: string | null
+          person_id?: string | null
+          person_type: string
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          check_in_time?: string
+          check_out_time?: string | null
+          created_at?: string
+          destination_label?: string | null
+          destination_resident_person_id?: string | null
+          destination_wing_id?: string | null
+          group_id?: string | null
+          id?: string
+          legacy_visitor_id?: string | null
+          person_id?: string | null
+          person_type?: string
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visits_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_destination_resident_person_id_fkey"
+            columns: ["destination_resident_person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_destination_resident_person_id_fkey"
+            columns: ["destination_resident_person_id"]
+            isOneToOne: false
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["person_id"]
+          },
+          {
+            foreignKeyName: "visits_destination_wing_id_fkey"
+            columns: ["destination_wing_id"]
+            isOneToOne: false
+            referencedRelation: "wings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_legacy_visitor_id_fkey"
+            columns: ["legacy_visitor_id"]
+            isOneToOne: false
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["legacy_visitor_id"]
+          },
+          {
+            foreignKeyName: "visits_legacy_visitor_id_fkey"
+            columns: ["legacy_visitor_id"]
+            isOneToOne: false
+            referencedRelation: "visitors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["person_id"]
+          },
+          {
+            foreignKeyName: "visits_person_type_fkey"
+            columns: ["person_type"]
+            isOneToOne: false
+            referencedRelation: "person_types"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "visits_status_fkey"
+            columns: ["status"]
+            isOneToOne: false
+            referencedRelation: "visit_statuses"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       wings: {
         Row: {
           branch_id: string | null
@@ -1869,9 +2515,32 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_legacy_visitor_visits: {
+        Row: {
+          branch_id: string | null
+          check_in_time: string | null
+          check_out_time: string | null
+          group_id: string | null
+          legacy_visitor_id: string | null
+          person_id: string | null
+          person_type: string | null
+          status: string | null
+          visit_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visitors_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      current_user_site_ids: { Args: never; Returns: string[] }
+      default_site_id: { Args: never; Returns: string }
       ensure_user_bootstrap: { Args: never; Returns: undefined }
       has_role: {
         Args: {
@@ -1909,7 +2578,19 @@ export type Database = {
           whom_to_visit: string
         }[]
       }
+      resolve_setting: {
+        Args: {
+          p_branch_id?: string
+          p_jurisdiction?: string
+          p_key: string
+          p_person_type?: string
+          p_role?: string
+          p_wing_id?: string
+        }
+        Returns: string
+      }
       set_kiosk_pin: { Args: { p_pin: string }; Returns: undefined }
+      user_can_access_site: { Args: { _branch_id: string }; Returns: boolean }
       verify_kiosk_pin: { Args: { p_pin: string }; Returns: boolean }
     }
     Enums: {
