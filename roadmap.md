@@ -91,3 +91,24 @@ Baseline recorded in the approved plan document.
 - [ ] No email or SMS delivery; notifications are in-app and audited only.
 - [ ] Kiosk devices are not bound to a site by a device credential.
 - [ ] Real Centrim Life integration APIs are unknown; adapters remain local prototype only.
+
+## Stage 6A — contractor operations and keys / fobs register
+
+- Nine action permissions added and enforced in the register UI and in RLS.
+- Keys and handovers are site-scoped (`branch_id`) on both read and write.
+- Items now carry a serial or engraved number, and can be reported damaged with an
+  optional replacement copy ("awaiting replacement" when no copy is made).
+- Every key action is audited.
+- Site-specific mandatory contractor credentials (`contractor_mandatory_credentials@<site>`),
+  used by both kiosk screening and the staff contractor profile panel.
+- Supplier and person credential access narrowed to the contractor credential permissions,
+  with site checks on person records.
+- Kiosk key checks now go through `kiosk_open_key_holds` (counts only); the kiosk makes no
+  denied reads of the key tables.
+- Verified in the browser: add key with serial, report damaged with replacement copy,
+  site-scoped list, kiosk check-in and check-out clean. Test records removed afterwards.
+
+### Still open after Stage 6A
+- [ ] Credential documents are not verified against any issuing authority.
+- [ ] `keys.export` exists as a permission but there is no dedicated export file yet.
+- [ ] Everything under "Still open" above Stage 5 remains open.
