@@ -148,6 +148,8 @@ export function useCheckInFlow(open: boolean) {
           setTcContent(map[`tc_content_${selectedType}`] || null);
           if (map.jurisdiction === "UK" || map.jurisdiction === "AU") setJurisdiction(map.jurisdiction);
           setBadgePrintingEnabled(map.badge_printing_enabled === "true");
+          setFoodStepEnabled(map[`food_register_checkin_${selectedType}`] !== "false");
+
         }
       });
   }, [selectedType]);
