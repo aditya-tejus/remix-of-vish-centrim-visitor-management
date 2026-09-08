@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { siteScopedKey } from "@/lib/settingsScope";
+import { siteScopedKey } from "@/contexts/OperatingContext";
 import { printBadgeAuto, type BadgeData } from "./printBadge";
 
 /**
