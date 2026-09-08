@@ -40,6 +40,9 @@ export interface EvacuationAttendance {
   emergency_contact_phone: string | null;
   area_label: string | null;
   room_label: string | null;
+  responsible_staff: string | null;
+  associated_with: string | null;
+
   evacuation_point_id: string | null;
   status: string;
   marked_safe_at: string | null;
