@@ -91,12 +91,23 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
   const [loading, setLoading] = useState(true);
 
   const fetchVisitors = useCallback(async () => {
+    // Kiosk (unauthenticated) reads go through a narrow server function that returns
+    // presence only — never visit history or personal details.
+    if (publicMode) {
+      const { data, error } = await supabase.rpc("kiosk_presence_list" as any);
+      if (!error && data) {
+        setVisitors((data as unknown as DbVisitor[]).map(dbToVisitor));
+      }
+      setLoading(false);
+      return;
+    }
+
     // Fetch today's visitors + any still checked-in + any checked-out residents (for away/leave tracking)
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const { data, error } = await supabase
       .from("visitors")
-      .select(publicMode ? KIOSK_SAFE_COLUMNS : "*")
+      .select("*")
       .or(`check_in_time.gte.${todayStart.toISOString()},status.eq.checked-in,and(type.eq.resident,status.eq.checked-out)`)
       .order("check_in_time", { ascending: false })
       .limit(500);
@@ -105,6 +116,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     }
     setLoading(false);
   }, [publicMode]);
+
 
 
   // Load the per-type "too long on site" thresholds once so counts everywhere agree.
