@@ -483,7 +483,7 @@ export default function KeysRegister() {
                                   {k.storageLocation ? ` · kept in ${k.storageLocation}` : ""}
                                 </p>
                               </div>
-                              <div className="min-w-[200px]">
+                              <div className="sm:min-w-[200px] min-w-0">
                                 {k.currentIssue ? (
                                   <>
                                     <p className="text-sm text-foreground">
