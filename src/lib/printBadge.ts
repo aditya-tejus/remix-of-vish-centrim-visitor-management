@@ -73,7 +73,7 @@ export async function getBadgeConfig(): Promise<BadgeConfig> {
   };
 }
 
-function badgeMarkup(data: BadgeData, color: string, date: Date) {
+function badgeMarkup(data: BadgeData, color: string, date: Date, qr?: string) {
   return `
     <div class="badge">
       <div class="strip"></div>
@@ -83,11 +83,15 @@ function badgeMarkup(data: BadgeData, color: string, date: Date) {
       </div>
       <div class="body">
         <div class="row"><span class="label">Date</span><span class="value">${format(date, "dd MMM yyyy")}</span></div>
+        ${data.room ? `<div class="row"><span class="label">Room</span><span class="value">${data.room}</span></div>` : ""}
         ${data.visiting ? `<div class="row"><span class="label">Visiting</span><span class="value">${data.visiting}</span></div>` : ""}
+        ${data.mobile ? `<div class="row"><span class="label">Mobile</span><span class="value">${data.mobile}</span></div>` : ""}
+        ${qr ? `<div class="qr"><img src="${qr}" alt="QR code" /><div class="qr-hint">Scan to check out</div></div>` : ""}
       </div>
       <div class="foot">Centrim Life</div>
     </div>`;
 }
+
 
 function standardHtml(data: BadgeData, color: string, date: Date) {
   return `<!DOCTYPE html><html><head><title>Badge — ${data.name}</title>
