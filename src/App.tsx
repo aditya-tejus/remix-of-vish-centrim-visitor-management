@@ -39,6 +39,8 @@ import KioskCheckIn from "./pages/kiosk/KioskCheckIn";
 import KioskCheckOut from "./pages/kiosk/KioskCheckOut";
 import KioskResidentLeave from "./pages/kiosk/KioskResidentLeave";
 import KioskQRScan from "./pages/kiosk/KioskQRScan";
+import KioskEvacuation from "./pages/kiosk/KioskEvacuation";
+
 
 const queryClient = new QueryClient();
 
