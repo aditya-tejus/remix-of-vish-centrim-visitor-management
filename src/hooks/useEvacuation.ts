@@ -193,15 +193,42 @@ export function useEvacuationMutations() {
   };
 
   const startDrill = useMutation({
-    mutationFn: async ({ title, people, eventType }: { title: string; people: RollCallSeed[]; eventType?: string }) => {
+    mutationFn: async ({
+      title,
+      people,
+      eventType,
+      eventClass,
+      branchId,
+      areaId,
+    }: {
+      title: string;
+      people: RollCallSeed[];
+      eventType?: string;
+      eventClass?: "drill" | "real";
+      branchId?: string | null;
+      areaId?: string | null;
+    }) => {
+      const now = new Date().toISOString();
+      const { data: userData } = await supabase.auth.getUser();
       const { data: drill, error } = await supabase
         .from("evacuation_drills" as any)
-        .insert({ title, total_people: people.length, status: "active", event_type: eventType || "drill" } as any)
+        .insert({
+          title,
+          total_people: people.length,
+          state: "active",
+          event_class: eventClass || (eventType === "drill" ? "drill" : "real"),
+          event_type: eventType || "drill",
+          branch_id: branchId || null,
+          area_id: areaId || null,
+          activated_by: userData?.user?.id || null,
+          // The snapshot is taken once; later check-ins do not rewrite it.
+          snapshot_at: now,
+        } as any)
         .select()
         .single();
       if (error) throw error;
       const drillId = (drill as any).id;
-      
+
       if (people.length > 0) {
         const rows = people.map((p) => ({
           drill_id: drillId,
@@ -219,14 +246,16 @@ export function useEvacuationMutations() {
   });
 
   const markSafe = useMutation({
-    mutationFn: async ({ id, pointId, status, markedBy }: { id: string; pointId?: string; status?: AttendanceStatus; markedBy?: string }) => {
+    mutationFn: async ({ id, pointId, status, markedBy, note }: { id: string; pointId?: string; status?: AttendanceStatus; markedBy?: string; note?: string }) => {
+      const next = status || "safe";
       const { error } = await supabase
         .from("evacuation_attendance" as any)
         .update({
-          status: status || "safe",
+          status: next,
           marked_by: markedBy || null,
           marked_safe_at: new Date().toISOString(),
           evacuation_point_id: pointId || null,
+          ...(note !== undefined ? { note } : {}),
         } as any)
         .eq("id", id);
       if (error) throw error;
@@ -234,13 +263,53 @@ export function useEvacuationMutations() {
     onSuccess: invalidateAll,
   });
 
+  /** Undoing an outcome is a correction: the reason is stored with the audit entry. */
   const markUnsafe = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (input: string | { id: string; reason?: string; drillId?: string; personName?: string }) => {
+      const id = typeof input === "string" ? input : input.id;
+      const reason = typeof input === "string" ? undefined : input.reason;
       const { error } = await supabase
         .from("evacuation_attendance" as any)
         .update({ status: "unaccounted", marked_safe_at: null, evacuation_point_id: null } as any)
         .eq("id", id);
       if (error) throw error;
+      if (reason) {
+        const { data: latest } = await supabase
+          .from("emergency_actions" as any)
+          .select("id")
+          .eq("attendance_id", id)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        const actionId = (latest as any[])?.[0]?.id;
+        if (actionId) {
+          await supabase.from("emergency_actions" as any).update({ reason, action: "correction" } as any).eq("id", actionId);
+        }
+      }
+    },
+    onSuccess: invalidateAll,
+  });
+
+  /** Moves the emergency event between draft, active, paused, resolved and reviewed. */
+  const setEmergencyState = useMutation({
+    mutationFn: async ({ drillId, state, accounted, reason, reviewNotes }: { drillId: string; state: EmergencyState; accounted?: number; reason?: string; reviewNotes?: string }) => {
+      const { data: userData } = await supabase.auth.getUser();
+      const patch: Record<string, unknown> = { state };
+      if (accounted != null) patch.accounted_for = accounted;
+      if (reason) patch.unaccounted_reason = reason;
+      if (reviewNotes !== undefined) patch.review_notes = reviewNotes;
+      if (state === "resolved") patch.ended_at = new Date().toISOString();
+      if (state === "reviewed") {
+        patch.reviewed_at = new Date().toISOString();
+        patch.reviewed_by = userData?.user?.id || null;
+      }
+      const { error } = await supabase.from("evacuation_drills" as any).update(patch as any).eq("id", drillId);
+      if (error) throw error;
+      await (supabase as any).rpc("log_audit", {
+        _action: `emergency.${state}`,
+        _details: { drill_id: drillId, accounted: accounted ?? null },
+        _records: 1,
+        _reason: reason || null,
+      });
     },
     onSuccess: invalidateAll,
   });
@@ -249,12 +318,19 @@ export function useEvacuationMutations() {
     mutationFn: async ({ drillId, accounted, reason }: { drillId: string; accounted: number; reason?: string }) => {
       const { error } = await supabase
         .from("evacuation_drills" as any)
-        .update({ status: "completed", ended_at: new Date().toISOString(), accounted_for: accounted, unaccounted_reason: reason || null } as any)
+        .update({ state: "resolved", ended_at: new Date().toISOString(), accounted_for: accounted, unaccounted_reason: reason || null } as any)
         .eq("id", drillId);
       if (error) throw error;
+      await (supabase as any).rpc("log_audit", {
+        _action: "emergency.resolved",
+        _details: { drill_id: drillId, accounted },
+        _records: 1,
+        _reason: reason || null,
+      });
     },
     onSuccess: invalidateAll,
   });
+
 
   // Adds someone who arrived after the roll call started
   const addAttendee = useMutation({
