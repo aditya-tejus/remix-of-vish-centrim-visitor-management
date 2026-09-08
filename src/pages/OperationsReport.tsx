@@ -114,7 +114,7 @@ export default function OperationsReport() {
         <CardContent className="p-4 space-y-4">
           <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
             <div className="flex flex-wrap items-end justify-between gap-3">
-              <TabsList>
+              <TabsList className="flex-wrap h-auto">
                 <TabsTrigger value="onsite">On site now</TabsTrigger>
                 <TabsTrigger value="overdue">Not checked out</TabsTrigger>
                 <TabsTrigger value="history">Visit history</TabsTrigger>
