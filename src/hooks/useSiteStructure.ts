@@ -1,44 +1,32 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useOperatingContext } from "@/contexts/OperatingContext";
 
 export type SiteStructure = "rac" | "rv" | "mixed";
 
 /**
  * A care home talks about wings and rooms; a retirement village talks about
- * stages and villas. Same data, different words on screen.
+ * stages and villas; a UK care home talks about units. Same data, different
+ * words on screen. Wording now comes from the site's operating-context pack.
  */
 export function useSiteStructure() {
-  const [structure, setStructure] = useState<SiteStructure>("rac");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    supabase
-      .from("settings")
-      .select("value")
-      .eq("key", "site_structure")
-      .maybeSingle()
-      .then(({ data }) => {
-        if (cancelled) return;
-        if (data?.value === "rv" || data?.value === "mixed" || data?.value === "rac") {
-          setStructure(data.value);
-        }
-        setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []);
-
-  const isVillage = structure === "rv";
+  const { pack, loading } = useOperatingContext();
+  const isVillage = pack.structure === "rv";
 
   return {
-    structure,
+    structure: (isVillage ? "rv" : "rac") as SiteStructure,
     loading,
     isVillage,
-    /** "Wing" / "Stage" */
-    areaLabel: isVillage ? "Stage" : "Wing",
-    areaLabelPlural: isVillage ? "Stages" : "Wings",
+    /** "Wing" / "Stage" / "Unit" */
+    areaLabel: pack.terms.area,
+    areaLabelPlural: pack.terms.areaPlural,
     /** "Room" / "Villa" */
-    roomLabel: isVillage ? "Villa" : "Room",
-    siteLabel: structure === "mixed" ? "Site" : isVillage ? "Village" : "Home",
+    roomLabel: pack.terms.place,
+    siteLabel: pack.terms.site,
+    /** "Property" in a village, otherwise not used. */
+    propertyLabel: pack.terms.property,
+    householdLabel: pack.terms.household,
+    responsibleLabel: pack.terms.responsible,
+    associatesLabel: pack.terms.associates,
+    showPropertyFields: pack.modules.propertyFields,
+    showClinicalSupportFields: pack.modules.clinicalSupportFields,
   };
 }

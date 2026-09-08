@@ -8,6 +8,8 @@ import { useStaffMembers } from "@/hooks/useStaffMembers";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import type { VisitorType } from "@/types/visitor";
 import { FoodFormState, emptyFoodForm, isFoodFormValid } from "@/components/food/FoodFormFields";
+import { usePersonTypes } from "@/hooks/usePersonTypes";
+import { useOperatingContext } from "@/contexts/OperatingContext";
 
 export type KioskStepId = "type" | "details" | "visiting" | "food" | "companions" | "screening" | "contractor" | "terms" | "confirm";
 
@@ -42,6 +44,18 @@ export function useKioskCheckInFlow() {
   const [bringingFood, setBringingFood] = useState<boolean | null>(null);
   const [foodForm, setFoodForm] = useState<FoodFormState>(emptyFoodForm);
   const [visitedResidentId, setVisitedResidentId] = useState<string | null>(null);
+
+  // Operating context and per-person-type rules (Stage 4)
+  const { modules, terms } = useOperatingContext();
+  const { personTypes } = usePersonTypes();
+  const typeConfig = useMemo(
+    () => personTypes.find((t) => t.type === (selectedType as any)),
+    [personTypes, selectedType]
+  );
+  const destinationRequired = typeConfig?.destinationRequired ?? selectedType !== "contractor";
+  const screeningApplies = typeConfig?.screeningApplies ?? true;
+  const privacyApplies = typeConfig?.privacyApplies ?? true;
+  const badgeApplies = typeConfig?.badgeApplies ?? true;
 
   // Dynamic form fields
   const { data: formFields = [] } = useFormFields(selectedType as any);
@@ -151,11 +165,11 @@ export function useKioskCheckInFlow() {
     const pipeline: KioskStep[] = [{ id: "type", label: "Type" }];
     pipeline.push({ id: "details", label: "Your Details" });
     // Visiting step for non-contractor types
-    if (selectedType !== "contractor") {
+    if (selectedType !== "contractor" && destinationRequired) {
       pipeline.push({ id: "visiting", label: "Visiting" });
     }
     // Food register — visitors/volunteers visiting a resident
-    if (foodStepEnabled && (selectedType === "visitor" || selectedType === "volunteer") && visitedResidentId) {
+    if (foodStepEnabled && modules.foodRegister && (selectedType === "visitor" || selectedType === "volunteer") && visitedResidentId) {
       pipeline.push({ id: "food", label: "Food" });
     }
     // Companions step (always after visiting/contractor)
@@ -165,16 +179,16 @@ export function useKioskCheckInFlow() {
       pipeline.push({ id: "contractor", label: "Screening" });
     }
     // Health screening (if questions configured)
-    if (healthQuestions.length > 0) {
+    if (screeningApplies && healthQuestions.length > 0) {
       pipeline.push({ id: "screening", label: "Health" });
     }
     // T&C
-    if (tcContent) {
+    if (privacyApplies && tcContent) {
       pipeline.push({ id: "terms", label: "Terms" });
     }
     pipeline.push({ id: "confirm", label: "Review" });
     return pipeline;
-  }, [selectedType, healthQuestions.length, tcContent, visitedResidentId, foodStepEnabled]);
+  }, [selectedType, healthQuestions.length, tcContent, visitedResidentId, foodStepEnabled, destinationRequired, screeningApplies, privacyApplies, modules.foodRegister]);
 
   const updateField = (key: string, value: string) => {
     setFormValues((prev) => ({ ...prev, [key]: value }));
@@ -243,6 +257,13 @@ export function useKioskCheckInFlow() {
 
 
   return {
+    typeConfig,
+    destinationRequired,
+    screeningApplies,
+    privacyApplies,
+    badgeApplies,
+    terms,
+    modules,
     selectedType,
     setSelectedType,
     formValues,
@@ -286,7 +307,7 @@ export function useKioskCheckInFlow() {
     keyBlocked,
     keyEnforcement: keyPolicy.enforcement,
     outbreakMode,
-    badgePrintingEnabled,
+    badgePrintingEnabled: badgePrintingEnabled && badgeApplies,
     bringingFood,
     setBringingFood,
     foodForm,

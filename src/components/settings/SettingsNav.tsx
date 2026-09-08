@@ -1,11 +1,12 @@
 import { cn } from "@/lib/utils";
 import {
   Users, HardHat, Home, UserCog, Heart, Globe, Printer, Shield, Link2,
-  ClipboardList, Lock, MessageSquare, KeyRound, type LucideIcon,
+  ClipboardList, Lock, MessageSquare, KeyRound, Layers, type LucideIcon,
 } from "lucide-react";
 import type { SettingsScopeLevel } from "@/components/settings/SettingsScope";
 
 export type SettingsSection =
+  | "context"
   | "visitor" | "contractor" | "resident" | "staff" | "volunteer"
   | "person-types"
   | "presence" | "printing" | "keys" | "compliance" | "integration" | "audit" | "governance" | "feedback";
@@ -21,6 +22,17 @@ interface SectionMeta {
 
 /** Grouped by the decision an administrator is making, not by table or feature name. */
 export const SETTINGS_GROUPS: { label: string; items: SectionMeta[] }[] = [
+  {
+    label: "How this site runs",
+    items: [
+      {
+        id: "context", label: "Operating context", icon: Layers,
+        title: "Operating context",
+        description: "The kind of place this site is, the words it uses and which registers apply. Administrators only.",
+        scopes: ["jurisdiction", "organisation", "site"],
+      },
+    ],
+  },
   {
     label: "Who comes on site",
     items: [
