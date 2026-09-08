@@ -335,6 +335,10 @@ export default function Evacuation() {
   }));
 
   const exportCSV = () => {
+    if (!can("emergency.export")) {
+      toast({ title: "Not allowed", description: "You do not have permission to export the emergency snapshot.", variant: "destructive" });
+      return;
+    }
     const data = rows();
     if (data.length === 0) return;
     const headers = Object.keys(data[0]);
@@ -355,6 +359,10 @@ export default function Evacuation() {
   };
 
   const printList = () => {
+    if (!can("emergency.export")) {
+      toast({ title: "Not allowed", description: "You do not have permission to export the emergency snapshot.", variant: "destructive" });
+      return;
+    }
     const date = format(new Date(), "dd MMMM yyyy, HH:mm");
     const body = groups.map((g) => {
       const wardens = [...new Set(g.people.map((p) => p.responsibleStaff).filter(Boolean))];
