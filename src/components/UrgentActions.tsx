@@ -28,20 +28,9 @@ interface ActionItem {
 export function UrgentActions({ visitors, onCheckOut, onCheckOutAllOverstayed }: UrgentActionsProps) {
   const navigate = useNavigate();
   const actions: ActionItem[] = [];
-  const [noReturnEnabled, setNoReturnEnabled] = useState(false);
   const [escalateTarget, setEscalateTarget] = useState<Visitor | null>(null);
-
-  useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase
-        .from("settings")
-        .select("value")
-        .eq("key", "no_return_notification_enabled")
-        .maybeSingle();
-      if (data) setNoReturnEnabled(data.value === "true");
-    };
-    load();
-  }, []);
+  const { policy } = useReturnNotificationPolicy();
+  const noReturnEnabled = policy?.overdueEnabled ?? false;
 
   // Overstayed visitors (8+ hours)
   visitors
