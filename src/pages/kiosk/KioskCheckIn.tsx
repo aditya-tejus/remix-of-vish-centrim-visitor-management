@@ -28,6 +28,7 @@ import {
 
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useOperatingContext } from "@/contexts/OperatingContext";
 
 const TYPE_DEFS = {
   visitor: { icon: UserRound, iconBg: "bg-primary/15", iconColor: "text-primary" },
@@ -39,7 +40,12 @@ const TYPE_DEFS = {
 export default function KioskCheckIn() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { addVisitor } = useVisitors({ publicMode: true });
+  const { siteId: kioskSiteId } = useOperatingContext();
+  const handleSaveError = useCallback(() => {
+    setSubmitted(false);
+    submittingRef.current = false;
+  }, []);
+  const { addVisitor } = useVisitors({ publicMode: true, siteId: kioskSiteId, onSaveError: handleSaveError });
   const flow = useKioskCheckInFlow();
   const { kioskTypes } = usePersonTypes();
   const TYPES = useMemo(

@@ -7,6 +7,9 @@ import { useStaffMembers } from "@/hooks/useStaffMembers";
 import { supabase } from "@/integrations/supabase/client";
 import { Supplier } from "@/hooks/useSuppliers";
 import { FoodFormState, emptyFoodForm, isFoodFormValid } from "@/components/food/FoodFormFields";
+import { useOperatingContext, siteScopedKey } from "@/contexts/OperatingContext";
+import { resolveTermsContent } from "@/lib/segmentPacks";
+
 
 export type StepId = "identify" | "details" | "food" | "screening" | "confirm";
 
@@ -36,6 +39,7 @@ export interface CheckInFormData {
 }
 
 export function useCheckInFlow(open: boolean) {
+  const { pack, siteId } = useOperatingContext();
   const { residents: dbResidents } = useResidents();
   const { staff: dbStaff } = useStaffMembers();
 
@@ -135,6 +139,7 @@ export function useCheckInFlow(open: boolean) {
         "branch_tc_url", "branch_privacy_url", "show_branch_docs_in_form", "jurisdiction",
         "badge_printing_enabled",
         `tc_content_${selectedType}`,
+        siteScopedKey(`tc_content_${selectedType}`, siteId),
         `food_register_checkin_${selectedType}`,
       ])
 
@@ -145,14 +150,22 @@ export function useCheckInFlow(open: boolean) {
           const showDocs = map.show_branch_docs_in_form !== "false";
           setBranchTcUrl(showDocs && map.branch_tc_url ? map.branch_tc_url : null);
           setBranchPrivacyUrl(showDocs && map.branch_privacy_url ? map.branch_privacy_url : null);
-          setTcContent(map[`tc_content_${selectedType}`] || null);
-          if (map.jurisdiction === "UK" || map.jurisdiction === "AU") setJurisdiction(map.jurisdiction);
+          const accountJur = map.jurisdiction === "UK" || map.jurisdiction === "AU" ? map.jurisdiction : null;
+          setTcContent(
+            resolveTermsContent(
+              map[siteScopedKey(`tc_content_${selectedType}`, siteId)],
+              map[`tc_content_${selectedType}`],
+              accountJur,
+              pack
+            )
+          );
+          setJurisdiction(pack.jurisdiction);
           setBadgePrintingEnabled(map.badge_printing_enabled === "true");
           setFoodStepEnabled(map[`food_register_checkin_${selectedType}`] !== "false");
 
         }
       });
-  }, [selectedType]);
+  }, [selectedType, siteId, pack]);
 
   // Fetch previous visitors
   useEffect(() => {

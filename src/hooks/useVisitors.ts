@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Visitor, CompanionDetail } from "@/types/visitor";
 import { toast } from "@/hooks/use-toast";
 import { policyFromRow } from "@/hooks/useReturnNotificationPolicy";
+import { useSite } from "@/contexts/SiteContext";
 
 
 interface DbVisitor {
@@ -75,10 +76,15 @@ function dbToVisitor(row: DbVisitor): Visitor {
 interface UseVisitorsOptions {
   /** Kiosk / unauthenticated context: request only non-sensitive columns. */
   publicMode?: boolean;
+  /** Kiosk: the site this kiosk belongs to, so arrivals are recorded at the right place. */
+  siteId?: string | null;
+  /** Called when a check-in could not be saved, so the screen can stay honest. */
+  onSaveError?: () => void;
 }
 
 export function useVisitors(options: UseVisitorsOptions = {}) {
-  const { publicMode = false } = options;
+  const { publicMode = false, siteId: kioskSiteId = null, onSaveError } = options;
+  const { currentSiteId, isLegacySite } = useSite();
   const [visitors, setVisitors] = useState<Visitor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -101,10 +107,18 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     // Fetch today's visitors + any still checked-in + any checked-out residents (for away/leave tracking)
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
-    const { data, error } = await supabase
+    let query = supabase
       .from("visitors")
       .select("*")
-      .or(`check_in_time.gte.${todayStart.toISOString()},status.eq.checked-in,and(type.eq.resident,status.eq.checked-out)`)
+      .or(`check_in_time.gte.${todayStart.toISOString()},status.eq.checked-in,and(type.eq.resident,status.eq.checked-out)`);
+    // Only this site's people. Records saved before sites existed have no site
+    // of their own, so they stay with the original legacy site.
+    if (currentSiteId) {
+      query = isLegacySite
+        ? query.or(`branch_id.eq.${currentSiteId},branch_id.is.null`)
+        : query.eq("branch_id", currentSiteId);
+    }
+    const { data, error } = await query
       .order("check_in_time", { ascending: false })
       .limit(500);
     if (error) {
@@ -114,7 +128,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       setVisitors((data as unknown as DbVisitor[]).map(dbToVisitor));
     }
     setLoading(false);
-  }, [publicMode]);
+  }, [publicMode, currentSiteId, isLegacySite]);
 
 
 
@@ -177,6 +191,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       person_qr: visitor.personQr ?? null,
       group_id: visitor.groupId ?? null,
       visited_resident_ids: visitor.visitedResidentIds?.length ? visitor.visitedResidentIds : null,
+      branch_id: (publicMode ? kioskSiteId : currentSiteId) ?? null,
 
     };
 
@@ -201,6 +216,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
         variant: "destructive",
       });
       console.error("Failed to save visitor record", error);
+      onSaveError?.();
     };
 
     if (publicMode) {
