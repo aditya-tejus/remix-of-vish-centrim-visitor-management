@@ -1,5 +1,7 @@
 import { format } from "date-fns";
+import QRCode from "qrcode";
 import { supabase } from "@/integrations/supabase/client";
+
 
 /**
  * Badge printing.
