@@ -54,7 +54,13 @@ export default function SettingsPage() {
                 {active === "compliance" && <ComplianceTab />}
                 {active === "integration" && <IntegrationTab />}
                 {active === "audit" && <AuditTrailTab />}
-                {active === "governance" && <LockGovernanceTab />}
+                {active === "governance" && (
+                  <div className="space-y-6">
+                    <LockGovernanceTab />
+                    <KioskStaffPinCard />
+                  </div>
+                )}
+
               </div>
             </div>
           </main>
