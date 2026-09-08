@@ -33,6 +33,8 @@ import { EditVisitorDialog } from "@/components/EditVisitorDialog";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { AddVisitDialog } from "@/components/AddVisitDialog";
 import { VisitorBadge } from "@/components/VisitorBadge";
+import { printBadgeAuto } from "@/lib/printBadge";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Visitor } from "@/types/visitor";
