@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useJurisdiction } from "@/hooks/useJurisdiction";
+import { PrivacyRetentionCard } from "@/components/settings/PrivacyRetentionCard";
 
 type ReqStatus = "implemented" | "not-implemented" | "not-confirmed" | "partial";
 
@@ -33,9 +34,9 @@ const gdprRequirementDefs: GdprReqDef[] = [
     detail: "A link to the full privacy policy is accessible from the check-in form privacy notice, pointing to https://app.centrimlife.uk/legal.",
     action: "No action needed — link is live in the Privacy Notice component.",
     usedIn: [{ label: "Check-In Privacy Notice", path: "/check-in" }, { label: "Public Check-In", path: "/public-check-in" }] },
-  { id: "data_retention", name: "Configurable Data Retention", defaultStatus: "implemented", article: "Art. 5(1)(e)",
-    detail: "Retention periods can be configured (30–180 days). Data is automatically flagged for deletion after the configured period.",
-    action: "Configure the period in the Data Retention tab.",
+  { id: "data_retention", name: "Configurable Data Retention", defaultStatus: "not-confirmed", article: "Art. 5(1)(e)",
+    detail: "Retention periods are set by your organisation per record type. Nothing is removed until a period is set and switched on, and records on legal hold are always kept.",
+    action: "Set the periods your organisation has decided on in Privacy and retention. No periods are supplied for you.",
     usedIn: [{ label: "Settings → Data Retention", path: "/settings" }, { label: "Cleanup Edge Function", path: "/settings" }] },
   { id: "data_export_sar", name: "Data Export for Subject Access", defaultStatus: "implemented", article: "Art. 20",
     detail: "Visitor records can be exported in CSV and PDF formats to fulfil Subject Access Requests (SARs).",
@@ -49,9 +50,9 @@ const gdprRequirementDefs: GdprReqDef[] = [
     detail: "Individual visitor records can be deleted on request. Verify that deletion removes all associated data.",
     action: "Test the deletion flow and confirm all linked data is removed.",
     usedIn: [{ label: "GDPR → Erasure Toolkit", path: "/gdpr" }, { label: "Visitor Profile → Delete", path: "/visitors" }] },
-  { id: "automated_cleanup", name: "Automated Data Cleanup", defaultStatus: "implemented", article: "Art. 5(1)(e)",
-    detail: "A daily cron job runs at 2:00 AM to automatically delete visitor records that have exceeded the configured retention period. Stale checked-in records get a 7-day grace period.",
-    action: "No action needed — automated cleanup runs daily at 2:00 AM.",
+  { id: "automated_cleanup", name: "Retention runs", defaultStatus: "not-confirmed", article: "Art. 5(1)(e)",
+    detail: "Retention is run for visits and the food register only, and only when a period is switched on. Every run is recorded with how many records were handled and how many were skipped for legal hold.",
+    action: "Run retention from Privacy and retention, or confirm with your provider before relying on it.",
     usedIn: [{ label: "Cleanup Edge Function", path: "/settings" }, { label: "Settings → Data Retention", path: "/settings" }] },
   { id: "audit_trail", name: "Activity Audit Trail", defaultStatus: "not-confirmed", article: "Art. 30",
     detail: "All data access and modifications are logged. Verify logs capture who accessed what and when.",
@@ -65,7 +66,7 @@ const gdprRequirementDefs: GdprReqDef[] = [
     detail: "Admin and staff roles are defined. Ensure only authorised personnel can access sensitive visitor data.",
     action: "Audit current role assignments and restrict access as needed.",
     usedIn: [{ label: "User Roles (Database)", path: "/settings" }] },
-  { id: "dpa", name: "Data Processing Agreement", defaultStatus: "implemented", article: "Art. 28",
+  { id: "dpa", name: "Data Processing Agreement", defaultStatus: "not-confirmed", article: "Art. 28",
     detail: "Data processing is handled by Centrim Life with infrastructure hosted on AWS. A formal Data Processing Agreement is in place covering all third-party processing of visitor data.",
     action: "No action needed — DPA is established with Centrim Life and AWS.",
     usedIn: [{ label: "Centrim Life Platform", path: "/settings" }] },
@@ -90,7 +91,7 @@ const auReferences: Record<string, { article: string; detail?: string }> = {
   data_export_sar: { article: "APP 12", detail: "Visitor records can be exported in CSV and PDF to fulfil individual access requests within a reasonable period (APP 12.4)." },
   data_correction: { article: "APP 13", detail: "Authorised staff can correct inaccurate, out-of-date or misleading personal information on request (APP 13.1)." },
   right_to_erasure: { article: "APP 11.2", detail: "Records can be destroyed or de-identified on request where retention is no longer required. Verify deletion removes all associated data." },
-  automated_cleanup: { article: "APP 11.2", detail: "A daily job at 2:00 AM destroys records past the configured retention period. Records under legal hold are exempt." },
+  automated_cleanup: { article: "APP 11.2", detail: "Retention runs only for record types you have switched on, and always skips records under legal hold. Each run is logged." },
   audit_trail: { article: "APP 11.1", detail: "Access and modifications are logged as a reasonable security step against misuse or unauthorised access (APP 11.1)." },
   encryption_at_rest: { article: "APP 11.1", detail: "Database storage is encrypted at rest. Consider additional protection for health information, which is sensitive information under the Act." },
   rbac: { article: "APP 11.1", detail: "Admin and staff roles restrict who can access personal and health information (APP 11.1)." },
@@ -180,6 +181,8 @@ export function ComplianceTab() {
 
   return (
     <div className="space-y-6">
+      <PrivacyRetentionCard />
+
       {/* Compliance Score */}
       <div className="rounded-xl border border-border bg-card p-5 shadow-soft">
         <div className="flex items-center justify-between mb-3">
@@ -189,7 +192,7 @@ export function ComplianceTab() {
             </div>
             <div>
               <h2 className="font-semibold text-foreground">Compliance Score</h2>
-              <p className="text-xs text-muted-foreground">{`How ready is your facility for a ${regimeName} audit?`}</p>
+              <p className="text-xs text-muted-foreground">{`Your own record of how you are tracking against ${regimeName}. It is not a legal assessment.`}</p>
             </div>
           </div>
           <span className="text-3xl font-bold text-primary">{loadingStatuses ? "—" : `${compliancePercent}%`}</span>
