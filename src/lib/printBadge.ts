@@ -119,7 +119,7 @@ function standardHtml(data: BadgeData, color: string, date: Date, qr?: string) {
 }
 
 
-function labelHtml(data: BadgeData, color: string, date: Date, size: string) {
+function labelHtml(data: BadgeData, color: string, date: Date, size: string, qr?: string) {
   const dim = LABEL_DIMENSIONS[size] || LABEL_DIMENSIONS["62mm"];
   const compact = dim.h <= 40; // 62 x 29mm roll — name + type only
   const nameSize = compact ? 13 : 19;
@@ -139,31 +139,46 @@ function labelHtml(data: BadgeData, color: string, date: Date, size: string) {
     .row { display:flex; justify-content:space-between; gap:2mm; font-size:9pt; padding:1.2mm 0; border-top:0.2mm solid #e2e8f0; }
     .label { color:#64748b; }
     .value { color:#0f172a; font-weight:600; text-align:right; }
+    .qr { text-align:center; padding-top:1.5mm; }
+    .qr img { width:18mm; height:18mm; }
+    .qr-hint { font-size:6pt; color:#94a3b8; }
     .foot { text-align:center; font-size:6.5pt; color:#94a3b8; padding:${compact ? "0.5mm" : "1.5mm"} 0 1.5mm; letter-spacing:.08em; text-transform:uppercase; }
   </style></head><body>
-    ${badgeMarkup(data, color, date)}
+    ${badgeMarkup(data, color, date, qr)}
     <script>window.onload = function(){ window.print(); }<\/script>
   </body></html>`;
 }
 
-export function printBadge(data: BadgeData, config?: Partial<BadgeConfig>) {
+/** QR image for the badge, or undefined when there is nothing to encode. */
+async function qrDataUrl(value?: string): Promise<string | undefined> {
+  if (!value) return undefined;
+  try {
+    return await QRCode.toDataURL(value, { margin: 0, width: 240, errorCorrectionLevel: "M" });
+  } catch {
+    return undefined;
+  }
+}
+
+export async function printBadge(data: BadgeData, config?: Partial<BadgeConfig>) {
   const color = TYPE_COLORS[data.type?.toLowerCase()] || TYPE_COLORS.visitor;
   const date = data.date || new Date();
   const mode = config?.mode || "standard";
   const size = config?.labelSize || "62mm";
   const dim = LABEL_DIMENSIONS[size] || LABEL_DIMENSIONS["62mm"];
+  const qr = await qrDataUrl(data.qrValue);
 
   const win =
     mode === "label"
-      ? window.open("", "_blank", `width=${Math.round(dim.w * 4)},height=${Math.round(dim.h * 4) + 120}`)
-      : window.open("", "_blank", "width=460,height=640");
+      ? window.open("", "_blank", `width=${Math.round(dim.w * 4)},height=${Math.round(dim.h * 4) + 200}`)
+      : window.open("", "_blank", "width=460,height=760");
   if (!win) return;
 
   win.document.write(
-    mode === "label" ? labelHtml(data, color, date, size) : standardHtml(data, color, date)
+    mode === "label" ? labelHtml(data, color, date, size, qr) : standardHtml(data, color, date, qr)
   );
   win.document.close();
 }
+
 
 /** Reads the configured printer mode and prints accordingly. */
 export async function printBadgeAuto(data: BadgeData) {
