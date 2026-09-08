@@ -357,7 +357,21 @@ export default function Evacuation() {
     if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 300); }
   };
 
+  /** Everyone sharing one property sits together — a couple in one villa is two lines, one heading. */
+  const unitBlocks = (people: RollCallPerson[]) => {
+    const map = new Map<string, RollCallPerson[]>();
+    people.forEach((p) => {
+      const k = p.unit || "";
+      if (!map.has(k)) map.set(k, []);
+      map.get(k)!.push(p);
+    });
+    return [...map.entries()]
+      .sort(([a], [b]) => (parseInt(a) || 0) - (parseInt(b) || 0) || a.localeCompare(b))
+      .map(([unit, list]) => ({ unit, people: list }));
+  };
+
   const renderPerson = (p: RollCallPerson) => {
+
     const status = statusOf(p);
     const isSafe = status !== "unaccounted";
     const marked = statusByKey.get(p.key);
