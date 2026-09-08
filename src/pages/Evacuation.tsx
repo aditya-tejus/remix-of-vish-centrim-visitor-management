@@ -80,9 +80,10 @@ export default function Evacuation() {
   const markedBy = user?.email || "Staff";
 
   const { onSite, offSite } = useMemo(
-    () => buildRollCall({ visitors, residents }),
-    [visitors, residents]
+    () => buildRollCall({ visitors, residents, roomLabel }),
+    [visitors, residents, roomLabel]
   );
+
 
   const statusByKey = useMemo(() => {
     const map = new Map<string, { id: string; status: AttendanceStatus; at: string | null; point: string | null }>();
