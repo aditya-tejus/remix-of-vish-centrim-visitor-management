@@ -287,9 +287,6 @@ export function ReturnNotificationSettingsTab() {
 
   if (loading) return <div className="text-sm text-muted-foreground p-4">Loading...</div>;
 
-  const overdueSummary = settings
-    ? `A resident shows as overdue ${graceLabel(settings.overdue_grace_placeholder ?? settings.graceMinutes)} after their expected return time.`
-    : "";
 
   return (
     <div className="space-y-5">
