@@ -231,7 +231,7 @@ function Shell({ children, actions }: { children: React.ReactNode; actions?: Rea
             subtitle="Live presence, people over their expected time, and visit history for this site."
             actions={actions}
           />
-          <main className="p-6 space-y-4">{children}</main>
+          <main className="p-4 sm:p-6 space-y-4">{children}</main>
         </SidebarInset>
       </div>
     </SidebarProvider>
