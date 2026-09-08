@@ -60,9 +60,23 @@ export default function KioskEvacuation({ onExit }: { onExit?: () => void }) {
     try {
       await startDrill.mutateAsync({
         title: `Emergency roll call — ${new Date().toLocaleString()}`,
-        people: onSite,
+        people: onSite.map((p) => ({
+          name: p.name,
+          type: p.type,
+          visitorId: p.visitorId,
+          companionIndex: p.companionIndex,
+          assistanceLevel: p.assistance.label,
+          contactPhone: p.phone,
+          emergencyContactName: p.emergencyContactName,
+          emergencyContactPhone: p.emergencyContactPhone,
+          area: p.area,
+          room: p.room,
+          responsibleStaff: p.responsibleStaff,
+          associatedWith: p.associatedWith.join("; "),
+        })),
         eventType: "emergency",
       });
+
       toast({ title: "Roll call started", description: `${onSite.length} people to account for.` });
     } catch (e: any) {
       toast({ title: "Could not start roll call", description: e.message, variant: "destructive" });
