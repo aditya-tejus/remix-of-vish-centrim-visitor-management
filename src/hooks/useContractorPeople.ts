@@ -31,6 +31,31 @@ export async function findContractorPerson(params: {
   const last = (params.surname || "").trim();
   const qr = (params.qr || "").trim().toUpperCase();
 
+  // The kiosk is not signed in and cannot read the contractor register directly.
+  // It asks a narrow server function for identity only.
+  const { data: session } = await supabase.auth.getSession();
+  if (!session?.session) {
+    const { data } = await supabase.rpc("kiosk_contractor_lookup" as any, {
+      p_mobile: mobile || null,
+      p_qr: qr || null,
+      p_first: first || null,
+      p_last: last || null,
+    });
+    const row = (data as any[])?.[0];
+    if (!row) return null;
+    return {
+      id: row.person_id,
+      first_name: row.first_name,
+      surname: row.surname,
+      mobile: null,
+      email: null,
+      supplier_id: row.supplier_id,
+      person_qr: null,
+      is_active: true,
+      notes: null,
+    } as unknown as ContractorPerson;
+  }
+
   if (qr) {
     const { data } = await supabase.from("contractor_people").select("*").eq("person_qr", qr).maybeSingle();
     if (data) return data as ContractorPerson;

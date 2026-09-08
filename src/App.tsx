@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ReactNode } from "react";
 import { AuthProvider } from "@/hooks/useAuth";
+import { SiteProvider } from "@/contexts/SiteContext";
 import { RequireAuth } from "@/components/RequireAuth";
 import AuthPage from "./pages/Auth";
 import VisitList from "./pages/VisitList";
@@ -53,6 +54,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <SiteProvider>
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
 
@@ -103,6 +105,7 @@ const App = () => (
 
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </SiteProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

@@ -72,14 +72,6 @@ function dbToVisitor(row: DbVisitor): Visitor {
   };
 }
 
-/**
- * Columns the unauthenticated kiosk is allowed to read.
- * Sensitive PII (email, mobile, address, health answers, temperature, comments)
- * is not granted to the anon role at the database level.
- */
-const KIOSK_SAFE_COLUMNS =
-  "id, first_name, surname, type, status, check_in_time, check_out_time, whom_to_visit, qr_code, group_id, additional_visitors, expected_return_date, leave_type, accompanied_by_name, print_status, created_at";
-
 interface UseVisitorsOptions {
   /** Kiosk / unauthenticated context: request only non-sensitive columns. */
   publicMode?: boolean;
@@ -91,12 +83,23 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
   const [loading, setLoading] = useState(true);
 
   const fetchVisitors = useCallback(async () => {
+    // Kiosk (unauthenticated) reads go through a narrow server function that returns
+    // presence only — never visit history or personal details.
+    if (publicMode) {
+      const { data, error } = await supabase.rpc("kiosk_presence_list" as any);
+      if (!error && data) {
+        setVisitors((data as unknown as DbVisitor[]).map(dbToVisitor));
+      }
+      setLoading(false);
+      return;
+    }
+
     // Fetch today's visitors + any still checked-in + any checked-out residents (for away/leave tracking)
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const { data, error } = await supabase
       .from("visitors")
-      .select(publicMode ? KIOSK_SAFE_COLUMNS : "*")
+      .select("*")
       .or(`check_in_time.gte.${todayStart.toISOString()},status.eq.checked-in,and(type.eq.resident,status.eq.checked-out)`)
       .order("check_in_time", { ascending: false })
       .limit(500);
@@ -107,11 +110,18 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
   }, [publicMode]);
 
 
+
   // Load the per-type "too long on site" thresholds once so counts everywhere agree.
   useEffect(() => { fetchOverstayHours(); }, []);
 
   useEffect(() => {
     fetchVisitors();
+
+    // The kiosk has no read access to the visitors table, so it cannot use realtime.
+    if (publicMode) {
+      const poll = setInterval(fetchVisitors, 20000);
+      return () => clearInterval(poll);
+    }
 
     // Realtime subscription
     const channel = supabase
@@ -128,6 +138,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     return () => {
       supabase.removeChannel(channel);
     };
+
   }, [fetchVisitors]);
 
   const addVisitor = (visitor: Omit<Visitor, "id">): Visitor => {
@@ -252,7 +263,20 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       updateData.additional_visitors = details.companionDetails.length;
     }
 
+    if (publicMode) {
+      // Kiosk: narrow server function, no direct table write.
+      await supabase.rpc("kiosk_resident_leave" as any, {
+        p_visitor_id: visitorId,
+        p_time: now.toISOString(),
+        p_leave_type: details.leaveType ?? null,
+        p_expected_return: details.expectedReturnDate?.toISOString() ?? null,
+        p_accompanied_by_name: details.accompaniedByName ?? null,
+        p_reason: details.checkoutReason ?? null,
+      });
+      return;
+    }
     await supabase.from("visitors").update(updateData).eq("id", visitorId);
+
   };
 
   const checkOutVisitor = async (
@@ -298,10 +322,20 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       }
       updateData.additional_visitors = companionOutcome.remainingCompanions;
     }
-    await supabase
-      .from("visitors")
-      .update(updateData)
-      .eq("id", id);
+    if (publicMode) {
+      if (!stillOpen) {
+        await supabase.rpc("kiosk_check_out" as any, {
+          p_visitor_id: id,
+          p_time: checkOutTime.toISOString(),
+        });
+      }
+    } else {
+      await supabase
+        .from("visitors")
+        .update(updateData)
+        .eq("id", id);
+    }
+
   };
 
   const checkInReturn = async (id: string, returnComment?: string, timeOverride?: string) => {
@@ -323,7 +357,15 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       }
 
     }
-    await supabase.from("visitors").update(updateData).eq("id", id);
+    if (publicMode) {
+      await supabase.rpc("kiosk_resident_return" as any, {
+        p_visitor_id: id,
+        p_time: checkInTime.toISOString(),
+      });
+    } else {
+      await supabase.from("visitors").update(updateData).eq("id", id);
+    }
+
 
     // Record the safe-return confirmation for the audit trail when configured.
     if (!publicMode) {

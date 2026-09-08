@@ -36,7 +36,42 @@ export function useResidents(options: UseResidentsOptions = {}) {
   const [loading, setLoading] = useState(true);
 
   const fetchResidents = useCallback(async () => {
-    const contactCols = publicMode ? "" : "email, mobile,";
+    // Kiosk: name, room and area only — no contact, care, clinical or risk information.
+    if (publicMode) {
+      const { data, error } = await supabase.rpc("kiosk_resident_directory" as any, { p_search: null });
+      if (!error && data) {
+        setResidents(
+          (data as any[]).map((r) => ({
+            id: r.visitor_id,
+            visitorId: r.visitor_id,
+            firstName: r.first_name,
+            surname: r.surname,
+            name: `${r.first_name} ${r.surname}`,
+            room: r.room ? `Room ${r.room}` : "",
+            wing: r.area_name || "",
+            wingId: null,
+            careLevel: "standard",
+            keyWorker: null,
+            photoUrl: null,
+            emergencyContactName: null,
+            emergencyContactPhone: null,
+            mobilityLevel: "",
+            dolsLpsFlag: false,
+            riskAssessmentLevel: "standard",
+            medicationNotes: null,
+            mobilityAids: [],
+            notes: null,
+            email: "",
+            mobile: "",
+          }))
+        );
+      }
+      setLoading(false);
+      return;
+    }
+
+    const contactCols = "email, mobile,";
+
     const { data, error } = await supabase
       .from("visitors")
       .select(`
