@@ -114,15 +114,37 @@ export default function KioskLayout() {
 
       {/* Content — frosted glass panel */}
       <main className="relative z-10 flex-1 flex items-center justify-center p-4 sm:p-8">
-        <div className="w-full max-w-2xl bg-card/95 backdrop-blur-xl rounded-3xl border border-border shadow-2xl p-6 sm:p-8 max-h-[calc(100vh-140px)] overflow-y-auto kiosk-scroll-fade">
+        <div className={`w-full ${isEvacuation ? "max-w-3xl" : "max-w-2xl"} bg-card/95 backdrop-blur-xl rounded-3xl border border-border shadow-2xl p-6 sm:p-8 max-h-[calc(100vh-140px)] overflow-y-auto kiosk-scroll-fade`}>
           <Outlet />
         </div>
       </main>
 
-      <footer className="relative z-10 flex items-center justify-center gap-1.5 py-2 text-[11px] text-muted-foreground/40 tracking-wide">
-        Powered by
-        <img src={centrimLogo} alt="Centrim Life" className="h-3.5 object-contain opacity-40" />
+      <footer className="relative z-10 flex items-center justify-center gap-2 py-2 text-[11px] text-muted-foreground/40 tracking-wide">
+        <span className="flex items-center gap-1.5">
+          Powered by
+          <img src={centrimLogo} alt="Centrim Life" className="h-3.5 object-contain opacity-40" />
+        </span>
+        {/* Discreet staff access — press and hold */}
+        <button
+          onMouseDown={startHold}
+          onMouseUp={cancelHold}
+          onMouseLeave={cancelHold}
+          onTouchStart={startHold}
+          onTouchEnd={cancelHold}
+          onContextMenu={(e) => e.preventDefault()}
+          className="p-2 -m-1 text-muted-foreground/25 active:text-muted-foreground/60"
+          aria-label="Staff access"
+        >
+          <ShieldCheck className="h-3.5 w-3.5" />
+        </button>
       </footer>
+
+      <KioskPinPad
+        open={pinOpen}
+        onOpenChange={setPinOpen}
+        onSuccess={() => { setPinOpen(false); navigate("/kiosk/evacuation"); }}
+      />
+
 
       {/* Help Dialog */}
       {helpOpen && (
