@@ -91,7 +91,16 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
       });
     }
     setSuccessName(fullName);
-    setSuccessBadge({ name: fullName, type: flow.selectedType, visiting: flow.formData.selectPerson || undefined });
+    setSuccessBadge({
+      name: fullName,
+      type: flow.selectedType,
+      visiting: flow.formData.selectPerson || undefined,
+      mobile: flow.formData.mobile || undefined,
+      room: [flow.selectedResident?.room, flow.selectedResident?.wing].filter(Boolean).join(" · ") || undefined,
+      qrValue: created?.personQr || visitor.personQr || undefined,
+      date: visitor.checkInTime,
+    });
+
     setShowSuccess(true);
     if (!flow.badgePrintingEnabled) {
       setTimeout(() => {
