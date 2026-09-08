@@ -113,6 +113,9 @@ export default function Evacuation() {
     emergencyContactPhone: p.emergencyContactPhone,
     area: p.area,
     room: p.room,
+    responsibleStaff: p.responsibleStaff,
+    associatedWith: p.associatedWith.join("; "),
+
   });
 
   const ensureDrill = async (): Promise<EvacuationDrill> => {
