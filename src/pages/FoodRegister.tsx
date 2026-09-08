@@ -14,6 +14,7 @@ import { useResidents } from "@/hooks/useResidents";
 import { useFoodRegister } from "@/hooks/useFoodRegister";
 import { AddFoodDialog } from "@/components/food/AddFoodDialog";
 import { exportCsvAudited } from "@/lib/exportAudit";
+import { ErrorState } from "@/components/states";
 import { useSite } from "@/contexts/SiteContext";
 
 import { FoodRecord, foodTypeLabel } from "@/lib/foodRegister";
@@ -42,7 +43,7 @@ export default function FoodRegisterPage() {
     [from, to, residentVisitorId, visitorName, search]
   );
 
-  const { records, loading, refetch } = useFoodRegister(filters);
+  const { records, loading, error, refetch } = useFoodRegister(filters);
 
   const hasFilters = !!(from || to || residentVisitorId !== "all" || visitorName || search);
   const clearFilters = () => {
@@ -143,6 +144,8 @@ export default function FoodRegisterPage() {
             </Card>
 
 
+
+            {error && <ErrorState description={error} onRetry={refetch} />}
 
             <Card className="rounded-xl">
               <CardContent className="p-0">

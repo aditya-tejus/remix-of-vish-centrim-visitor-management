@@ -21,6 +21,7 @@ interface AddFoodDialogProps {
 export function AddFoodDialog({ open, onOpenChange, onSaved }: AddFoodDialogProps) {
   const { residents } = useResidents();
   const { toast } = useToast();
+  const { currentSiteId } = useSite();
   const [residentId, setResidentId] = useState("");
   const [broughtBy, setBroughtBy] = useState("");
   const [recordedAt, setRecordedAt] = useState(() => {
