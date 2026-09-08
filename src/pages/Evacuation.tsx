@@ -802,12 +802,45 @@ export default function Evacuation() {
                   <p className="text-[12px] text-muted-foreground">Required — this appears on the evacuation report.</p>
                 </div>
               )}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">Review notes (optional)</p>
+                <Textarea
+                  value={reviewNotes}
+                  onChange={(e) => setReviewNotes(e.target.value)}
+                  placeholder="What went well, what needs to change, actions agreed."
+                  rows={3}
+                />
+                <p className="text-[12px] text-muted-foreground">Adding notes marks this event as reviewed.</p>
+              </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setClosing(false)}>Keep going</Button>
                 <Button onClick={finishRollCall} disabled={busy}>End roll call</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          <Dialog open={!!correcting} onOpenChange={(o) => !o && setCorrecting(null)}>
+            <DialogContent className="rounded-xl">
+              <DialogHeader>
+                <DialogTitle>Correct this entry</DialogTitle>
+                <DialogDescription>
+                  {correcting?.name} is currently recorded as {ATTENDANCE_LABELS[correcting ? statusOf(correcting) : "unaccounted"]}.
+                  Corrections are kept in the audit trail.
+                </DialogDescription>
+              </DialogHeader>
+              <Textarea
+                value={correctionReason}
+                onChange={(e) => setCorrectionReason(e.target.value)}
+                placeholder="e.g. Marked safe by mistake — wrong person tapped."
+                rows={3}
+              />
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setCorrecting(null)}>Cancel</Button>
+                <Button onClick={confirmCorrection} disabled={busy}>Record correction</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
         </SidebarInset>
       </div>
     </SidebarProvider>
