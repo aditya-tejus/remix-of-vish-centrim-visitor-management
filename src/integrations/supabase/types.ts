@@ -421,6 +421,69 @@ export type Database = {
         }
         Relationships: []
       }
+      emergency_actions: {
+        Row: {
+          action: string
+          actor_label: string
+          actor_user_id: string | null
+          attendance_id: string | null
+          created_at: string
+          drill_id: string
+          id: string
+          new_status: string | null
+          note: string | null
+          person_name: string | null
+          previous_status: string | null
+          reason: string | null
+          source: string
+        }
+        Insert: {
+          action: string
+          actor_label?: string
+          actor_user_id?: string | null
+          attendance_id?: string | null
+          created_at?: string
+          drill_id: string
+          id?: string
+          new_status?: string | null
+          note?: string | null
+          person_name?: string | null
+          previous_status?: string | null
+          reason?: string | null
+          source?: string
+        }
+        Update: {
+          action?: string
+          actor_label?: string
+          actor_user_id?: string | null
+          attendance_id?: string | null
+          created_at?: string
+          drill_id?: string
+          id?: string
+          new_status?: string | null
+          note?: string | null
+          person_name?: string | null
+          previous_status?: string | null
+          reason?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emergency_actions_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "evacuation_attendance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "emergency_actions_drill_id_fkey"
+            columns: ["drill_id"]
+            isOneToOne: false
+            referencedRelation: "evacuation_drills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evacuation_attendance: {
         Row: {
           area_label: string | null
@@ -437,6 +500,7 @@ export type Database = {
           id: string
           marked_by: string | null
           marked_safe_at: string | null
+          note: string | null
           notes: string | null
           parent_visitor_id: string | null
           person_name: string
@@ -461,6 +525,7 @@ export type Database = {
           id?: string
           marked_by?: string | null
           marked_safe_at?: string | null
+          note?: string | null
           notes?: string | null
           parent_visitor_id?: string | null
           person_name: string
@@ -485,6 +550,7 @@ export type Database = {
           id?: string
           marked_by?: string | null
           marked_safe_at?: string | null
+          note?: string | null
           notes?: string | null
           parent_visitor_id?: string | null
           person_name?: string
@@ -549,14 +615,22 @@ export type Database = {
       evacuation_drills: {
         Row: {
           accounted_for: number
+          activated_by: string | null
+          area_id: string | null
           branch_id: string | null
           created_at: string
           ended_at: string | null
+          event_class: string
           event_type: string
           id: string
           notes: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          snapshot_at: string | null
           started_at: string
           started_by: string
+          state: string
           status: string
           title: string
           total_people: number
@@ -564,14 +638,22 @@ export type Database = {
         }
         Insert: {
           accounted_for?: number
+          activated_by?: string | null
+          area_id?: string | null
           branch_id?: string | null
           created_at?: string
           ended_at?: string | null
+          event_class?: string
           event_type?: string
           id?: string
           notes?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          snapshot_at?: string | null
           started_at?: string
           started_by?: string
+          state?: string
           status?: string
           title?: string
           total_people?: number
@@ -579,20 +661,35 @@ export type Database = {
         }
         Update: {
           accounted_for?: number
+          activated_by?: string | null
+          area_id?: string | null
           branch_id?: string | null
           created_at?: string
           ended_at?: string | null
+          event_class?: string
           event_type?: string
           id?: string
           notes?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          snapshot_at?: string | null
           started_at?: string
           started_by?: string
+          state?: string
           status?: string
           title?: string
           total_people?: number
           unaccounted_reason?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "evacuation_drills_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "wings"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "evacuation_drills_branch_id_fkey"
             columns: ["branch_id"]
@@ -1097,6 +1194,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      kiosk_access_log: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          detail: string | null
+          id: string
+          outcome: string
+          purpose: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          outcome: string
+          purpose: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          outcome?: string
+          purpose?: string
+        }
+        Relationships: []
       }
       kiosk_security: {
         Row: {
@@ -2605,6 +2729,47 @@ export type Database = {
           supplier_id: string
           supplier_name: string
           surname: string
+        }[]
+      }
+      kiosk_emergency_gate: {
+        Args: { p_pin: string; p_purpose: string }
+        Returns: boolean
+      }
+      kiosk_emergency_mark: {
+        Args: {
+          p_attendance_id: string
+          p_marked_by?: string
+          p_pin: string
+          p_reason?: string
+          p_status: string
+        }
+        Returns: boolean
+      }
+      kiosk_emergency_progress: {
+        Args: { p_pin: string }
+        Returns: {
+          accounted: number
+          drill_title: string
+          event_class: string
+          outstanding: number
+          total: number
+        }[]
+      }
+      kiosk_emergency_rollcall: {
+        Args: { p_pin: string }
+        Returns: {
+          assistance_level: string
+          attendance_id: string
+          contact_phone: string
+          drill_id: string
+          drill_state: string
+          drill_title: string
+          event_class: string
+          location_label: string
+          marked_safe_at: string
+          person_name: string
+          person_type: string
+          status: string
         }[]
       }
       kiosk_pin_is_set: { Args: never; Returns: boolean }
