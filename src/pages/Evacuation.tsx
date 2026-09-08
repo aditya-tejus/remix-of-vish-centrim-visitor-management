@@ -102,6 +102,9 @@ export default function Evacuation() {
   const statusOf = (p: RollCallPerson): AttendanceStatus =>
     statusByKey.get(p.key)?.status || "unaccounted";
 
+  /** Only "safe", "safe elsewhere" and "evacuated off-site" close a person off. */
+  const accountedFor = (p: RollCallPerson) => ACCOUNTED_STATUSES.includes(statusOf(p));
+
   const seedOf = (p: RollCallPerson): RollCallSeed => ({
     name: p.name,
     type: p.type,
