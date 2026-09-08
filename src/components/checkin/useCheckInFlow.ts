@@ -274,7 +274,12 @@ export function useCheckInFlow(open: boolean) {
 
   const buildVisitor = (): Omit<Visitor, "id"> => {
     const allHealthClear = Object.values(healthAnswers).every((v) => v === false);
+    const visitQr = crypto.randomUUID().slice(0, 12).toUpperCase();
     return {
+      qrCode: visitQr,
+      // Stable personal card code — reused when a returning visitor is recognised
+      personQr: (selectedProfile as any)?.personQr || visitQr,
+
       firstName: formData.firstName,
       surname: formData.surname,
       email: formData.email,
