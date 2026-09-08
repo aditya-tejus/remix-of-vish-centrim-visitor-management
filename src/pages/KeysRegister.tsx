@@ -19,9 +19,11 @@ import { AddKeyDialog, keyTypeLabel } from "@/components/keys/AddKeyDialog";
 import { IssueKeySheet, IssuePrefill } from "@/components/keys/IssueKeySheet";
 import { KeyFilters, KeyFilterValues, EMPTY_FILTERS } from "@/components/keys/KeyFilters";
 import { format } from "date-fns";
-import { KeyRound, Plus, History, ArrowLeftRight, AlertTriangle, UserCog, CalendarClock, Printer, TriangleAlert } from "lucide-react";
+import { Download, KeyRound, Plus, History, ArrowLeftRight, AlertTriangle, UserCog, CalendarClock, Printer, TriangleAlert } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { printKeyCardAuto } from "@/lib/printKeyCard";
+import { exportCsvAudited } from "@/lib/exportAudit";
+import { useSite } from "@/contexts/SiteContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PermissionDeniedState } from "@/components/states";
 
@@ -45,6 +47,8 @@ export default function KeysRegister() {
   const canIssue = can("keys.issue");
   const canReturn = can("keys.return");
   const canManage = can("keys.manage");
+  const canExport = can("keys.export");
+  const { currentSite, currentSiteId } = useSite();
   const { residents } = useResidents();
   const { data: wings = [] } = useWings();
   const { toast } = useToast();
@@ -317,6 +321,13 @@ export default function KeysRegister() {
           <AppHeader
             title="Keys Register"
             subtitle="Every property key, who has it right now, and when it is due back."
+            actions={
+              canView && canExport ? (
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={exportRegister} disabled={keys.length === 0}>
+                  <Download className="h-3.5 w-3.5" /> Export register
+                </Button>
+              ) : undefined
+            }
           />
 
           <main className="p-6 space-y-6">
