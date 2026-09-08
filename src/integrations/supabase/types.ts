@@ -1520,6 +1520,148 @@ export type Database = {
         }
         Relationships: []
       }
+      privacy_acknowledgements: {
+        Row: {
+          acknowledged_at: string
+          branch_id: string | null
+          device: string | null
+          id: string
+          method: string
+          notice_version: string
+          person_id: string | null
+          visit_id: string | null
+          visitor_id: string | null
+        }
+        Insert: {
+          acknowledged_at?: string
+          branch_id?: string | null
+          device?: string | null
+          id?: string
+          method?: string
+          notice_version?: string
+          person_id?: string | null
+          visit_id?: string | null
+          visitor_id?: string | null
+        }
+        Update: {
+          acknowledged_at?: string
+          branch_id?: string | null
+          device?: string | null
+          id?: string
+          method?: string
+          notice_version?: string
+          person_id?: string | null
+          visit_id?: string | null
+          visitor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "privacy_acknowledgements_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "privacy_acknowledgements_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "privacy_acknowledgements_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["person_id"]
+          },
+          {
+            foreignKeyName: "privacy_acknowledgements_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["visit_id"]
+          },
+          {
+            foreignKeyName: "privacy_acknowledgements_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "privacy_acknowledgements_visitor_id_fkey"
+            columns: ["visitor_id"]
+            isOneToOne: false
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["legacy_visitor_id"]
+          },
+          {
+            foreignKeyName: "privacy_acknowledgements_visitor_id_fkey"
+            columns: ["visitor_id"]
+            isOneToOne: false
+            referencedRelation: "visitors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      privacy_notices: {
+        Row: {
+          branch_id: string | null
+          controller_contact: string | null
+          controller_name: string | null
+          created_at: string
+          data_categories: Json
+          id: string
+          is_active: boolean
+          jurisdiction: string | null
+          notice_text: string | null
+          notice_url: string | null
+          notice_version: string
+          privacy_contact: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          controller_contact?: string | null
+          controller_name?: string | null
+          created_at?: string
+          data_categories?: Json
+          id?: string
+          is_active?: boolean
+          jurisdiction?: string | null
+          notice_text?: string | null
+          notice_url?: string | null
+          notice_version?: string
+          privacy_contact?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          controller_contact?: string | null
+          controller_name?: string | null
+          created_at?: string
+          data_categories?: Json
+          id?: string
+          is_active?: boolean
+          jurisdiction?: string | null
+          notice_text?: string | null
+          notice_url?: string | null
+          notice_version?: string
+          privacy_contact?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "privacy_notices_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1822,6 +1964,95 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      retention_policies: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          exception_reason: string | null
+          id: string
+          is_enabled: boolean
+          mode: string
+          record_class: string
+          retention_unit: string
+          retention_value: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          exception_reason?: string | null
+          id?: string
+          is_enabled?: boolean
+          mode?: string
+          record_class: string
+          retention_unit?: string
+          retention_value?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          exception_reason?: string | null
+          id?: string
+          is_enabled?: boolean
+          mode?: string
+          record_class?: string
+          retention_unit?: string
+          retention_value?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retention_policies_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      retention_runs: {
+        Row: {
+          action: string
+          branch_id: string | null
+          created_at: string
+          error_detail: string | null
+          id: string
+          outcome: string
+          performed_by: string | null
+          record_class: string
+          records_affected: number
+          skipped_legal_hold: number
+        }
+        Insert: {
+          action: string
+          branch_id?: string | null
+          created_at?: string
+          error_detail?: string | null
+          id?: string
+          outcome: string
+          performed_by?: string | null
+          record_class: string
+          records_affected?: number
+          skipped_legal_hold?: number
+        }
+        Update: {
+          action?: string
+          branch_id?: string | null
+          created_at?: string
+          error_detail?: string | null
+          id?: string
+          outcome?: string
+          performed_by?: string | null
+          record_class?: string
+          records_affected?: number
+          skipped_legal_hold?: number
+        }
+        Relationships: []
       }
       role_permissions: {
         Row: {
@@ -2878,6 +3109,16 @@ export type Database = {
         }
         Returns: string
       }
+      record_privacy_ack: {
+        Args: {
+          p_branch_id?: string
+          p_device?: string
+          p_method?: string
+          p_version?: string
+          p_visitor_id: string
+        }
+        Returns: string
+      }
       resolve_setting: {
         Args: {
           p_branch_id?: string
@@ -2888,6 +3129,13 @@ export type Database = {
           p_wing_id?: string
         }
         Returns: string
+      }
+      run_retention: {
+        Args: { p_record_class: string }
+        Returns: {
+          affected: number
+          skipped: number
+        }[]
       }
       set_kiosk_pin: { Args: { p_pin: string }; Returns: undefined }
       user_can_access_site: { Args: { _branch_id: string }; Returns: boolean }
