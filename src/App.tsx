@@ -39,6 +39,8 @@ import KioskCheckIn from "./pages/kiosk/KioskCheckIn";
 import KioskCheckOut from "./pages/kiosk/KioskCheckOut";
 import KioskResidentLeave from "./pages/kiosk/KioskResidentLeave";
 import KioskQRScan from "./pages/kiosk/KioskQRScan";
+import KioskEvacuation from "./pages/kiosk/KioskEvacuation";
+
 
 const queryClient = new QueryClient();
 
@@ -95,6 +97,8 @@ const App = () => (
               <Route path="checkout" element={<KioskCheckOut />} />
               <Route path="resident-leave" element={<KioskResidentLeave />} />
               <Route path="qr-scan" element={<KioskQRScan />} />
+              <Route path="evacuation" element={<KioskEvacuation />} />
+
             </Route>
 
             <Route path="*" element={<NotFound />} />

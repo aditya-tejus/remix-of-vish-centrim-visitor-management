@@ -33,6 +33,8 @@ import { EditVisitorDialog } from "@/components/EditVisitorDialog";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { AddVisitDialog } from "@/components/AddVisitDialog";
 import { VisitorBadge } from "@/components/VisitorBadge";
+import { printBadgeAuto } from "@/lib/printBadge";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Visitor } from "@/types/visitor";
@@ -207,7 +209,23 @@ export default function VisitorProfilePage() {
                     <LogIn className="h-3.5 w-3.5" /> Check in again
                   </Button>
                 )}
-                <VisitorBadge visitor={visitor} variant="print" />
+                <VisitorBadge
+                  visitor={visitor}
+                  variant="print"
+                  onPrint={() => {
+                    const res = residentForVisit(visitor);
+                    printBadgeAuto({
+                      name: `${visitor.firstName} ${visitor.surname}`.trim(),
+                      type: visitor.type,
+                      visiting: res?.name || visitor.whomToVisit || undefined,
+                      mobile: visitor.mobile || undefined,
+                      room: [res?.room, res?.wing].filter(Boolean).join(" · ") || undefined,
+                      qrValue: visitor.personQr || visitor.qrCode || visitor.id,
+                      date: visitor.checkInTime,
+                    });
+                  }}
+                />
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="h-8 w-8 p-0">

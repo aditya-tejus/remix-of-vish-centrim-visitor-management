@@ -14,7 +14,7 @@ import { StepScreening } from "./StepScreening";
 import { StepConfirm } from "./StepConfirm";
 import { FoodFormFields } from "@/components/food/FoodFormFields";
 import { insertFoodRecord } from "@/lib/foodRegister";
-import { printBadgeAuto } from "@/lib/printBadge";
+import { printBadgeAuto, type BadgeData } from "@/lib/printBadge";
 import { Label } from "@/components/ui/label";
 
 interface CheckInSheetProps {
@@ -35,7 +35,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
   const flow = useCheckInFlow(open);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successName, setSuccessName] = useState("");
-  const [successBadge, setSuccessBadge] = useState<{ name: string; type: string; visiting?: string } | null>(null);
+  const [successBadge, setSuccessBadge] = useState<BadgeData | null>(null);
 
   const handleClose = () => {
     flow.resetForm();
@@ -91,7 +91,16 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
       });
     }
     setSuccessName(fullName);
-    setSuccessBadge({ name: fullName, type: flow.selectedType, visiting: flow.formData.selectPerson || undefined });
+    setSuccessBadge({
+      name: fullName,
+      type: flow.selectedType,
+      visiting: flow.formData.selectPerson || undefined,
+      mobile: flow.formData.mobile || undefined,
+      room: [flow.selectedResident?.room, flow.selectedResident?.wing].filter(Boolean).join(" · ") || undefined,
+      qrValue: created?.personQr || visitor.personQr || undefined,
+      date: visitor.checkInTime,
+    });
+
     setShowSuccess(true);
     if (!flow.badgePrintingEnabled) {
       setTimeout(() => {

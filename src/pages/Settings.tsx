@@ -12,6 +12,8 @@ import { ComplianceTab } from "@/components/settings/ComplianceTab";
 import { IntegrationTab } from "@/components/settings/IntegrationTab";
 import { AuditTrailTab } from "@/components/settings/AuditTrailTab";
 import { LockGovernanceTab } from "@/components/settings/LockGovernanceTab";
+import { KioskStaffPinCard } from "@/components/settings/KioskStaffPinCard";
+
 import { SurveyBuilder } from "@/components/feedback/SurveyBuilder";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -54,7 +56,13 @@ export default function SettingsPage() {
                 {active === "compliance" && <ComplianceTab />}
                 {active === "integration" && <IntegrationTab />}
                 {active === "audit" && <AuditTrailTab />}
-                {active === "governance" && <LockGovernanceTab />}
+                {active === "governance" && (
+                  <div className="space-y-6">
+                    <LockGovernanceTab />
+                    <KioskStaffPinCard />
+                  </div>
+                )}
+
               </div>
             </div>
           </main>

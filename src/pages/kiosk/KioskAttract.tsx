@@ -5,6 +5,8 @@ import { format } from "date-fns";
 import QRCode from "react-qr-code";
 import centrimLogo from "@/assets/centrim-life-logo.png";
 import kioskBg from "@/assets/kiosk-bg.jpg";
+import { createKioskQrToken } from "@/lib/kioskQrToken";
+
 
 export default function KioskAttract() {
   const navigate = useNavigate();
@@ -15,7 +17,14 @@ export default function KioskAttract() {
     return () => clearInterval(interval);
   }, []);
 
-  const publicCheckinUrl = `${window.location.origin}/kiosk/checkin`;
+  // Rotating phone check-in code — refreshes every 5 minutes.
+  const [qrToken, setQrToken] = useState(() => createKioskQrToken());
+  useEffect(() => {
+    const id = setInterval(() => setQrToken(createKioskQrToken()), 30 * 1000);
+    return () => clearInterval(id);
+  }, []);
+  const publicCheckinUrl = `${window.location.origin}/kiosk/checkin?k=${qrToken}`;
+
 
   const handleStart = useCallback(() => navigate("/kiosk/home"), [navigate]);
 
@@ -93,6 +102,8 @@ export default function KioskAttract() {
           <div className="text-left">
             <p className="text-base font-medium text-foreground">Prefer your phone?</p>
             <p className="text-sm text-muted-foreground">Scan to check in<br />from your device</p>
+            <p className="text-[11px] text-muted-foreground/70 mt-1">Code refreshes every 5 minutes</p>
+
           </div>
         </div>
       </div>

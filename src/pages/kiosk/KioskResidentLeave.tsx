@@ -1,4 +1,6 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -28,24 +30,46 @@ export default function KioskResidentLeave() {
   const [expectedReturn, setExpectedReturn] = useState("");
   const [doneMessage, setDoneMessage] = useState<{ title: string; subtitle: string } | null>(null);
 
+  // Privacy: some homes only reveal resident names once staff/residents type a few letters.
+  const [lookupMode, setLookupMode] = useState<"show_all" | "search_first">("show_all");
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from("settings")
+      .select("key, value")
+      .in("key", ["kiosk_resident_lookup_mode_resident", "kiosk_resident_lookup_mode"])
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        const map = Object.fromEntries(data.map((r: any) => [r.key, r.value]));
+        const val = map["kiosk_resident_lookup_mode_resident"] || map["kiosk_resident_lookup_mode"];
+        if (val === "search_first" || val === "show_all") setLookupMode(val);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const searchFirst = lookupMode === "search_first";
+
   const awayResidents = useMemo(
     () => visitors.filter((v) => v.type === "resident" && v.status === "checked-out"),
     [visitors]
   );
 
   const filteredResidents = useMemo(() => {
-    if (!room.trim()) return residents;
-    const q = room.toLowerCase();
+    const q = room.trim().toLowerCase();
+    if (!q) return searchFirst ? [] : residents;
+    if (searchFirst && q.length < 3) return [];
     return residents.filter((r) =>
       r.room?.toLowerCase().includes(q) || `${r.firstName} ${r.surname}`.toLowerCase().includes(q)
     );
-  }, [residents, room]);
+  }, [residents, room, searchFirst]);
 
   const filteredAway = useMemo(() => {
-    if (!returnSearch.trim()) return awayResidents;
-    const q = returnSearch.toLowerCase();
+    const q = returnSearch.trim().toLowerCase();
+    if (!q) return searchFirst ? [] : awayResidents;
+    if (searchFirst && q.length < 3) return [];
     return awayResidents.filter((v) => `${v.firstName} ${v.surname}`.toLowerCase().includes(q));
-  }, [awayResidents, returnSearch]);
+  }, [awayResidents, returnSearch, searchFirst]);
+
 
   const handleSelectLeaving = (r: any) => {
     setSelectedResident(r);
@@ -228,7 +252,12 @@ export default function KioskResidentLeave() {
           {filteredAway.length === 0 ? (
             <div className="text-center py-12 space-y-3">
               <Home className="h-12 w-12 text-muted-foreground/40 mx-auto" />
-              <p className="text-muted-foreground text-lg">No residents currently away</p>
+              <p className="text-muted-foreground text-lg">
+                {searchFirst && returnSearch.trim().length < 3
+                  ? "Type at least 3 letters of the name"
+                  : "No residents currently away"}
+              </p>
+
             </div>
           ) : (
             filteredAway.map((v) => (
@@ -264,7 +293,12 @@ export default function KioskResidentLeave() {
         {filteredResidents.length === 0 ? (
             <div className="text-center py-12 space-y-3">
               <Search className="h-12 w-12 text-muted-foreground/40 mx-auto" />
-              <p className="text-muted-foreground text-lg">No residents found</p>
+              <p className="text-muted-foreground text-lg">
+                {searchFirst && room.trim().length < 3
+                  ? "Type the room number or at least 3 letters of the name"
+                  : "No residents found"}
+              </p>
+
             </div>
         ) : (
           filteredResidents.map((r) => (

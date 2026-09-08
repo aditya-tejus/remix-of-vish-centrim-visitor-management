@@ -1,5 +1,7 @@
 import { format } from "date-fns";
+import QRCode from "qrcode";
 import { supabase } from "@/integrations/supabase/client";
+
 
 /**
  * Badge printing.
@@ -22,7 +24,14 @@ export interface BadgeData {
   type: string; // visitor | contractor | staff | volunteer | resident
   visiting?: string;
   date?: Date;
+  /** Visitor's own mobile number. */
+  mobile?: string;
+  /** Room / villa (and wing) of the resident being visited. */
+  room?: string;
+  /** Value encoded in the badge QR code — the person's stable personal code. */
+  qrValue?: string;
 }
+
 
 export type BadgeMode = "standard" | "label";
 
@@ -66,7 +75,7 @@ export async function getBadgeConfig(): Promise<BadgeConfig> {
   };
 }
 
-function badgeMarkup(data: BadgeData, color: string, date: Date) {
+function badgeMarkup(data: BadgeData, color: string, date: Date, qr?: string) {
   return `
     <div class="badge">
       <div class="strip"></div>
@@ -76,13 +85,17 @@ function badgeMarkup(data: BadgeData, color: string, date: Date) {
       </div>
       <div class="body">
         <div class="row"><span class="label">Date</span><span class="value">${format(date, "dd MMM yyyy")}</span></div>
+        ${data.room ? `<div class="row"><span class="label">Room</span><span class="value">${data.room}</span></div>` : ""}
         ${data.visiting ? `<div class="row"><span class="label">Visiting</span><span class="value">${data.visiting}</span></div>` : ""}
+        ${data.mobile ? `<div class="row"><span class="label">Mobile</span><span class="value">${data.mobile}</span></div>` : ""}
+        ${qr ? `<div class="qr"><img src="${qr}" alt="QR code" /><div class="qr-hint">Scan to check out</div></div>` : ""}
       </div>
       <div class="foot">Centrim Life</div>
     </div>`;
 }
 
-function standardHtml(data: BadgeData, color: string, date: Date) {
+
+function standardHtml(data: BadgeData, color: string, date: Date, qr?: string) {
   return `<!DOCTYPE html><html><head><title>Badge — ${data.name}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -96,15 +109,19 @@ function standardHtml(data: BadgeData, color: string, date: Date) {
     .row { display:flex; justify-content:space-between; font-size:13px; padding:8px 0; border-top:1px solid #f1f5f9; }
     .label { color:#64748b; }
     .value { color:#0f172a; font-weight:600; text-align:right; }
+    .qr { text-align:center; padding-top:14px; }
+    .qr img { width:112px; height:112px; }
+    .qr-hint { font-size:10px; color:#94a3b8; margin-top:4px; }
     .foot { text-align:center; font-size:10px; color:#94a3b8; padding:10px 0 14px; letter-spacing:.08em; text-transform:uppercase; }
     @media print { body { background:#fff; } .badge { border:1px solid #cbd5e1; } }
   </style></head><body>
-    ${badgeMarkup(data, color, date)}
+    ${badgeMarkup(data, color, date, qr)}
     <script>window.onload = function(){ window.print(); }<\/script>
   </body></html>`;
 }
 
-function labelHtml(data: BadgeData, color: string, date: Date, size: string) {
+
+function labelHtml(data: BadgeData, color: string, date: Date, size: string, qr?: string) {
   const dim = LABEL_DIMENSIONS[size] || LABEL_DIMENSIONS["62mm"];
   const compact = dim.h <= 40; // 62 x 29mm roll — name + type only
   const nameSize = compact ? 13 : 19;
@@ -124,31 +141,46 @@ function labelHtml(data: BadgeData, color: string, date: Date, size: string) {
     .row { display:flex; justify-content:space-between; gap:2mm; font-size:9pt; padding:1.2mm 0; border-top:0.2mm solid #e2e8f0; }
     .label { color:#64748b; }
     .value { color:#0f172a; font-weight:600; text-align:right; }
+    .qr { text-align:center; padding-top:1.5mm; }
+    .qr img { width:18mm; height:18mm; }
+    .qr-hint { font-size:6pt; color:#94a3b8; }
     .foot { text-align:center; font-size:6.5pt; color:#94a3b8; padding:${compact ? "0.5mm" : "1.5mm"} 0 1.5mm; letter-spacing:.08em; text-transform:uppercase; }
   </style></head><body>
-    ${badgeMarkup(data, color, date)}
+    ${badgeMarkup(data, color, date, qr)}
     <script>window.onload = function(){ window.print(); }<\/script>
   </body></html>`;
 }
 
-export function printBadge(data: BadgeData, config?: Partial<BadgeConfig>) {
+/** QR image for the badge, or undefined when there is nothing to encode. */
+async function qrDataUrl(value?: string): Promise<string | undefined> {
+  if (!value) return undefined;
+  try {
+    return await QRCode.toDataURL(value, { margin: 0, width: 240, errorCorrectionLevel: "M" });
+  } catch {
+    return undefined;
+  }
+}
+
+export async function printBadge(data: BadgeData, config?: Partial<BadgeConfig>) {
   const color = TYPE_COLORS[data.type?.toLowerCase()] || TYPE_COLORS.visitor;
   const date = data.date || new Date();
   const mode = config?.mode || "standard";
   const size = config?.labelSize || "62mm";
   const dim = LABEL_DIMENSIONS[size] || LABEL_DIMENSIONS["62mm"];
+  const qr = await qrDataUrl(data.qrValue);
 
   const win =
     mode === "label"
-      ? window.open("", "_blank", `width=${Math.round(dim.w * 4)},height=${Math.round(dim.h * 4) + 120}`)
-      : window.open("", "_blank", "width=460,height=640");
+      ? window.open("", "_blank", `width=${Math.round(dim.w * 4)},height=${Math.round(dim.h * 4) + 200}`)
+      : window.open("", "_blank", "width=460,height=760");
   if (!win) return;
 
   win.document.write(
-    mode === "label" ? labelHtml(data, color, date, size) : standardHtml(data, color, date)
+    mode === "label" ? labelHtml(data, color, date, size, qr) : standardHtml(data, color, date, qr)
   );
   win.document.close();
 }
+
 
 /** Reads the configured printer mode and prints accordingly. */
 export async function printBadgeAuto(data: BadgeData) {

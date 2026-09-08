@@ -1,10 +1,11 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { RotateCcw, HelpCircle } from "lucide-react";
+import { RotateCcw, HelpCircle, ShieldCheck } from "lucide-react";
 import centrimLogo from "@/assets/centrim-life-logo.png";
 import kioskBg from "@/assets/kiosk-bg.jpg";
 import { useIdleTimerWithWarning } from "@/hooks/useIdleTimer";
 import { KioskIdleWarning } from "@/components/kiosk/KioskIdleWarning";
+import { KioskPinPad } from "@/components/kiosk/KioskPinPad";
 import { useState } from "react";
 
 const ROUTE_LABELS: Record<string, string> = {
@@ -12,24 +13,39 @@ const ROUTE_LABELS: Record<string, string> = {
   "/kiosk/checkout": "Check Out",
   "/kiosk/resident-leave": "Resident Leave",
   "/kiosk/qr-scan": "Scan QR Code",
+  "/kiosk/evacuation": "Emergency Roll Call",
 };
 
 export default function KioskLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [helpOpen, setHelpOpen] = useState(false);
+  const [pinOpen, setPinOpen] = useState(false);
+  const holdTimer = useRef<number | null>(null);
 
   const isAttract = location.pathname === "/kiosk" || location.pathname === "/kiosk/";
   const isHome = location.pathname === "/kiosk/home";
+  const isEvacuation = location.pathname === "/kiosk/evacuation";
 
   const pageLabel = useMemo(() => ROUTE_LABELS[location.pathname] || "", [location.pathname]);
 
   const handleIdle = useCallback(() => {
+    // Never time out in the middle of a roll call.
     if (location.pathname === "/kiosk" || location.pathname === "/kiosk/") return;
+    if (location.pathname === "/kiosk/evacuation") return;
     navigate("/kiosk");
   }, [navigate, location.pathname]);
 
   const { showWarning, dismissWarning } = useIdleTimerWithWarning(handleIdle, 60000, 90000);
+
+  // Press and hold the small shield in the footer for staff access.
+  const startHold = useCallback(() => {
+    holdTimer.current = window.setTimeout(() => setPinOpen(true), 1200);
+  }, []);
+  const cancelHold = useCallback(() => {
+    if (holdTimer.current) { window.clearTimeout(holdTimer.current); holdTimer.current = null; }
+  }, []);
+
 
   if (isAttract) {
     return <Outlet />;
@@ -42,6 +58,24 @@ export default function KioskLayout() {
         <main className="flex-1">
           <Outlet />
         </main>
+        {/* Discreet staff access — press and hold */}
+        <button
+          onMouseDown={startHold}
+          onMouseUp={cancelHold}
+          onMouseLeave={cancelHold}
+          onTouchStart={startHold}
+          onTouchEnd={cancelHold}
+          onContextMenu={(e) => e.preventDefault()}
+          className="fixed bottom-3 right-3 p-3 text-muted-foreground/20 active:text-muted-foreground/60"
+          aria-label="Staff access"
+        >
+          <ShieldCheck className="h-4 w-4" />
+        </button>
+        <KioskPinPad
+          open={pinOpen}
+          onOpenChange={setPinOpen}
+          onSuccess={() => { setPinOpen(false); navigate("/kiosk/evacuation"); }}
+        />
         <KioskIdleWarning
           open={showWarning}
           countdownSeconds={30}
@@ -49,6 +83,7 @@ export default function KioskLayout() {
           onTimeout={handleIdle}
         />
       </div>
+
     );
   }
 
@@ -91,15 +126,37 @@ export default function KioskLayout() {
 
       {/* Content — frosted glass panel */}
       <main className="relative z-10 flex-1 flex items-center justify-center p-4 sm:p-8">
-        <div className="w-full max-w-2xl bg-card/95 backdrop-blur-xl rounded-3xl border border-border shadow-2xl p-6 sm:p-8 max-h-[calc(100vh-140px)] overflow-y-auto kiosk-scroll-fade">
+        <div className={`w-full ${isEvacuation ? "max-w-3xl" : "max-w-2xl"} bg-card/95 backdrop-blur-xl rounded-3xl border border-border shadow-2xl p-6 sm:p-8 max-h-[calc(100vh-140px)] overflow-y-auto kiosk-scroll-fade`}>
           <Outlet />
         </div>
       </main>
 
-      <footer className="relative z-10 flex items-center justify-center gap-1.5 py-2 text-[11px] text-muted-foreground/40 tracking-wide">
-        Powered by
-        <img src={centrimLogo} alt="Centrim Life" className="h-3.5 object-contain opacity-40" />
+      <footer className="relative z-10 flex items-center justify-center gap-2 py-2 text-[11px] text-muted-foreground/40 tracking-wide">
+        <span className="flex items-center gap-1.5">
+          Powered by
+          <img src={centrimLogo} alt="Centrim Life" className="h-3.5 object-contain opacity-40" />
+        </span>
+        {/* Discreet staff access — press and hold */}
+        <button
+          onMouseDown={startHold}
+          onMouseUp={cancelHold}
+          onMouseLeave={cancelHold}
+          onTouchStart={startHold}
+          onTouchEnd={cancelHold}
+          onContextMenu={(e) => e.preventDefault()}
+          className="p-2 -m-1 text-muted-foreground/25 active:text-muted-foreground/60"
+          aria-label="Staff access"
+        >
+          <ShieldCheck className="h-3.5 w-3.5" />
+        </button>
       </footer>
+
+      <KioskPinPad
+        open={pinOpen}
+        onOpenChange={setPinOpen}
+        onSuccess={() => { setPinOpen(false); navigate("/kiosk/evacuation"); }}
+      />
+
 
       {/* Help Dialog */}
       {helpOpen && (
