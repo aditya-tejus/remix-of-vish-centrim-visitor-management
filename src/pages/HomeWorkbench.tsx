@@ -217,6 +217,43 @@ export default function HomeWorkbench() {
               </div>
             </section>
 
+            {/* Needs attention */}
+            <section className="rounded-xl border border-border bg-card">
+              <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                <h2 className="text-sm font-semibold text-foreground">Needs attention</h2>
+                <button
+                  onClick={() => navigate("/evacuation")}
+                  className="inline-flex min-h-[36px] items-center gap-2 rounded-lg border border-destructive/30 px-3 text-[13px] font-medium text-destructive hover:bg-destructive/10"
+                >
+                  <ShieldAlert className="h-4 w-4" aria-hidden="true" /> Emergency roll call
+                </button>
+              </div>
+              <ul className="divide-y divide-border">
+                {[
+                  { label: "Visitors still on site past their expected time", count: overstayedCount, path: "/visit-list", tone: "text-destructive" },
+                  { label: "Residents overdue back from leave", count: overdueResidents, path: "/residents", tone: "text-warning" },
+                  { label: "Leave requests waiting for approval", count: pendingApprovals, path: "/residents", tone: "text-warning" },
+                ].map((row) => (
+                  <li key={row.label}>
+                    <button
+                      onClick={() => navigate(row.path)}
+                      className="flex w-full min-h-[48px] items-center justify-between gap-4 px-4 py-3 text-left hover:bg-muted/50"
+                    >
+                      <span className="text-[13px] text-foreground">{row.label}</span>
+                      <span className={`text-base font-bold tabular-nums ${row.count > 0 ? row.tone : "text-muted-foreground"}`}>
+                        {row.count}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {overstayedCount === 0 && overdueResidents === 0 && pendingApprovals === 0 && (
+                <p className="px-4 pb-3 text-[13px] text-muted-foreground">Nothing outstanding right now.</p>
+              )}
+            </section>
+
+
+
             {/* Two-column layout: Active Now + History */}
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
               {/* Active Now — pinned, wider */}
