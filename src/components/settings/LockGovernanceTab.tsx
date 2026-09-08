@@ -66,7 +66,7 @@ export function LockGovernanceTab() {
   const lockedCount = Object.values(locks).filter(Boolean).length;
 
   return (
-    <>
+    <div className="space-y-6">
       <PermissionMatrixCard />
     <div className="space-y-6">
       <Card>
@@ -144,6 +144,6 @@ export function LockGovernanceTab() {
         </CardContent>
       </Card>
     </div>
-    </>
+    </div>
   );
 }
