@@ -184,7 +184,12 @@ export default function KioskCheckIn() {
 
   const [checkedInQrCode, setCheckedInQrCode] = useState<string | null>(null);
 
+  const submittingRef = useRef(false);
+
   const doCheckIn = useCallback(() => {
+    // Guard against a second tap creating a duplicate arrival record
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     const allHealthClear = Object.values(flow.healthAnswers).every((v) => v === false);
     const groupId = flow.companions.length > 0 ? crypto.randomUUID() : undefined;
     const primaryQr = crypto.randomUUID().slice(0, 12).toUpperCase();
