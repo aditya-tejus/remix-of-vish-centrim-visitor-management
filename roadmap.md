@@ -25,3 +25,11 @@ Baseline recorded in the approved plan document.
 - [ ] 34 Supabase linter warnings remain: 1 extension in public, 13 anon-executable and
       20 authenticated-executable SECURITY DEFINER functions (kiosk RPCs and RLS helpers).
 - [ ] Real Centrim Life integration APIs, kiosk-to-site binding and retention rules unknown.
+
+## Stage 2 — Information architecture and visual shell (done)
+- Root `/` now renders the staff workbench (Today); `/visit-list` and `/dashboard` preserved via direct route/redirect.
+- Sidebar regrouped: Today, Visitor operations, People and movements, Registers, Reports, Administration, plus distinct emergency + kiosk entries.
+- Header and sidebar footer show live current-site context (SiteSwitcher) instead of a hardcoded facility name.
+- Settings regrouped by administrator decisions with visible scope badges.
+- Shared loading/empty/error/permission/offline states added at `src/components/states`.
+- No schema, RLS, or workflow changes in this stage.

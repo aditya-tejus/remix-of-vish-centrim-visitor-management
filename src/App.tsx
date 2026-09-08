@@ -9,6 +9,7 @@ import { SiteProvider } from "@/contexts/SiteContext";
 import { RequireAuth } from "@/components/RequireAuth";
 import AuthPage from "./pages/Auth";
 import VisitList from "./pages/VisitList";
+import HomeWorkbench from "./pages/HomeWorkbench";
 import Settings from "./pages/Settings";
 import Visitors from "./pages/Visitors";
 import VisitorProfilePage from "./pages/VisitorProfilePage";
@@ -58,9 +59,10 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
 
-            <Route path="/" element={<Staff><VisitList /></Staff>} />
+            <Route path="/" element={<Staff><HomeWorkbench /></Staff>} />
             <Route path="/dashboard" element={<Navigate to="/" replace />} />
-            <Route path="/visit-list" element={<Navigate to="/" replace />} />
+            <Route path="/workbench" element={<Navigate to="/" replace />} />
+            <Route path="/visit-list" element={<Staff><VisitList /></Staff>} />
             <Route path="/visitors" element={<Staff><Visitors /></Staff>} />
             <Route path="/visitors/:id" element={<Staff><VisitorProfilePage /></Staff>} />
             <Route path="/check-in" element={<Navigate to="/" replace />} />

@@ -1,8 +1,8 @@
 import { isOverstayedSync } from "@/hooks/useOverstayPolicy";
 import centrimLogo from "@/assets/centrim-life-logo.png";
 import {
-  Users, Settings, BarChart3,
-  ChevronDown, Layers,
+  Users, Settings, BarChart3, ChevronDown, Layers, Home, ClipboardList,
+  KeyRound, UtensilsCrossed, IdCard, ListChecks, Siren, DoorOpen,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -13,8 +13,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useVisitors } from "@/hooks/useVisitors";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useSite } from "@/contexts/SiteContext";
 
 interface NavItem {
   title: string;
@@ -22,34 +21,19 @@ interface NavItem {
   path: string;
   badge?: number | null;
   badgeVariant?: "blue" | "red" | "amber" | "green";
-  indent?: boolean;
-  activeDot?: boolean;
 }
 
 interface NavGroup {
   label: string;
   icon: LucideIcon;
-  iconColor: string;
   items: NavItem[];
-  collapsible?: boolean;
 }
 
 export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { visitors } = useVisitors();
-  const [pendingCheckoutRequests, setPendingCheckoutRequests] = useState(0);
-
-  useEffect(() => {
-    const fetchPending = async () => {
-      const { count } = await supabase
-        .from("leave_requests")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "pending");
-      setPendingCheckoutRequests(count || 0);
-    };
-    fetchPending();
-  }, []);
+  const { currentSite } = useSite();
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -57,62 +41,61 @@ export function AppSidebar() {
   const todayNonResidents = visitors.filter(
     (v) => v.type !== "resident" && v.checkInTime >= todayStart
   );
-
-  const activeVisitorCount = todayNonResidents.filter(
-    (v) => v.status === "checked-in"
-  ).length;
-
-  const todayOverstayed = todayNonResidents.filter(
-    isOverstayedSync
-  ).length;
-
+  const activeVisitorCount = todayNonResidents.filter((v) => v.status === "checked-in").length;
+  const todayOverstayed = todayNonResidents.filter(isOverstayedSync).length;
   const residentsAwayCount = visitors.filter(
     (v) => v.type === "resident" && v.status !== "checked-in"
   ).length;
 
-  const totalVisitorBadge = todayOverstayed > 0 ? todayOverstayed : null;
-
   const navGroups: NavGroup[] = [
     {
-      label: "Visitors",
+      label: "Visitor operations",
       icon: Users,
-      iconColor: "text-blue-400",
-      collapsible: true,
       items: [
-        { title: "Visitor List", path: "/", badge: activeVisitorCount || null, badgeVariant: "blue", activeDot: true },
-        { title: "Residents", path: "/residents", badge: residentsAwayCount || null, badgeVariant: "amber" },
-        { title: "Visitor Profiles", path: "/visitors" },
-        { title: "Food Register", path: "/food-register" },
-        { title: "Keys Register", path: "/keys" },
-
-        { title: "Evacuation Report", path: "/evacuation" },
+        { title: "Visit list", path: "/visit-list", icon: ListChecks, badge: activeVisitorCount || null, badgeVariant: "blue" },
+        { title: "Overdue", path: "/visit-list", icon: Layers, badge: todayOverstayed || null, badgeVariant: "red" },
+        { title: "Presence log", path: "/reports/presence", icon: ClipboardList },
+        { title: "Visitor profiles", path: "/visitors", icon: IdCard },
+      ],
+    },
+    {
+      label: "People and movements",
+      icon: DoorOpen,
+      items: [
+        { title: "Residents", path: "/residents", icon: Home, badge: residentsAwayCount || null, badgeVariant: "amber" },
+        { title: "Planner", path: "/calendar", icon: ClipboardList },
+      ],
+    },
+    {
+      label: "Registers",
+      icon: KeyRound,
+      items: [
+        { title: "Keys and fobs", path: "/keys", icon: KeyRound },
+        { title: "Food register", path: "/food-register", icon: UtensilsCrossed },
       ],
     },
     {
       label: "Reports",
       icon: BarChart3,
-      iconColor: "text-violet-400",
-      collapsible: true,
       items: [
-        { title: "Visitor Reports", path: "/reports", indent: true },
-        { title: "Feedback Responses", path: "/reports/feedback-responses", indent: true },
-        { title: "Feedback Reports", path: "/reports/feedback-reports", indent: true },
-        { title: "Safety & Compliance", path: "/gdpr", indent: true },
+        { title: "Visitor reports", path: "/reports" },
+        { title: "Feedback responses", path: "/reports/feedback-responses" },
+        { title: "Feedback reports", path: "/reports/feedback-reports" },
+        { title: "Safety and compliance", path: "/gdpr" },
       ],
     },
     {
-      label: "Settings",
+      label: "Administration",
       icon: Settings,
-      iconColor: "text-gray-400",
-      collapsible: true,
       items: [
-        { title: "Visitor Settings", path: "/settings", indent: true },
+        { title: "Settings", path: "/settings" },
+        { title: "Audit trail", path: "/audit-log" },
       ],
     },
   ];
 
   const badgeClasses: Record<string, string> = {
-    blue: "bg-blue-500 text-white",
+    blue: "bg-sidebar-primary text-sidebar-primary-foreground",
     red: "bg-destructive text-destructive-foreground",
     amber: "bg-warning text-warning-foreground",
     green: "bg-success text-success-foreground",
@@ -121,13 +104,15 @@ export function AppSidebar() {
   const isGroupActive = (group: NavGroup) =>
     group.items.some((item) => location.pathname === item.path);
 
+  const workbenchActive = location.pathname === "/";
+
   return (
     <Sidebar className="border-r-0">
       <SidebarHeader className="px-5 py-4">
-        <div className="flex items-center gap-3">
-          <img src={centrimLogo} alt="Centrim Life" className="h-10 object-contain" />
-          <span className="text-[11px] font-semibold tracking-wide text-sidebar-primary bg-sidebar-primary/15 rounded px-1.5 py-0.5">
-            VMS
+        <div className="flex min-w-0 items-center gap-2">
+          <img src={centrimLogo} alt="Centrim Life" className="h-9 min-w-0 flex-1 object-contain object-left" />
+          <span className="shrink-0 rounded bg-sidebar-primary/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-sidebar-primary">
+            Visitors
           </span>
         </div>
       </SidebarHeader>
@@ -135,24 +120,38 @@ export function AppSidebar() {
       <div className="mx-4 h-px bg-sidebar-border" />
 
       <SidebarContent className="px-2 pt-3">
+        {/* Primary surface */}
+        <SidebarMenu className="px-1 pb-2">
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => navigate("/")}
+              isActive={workbenchActive}
+              tooltip="Today"
+              className={`h-10 gap-2.5 rounded-lg px-3 text-[13px] font-semibold ${
+                workbenchActive
+                  ? "bg-sidebar-accent text-sidebar-foreground"
+                  : "text-sidebar-muted hover:bg-[rgba(255,255,255,0.05)] hover:text-sidebar-foreground"
+              }`}
+            >
+              <Home className="h-4 w-4 shrink-0" />
+              <span>Today</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+
         {navGroups.map((group) => (
-          <Collapsible key={group.label} defaultOpen={isGroupActive(group) || group.label === "Visitors"}>
+          <Collapsible key={group.label} defaultOpen={isGroupActive(group) || group.label === "Visitor operations"}>
             <SidebarGroup>
               <CollapsibleTrigger className="w-full">
-                <SidebarGroupLabel className="flex items-center gap-2.5 text-[13px] font-semibold text-sidebar-foreground px-3 py-2 hover:bg-[rgba(255,255,255,0.05)] rounded-lg cursor-pointer transition-colors">
-                  <group.icon className={`h-4 w-4 ${group.iconColor}`} />
+                <SidebarGroupLabel className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-semibold text-sidebar-foreground transition-colors hover:bg-[rgba(255,255,255,0.05)]">
+                  <group.icon className="h-4 w-4 text-sidebar-muted" />
                   <span className="flex-1 text-left">{group.label}</span>
-                  {group.label === "Visitors" && totalVisitorBadge != null && totalVisitorBadge > 0 && (
-                    <span className={`${badgeClasses["red"]} text-[10px] font-bold min-w-[20px] h-5 rounded-full flex items-center justify-center px-1.5`}>
-                      {totalVisitorBadge}
-                    </span>
-                  )}
                   <ChevronDown className="h-3.5 w-3.5 text-sidebar-muted transition-transform duration-200 group-data-[state=open]:rotate-180" />
                 </SidebarGroupLabel>
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <SidebarGroupContent>
-                  <SidebarMenu className="space-y-0.5 mt-1">
+                  <SidebarMenu className="mt-1 space-y-0.5">
                     {group.items.map((item) => {
                       const active = location.pathname === item.path;
                       return (
@@ -161,19 +160,15 @@ export function AppSidebar() {
                             onClick={() => navigate(item.path)}
                             isActive={active}
                             tooltip={item.title}
-                            className={`rounded-lg h-8 text-[13px] font-medium gap-2 transition-all duration-150
-                              ${item.indent ? "pl-10" : "pl-3"}
+                            className={`h-9 gap-2 rounded-lg pl-9 text-[13px] font-medium transition-all duration-150
                               ${active
                                 ? "bg-sidebar-accent text-sidebar-foreground"
                                 : "text-sidebar-muted hover:bg-[rgba(255,255,255,0.05)] hover:text-sidebar-foreground"
                               }`}
                           >
-                            {item.activeDot && active && (
-                              <span className="h-1.5 w-1.5 rounded-full bg-sidebar-primary shrink-0" />
-                            )}
                             <span className="flex-1">{item.title}</span>
                             {item.badge != null && item.badge > 0 && (
-                              <span className={`${badgeClasses[item.badgeVariant || "blue"]} text-[10px] font-bold min-w-[20px] h-5 rounded-full flex items-center justify-center px-1.5`}>
+                              <span className={`${badgeClasses[item.badgeVariant || "blue"]} flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold`}>
                                 {item.badge}
                               </span>
                             )}
@@ -188,17 +183,28 @@ export function AppSidebar() {
           </Collapsible>
         ))}
 
-        {/* Kiosk Mode link */}
+        {/* Emergency — always visible, visually distinct, never noisy */}
         <div className="mt-2 px-1">
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                onClick={() => window.open("/kiosk", "_blank")}
-                tooltip="Kiosk Mode"
-                className="rounded-lg h-8 text-[13px] font-medium gap-3 px-3 text-sidebar-muted hover:bg-[rgba(255,255,255,0.05)] hover:text-sidebar-foreground"
+                onClick={() => navigate("/evacuation")}
+                isActive={location.pathname === "/evacuation"}
+                tooltip="Emergency roll call"
+                className="h-9 gap-2.5 rounded-lg border border-destructive/40 px-3 text-[13px] font-semibold text-destructive-foreground/90 hover:bg-destructive/20"
               >
-                <Layers className="h-4 w-4 shrink-0 text-cyan-400" />
-                <span>Kiosk Mode</span>
+                <Siren className="h-4 w-4 shrink-0 text-destructive" />
+                <span>Emergency roll call</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => window.open("/kiosk", "_blank")}
+                tooltip="Open kiosk"
+                className="h-9 gap-2.5 rounded-lg px-3 text-[13px] font-medium text-sidebar-muted hover:bg-[rgba(255,255,255,0.05)] hover:text-sidebar-foreground"
+              >
+                <Layers className="h-4 w-4 shrink-0" />
+                <span>Open kiosk</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -207,8 +213,10 @@ export function AppSidebar() {
 
       <SidebarFooter className="px-3 pb-4">
         <div className="rounded-lg bg-sidebar-accent p-3">
-          <p className="text-[11px] text-sidebar-muted font-medium">Care Home</p>
-          <p className="text-[13px] text-sidebar-foreground font-semibold truncate">Sydney Care Centre</p>
+          <p className="text-[11px] font-medium text-sidebar-muted">Current site</p>
+          <p className="truncate text-[13px] font-semibold text-sidebar-foreground">
+            {currentSite?.name ?? "No site selected"}
+          </p>
         </div>
       </SidebarFooter>
     </Sidebar>
