@@ -410,8 +410,13 @@ export default function Evacuation() {
               {p.room && <span className="flex items-center gap-1"><Home className="h-3 w-3" />{p.room}</span>}
               {p.area && <span className="flex items-center gap-1 text-primary font-medium"><MapPin className="h-3 w-3" />{p.area}</span>}
               {p.assistance.aids.length > 0 && <span>{p.assistance.aids.join(", ")}</span>}
-              {p.host && <span>Visiting {p.host}</span>}
-              {p.accompaniedBy && p.type === "companion" && <span>With {p.accompaniedBy}</span>}
+              {p.associatedWith.length > 0 ? (
+                <span>{p.associatedWith.join(" · ")}</span>
+              ) : (
+                p.host && <span>Visiting {p.host}</span>
+              )}
+              {p.responsibleStaff && <span>Warden: {p.responsibleStaff}</span>}
+
               {p.workLocation && <span>Working at {p.workLocation}</span>}
               {p.checkInTime && p.type !== "resident" && (
                 <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{format(p.checkInTime, "HH:mm")} · {formatDuration(p.checkInTime)}</span>
