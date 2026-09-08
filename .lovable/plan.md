@@ -8,6 +8,8 @@ The roll call and report already carry names, assistance levels and phone number
 - Residents show **Stage + villa/unit** (the existing wing and room, worded for a village).
 - Visitors, companions and contractors inherit the **stage and villa of the person they came to see** — so a warden sweeping Stage 2 sees the visitor standing in villa 14, not an unplaced name at the bottom of the list.
 - Anyone with no link to a villa sits in a clearly labelled "No stage recorded" block, never hidden.
+- **Couples and housemates**: two residents in one villa are always two separate lines — each is accounted for on their own — but they sit nested under a single villa heading that reads "Villa 14 — 2 people, both accounted for". Marking one safe never marks the other.
+
 
 ### Associated details on every line
 Each person's line carries, at a glance:
@@ -25,7 +27,7 @@ Each person's line carries, at a glance:
 ## What changes on the report
 
 The saved drill record gains the same detail, snapshotted at the time so it stays truthful later:
-- Attendance table grouped **by stage, then villa**, with associated people, contact numbers, next of kin, assistance level and responsible staff.
+- Attendance table grouped **by stage, then villa**, with every occupant of a shared villa listed separately under it, plus associated people, contact numbers, next of kin, assistance level and responsible staff.
 - Stage-by-stage summary at the top: people, accounted for, time to account, warden.
 - CSV and the printable page carry the same columns, with village wording and the existing AU/UK compliance footer.
 - The printed sheet (for when the system is unreachable) lists villa, phone, next of kin and who each person is with.
