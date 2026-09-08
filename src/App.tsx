@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ReactNode } from "react";
 import { AuthProvider } from "@/hooks/useAuth";
 import { SiteProvider } from "@/contexts/SiteContext";
-import { OperatingContextProvider } from "@/contexts/OperatingContext";
+import { OperatingContextProvider, useOperatingContext } from "@/contexts/OperatingContext";
 import { RequireAuth } from "@/components/RequireAuth";
 import AuthPage from "./pages/Auth";
 import VisitList from "./pages/VisitList";
@@ -49,6 +49,13 @@ const queryClient = new QueryClient();
 
 const Staff = ({ children }: { children: ReactNode }) => <RequireAuth>{children}</RequireAuth>;
 
+/** A register that is switched off for this kind of site disappears entirely. */
+const Module = ({ name, children }: { name: "keysRegister" | "foodRegister"; children: ReactNode }) => {
+  const { modules, loading } = useOperatingContext();
+  if (loading) return null;
+  return modules[name] ? <>{children}</> : <Navigate to="/" replace />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -73,8 +80,8 @@ const App = () => (
             <Route path="/group-checkin" element={<Navigate to="/" replace />} />
             <Route path="/qr-fast-lane" element={<Navigate to="/" replace />} />
             <Route path="/residents" element={<Staff><Residents /></Staff>} />
-            <Route path="/food-register" element={<Staff><FoodRegister /></Staff>} />
-            <Route path="/keys" element={<Staff><KeysRegister /></Staff>} />
+            <Route path="/food-register" element={<Staff><Module name="foodRegister"><FoodRegister /></Module></Staff>} />
+            <Route path="/keys" element={<Staff><Module name="keysRegister"><KeysRegister /></Module></Staff>} />
 
             <Route path="/resident-leave" element={<Navigate to="/residents" replace />} />
             <Route path="/calendar" element={<Staff><CalendarPage /></Staff>} />
