@@ -44,6 +44,8 @@ export interface FoodRecordInput {
   recordedAt?: Date;
   source?: "check_in" | "manual";
   createdBy?: string | null;
+  /** Site the record belongs to. Keeps the register scoped like every other register. */
+  branchId?: string | null;
 }
 
 export function mapFoodRow(row: any): FoodRecord {
@@ -80,5 +82,6 @@ export async function insertFoodRecord(input: FoodRecordInput) {
     recorded_at: (input.recordedAt ?? new Date()).toISOString(),
     source: input.source ?? "check_in",
     created_by: input.createdBy ?? null,
+    branch_id: input.branchId ?? null,
   });
 }

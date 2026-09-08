@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { FoodRecord, mapFoodRow } from "@/lib/foodRegister";
+import { useSite } from "@/contexts/SiteContext";
 
 export interface FoodFilters {
   from?: string; // yyyy-MM-dd
@@ -11,19 +12,24 @@ export interface FoodFilters {
 }
 
 export function useFoodRegister(filters: FoodFilters) {
+  const { currentSiteId } = useSite();
   const [records, setRecords] = useState<FoodRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const { from, to, residentVisitorId, visitorName, search } = filters;
 
   const fetchRecords = useCallback(async () => {
     setLoading(true);
+    setError(null);
     let query = supabase
       .from("food_register")
       .select("*")
       .order("recorded_at", { ascending: false })
       .limit(500);
 
+    // Records with no site yet (legacy rows) stay visible so nothing disappears.
+    if (currentSiteId) query = query.or(`branch_id.eq.${currentSiteId},branch_id.is.null`);
     if (from) query = query.gte("recorded_at", new Date(`${from}T00:00:00`).toISOString());
     if (to) query = query.lte("recorded_at", new Date(`${to}T23:59:59`).toISOString());
     if (residentVisitorId) query = query.eq("resident_visitor_id", residentVisitorId);
@@ -36,14 +42,15 @@ export function useFoodRegister(filters: FoodFilters) {
     }
 
     const { data, error } = await query;
+    if (error) setError("We could not load the food register just now.");
     if (!error && data) setRecords(data.map(mapFoodRow));
     setLoading(false);
-  }, [from, to, residentVisitorId, visitorName, search]);
+  }, [from, to, residentVisitorId, visitorName, search, currentSiteId]);
 
   useEffect(() => {
     const t = setTimeout(fetchRecords, 200);
     return () => clearTimeout(t);
   }, [fetchRecords]);
 
-  return { records, loading, refetch: fetchRecords };
+  return { records, loading, error, refetch: fetchRecords };
 }

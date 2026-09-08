@@ -71,6 +71,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
             .filter(Boolean) as string[],
           notes: flow.foodForm.notes.trim() || null,
           source: "check_in",
+          branchId: currentSiteId,
           createdBy: data.user?.email || "Staff",
         }).then(() => undefined);
       });
