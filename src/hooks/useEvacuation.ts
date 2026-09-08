@@ -83,8 +83,11 @@ function seedColumns(p: RollCallSeed) {
     emergency_contact_phone: p.emergencyContactPhone || null,
     area_label: p.area || null,
     room_label: p.room || null,
+    responsible_staff: p.responsibleStaff || null,
+    associated_with: p.associatedWith || null,
   };
 }
+
 
 export function useEvacuationPoints() {
   return useQuery({
