@@ -35,7 +35,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
   const flow = useCheckInFlow(open);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successName, setSuccessName] = useState("");
-  const [successBadge, setSuccessBadge] = useState<{ name: string; type: string; visiting?: string } | null>(null);
+  const [successBadge, setSuccessBadge] = useState<BadgeData | null>(null);
 
   const handleClose = () => {
     flow.resetForm();
