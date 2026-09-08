@@ -98,14 +98,16 @@ export function UrgentActions({ visitors, onCheckOut, onCheckOutAllOverstayed }:
           v.status === "checked-out" &&
           v.returnNotificationOptIn &&
           v.expectedReturnDate &&
-          isPast(v.expectedReturnDate)
+          isReturnOverdue(v.expectedReturnDate, policy)
       )
       .forEach((v) => {
+        const escalated = isReturnEscalated(v.expectedReturnDate!, policy);
+        const named = recipientSummary(policy, "overdue");
         actions.push({
           id: `overdue-return-${v.id}`,
           visitorId: v.id,
-          title: `Resident Not Returned — Overdue`,
-          description: `${v.firstName} ${v.surname} was expected back by ${format(v.expectedReturnDate!, "dd MMM yyyy")} (${formatDistanceToNow(v.expectedReturnDate!, { addSuffix: true })}). Reason: ${v.checkoutReason || "Not specified"}.`,
+          title: escalated ? `Resident Not Returned — Escalated` : `Resident Not Returned — Overdue`,
+          description: `${v.firstName} ${v.surname} was expected back by ${format(v.expectedReturnDate!, "hh:mm a dd MMM")} (${formatDistanceToNow(v.expectedReturnDate!, { addSuffix: true })}). Reason: ${v.checkoutReason || "Not specified"}.${named ? ` Tell ${named}.` : ""}`,
           time: format(v.expectedReturnDate!, "dd MMM"),
           severity: "red",
           icon: Home,
