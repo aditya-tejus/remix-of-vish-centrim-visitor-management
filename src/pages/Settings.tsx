@@ -4,6 +4,7 @@ import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { SettingsNav, SettingsSection } from "@/components/settings/SettingsNav";
 import { PersonTypeSettings } from "@/components/settings/PersonTypeSettings";
+import { PersonTypesTab } from "@/components/settings/PersonTypesTab";
 import { PresenceTab } from "@/components/settings/PresenceTab";
 import { PrintingTab } from "@/components/settings/PrintingTab";
 import { KeysPolicyTab } from "@/components/settings/KeysPolicyTab";
@@ -48,6 +49,7 @@ export default function SettingsPage() {
               {/* Content */}
               <div className="flex-1 min-w-0 max-w-3xl">
                 {isPersonType && <PersonTypeSettings type={active} />}
+                {active === "person-types" && <PersonTypesTab />}
                 {active === "feedback" && <SurveyBuilder />}
                 {active === "presence" && <PresenceTab />}
                 {active === "printing" && <PrintingTab />}

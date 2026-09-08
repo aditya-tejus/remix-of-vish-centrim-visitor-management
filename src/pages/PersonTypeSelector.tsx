@@ -5,8 +5,9 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { AddVisitDialog } from "@/components/AddVisitDialog";
 import { useVisitors } from "@/hooks/useVisitors";
 import { User, Truck, Heart, Users, QrCode, ArrowRight } from "lucide-react";
+import { usePersonTypes } from "@/hooks/usePersonTypes";
 
-const PERSON_TYPES = [
+const ALL_PERSON_TYPES = [
   { type: "visitor", label: "Visitor", description: "Social, professional, or delivery visitor", icon: User, color: "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground" },
   { type: "contractor", label: "Contractor", description: "Maintenance, cleaning, IT, or building work", icon: Truck, color: "bg-warning/10 text-warning group-hover:bg-warning group-hover:text-warning-foreground" },
   { type: "volunteer", label: "Volunteer", description: "Voluntary workers and community helpers", icon: Heart, color: "bg-success/10 text-success group-hover:bg-success group-hover:text-success-foreground" },
@@ -16,6 +17,9 @@ const PERSON_TYPES = [
 export default function PersonTypeSelector() {
   const navigate = useNavigate();
   const { addVisitor } = useVisitors();
+  const { deskTypes } = usePersonTypes();
+  const enabledDesk = new Set(deskTypes.map((t) => t.type as string));
+  const PERSON_TYPES = ALL_PERSON_TYPES.filter((pt) => enabledDesk.has(pt.type));
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<string>("visitor");
 

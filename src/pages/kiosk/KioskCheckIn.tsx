@@ -20,25 +20,34 @@ import { KioskSuccessScreen } from "@/components/kiosk/KioskSuccessScreen";
 import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
 import { useKioskCheckInFlow, KioskStepId } from "@/hooks/useKioskCheckInFlow";
 import { isKioskQrTokenValid } from "@/lib/kioskQrToken";
+import { usePersonTypes } from "@/hooks/usePersonTypes";
 
 import {
-  UserRound, Truck, Heart, ArrowLeft, ArrowRight, Shield, ScrollText,
+  UserRound, Truck, Heart, UserCog, ArrowLeft, ArrowRight, Shield, ScrollText,
   AlertTriangle, Search, RotateCcw, UserSearch, QrCode, UserPlus, X, Users, ChevronDown, Check
 
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const TYPES = [
-  { type: "visitor" as const, label: "Visitor", icon: UserRound, description: "Family, friend, or guest", iconBg: "bg-primary/15", iconColor: "text-primary" },
-  { type: "contractor" as const, label: "Contractor", icon: Truck, description: "Tradesperson or supplier", iconBg: "bg-warning/15", iconColor: "text-warning" },
-  { type: "volunteer" as const, label: "Volunteer", icon: Heart, description: "Volunteer or helper", iconBg: "bg-success/15", iconColor: "text-success" },
-];
+const TYPE_DEFS = {
+  visitor: { icon: UserRound, iconBg: "bg-primary/15", iconColor: "text-primary" },
+  contractor: { icon: Truck, iconBg: "bg-warning/15", iconColor: "text-warning" },
+  volunteer: { icon: Heart, iconBg: "bg-success/15", iconColor: "text-success" },
+  staff: { icon: UserCog, iconBg: "bg-info/15", iconColor: "text-info" },
+} as const;
 
 export default function KioskCheckIn() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { addVisitor } = useVisitors({ publicMode: true });
   const flow = useKioskCheckInFlow();
+  const { kioskTypes } = usePersonTypes();
+  const TYPES = useMemo(
+    () => kioskTypes
+      .filter((t) => t.type in TYPE_DEFS)
+      .map((t) => ({ type: t.type as keyof typeof TYPE_DEFS, label: t.kioskLabel, description: t.description, ...TYPE_DEFS[t.type as keyof typeof TYPE_DEFS] })),
+    [kioskTypes]
+  );
 
   const [step, setStep] = useState<KioskStepId>("type");
   // Phone check-in codes expire after 5 minutes — a photographed screen won't work.
@@ -90,6 +99,15 @@ export default function KioskCheckIn() {
   }, [flow.screeningBlocked, flow.hasYesFlags, flow.bodyTemperature, flow.formValues, flow.selectedType]);
 
 
+
+  // With only one person type enabled there is nothing to choose.
+  useEffect(() => {
+    if (step === "type" && TYPES.length === 1) {
+      flow.setSelectedType(TYPES[0].type as any);
+      const nextIdx = flow.steps.findIndex((s) => s.id === "type") + 1;
+      if (nextIdx > 0 && nextIdx < flow.steps.length) setStep(flow.steps[nextIdx].id);
+    }
+  }, [step, TYPES, flow.steps]);
 
   const goNext = () => {
     const nextIdx = currentIdx + 1;
@@ -358,7 +376,7 @@ export default function KioskCheckIn() {
         {step === "type" && (
           <motion.div key="type" {...anim} className="space-y-5">
             <h2 className="text-2xl font-bold text-foreground text-center">What brings you here today?</h2>
-            <div className="grid grid-cols-3 gap-4">
+            <div className={`grid gap-4 ${TYPES.length <= 2 ? "grid-cols-2" : TYPES.length === 4 ? "grid-cols-4" : "grid-cols-3"}`}>
               {TYPES.map((t) => (
                 <button
                   key={t.type}
