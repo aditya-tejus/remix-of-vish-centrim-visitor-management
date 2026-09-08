@@ -49,7 +49,38 @@ export default function EvacuationReport() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [attendance, setAttendance] = useState<Record<string, AttendanceRecord[]>>({});
   const { isUK } = useJurisdiction();
-  const { areaLabel, roomLabel } = useSiteStructure();
+  const { areaLabel, roomLabel, structure } = useSiteStructure();
+  const isVillageView = structure === "rv" || structure === "mixed";
+
+  /** Stage, then property — a couple sharing one villa sits under one heading. */
+  const groupRows = (rows: AttendanceRecord[]) => {
+    const areas = new Map<string, AttendanceRecord[]>();
+    rows.forEach((r) => {
+      const a = r.area_label || "No area recorded";
+      if (!areas.has(a)) areas.set(a, []);
+      areas.get(a)!.push(r);
+    });
+    return [...areas.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([area, list]) => {
+        const units = new Map<string, AttendanceRecord[]>();
+        list.forEach((r) => {
+          const u = r.room_label || "";
+          if (!units.has(u)) units.set(u, []);
+          units.get(u)!.push(r);
+        });
+        return {
+          area,
+          wardens: [...new Set(list.map((r) => r.responsible_staff).filter(Boolean))] as string[],
+          accounted: list.filter((r) => r.status !== "unaccounted").length,
+          total: list.length,
+          units: [...units.entries()]
+            .sort(([a], [b]) => (parseInt(a.replace(/\D/g, "")) || 0) - (parseInt(b.replace(/\D/g, "")) || 0) || a.localeCompare(b))
+            .map(([unit, people]) => ({ unit, people })),
+        };
+      });
+  };
+
 
   const complianceNote = isUK
     ? "Evidence for the Regulatory Reform (Fire Safety) Order 2005 and CQC Regulation 12 (safe care and treatment). Retain fire drill and roll call records for inspection."
