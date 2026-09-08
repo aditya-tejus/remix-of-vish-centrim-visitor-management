@@ -307,7 +307,7 @@ export function useKioskCheckInFlow() {
     keyBlocked,
     keyEnforcement: keyPolicy.enforcement,
     outbreakMode,
-    badgePrintingEnabled,
+    badgePrintingEnabled: badgePrintingEnabled && badgeApplies,
     bringingFood,
     setBringingFood,
     foodForm,

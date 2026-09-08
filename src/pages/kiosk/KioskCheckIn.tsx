@@ -1260,7 +1260,7 @@ export default function KioskCheckIn() {
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={!flow.privacyAcknowledged || submitted}
+                disabled={(flow.privacyApplies && !flow.privacyAcknowledged) || submitted}
                 className="flex-1 h-14 text-base gap-2 bg-success hover:bg-success/90 text-success-foreground"
               >
                 ✓ Complete Check In
