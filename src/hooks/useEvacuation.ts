@@ -78,7 +78,25 @@ export interface RollCallSeed {
 }
 
 
-export type AttendanceStatus = "safe" | "unaccounted" | "evacuated_offsite";
+export type AttendanceStatus =
+  | "safe"
+  | "safe_elsewhere"
+  | "not_located"
+  | "assistance_required"
+  | "unaccounted"
+  | "evacuated_offsite";
+
+export const ATTENDANCE_LABELS: Record<AttendanceStatus, string> = {
+  safe: "Safe",
+  safe_elsewhere: "Safe elsewhere",
+  not_located: "Not located",
+  assistance_required: "Assistance required",
+  unaccounted: "Not accounted for",
+  evacuated_offsite: "Evacuated off-site",
+};
+
+/** Statuses that count towards "everyone accounted for". */
+export const ACCOUNTED_STATUSES: AttendanceStatus[] = ["safe", "safe_elsewhere", "evacuated_offsite"];
 
 function seedColumns(p: RollCallSeed) {
   const isCompanion = p.companionIndex != null;
