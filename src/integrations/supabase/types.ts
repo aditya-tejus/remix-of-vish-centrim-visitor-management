@@ -978,6 +978,30 @@ export type Database = {
           },
         ]
       }
+      kiosk_security: {
+        Row: {
+          created_at: string
+          id: string
+          pin_hash: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pin_hash: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pin_hash?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       leave_requests: {
         Row: {
           comments: string | null
@@ -1856,6 +1880,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      kiosk_pin_is_set: { Args: never; Returns: boolean }
       kiosk_prefill_visitor: {
         Args: { p_first: string; p_last: string }
         Returns: {
@@ -1884,6 +1909,8 @@ export type Database = {
           whom_to_visit: string
         }[]
       }
+      set_kiosk_pin: { Args: { p_pin: string }; Returns: undefined }
+      verify_kiosk_pin: { Args: { p_pin: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "staff" | "user"
