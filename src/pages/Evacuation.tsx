@@ -20,7 +20,10 @@ import {
   EvacuationDrill,
   RollCallSeed,
   AttendanceStatus,
+  ATTENDANCE_LABELS,
+  ACCOUNTED_STATUSES,
 } from "@/hooks/useEvacuation";
+import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import {
   AlertTriangle, CheckCircle2, Search, Shield, Clock, Users, Download, Printer,
@@ -70,12 +73,17 @@ export default function Evacuation() {
   const [busy, setBusy] = useState(false);
   const [closing, setClosing] = useState(false);
   const [closeReason, setCloseReason] = useState("");
+  const [eventClass, setEventClass] = useState<"drill" | "real">("real");
+  const [reviewNotes, setReviewNotes] = useState("");
+  const [correcting, setCorrecting] = useState<RollCallPerson | null>(null);
+  const [correctionReason, setCorrectionReason] = useState("");
 
   const { data: activeDrills = [] } = useEvacuationDrills("active");
   const activeDrill = activeDrills[0];
   const { data: attendance = [] } = useEvacuationAttendance(activeDrill?.id);
   const { data: points = [] } = useEvacuationPoints();
-  const { startDrill, markSafe, markUnsafe, endDrill, addAttendee } = useEvacuationMutations();
+  const { startDrill, markSafe, markUnsafe, endDrill, addAttendee, setEmergencyState } = useEvacuationMutations();
+  const { can } = usePermissions();
 
   const markedBy = user?.email || "Staff";
 
@@ -102,6 +110,9 @@ export default function Evacuation() {
   const statusOf = (p: RollCallPerson): AttendanceStatus =>
     statusByKey.get(p.key)?.status || "unaccounted";
 
+  /** Only "safe", "safe elsewhere" and "evacuated off-site" close a person off. */
+  const accountedFor = (p: RollCallPerson) => ACCOUNTED_STATUSES.includes(statusOf(p));
+
   const seedOf = (p: RollCallPerson): RollCallSeed => ({
     name: p.name,
     type: p.type,
@@ -120,15 +131,24 @@ export default function Evacuation() {
 
   const ensureDrill = async (): Promise<EvacuationDrill> => {
     if (activeDrill) return activeDrill;
+    if (!can("emergency.activate")) {
+      throw new Error("You do not have permission to activate an emergency.");
+    }
     return await startDrill.mutateAsync({
-      title: `Roll call ${format(new Date(), "dd MMM yyyy HH:mm")}`,
+      title: `${eventClass === "drill" ? "Drill" : "Emergency"} ${format(new Date(), "dd MMM yyyy HH:mm")}`,
       people: onSite.map(seedOf),
+      eventClass,
+      eventType: eventClass === "drill" ? "drill" : "emergency",
     });
   };
 
-  /** Records an outcome for a group of people, creating the drill if needed. */
-  const setStatusFor = async (people: RollCallPerson[], status: AttendanceStatus) => {
+  /** Records an outcome for a group of people, creating the event if needed. */
+  const setStatusFor = async (people: RollCallPerson[], status: AttendanceStatus, reason?: string) => {
     if (people.length === 0) return;
+    if (!can("emergency.mark_safe")) {
+      toast({ title: "Not allowed", description: "You do not have permission to record roll call outcomes.", variant: "destructive" });
+      return;
+    }
     setBusy(true);
     try {
       const drill = await ensureDrill();
@@ -141,7 +161,7 @@ export default function Evacuation() {
       for (const p of people) {
         const attId = found.get(p.key);
         if (attId) {
-          if (status === "unaccounted") await markUnsafe.mutateAsync(attId);
+          if (status === "unaccounted") await markUnsafe.mutateAsync({ id: attId, reason });
           else await markSafe.mutateAsync({ id: attId, status, pointId: assemblyPoint || undefined, markedBy });
         } else {
           await addAttendee.mutateAsync({
@@ -160,10 +180,27 @@ export default function Evacuation() {
     }
   };
 
+  /** Undoing an outcome is a correction and always needs a reason. */
   const togglePerson = (p: RollCallPerson) => {
-    const current = statusOf(p);
-    void setStatusFor([p], current === "unaccounted" ? "safe" : "unaccounted");
+    if (accountedFor(p) || statusOf(p) !== "unaccounted") {
+      setCorrecting(p);
+      setCorrectionReason("");
+      return;
+    }
+    void setStatusFor([p], "safe");
   };
+
+  const confirmCorrection = async () => {
+    if (!correcting) return;
+    if (correctionReason.trim().length < 3) {
+      toast({ title: "Reason required", description: "Record why this entry is being changed.", variant: "destructive" });
+      return;
+    }
+    await setStatusFor([correcting], "unaccounted", correctionReason.trim());
+    setCorrecting(null);
+    setCorrectionReason("");
+  };
+
 
   const allAreas = useMemo(() => {
     const set = new Set<string>();
@@ -187,8 +224,8 @@ export default function Evacuation() {
     }
     if (filterType !== "all") list = list.filter((p) => p.type === filterType);
     if (filterArea !== "all") list = list.filter((p) => p.area === filterArea);
-    if (filterStatus === "safe") list = list.filter((p) => statusOf(p) !== "unaccounted");
-    else if (filterStatus === "unaccounted") list = list.filter((p) => statusOf(p) === "unaccounted");
+    if (filterStatus === "safe") list = list.filter((p) => accountedFor(p));
+    else if (filterStatus === "unaccounted") list = list.filter((p) => !accountedFor(p));
     return list;
   }, [onSite, searchQuery, filterType, filterArea, filterStatus, statusByKey]);
 
@@ -205,7 +242,7 @@ export default function Evacuation() {
       if (groupBy === "area") push(p.area || (p.type === "resident" ? UNASSIGNED_AREA : `${p.typeLabel}s`), p);
       else if (groupBy === "assistance") push(p.assistance.level, p);
       else if (groupBy === "type") push(`${p.typeLabel}s`, p);
-      else push(statusOf(p) === "unaccounted" ? "Not accounted for" : "Accounted for", p);
+      else push(!accountedFor(p) ? "Not accounted for" : "Accounted for", p);
     });
 
     let entries = [...map.entries()];
@@ -221,29 +258,29 @@ export default function Evacuation() {
     return entries.map(([k, people]) => ({ label: k, people: sortPeople(people) }));
   }, [filtered, groupBy, statusByKey]);
 
-  const safeCount = onSite.filter((p) => statusOf(p) !== "unaccounted").length;
+  const safeCount = onSite.filter((p) => accountedFor(p)).length;
   const unaccountedCount = onSite.length - safeCount;
   const offSiteCount = offSite.length;
 
   const markGroupSafe = async (g: Group) => {
-    const pending = g.people.filter((p) => statusOf(p) === "unaccounted");
+    const pending = g.people.filter((p) => !accountedFor(p));
     if (pending.length === 0) return;
     await setStatusFor(pending, "safe");
     toast({ title: `${g.label} accounted for`, description: `${pending.length} people marked safe.` });
   };
 
   const markAllSafe = async () => {
-    const pending = onSite.filter((p) => statusOf(p) === "unaccounted");
+    const pending = onSite.filter((p) => !accountedFor(p));
     await setStatusFor(pending, "safe");
     toast({ title: "All marked safe", description: `${pending.length} people marked as safe.` });
   };
 
   const resetAll = async () => {
-    await setStatusFor(onSite.filter((p) => statusOf(p) !== "unaccounted"), "unaccounted");
+    await setStatusFor(onSite.filter((p) => accountedFor(p)), "unaccounted");
   };
 
   const jumpToNext = () => {
-    const next = filtered.find((p) => statusOf(p) === "unaccounted");
+    const next = filtered.find((p) => !accountedFor(p));
     if (!next) return;
     document.getElementById(`person-${next.key}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
@@ -254,11 +291,28 @@ export default function Evacuation() {
       toast({ title: "Reason required", description: "Record why people are still unaccounted for before closing.", variant: "destructive" });
       return;
     }
-    await endDrill.mutateAsync({ drillId: activeDrill.id, accounted: safeCount, reason: closeReason.trim() || undefined });
+    await setEmergencyState.mutateAsync({
+      drillId: activeDrill.id,
+      state: reviewNotes.trim() ? "reviewed" : "resolved",
+      accounted: safeCount,
+      reason: closeReason.trim() || undefined,
+      reviewNotes: reviewNotes.trim() || undefined,
+    });
     setClosing(false);
     setCloseReason("");
-    toast({ title: "Roll call ended", description: `${safeCount} of ${onSite.length} accounted for.` });
+    setReviewNotes("");
+    toast({ title: "Emergency closed", description: `${safeCount} of ${onSite.length} accounted for.` });
   };
+
+  /** Pause holds the event open without losing the snapshot; resume continues it. */
+  const togglePause = async () => {
+    if (!activeDrill) return;
+    await setEmergencyState.mutateAsync({
+      drillId: activeDrill.id,
+      state: activeDrill.state === "paused" ? "active" : "paused",
+    });
+  };
+
 
   const rows = () => filtered.map((p) => ({
     Name: p.name,
@@ -276,11 +330,15 @@ export default function Evacuation() {
     "Responsible staff": p.responsibleStaff,
 
     "On site since": p.checkInTime ? format(p.checkInTime, "dd/MM/yyyy HH:mm") : "",
-    Status: statusOf(p) === "safe" ? "Safe" : statusOf(p) === "evacuated_offsite" ? "Evacuated off-site" : "Not accounted for",
+    Status: ATTENDANCE_LABELS[statusOf(p)],
     "Marked at": statusByKey.get(p.key)?.at ? format(new Date(statusByKey.get(p.key)!.at!), "HH:mm") : "",
   }));
 
   const exportCSV = () => {
+    if (!can("emergency.export")) {
+      toast({ title: "Not allowed", description: "You do not have permission to export the emergency snapshot.", variant: "destructive" });
+      return;
+    }
     const data = rows();
     if (data.length === 0) return;
     const headers = Object.keys(data[0]);
@@ -301,6 +359,10 @@ export default function Evacuation() {
   };
 
   const printList = () => {
+    if (!can("emergency.export")) {
+      toast({ title: "Not allowed", description: "You do not have permission to export the emergency snapshot.", variant: "destructive" });
+      return;
+    }
     const date = format(new Date(), "dd MMMM yyyy, HH:mm");
     const body = groups.map((g) => {
       const wardens = [...new Set(g.people.map((p) => p.responsibleStaff).filter(Boolean))];
@@ -316,7 +378,7 @@ export default function Evacuation() {
         <td>${p.phone || "—"}</td>
         <td>${p.emergencyContactName ? `${p.emergencyContactName}<br>${p.emergencyContactPhone || ""}` : "—"}</td>
         <td>${p.associatedWith.length ? p.associatedWith.join("<br>") : "—"}</td>
-        <td>${s === "unaccounted" ? "Not accounted for" : s === "safe" ? "Safe" : "Evacuated off-site"}</td>
+        <td>${ATTENDANCE_LABELS[s]}</td>
       </tr>`;
       }).join("")}
     `;
@@ -381,7 +443,7 @@ export default function Evacuation() {
   const renderPerson = (p: RollCallPerson) => {
 
     const status = statusOf(p);
-    const isSafe = status !== "unaccounted";
+    const isSafe = ACCOUNTED_STATUSES.includes(status);
     const marked = statusByKey.get(p.key);
     return (
       <div
@@ -450,7 +512,7 @@ export default function Evacuation() {
 
             {isSafe && marked?.at && (
               <p className="mt-1 text-[11px] text-success">
-                {status === "evacuated_offsite" ? "Evacuated off-site" : "Safe"} at {format(new Date(marked.at), "HH:mm")}
+                {ATTENDANCE_LABELS[status]} at {format(new Date(marked.at), "HH:mm")}
                 {points.find((pt) => pt.id === marked.point) ? ` · ${points.find((pt) => pt.id === marked.point)!.name}` : ""}
               </p>
             )}
@@ -461,23 +523,33 @@ export default function Evacuation() {
               size="sm"
               disabled={busy}
               variant={isSafe ? "outline" : "default"}
-              className={`h-9 min-w-[92px] text-xs ${!isSafe ? "bg-emerald-600 hover:bg-emerald-700 text-emerald-50" : ""}`}
+              className={`h-9 min-w-[110px] text-xs ${!isSafe ? "bg-emerald-600 hover:bg-emerald-700 text-emerald-50" : ""}`}
               onClick={() => togglePerson(p)}
             >
-              {isSafe ? "Undo" : "Safe"}
+              {isSafe ? "Correct" : "Safe"}
             </Button>
             {!isSafe && (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={busy}
-                className="h-8 min-w-[92px] text-[11px] gap-1"
-                onClick={() => setStatusFor([p], "evacuated_offsite")}
-              >
-                <Ambulance className="h-3 w-3" /> Off-site
-              </Button>
+              <>
+                <Button size="sm" variant="outline" disabled={busy} className="h-8 min-w-[110px] text-[11px] gap-1"
+                  onClick={() => setStatusFor([p], "safe_elsewhere")}>
+                  <MapPin className="h-3 w-3" /> Safe elsewhere
+                </Button>
+                <Button size="sm" variant="outline" disabled={busy} className="h-8 min-w-[110px] text-[11px]"
+                  onClick={() => setStatusFor([p], "not_located")}>
+                  Not located
+                </Button>
+                <Button size="sm" variant="outline" disabled={busy} className="h-8 min-w-[110px] text-[11px]"
+                  onClick={() => setStatusFor([p], "assistance_required")}>
+                  Needs help
+                </Button>
+                <Button size="sm" variant="outline" disabled={busy} className="h-8 min-w-[110px] text-[11px] gap-1"
+                  onClick={() => setStatusFor([p], "evacuated_offsite")}>
+                  <Ambulance className="h-3 w-3" /> Off-site
+                </Button>
+              </>
             )}
           </div>
+
         </div>
       </div>
     );
@@ -501,6 +573,20 @@ export default function Evacuation() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                {!activeDrill && (
+                  <Select value={eventClass} onValueChange={(v) => setEventClass(v as "drill" | "real")}>
+                    <SelectTrigger className="h-9 w-[150px] text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="real">Real emergency</SelectItem>
+                      <SelectItem value="drill">Practice drill</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+                {activeDrill && (
+                  <Button variant="outline" size="sm" disabled={busy} onClick={togglePause} className="h-9 text-xs">
+                    {activeDrill.state === "paused" ? "Resume" : "Pause"}
+                  </Button>
+                )}
                 {points.length > 0 && (
                   <Select value={assemblyPoint || "none"} onValueChange={(v) => setAssemblyPoint(v === "none" ? "" : v)}>
                     <SelectTrigger className="h-9 w-[190px] text-xs">
@@ -598,7 +684,7 @@ export default function Evacuation() {
               </div>
             ) : (
               groups.map((g) => {
-                const pending = g.people.filter((p) => statusOf(p) === "unaccounted").length;
+                const pending = g.people.filter((p) => !accountedFor(p)).length;
                 const done = g.people.length - pending;
                 const wardens = [...new Set(g.people.map((p) => p.responsibleStaff).filter(Boolean))];
                 return (
@@ -631,11 +717,11 @@ export default function Evacuation() {
                                 <span className="text-[11px] text-muted-foreground">
                                   {b.people.length} {b.people.length === 1 ? "person" : "people"}
                                 </span>
-                                {b.people.every((p) => statusOf(p) !== "unaccounted") ? (
+                                {b.people.every((p) => accountedFor(p)) ? (
                                   <span className="text-[11px] font-medium text-success">all accounted for</span>
                                 ) : (
                                   <span className="text-[11px] font-medium text-destructive">
-                                    {b.people.filter((p) => statusOf(p) === "unaccounted").length} still to find
+                                    {b.people.filter((p) => !accountedFor(p)).length} still to find
                                   </span>
                                 )}
                               </div>
@@ -724,12 +810,45 @@ export default function Evacuation() {
                   <p className="text-[12px] text-muted-foreground">Required — this appears on the evacuation report.</p>
                 </div>
               )}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">Review notes (optional)</p>
+                <Textarea
+                  value={reviewNotes}
+                  onChange={(e) => setReviewNotes(e.target.value)}
+                  placeholder="What went well, what needs to change, actions agreed."
+                  rows={3}
+                />
+                <p className="text-[12px] text-muted-foreground">Adding notes marks this event as reviewed.</p>
+              </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setClosing(false)}>Keep going</Button>
                 <Button onClick={finishRollCall} disabled={busy}>End roll call</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          <Dialog open={!!correcting} onOpenChange={(o) => !o && setCorrecting(null)}>
+            <DialogContent className="rounded-xl">
+              <DialogHeader>
+                <DialogTitle>Correct this entry</DialogTitle>
+                <DialogDescription>
+                  {correcting?.name} is currently recorded as {ATTENDANCE_LABELS[correcting ? statusOf(correcting) : "unaccounted"]}.
+                  Corrections are kept in the audit trail.
+                </DialogDescription>
+              </DialogHeader>
+              <Textarea
+                value={correctionReason}
+                onChange={(e) => setCorrectionReason(e.target.value)}
+                placeholder="e.g. Marked safe by mistake — wrong person tapped."
+                rows={3}
+              />
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setCorrecting(null)}>Cancel</Button>
+                <Button onClick={confirmCorrection} disabled={busy}>Record correction</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
         </SidebarInset>
       </div>
     </SidebarProvider>

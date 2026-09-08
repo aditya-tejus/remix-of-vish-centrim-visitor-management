@@ -74,7 +74,7 @@ export default function KioskLayout() {
         <KioskPinPad
           open={pinOpen}
           onOpenChange={setPinOpen}
-          onSuccess={() => { setPinOpen(false); navigate("/kiosk/evacuation"); }}
+          onSuccess={(pin) => { setPinOpen(false); navigate("/kiosk/evacuation", { state: { pin } }); }}
         />
         <KioskIdleWarning
           open={showWarning}
@@ -154,7 +154,7 @@ export default function KioskLayout() {
       <KioskPinPad
         open={pinOpen}
         onOpenChange={setPinOpen}
-        onSuccess={() => { setPinOpen(false); navigate("/kiosk/evacuation"); }}
+        onSuccess={(pin) => { setPinOpen(false); navigate("/kiosk/evacuation", { state: { pin } }); }}
       />
 
 

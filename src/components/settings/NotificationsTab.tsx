@@ -4,6 +4,16 @@ import { Bell, Info } from "lucide-react";
 export function NotificationsTab() {
   return (
     <div className="space-y-6">
+      <Card className="border-warning/30 bg-warning/[0.04]">
+        <CardHeader>
+          <CardTitle className="text-base">Email and text sending is not switched on</CardTitle>
+          <CardDescription className="text-xs">
+            Alerts are raised in the app and written to the record with who should have been told and when. Nothing is
+            emailed or texted out yet, so treat the recipient lists below as the plan, not as proof anyone was contacted.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">

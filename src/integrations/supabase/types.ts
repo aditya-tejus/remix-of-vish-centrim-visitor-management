@@ -421,6 +421,69 @@ export type Database = {
         }
         Relationships: []
       }
+      emergency_actions: {
+        Row: {
+          action: string
+          actor_label: string
+          actor_user_id: string | null
+          attendance_id: string | null
+          created_at: string
+          drill_id: string
+          id: string
+          new_status: string | null
+          note: string | null
+          person_name: string | null
+          previous_status: string | null
+          reason: string | null
+          source: string
+        }
+        Insert: {
+          action: string
+          actor_label?: string
+          actor_user_id?: string | null
+          attendance_id?: string | null
+          created_at?: string
+          drill_id: string
+          id?: string
+          new_status?: string | null
+          note?: string | null
+          person_name?: string | null
+          previous_status?: string | null
+          reason?: string | null
+          source?: string
+        }
+        Update: {
+          action?: string
+          actor_label?: string
+          actor_user_id?: string | null
+          attendance_id?: string | null
+          created_at?: string
+          drill_id?: string
+          id?: string
+          new_status?: string | null
+          note?: string | null
+          person_name?: string | null
+          previous_status?: string | null
+          reason?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emergency_actions_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "evacuation_attendance"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "emergency_actions_drill_id_fkey"
+            columns: ["drill_id"]
+            isOneToOne: false
+            referencedRelation: "evacuation_drills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evacuation_attendance: {
         Row: {
           area_label: string | null
@@ -437,6 +500,7 @@ export type Database = {
           id: string
           marked_by: string | null
           marked_safe_at: string | null
+          note: string | null
           notes: string | null
           parent_visitor_id: string | null
           person_name: string
@@ -461,6 +525,7 @@ export type Database = {
           id?: string
           marked_by?: string | null
           marked_safe_at?: string | null
+          note?: string | null
           notes?: string | null
           parent_visitor_id?: string | null
           person_name: string
@@ -485,6 +550,7 @@ export type Database = {
           id?: string
           marked_by?: string | null
           marked_safe_at?: string | null
+          note?: string | null
           notes?: string | null
           parent_visitor_id?: string | null
           person_name?: string
@@ -549,14 +615,22 @@ export type Database = {
       evacuation_drills: {
         Row: {
           accounted_for: number
+          activated_by: string | null
+          area_id: string | null
           branch_id: string | null
           created_at: string
           ended_at: string | null
+          event_class: string
           event_type: string
           id: string
           notes: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          snapshot_at: string | null
           started_at: string
           started_by: string
+          state: string
           status: string
           title: string
           total_people: number
@@ -564,14 +638,22 @@ export type Database = {
         }
         Insert: {
           accounted_for?: number
+          activated_by?: string | null
+          area_id?: string | null
           branch_id?: string | null
           created_at?: string
           ended_at?: string | null
+          event_class?: string
           event_type?: string
           id?: string
           notes?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          snapshot_at?: string | null
           started_at?: string
           started_by?: string
+          state?: string
           status?: string
           title?: string
           total_people?: number
@@ -579,20 +661,35 @@ export type Database = {
         }
         Update: {
           accounted_for?: number
+          activated_by?: string | null
+          area_id?: string | null
           branch_id?: string | null
           created_at?: string
           ended_at?: string | null
+          event_class?: string
           event_type?: string
           id?: string
           notes?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          snapshot_at?: string | null
           started_at?: string
           started_by?: string
+          state?: string
           status?: string
           title?: string
           total_people?: number
           unaccounted_reason?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "evacuation_drills_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "wings"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "evacuation_drills_branch_id_fkey"
             columns: ["branch_id"]
@@ -1098,6 +1195,33 @@ export type Database = {
           },
         ]
       }
+      kiosk_access_log: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          detail: string | null
+          id: string
+          outcome: string
+          purpose: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          outcome: string
+          purpose: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          outcome?: string
+          purpose?: string
+        }
+        Relationships: []
+      }
       kiosk_security: {
         Row: {
           created_at: string
@@ -1395,6 +1519,148 @@ export type Database = {
           sort_order?: number
         }
         Relationships: []
+      }
+      privacy_acknowledgements: {
+        Row: {
+          acknowledged_at: string
+          branch_id: string | null
+          device: string | null
+          id: string
+          method: string
+          notice_version: string
+          person_id: string | null
+          visit_id: string | null
+          visitor_id: string | null
+        }
+        Insert: {
+          acknowledged_at?: string
+          branch_id?: string | null
+          device?: string | null
+          id?: string
+          method?: string
+          notice_version?: string
+          person_id?: string | null
+          visit_id?: string | null
+          visitor_id?: string | null
+        }
+        Update: {
+          acknowledged_at?: string
+          branch_id?: string | null
+          device?: string | null
+          id?: string
+          method?: string
+          notice_version?: string
+          person_id?: string | null
+          visit_id?: string | null
+          visitor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "privacy_acknowledgements_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "privacy_acknowledgements_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "privacy_acknowledgements_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["person_id"]
+          },
+          {
+            foreignKeyName: "privacy_acknowledgements_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["visit_id"]
+          },
+          {
+            foreignKeyName: "privacy_acknowledgements_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "privacy_acknowledgements_visitor_id_fkey"
+            columns: ["visitor_id"]
+            isOneToOne: false
+            referencedRelation: "v_legacy_visitor_visits"
+            referencedColumns: ["legacy_visitor_id"]
+          },
+          {
+            foreignKeyName: "privacy_acknowledgements_visitor_id_fkey"
+            columns: ["visitor_id"]
+            isOneToOne: false
+            referencedRelation: "visitors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      privacy_notices: {
+        Row: {
+          branch_id: string | null
+          controller_contact: string | null
+          controller_name: string | null
+          created_at: string
+          data_categories: Json
+          id: string
+          is_active: boolean
+          jurisdiction: string | null
+          notice_text: string | null
+          notice_url: string | null
+          notice_version: string
+          privacy_contact: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          controller_contact?: string | null
+          controller_name?: string | null
+          created_at?: string
+          data_categories?: Json
+          id?: string
+          is_active?: boolean
+          jurisdiction?: string | null
+          notice_text?: string | null
+          notice_url?: string | null
+          notice_version?: string
+          privacy_contact?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          controller_contact?: string | null
+          controller_name?: string | null
+          created_at?: string
+          data_categories?: Json
+          id?: string
+          is_active?: boolean
+          jurisdiction?: string | null
+          notice_text?: string | null
+          notice_url?: string | null
+          notice_version?: string
+          privacy_contact?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "privacy_notices_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -1698,6 +1964,116 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      retention_policies: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          exception_reason: string | null
+          id: string
+          is_enabled: boolean
+          mode: string
+          record_class: string
+          retention_unit: string
+          retention_value: number | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          exception_reason?: string | null
+          id?: string
+          is_enabled?: boolean
+          mode?: string
+          record_class: string
+          retention_unit?: string
+          retention_value?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          exception_reason?: string | null
+          id?: string
+          is_enabled?: boolean
+          mode?: string
+          record_class?: string
+          retention_unit?: string
+          retention_value?: number | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retention_policies_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      retention_runs: {
+        Row: {
+          action: string
+          branch_id: string | null
+          created_at: string
+          error_detail: string | null
+          id: string
+          outcome: string
+          performed_by: string | null
+          record_class: string
+          records_affected: number
+          skipped_legal_hold: number
+        }
+        Insert: {
+          action: string
+          branch_id?: string | null
+          created_at?: string
+          error_detail?: string | null
+          id?: string
+          outcome: string
+          performed_by?: string | null
+          record_class: string
+          records_affected?: number
+          skipped_legal_hold?: number
+        }
+        Update: {
+          action?: string
+          branch_id?: string | null
+          created_at?: string
+          error_detail?: string | null
+          id?: string
+          outcome?: string
+          performed_by?: string | null
+          record_class?: string
+          records_affected?: number
+          skipped_legal_hold?: number
+        }
+        Relationships: []
+      }
+      role_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          permission: Database["public"]["Enums"]["app_permission"]
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          permission: Database["public"]["Enums"]["app_permission"]
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          permission?: Database["public"]["Enums"]["app_permission"]
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: []
       }
       settings: {
         Row: {
@@ -2545,6 +2921,13 @@ export type Database = {
       current_user_site_ids: { Args: never; Returns: string[] }
       default_site_id: { Args: never; Returns: string }
       ensure_user_bootstrap: { Args: never; Returns: undefined }
+      has_permission: {
+        Args: {
+          _permission: Database["public"]["Enums"]["app_permission"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2577,6 +2960,47 @@ export type Database = {
           supplier_id: string
           supplier_name: string
           surname: string
+        }[]
+      }
+      kiosk_emergency_gate: {
+        Args: { p_pin: string; p_purpose: string }
+        Returns: boolean
+      }
+      kiosk_emergency_mark: {
+        Args: {
+          p_attendance_id: string
+          p_marked_by?: string
+          p_pin: string
+          p_reason?: string
+          p_status: string
+        }
+        Returns: boolean
+      }
+      kiosk_emergency_progress: {
+        Args: { p_pin: string }
+        Returns: {
+          accounted: number
+          drill_title: string
+          event_class: string
+          outstanding: number
+          total: number
+        }[]
+      }
+      kiosk_emergency_rollcall: {
+        Args: { p_pin: string }
+        Returns: {
+          assistance_level: string
+          attendance_id: string
+          contact_phone: string
+          drill_id: string
+          drill_state: string
+          drill_title: string
+          event_class: string
+          location_label: string
+          marked_safe_at: string
+          person_name: string
+          person_type: string
+          status: string
         }[]
       }
       kiosk_pin_is_set: { Args: never; Returns: boolean }
@@ -2676,6 +3100,25 @@ export type Database = {
           is_match: boolean
         }[]
       }
+      log_audit: {
+        Args: {
+          _action: string
+          _details?: Json
+          _reason?: string
+          _records?: number
+        }
+        Returns: string
+      }
+      record_privacy_ack: {
+        Args: {
+          p_branch_id?: string
+          p_device?: string
+          p_method?: string
+          p_version?: string
+          p_visitor_id: string
+        }
+        Returns: string
+      }
       resolve_setting: {
         Args: {
           p_branch_id?: string
@@ -2687,11 +3130,34 @@ export type Database = {
         }
         Returns: string
       }
+      run_retention: {
+        Args: { p_record_class: string }
+        Returns: {
+          affected: number
+          skipped: number
+        }[]
+      }
       set_kiosk_pin: { Args: { p_pin: string }; Returns: undefined }
       user_can_access_site: { Args: { _branch_id: string }; Returns: boolean }
       verify_kiosk_pin: { Args: { p_pin: string }; Returns: boolean }
     }
     Enums: {
+      app_permission:
+        | "presence.view"
+        | "checkin.create"
+        | "checkout.perform"
+        | "person.edit"
+        | "screening.view"
+        | "assistance.view"
+        | "credentials.view"
+        | "emergency.activate"
+        | "emergency.mark_safe"
+        | "emergency.export"
+        | "watchlist.manage"
+        | "privacy.manage"
+        | "data.export"
+        | "data.erase"
+        | "settings.administer"
       app_role: "admin" | "staff" | "user"
     }
     CompositeTypes: {
@@ -2820,6 +3286,23 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_permission: [
+        "presence.view",
+        "checkin.create",
+        "checkout.perform",
+        "person.edit",
+        "screening.view",
+        "assistance.view",
+        "credentials.view",
+        "emergency.activate",
+        "emergency.mark_safe",
+        "emergency.export",
+        "watchlist.manage",
+        "privacy.manage",
+        "data.export",
+        "data.erase",
+        "settings.administer",
+      ],
       app_role: ["admin", "staff", "user"],
     },
   },
