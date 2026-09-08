@@ -43,10 +43,10 @@ export default function SettingsPage() {
             </div>
             <SiteSwitcher compact />
           </header>
-          <main className="p-6">
-            <div className="flex gap-6">
+          <main className="p-4 sm:p-6">
+            <div className="flex flex-col lg:flex-row gap-6">
               {/* Settings Navigation */}
-              <div className="sticky top-20 self-start">
+              <div className="lg:sticky lg:top-20 self-start w-full lg:w-auto">>
                 <SettingsNav active={active} onChange={setActive} />
               </div>
 
