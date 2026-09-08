@@ -52,7 +52,6 @@ export function AppSidebar() {
       label: "Visitor operations",
       icon: Users,
       items: [
-        { title: "Visit list", path: "/visit-list", icon: ListChecks, badge: activeVisitorCount || null, badgeVariant: "blue" },
         { title: "Overdue", path: "/visit-list", icon: Layers, badge: todayOverstayed || null, badgeVariant: "red" },
         { title: "Presence log", path: "/reports/presence", icon: ClipboardList },
         { title: "Visitor profiles", path: "/visitors", icon: IdCard },
