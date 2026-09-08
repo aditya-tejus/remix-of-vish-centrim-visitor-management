@@ -9,7 +9,8 @@ import { useWatchlist } from "@/hooks/useWatchlist";
 import type { VisitorType } from "@/types/visitor";
 import { FoodFormState, emptyFoodForm, isFoodFormValid } from "@/components/food/FoodFormFields";
 import { usePersonTypes } from "@/hooks/usePersonTypes";
-import { useOperatingContext } from "@/contexts/OperatingContext";
+import { useOperatingContext, siteScopedKey } from "@/contexts/OperatingContext";
+import { resolveTermsContent } from "@/lib/segmentPacks";
 
 export type KioskStepId = "type" | "details" | "visiting" | "food" | "companions" | "screening" | "contractor" | "terms" | "confirm";
 
@@ -46,7 +47,7 @@ export function useKioskCheckInFlow() {
   const [visitedResidentId, setVisitedResidentId] = useState<string | null>(null);
 
   // Operating context and per-person-type rules (Stage 4)
-  const { modules, terms } = useOperatingContext();
+  const { modules, terms, pack, siteId } = useOperatingContext();
   const { personTypes } = usePersonTypes();
   const typeConfig = useMemo(
     () => personTypes.find((t) => t.type === (selectedType as any)),
@@ -82,7 +83,7 @@ export function useKioskCheckInFlow() {
     supabase
       .from("settings")
       .select("key, value")
-      .in("key", [`tc_content_${selectedType}`, "jurisdiction", "kiosk_resident_lookup_mode", `kiosk_resident_lookup_mode_${selectedType}`, "kiosk_staff_lookup_mode", `kiosk_staff_lookup_mode_${selectedType}`, "outbreak_mode", "badge_printing_enabled", `food_register_checkin_${selectedType}`, `kiosk_returning_mobile_${selectedType}`, `kiosk_returning_qr_${selectedType}`, `kiosk_returning_name_${selectedType}`, `kiosk_suggest_last_resident_${selectedType}`])
+      .in("key", [`tc_content_${selectedType}`, siteScopedKey(`tc_content_${selectedType}`, siteId), "jurisdiction", "kiosk_resident_lookup_mode", `kiosk_resident_lookup_mode_${selectedType}`, "kiosk_staff_lookup_mode", `kiosk_staff_lookup_mode_${selectedType}`, "outbreak_mode", "badge_printing_enabled", `food_register_checkin_${selectedType}`, `kiosk_returning_mobile_${selectedType}`, `kiosk_returning_qr_${selectedType}`, `kiosk_returning_name_${selectedType}`, `kiosk_suggest_last_resident_${selectedType}`])
       .then(({ data }) => {
         const tc = data?.find((d) => d.key === `tc_content_${selectedType}`);
         const jur = data?.find((d) => d.key === "jurisdiction");
@@ -94,8 +95,10 @@ export function useKioskCheckInFlow() {
         const slmSpecific = data?.find((d) => d.key === `kiosk_staff_lookup_mode_${selectedType}`);
         const slmGlobal = data?.find((d) => d.key === "kiosk_staff_lookup_mode");
         const slmValue = slmSpecific?.value || slmGlobal?.value;
-        setTcContent(tc?.value || null);
-        if (jur?.value === "AU" || jur?.value === "UK") setJurisdiction(jur.value);
+        const siteTc = data?.find((d) => d.key === siteScopedKey(`tc_content_${selectedType}`, siteId));
+        const accountJur = jur?.value === "AU" || jur?.value === "UK" ? jur.value : null;
+        setTcContent(resolveTermsContent(siteTc?.value, tc?.value, accountJur, pack));
+        setJurisdiction(pack.jurisdiction);
         setOutbreakMode(data?.find((d) => d.key === "outbreak_mode")?.value === "true");
         setBadgePrintingEnabled(data?.find((d) => d.key === "badge_printing_enabled")?.value === "true");
         setFoodStepEnabled(data?.find((d) => d.key === `food_register_checkin_${selectedType}`)?.value !== "false");
@@ -109,7 +112,7 @@ export function useKioskCheckInFlow() {
           suggestResident: isOn(`kiosk_suggest_last_resident_${selectedType}`),
         });
       });
-  }, [selectedType]);
+  }, [selectedType, siteId, pack]);
 
   // Returning visitor lookup — restricted database helper that returns at most one
   // person's own saved details. The kiosk never reads the visitor table directly.

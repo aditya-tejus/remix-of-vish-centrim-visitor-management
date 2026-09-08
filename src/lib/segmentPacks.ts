@@ -228,3 +228,58 @@ export function resolvePack(
 export function packById(id?: string | null): SegmentPack {
   return SEGMENT_PACKS[(id as SegmentPackId) || DEFAULT_PACK_ID] ?? SEGMENT_PACKS[DEFAULT_PACK_ID];
 }
+
+/**
+ * Fallback visitor terms wording for a context. Used only when a site has no
+ * saved terms of its own, or when the saved wording belongs to the other
+ * country — UK wording must never appear on an Australian site.
+ */
+export function defaultTermsText(pack: SegmentPack): string {
+  const place = pack.terms.site.toLowerCase();
+  return [
+    `Terms & Conditions for Visitors`,
+    ``,
+    `1. Safeguarding`,
+    `All visitors must follow this ${place}'s safeguarding policies. If you have any concern about the wellbeing of a ${pack.terms.resident.toLowerCase()}, tell a staff member straight away.`,
+    ``,
+    `2. Infection control`,
+    `• Use the hand sanitiser provided on entry and during your visit`,
+    `• Do not visit if you are unwell or have vomiting, diarrhoea or respiratory symptoms`,
+    `• Follow any additional infection control measures directed by staff`,
+    ``,
+    `3. Privacy`,
+    `Your personal information is collected and handled in line with the ${pack.privacy.regimeName}, and questions can be raised with the ${pack.privacy.regulator}. ${pack.privacy.retentionNote}`,
+    ``,
+    `4. Site safety`,
+    `Sign in and out each visit, wear your badge where it can be seen, and follow staff directions in an emergency.`,
+  ].join("\n");
+}
+
+/**
+ * Choose which terms wording to show: a site's own wording wins, saved account
+ * wording is used when it belongs to the same country, otherwise the context
+ * default is used.
+ */
+const UK_MARKERS = /uk gdpr|data protection act 2018|information commissioner|dbs check/i;
+const AU_MARKERS = /privacy act 1988|australian privacy principles|oaic|police check/i;
+
+/** True when saved wording clearly belongs to the other country. */
+function wordingIsForeign(text: string, jurisdiction: Jurisdiction) {
+  return jurisdiction === "AU" ? UK_MARKERS.test(text) : AU_MARKERS.test(text);
+}
+
+export function resolveTermsContent(
+  siteValue: string | null | undefined,
+  accountValue: string | null | undefined,
+  accountJurisdiction: Jurisdiction | null | undefined,
+  pack: SegmentPack
+): string | null {
+  if (siteValue && siteValue.trim()) return siteValue;
+  if (accountValue && accountValue.trim()) {
+    const foreign =
+      (accountJurisdiction && accountJurisdiction !== pack.jurisdiction) ||
+      wordingIsForeign(accountValue, pack.jurisdiction);
+    return foreign ? defaultTermsText(pack) : accountValue;
+  }
+  return null;
+}
