@@ -163,6 +163,8 @@ export default function EvacuationReport() {
       table{width:100%;border-collapse:collapse;font-size:11px}
       th,td{padding:5px 7px;border-bottom:1px solid #e5e7eb;text-align:left}
       th{background:#fef2f2;color:#dc2626}
+      tr.grp td{background:#f3f4f6}
+
       .reason{margin:12px 0;padding:8px;border:1px solid #fca5a5;background:#fef2f2;font-size:12px;border-radius:6px}
       .footer{margin-top:18px;font-size:10px;color:#6b7280;border-top:1px solid #e5e7eb;padding-top:8px}
     </style></head><body>
