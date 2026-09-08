@@ -291,11 +291,28 @@ export default function Evacuation() {
       toast({ title: "Reason required", description: "Record why people are still unaccounted for before closing.", variant: "destructive" });
       return;
     }
-    await endDrill.mutateAsync({ drillId: activeDrill.id, accounted: safeCount, reason: closeReason.trim() || undefined });
+    await setEmergencyState.mutateAsync({
+      drillId: activeDrill.id,
+      state: reviewNotes.trim() ? "reviewed" : "resolved",
+      accounted: safeCount,
+      reason: closeReason.trim() || undefined,
+      reviewNotes: reviewNotes.trim() || undefined,
+    });
     setClosing(false);
     setCloseReason("");
-    toast({ title: "Roll call ended", description: `${safeCount} of ${onSite.length} accounted for.` });
+    setReviewNotes("");
+    toast({ title: "Emergency closed", description: `${safeCount} of ${onSite.length} accounted for.` });
   };
+
+  /** Pause holds the event open without losing the snapshot; resume continues it. */
+  const togglePause = async () => {
+    if (!activeDrill) return;
+    await setEmergencyState.mutateAsync({
+      drillId: activeDrill.id,
+      state: activeDrill.state === "paused" ? "active" : "paused",
+    });
+  };
+
 
   const rows = () => filtered.map((p) => ({
     Name: p.name,
