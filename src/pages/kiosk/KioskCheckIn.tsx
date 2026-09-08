@@ -39,7 +39,13 @@ export default function KioskCheckIn() {
   const flow = useKioskCheckInFlow();
 
   const [step, setStep] = useState<KioskStepId>("type");
+  // Phone check-in codes expire after 5 minutes — a photographed screen won't work.
+  const [staleQr] = useState(() => {
+    const k = new URLSearchParams(window.location.search).get("k");
+    return !isKioskQrTokenValid(k);
+  });
   const [submitted, setSubmitted] = useState(false);
+
   const [watchlistEntry, setWatchlistEntry] = useState<any>(null);
   const [watchlistMatchType, setWatchlistMatchType] = useState<"confirmed" | "near">("confirmed");
   const [watchlistOpen, setWatchlistOpen] = useState(false);
