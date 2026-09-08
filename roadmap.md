@@ -43,3 +43,11 @@ Baseline recorded in the approved plan document.
 - Staff check-in skips person-type screen when only one type is enabled.
 - Kiosk confirm step guarded against double-tap duplicate check-ins.
 - Known limitations: kiosk key-overdue blocking is inert (kiosk can no longer read key tables — needs a purpose-specific RPC); external notification delivery still not implemented; 36 Supabase linter warnings remain (mostly SECURITY DEFINER functions, incl. the intentional anon kiosk RPCs).
+
+## Stage 4 — AU/UK and segment configuration (done)
+- Segment packs: AU residential aged care, AU retirement village, UK care home (src/lib/segmentPacks.ts).
+- Operating context resolved per site (staff) and per kiosk `?site=` (src/contexts/OperatingContext.tsx).
+- Settings show what they control, where they apply, who may change them, kiosk/desk effect and record impact.
+- Person types: enabled, staff-visible, kiosk-visible, destination, screening, privacy, badge, roll call — per site, admin-only.
+- Registers switched off by the pack disappear from navigation and routes.
+- Open: retention periods and controller details are configuration placeholders only; person-type site overrides use `key@siteId` rows in `settings` because the kiosk cannot read authenticated scoped settings.
