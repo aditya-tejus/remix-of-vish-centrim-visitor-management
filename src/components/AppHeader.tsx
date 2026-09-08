@@ -82,7 +82,7 @@ export function AppHeader({
         </div>
 
         {/* Right: clock + facility badge + toolbar + page actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Live clock */}
           <div className="hidden md:flex items-center gap-1.5 mr-1">
             <Clock className="h-3.5 w-3.5 text-muted-foreground" />
