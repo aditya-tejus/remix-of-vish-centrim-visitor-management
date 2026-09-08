@@ -194,6 +194,7 @@ export default function OperationsReport() {
                     })}
                   </TableBody>
                 </Table>
+                </div>
               )}
             </TabsContent>
           </Tabs>
