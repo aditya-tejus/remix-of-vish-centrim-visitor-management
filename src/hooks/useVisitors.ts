@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Visitor, CompanionDetail } from "@/types/visitor";
 import { toast } from "@/hooks/use-toast";
+import { policyFromRow } from "@/hooks/useReturnNotificationPolicy";
 
 
 interface DbVisitor {
