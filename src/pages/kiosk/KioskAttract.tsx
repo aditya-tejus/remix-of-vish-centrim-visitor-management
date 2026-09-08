@@ -5,6 +5,8 @@ import { format } from "date-fns";
 import QRCode from "react-qr-code";
 import centrimLogo from "@/assets/centrim-life-logo.png";
 import kioskBg from "@/assets/kiosk-bg.jpg";
+import { createKioskQrToken } from "@/lib/kioskQrToken";
+
 
 export default function KioskAttract() {
   const navigate = useNavigate();
