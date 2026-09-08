@@ -4,6 +4,7 @@ import { Separator } from "@/components/ui/separator";
 
 export type SettingsSection =
   | "visitor" | "contractor" | "resident" | "staff" | "volunteer"
+  | "person-types"
   | "presence" | "printing" | "keys" | "compliance" | "integration" | "audit" | "governance" | "feedback";
 
 
