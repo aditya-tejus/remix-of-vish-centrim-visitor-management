@@ -11,10 +11,20 @@ export interface EvacuationPoint {
   sort_order: number;
 }
 
+export type EmergencyState = "draft" | "active" | "paused" | "resolved" | "reviewed";
+
 export interface EvacuationDrill {
   id: string;
   title: string;
   status: string;
+  state: EmergencyState;
+  event_class: "drill" | "real";
+  branch_id: string | null;
+  area_id: string | null;
+  activated_by: string | null;
+  snapshot_at: string | null;
+  review_notes: string | null;
+  reviewed_at: string | null;
   started_at: string;
   ended_at: string | null;
   started_by: string;
@@ -25,6 +35,7 @@ export interface EvacuationDrill {
   event_type: string;
   created_at: string;
 }
+
 
 export interface EvacuationAttendance {
   id: string;
