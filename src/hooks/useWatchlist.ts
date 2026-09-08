@@ -42,10 +42,16 @@ function normaliseName(first: string, last: string) {
   return `${first} ${last}`.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-export function useWatchlist() {
+interface UseWatchlistOptions {
+  /** Kiosk / unauthenticated context: the register itself is never readable. */
+  publicMode?: boolean;
+}
+
+export function useWatchlist({ publicMode = false }: UseWatchlistOptions = {}) {
   const qc = useQueryClient();
 
   const query = useQuery({
+    enabled: !publicMode,
     queryKey: ["watchlist"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -129,5 +135,38 @@ export function useWatchlist() {
     return new Date(`${e.review_date}T23:59:59`).getTime() < Date.now();
   });
 
-  return { ...query, addEntry, updateEntry, removeEntry, checkVisitor, flagMatchedVisit, entriesDueReview };
+  /**
+   * Kiosk-safe check. The kiosk cannot read the watchlist register, so it asks the
+   * server for a decision only — never the reason, instructions or history.
+   */
+  const checkVisitorRemote = async (
+    firstName: string,
+    surname: string
+  ): Promise<WatchlistMatch | null> => {
+    if (!firstName?.trim() || !surname?.trim()) return null;
+    const { data, error } = await supabase.rpc("kiosk_watchlist_check" as any, {
+      p_first: firstName,
+      p_last: surname,
+    });
+    const row = (data as any[])?.[0];
+    if (error || !row?.is_match) return null;
+    const entry: WatchlistEntry = {
+      id: "kiosk-match",
+      first_name: firstName,
+      surname,
+      date_of_birth: null,
+      photo_url: null,
+      reason: "Please speak to a staff member before continuing.",
+      reason_category: null,
+      review_date: null,
+      instructions: null,
+      alert_type: (row.alert_type === "soft" ? "soft" : "hard"),
+      added_by: "",
+      is_active: true,
+      created_at: new Date().toISOString(),
+    };
+    return { entry, matchType: "near" };
+  };
+
+  return { ...query, addEntry, updateEntry, removeEntry, checkVisitor, checkVisitorRemote, flagMatchedVisit, entriesDueReview };
 }

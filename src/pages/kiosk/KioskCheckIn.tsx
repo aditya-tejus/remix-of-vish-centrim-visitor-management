@@ -286,7 +286,7 @@ export default function KioskCheckIn() {
       });
       return;
     }
-    const match = flow.checkVisitor(flow.formValues.firstName || "", flow.formValues.surname || "");
+    const match = await flow.checkVisitor(flow.formValues.firstName || "", flow.formValues.surname || "");
     if (match) {
       setWatchlistEntry(match.entry);
       setWatchlistMatchType(match.matchType);

@@ -13,11 +13,36 @@ export interface StaffMember {
   isActive: boolean;
 }
 
-export function useStaffMembers() {
+interface UseStaffMembersOptions {
+  /** Kiosk / unauthenticated context: name and department only. */
+  publicMode?: boolean;
+}
+
+export function useStaffMembers({ publicMode = false }: UseStaffMembersOptions = {}) {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchStaff = useCallback(async () => {
+    if (publicMode) {
+      const { data, error } = await supabase.rpc("kiosk_staff_directory" as any, { p_search: null });
+      if (!error && data) {
+        setStaff(
+          (data as any[]).map((s) => ({
+            id: s.id,
+            firstName: s.first_name,
+            surname: s.surname,
+            name: `${s.first_name} ${s.surname}`,
+            role: "",
+            department: s.department,
+            phone: null,
+            email: null,
+            isActive: true,
+          }))
+        );
+      }
+      setLoading(false);
+      return;
+    }
     const { data, error } = await supabase
       .from("staff_members")
       .select("*")
@@ -40,7 +65,7 @@ export function useStaffMembers() {
       );
     }
     setLoading(false);
-  }, []);
+  }, [publicMode]);
 
   useEffect(() => {
     fetchStaff();

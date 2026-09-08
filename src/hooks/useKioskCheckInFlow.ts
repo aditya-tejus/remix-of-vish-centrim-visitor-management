@@ -58,10 +58,10 @@ export function useKioskCheckInFlow() {
 
   // Residents & staff for "who are you visiting" picker
   const { residents } = useResidents({ publicMode: true });
-  const { staff } = useStaffMembers();
+  const { staff } = useStaffMembers({ publicMode: true });
 
   // Watchlist
-  const { checkVisitor } = useWatchlist();
+  const { checkVisitorRemote } = useWatchlist({ publicMode: true });
 
   // Load T&C content + jurisdiction
   useEffect(() => {
@@ -275,7 +275,7 @@ export function useKioskCheckInFlow() {
     vaccinationFields,
     residents,
     staff,
-    checkVisitor,
+    checkVisitor: checkVisitorRemote,
     detailsValid,
     hasYesFlags,
     bodyTemperature,
