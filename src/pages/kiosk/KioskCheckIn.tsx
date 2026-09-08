@@ -271,6 +271,7 @@ export default function KioskCheckIn() {
           .filter(Boolean) as string[],
         notes: flow.foodForm.notes.trim() || null,
         source: "check_in",
+        branchId: kioskSiteId,
         createdBy: "Kiosk",
       }).then(() => undefined);
     }

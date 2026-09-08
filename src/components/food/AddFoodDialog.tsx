@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useResidents } from "@/hooks/useResidents";
 import { FoodFormFields, FoodFormState, emptyFoodForm, isFoodFormValid } from "./FoodFormFields";
 import { insertFoodRecord } from "@/lib/foodRegister";
+import { useSite } from "@/contexts/SiteContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { UtensilsCrossed } from "lucide-react";
@@ -58,6 +59,7 @@ export function AddFoodDialog({ open, onOpenChange, onSaved }: AddFoodDialogProp
       notes: form.notes.trim() || null,
       recordedAt: new Date(recordedAt),
       source: "manual",
+      branchId: currentSiteId,
       createdBy: userData.user?.email || "Staff",
     });
     setSaving(false);
