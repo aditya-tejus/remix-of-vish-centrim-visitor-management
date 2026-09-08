@@ -15,31 +15,44 @@ const ROUTE_LABELS: Record<string, string> = {
   "/kiosk/qr-scan": "Scan QR Code",
   "/kiosk/evacuation": "Emergency Roll Call",
 };
-
-
 const ROUTE_LABELS: Record<string, string> = {
   "/kiosk/checkin": "Check In",
   "/kiosk/checkout": "Check Out",
   "/kiosk/resident-leave": "Resident Leave",
   "/kiosk/qr-scan": "Scan QR Code",
+  "/kiosk/evacuation": "Emergency Roll Call",
 };
 
 export default function KioskLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [helpOpen, setHelpOpen] = useState(false);
+  const [pinOpen, setPinOpen] = useState(false);
+  const holdTimer = useRef<number | null>(null);
 
   const isAttract = location.pathname === "/kiosk" || location.pathname === "/kiosk/";
   const isHome = location.pathname === "/kiosk/home";
+  const isEvacuation = location.pathname === "/kiosk/evacuation";
 
   const pageLabel = useMemo(() => ROUTE_LABELS[location.pathname] || "", [location.pathname]);
 
   const handleIdle = useCallback(() => {
+    // Never time out in the middle of a roll call.
     if (location.pathname === "/kiosk" || location.pathname === "/kiosk/") return;
+    if (location.pathname === "/kiosk/evacuation") return;
     navigate("/kiosk");
   }, [navigate, location.pathname]);
 
   const { showWarning, dismissWarning } = useIdleTimerWithWarning(handleIdle, 60000, 90000);
+
+  // Press and hold the small shield in the footer for staff access.
+  const startHold = useCallback(() => {
+    holdTimer.current = window.setTimeout(() => setPinOpen(true), 1200);
+  }, []);
+  const cancelHold = useCallback(() => {
+    if (holdTimer.current) { window.clearTimeout(holdTimer.current); holdTimer.current = null; }
+  }, []);
+
 
   if (isAttract) {
     return <Outlet />;
