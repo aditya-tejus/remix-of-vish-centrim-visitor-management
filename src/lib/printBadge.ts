@@ -22,7 +22,14 @@ export interface BadgeData {
   type: string; // visitor | contractor | staff | volunteer | resident
   visiting?: string;
   date?: Date;
+  /** Visitor's own mobile number. */
+  mobile?: string;
+  /** Room / villa (and wing) of the resident being visited. */
+  room?: string;
+  /** Value encoded in the badge QR code — the person's stable personal code. */
+  qrValue?: string;
 }
+
 
 export type BadgeMode = "standard" | "label";
 
