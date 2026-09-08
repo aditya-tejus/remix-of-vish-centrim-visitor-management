@@ -305,6 +305,7 @@ export default function KioskCheckIn() {
 
   const handleComplete = useCallback(() => navigate("/kiosk/home"), [navigate]);
   const handleStartOver = () => {
+    submittingRef.current = false;
     flow.reset();
     setStep("type");
     setSubmitted(false);
