@@ -38,7 +38,10 @@ interface AttendanceRecord {
   emergency_contact_phone: string | null;
   area_label: string | null;
   room_label: string | null;
+  responsible_staff: string | null;
+  associated_with: string | null;
 }
+
 
 export default function EvacuationReport() {
   const [drills, setDrills] = useState<DrillRecord[]>([]);
