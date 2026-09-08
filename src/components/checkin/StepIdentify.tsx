@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Check, Phone, QrCode, UserPlus } from "lucide-react";
 import { VisitorProfile } from "./useCheckInFlow";
 
-const typeChips: { type: VisitorType; label: string; emoji: string; desc: string }[] = [
+const allTypeChips: { type: VisitorType; label: string; emoji: string; desc: string }[] = [
   { type: "visitor", label: "Visitor", emoji: "👋", desc: "Family, friends, guests" },
   { type: "contractor", label: "Contractor", emoji: "🔧", desc: "Trades, maintenance" },
   { type: "volunteer", label: "Volunteer", emoji: "🤝", desc: "Activities, support" },
