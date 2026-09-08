@@ -27,7 +27,7 @@ Each person's line carries, at a glance:
 ## What changes on the report
 
 The saved drill record gains the same detail, snapshotted at the time so it stays truthful later:
-- Attendance table grouped **by stage, then villa**, with associated people, contact numbers, next of kin, assistance level and responsible staff.
+- Attendance table grouped **by stage, then villa**, with every occupant of a shared villa listed separately under it, plus associated people, contact numbers, next of kin, assistance level and responsible staff.
 - Stage-by-stage summary at the top: people, accounted for, time to account, warden.
 - CSV and the printable page carry the same columns, with village wording and the existing AU/UK compliance footer.
 - The printed sheet (for when the system is unreachable) lists villa, phone, next of kin and who each person is with.
