@@ -62,7 +62,10 @@ export interface RollCallSeed {
   emergencyContactPhone?: string;
   area?: string;
   room?: string;
+  responsibleStaff?: string;
+  associatedWith?: string;
 }
+
 
 export type AttendanceStatus = "safe" | "unaccounted" | "evacuated_offsite";
 
