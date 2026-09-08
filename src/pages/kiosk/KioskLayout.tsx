@@ -1,11 +1,21 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
-import { RotateCcw, HelpCircle } from "lucide-react";
+import { RotateCcw, HelpCircle, ShieldCheck } from "lucide-react";
 import centrimLogo from "@/assets/centrim-life-logo.png";
 import kioskBg from "@/assets/kiosk-bg.jpg";
 import { useIdleTimerWithWarning } from "@/hooks/useIdleTimer";
 import { KioskIdleWarning } from "@/components/kiosk/KioskIdleWarning";
+import { KioskPinPad } from "@/components/kiosk/KioskPinPad";
 import { useState } from "react";
+
+const ROUTE_LABELS: Record<string, string> = {
+  "/kiosk/checkin": "Check In",
+  "/kiosk/checkout": "Check Out",
+  "/kiosk/resident-leave": "Resident Leave",
+  "/kiosk/qr-scan": "Scan QR Code",
+  "/kiosk/evacuation": "Emergency Roll Call",
+};
+
 
 const ROUTE_LABELS: Record<string, string> = {
   "/kiosk/checkin": "Check In",
