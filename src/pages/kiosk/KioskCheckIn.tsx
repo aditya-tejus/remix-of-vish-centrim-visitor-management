@@ -284,7 +284,7 @@ export default function KioskCheckIn() {
     if (flow.keyBlocked) {
       toast({
         title: "Please see reception",
-        description: `Our records show ${flow.overdueKeys.map((k) => k.keyLabel).join(", ")} has not been returned yet.`,
+        description: "Our records show a key or fob has not been returned yet.",
         variant: "destructive",
       });
       return;
@@ -1083,7 +1083,7 @@ export default function KioskCheckIn() {
               )}
             </div>
 
-            {flow.overdueKeys.length > 0 && flow.keyEnforcement !== "off" && (
+            {flow.overdueKeyCount > 0 && flow.keyEnforcement !== "off" && (
               <div className={`rounded-2xl p-5 flex items-start gap-3 border-2 ${flow.keyBlocked ? "bg-destructive/10 border-destructive/30" : "bg-warning/10 border-warning/30"}`}>
                 <AlertTriangle className={`h-6 w-6 shrink-0 mt-0.5 ${flow.keyBlocked ? "text-destructive" : "text-warning"}`} />
                 <div>
@@ -1091,7 +1091,7 @@ export default function KioskCheckIn() {
                     {flow.keyBlocked ? "Please see reception" : "You still have a key or fob"}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {flow.overdueKeys.map((k) => k.keyLabel).join(", ")} has not been returned.
+                    {flow.overdueKeyCount === 1 ? "A key or fob has" : `${flow.overdueKeyCount} keys or fobs have`} not been returned.
                     {flow.keyBlocked
                       ? " Reception will help you complete your check-in."
                       : " Please hand it back at reception when you can."}

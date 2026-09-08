@@ -34,6 +34,20 @@ export function useKioskCheckInFlow() {
   const [returningOptions, setReturningOptions] = useState({ mobile: false, qr: false, name: false, suggestResident: false });
   const [personQr, setPersonQr] = useState<string | null>(null);
 
+  // The kiosk cannot read the keys register. It asks a narrow server check that
+  // answers with counts only, and only for a recognised person code.
+  useEffect(() => {
+    fetchKeyPolicy().then(setKeyPolicy);
+  }, []);
+  useEffect(() => {
+    let cancelled = false;
+    if (!personQr) { setOverdueKeyCount(0); return; }
+    (supabase.rpc as any)("kiosk_open_key_holds", { p_person_qr: personQr }).then(({ data }: any) => {
+      if (!cancelled) setOverdueKeyCount(Number(data?.[0]?.overdue_items ?? 0));
+    });
+    return () => { cancelled = true; };
+  }, [personQr]);
+
   const [contractorAnswers, setContractorAnswers] = useState<Record<string, any>>({});
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [returningVisitor, setReturningVisitor] = useState<any>(null);
