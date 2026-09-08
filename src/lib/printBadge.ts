@@ -93,7 +93,7 @@ function badgeMarkup(data: BadgeData, color: string, date: Date, qr?: string) {
 }
 
 
-function standardHtml(data: BadgeData, color: string, date: Date) {
+function standardHtml(data: BadgeData, color: string, date: Date, qr?: string) {
   return `<!DOCTYPE html><html><head><title>Badge — ${data.name}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -107,13 +107,17 @@ function standardHtml(data: BadgeData, color: string, date: Date) {
     .row { display:flex; justify-content:space-between; font-size:13px; padding:8px 0; border-top:1px solid #f1f5f9; }
     .label { color:#64748b; }
     .value { color:#0f172a; font-weight:600; text-align:right; }
+    .qr { text-align:center; padding-top:14px; }
+    .qr img { width:112px; height:112px; }
+    .qr-hint { font-size:10px; color:#94a3b8; margin-top:4px; }
     .foot { text-align:center; font-size:10px; color:#94a3b8; padding:10px 0 14px; letter-spacing:.08em; text-transform:uppercase; }
     @media print { body { background:#fff; } .badge { border:1px solid #cbd5e1; } }
   </style></head><body>
-    ${badgeMarkup(data, color, date)}
+    ${badgeMarkup(data, color, date, qr)}
     <script>window.onload = function(){ window.print(); }<\/script>
   </body></html>`;
 }
+
 
 function labelHtml(data: BadgeData, color: string, date: Date, size: string) {
   const dim = LABEL_DIMENSIONS[size] || LABEL_DIMENSIONS["62mm"];
