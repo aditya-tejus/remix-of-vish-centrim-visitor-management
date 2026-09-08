@@ -73,6 +73,10 @@ export default function Evacuation() {
   const [busy, setBusy] = useState(false);
   const [closing, setClosing] = useState(false);
   const [closeReason, setCloseReason] = useState("");
+  const [eventClass, setEventClass] = useState<"drill" | "real">("real");
+  const [reviewNotes, setReviewNotes] = useState("");
+  const [correcting, setCorrecting] = useState<RollCallPerson | null>(null);
+  const [correctionReason, setCorrectionReason] = useState("");
 
   const { data: activeDrills = [] } = useEvacuationDrills("active");
   const activeDrill = activeDrills[0];
