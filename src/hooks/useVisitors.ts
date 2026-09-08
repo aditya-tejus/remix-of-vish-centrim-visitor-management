@@ -365,7 +365,15 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       }
 
     }
-    await supabase.from("visitors").update(updateData).eq("id", id);
+    if (publicMode) {
+      await supabase.rpc("kiosk_resident_return" as any, {
+        p_visitor_id: id,
+        p_time: checkInTime.toISOString(),
+      });
+    } else {
+      await supabase.from("visitors").update(updateData).eq("id", id);
+    }
+
 
     // Record the safe-return confirmation for the audit trail when configured.
     if (!publicMode) {
