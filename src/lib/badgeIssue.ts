@@ -89,10 +89,6 @@ export async function issueBadge(data: BadgeData, opts: IssueBadgeOptions = {}) 
     siteId: opts.siteId,
     name: data.name,
     personType: data.type,
-    visitorId: opts.visitorId,
-    siteId: opts.siteId,
-    name: data.name,
-    personType: data.type,
   });
 }
 
