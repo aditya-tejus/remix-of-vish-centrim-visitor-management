@@ -353,7 +353,7 @@ export default function Evacuation() {
         <td>${p.phone || "—"}</td>
         <td>${p.emergencyContactName ? `${p.emergencyContactName}<br>${p.emergencyContactPhone || ""}` : "—"}</td>
         <td>${p.associatedWith.length ? p.associatedWith.join("<br>") : "—"}</td>
-        <td>${s === "unaccounted" ? "Not accounted for" : s === "safe" ? "Safe" : "Evacuated off-site"}</td>
+        <td>${ATTENDANCE_LABELS[s]}</td>
       </tr>`;
       }).join("")}
     `;
