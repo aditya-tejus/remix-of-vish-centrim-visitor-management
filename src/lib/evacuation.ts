@@ -114,6 +114,8 @@ function typeLabelOf(type: string) {
 interface BuildArgs {
   visitors: Visitor[];
   residents: Resident[];
+  /** "Room" in a care home, "Villa" in a retirement village. */
+  roomLabel?: string;
 }
 
 export interface RollCall {
@@ -121,27 +123,61 @@ export interface RollCall {
   offSite: RollCallPerson[];
 }
 
-export function buildRollCall({ visitors, residents }: BuildArgs): RollCall {
+/** "Room 14" / "14" -> bare "14" so a couple in one property groups together. */
+export function unitOf(room: string) {
+  return (room || "").replace(/^(room|villa|unit|apartment|apt)\s*/i, "").trim();
+}
+
+function roomDisplay(room: string, label: string) {
+  const unit = unitOf(room);
+  return unit ? `${label} ${unit}` : "";
+}
+
+export function buildRollCall({ visitors, residents, roomLabel = "Room" }: BuildArgs): RollCall {
   const residentMap = new Map(residents.map((r) => [r.visitorId, r]));
+  const residentByName = new Map(
+    residents.map((r) => [r.name.toLowerCase().trim(), r])
+  );
   const onSite: RollCallPerson[] = [];
   const offSite: RollCallPerson[] = [];
 
   const residentNameById = (id: string) => residentMap.get(id)?.name || "";
 
+  /** The resident whose property a non-resident is standing in. */
+  const hostResidentOf = (v: Visitor): Resident | undefined => {
+    const first = (v.visitedResidentIds || []).find((id) => residentMap.has(id));
+    if (first) return residentMap.get(first);
+    const named = (v.whomToVisit || "").toLowerCase().trim();
+    return named ? residentByName.get(named) : undefined;
+  };
+
+  /** Everyone currently in a resident's property, other than the resident. */
+  const companionsWith = new Map<string, string[]>();
+
   visitors.forEach((v) => {
     const resident = v.type === "resident" ? residentMap.get(v.id) : undefined;
     const hostNames = (v.visitedResidentIds || []).map(residentNameById).filter(Boolean);
     const host = hostNames.join(", ") || v.whomToVisit || "";
+    const hostResident = resident ? undefined : hostResidentOf(v);
+    const locationSource = resident || hostResident;
+    const selfName = `${v.firstName} ${v.surname}`.trim();
+
+    if (hostResident && v.status === "checked-in") {
+      const list = companionsWith.get(hostResident.visitorId) || [];
+      list.push(selfName);
+      companionsWith.set(hostResident.visitorId, list);
+    }
 
     const base: RollCallPerson = {
       key: `${v.id}:self`,
       visitorId: v.id,
       companionIndex: null,
-      name: `${v.firstName} ${v.surname}`.trim(),
+      name: selfName,
       type: v.type,
       typeLabel: typeLabelOf(v.type),
-      area: resident ? resident.wing || UNASSIGNED_AREA : "",
-      room: resident?.room || "",
+      area: locationSource ? locationSource.wing || UNASSIGNED_AREA : "",
+      room: roomDisplay(locationSource?.room || "", roomLabel),
+      unit: unitOf(locationSource?.room || ""),
       phone: v.mobile || "",
       emergencyContactName: resident?.emergencyContactName || "",
       emergencyContactPhone: resident?.emergencyContactPhone || "",
@@ -152,10 +188,20 @@ export function buildRollCall({ visitors, residents }: BuildArgs): RollCall {
       offSite: false,
       expectedReturn: v.expectedReturnDate ? new Date(v.expectedReturnDate) : null,
       accompaniedBy: v.accompaniedByName || v.accompaniedBy || "",
+      associatedWith: hostResident
+        ? [`Visiting ${hostResident.name}${hostResident.room ? ` (${roomDisplay(hostResident.room, roomLabel)})` : ""}`]
+        : host
+          ? [`Visiting ${host}`]
+          : [],
+      responsibleStaff: locationSource?.keyWorker || "",
     };
 
     if (v.type === "resident" && v.status !== "checked-in") {
-      offSite.push({ ...base, offSite: true });
+      offSite.push({
+        ...base,
+        offSite: true,
+        associatedWith: base.accompaniedBy ? [`Out with ${base.accompaniedBy}`] : [],
+      });
       return;
     }
     if (v.status !== "checked-in") return;
@@ -164,45 +210,51 @@ export function buildRollCall({ visitors, residents }: BuildArgs): RollCall {
 
     // Companions are people too — each gets their own line.
     const companions = v.companionDetails || [];
+    const companionLine = (i: number, name: string, phone: string): RollCallPerson => ({
+      ...base,
+      key: `${v.id}:${i}`,
+      companionIndex: i,
+      name,
+      type: "companion",
+      typeLabel: "Companion",
+      phone,
+      emergencyContactName: base.name,
+      emergencyContactPhone: v.mobile || "",
+      assistance: assistanceFor(undefined),
+      accompaniedBy: base.name,
+      associatedWith: [`With ${base.name}`, ...base.associatedWith],
+    });
+
     if (companions.length > 0) {
       companions.forEach((c, i) => {
         if (c.checkedOutAt) return;
-        onSite.push({
-          ...base,
-          key: `${v.id}:${i}`,
-          companionIndex: i,
-          name: c.name?.trim() || `Companion ${i + 1} of ${base.name}`,
-          type: "companion",
-          typeLabel: "Companion",
-          phone: c.phone || "",
-          emergencyContactName: base.name,
-          emergencyContactPhone: v.mobile || "",
-          assistance: assistanceFor(undefined),
-          accompaniedBy: base.name,
-        });
+        const name = c.name?.trim() || `Companion ${i + 1} of ${base.name}`;
+        onSite.push(companionLine(i, name, c.phone || ""));
+        if (hostResident) {
+          const list = companionsWith.get(hostResident.visitorId) || [];
+          list.push(name);
+          companionsWith.set(hostResident.visitorId, list);
+        }
       });
     } else if ((v.additionalVisitors || 0) > 0) {
       // No names captured (kiosk) — still list them so the count is honest.
       for (let i = 0; i < (v.additionalVisitors || 0); i++) {
-        onSite.push({
-          ...base,
-          key: `${v.id}:${i}`,
-          companionIndex: i,
-          name: `Companion ${i + 1} of ${base.name}`,
-          type: "companion",
-          typeLabel: "Companion",
-          phone: "",
-          emergencyContactName: base.name,
-          emergencyContactPhone: v.mobile || "",
-          assistance: assistanceFor(undefined),
-          accompaniedBy: base.name,
-        });
+        onSite.push(companionLine(i, `Companion ${i + 1} of ${base.name}`, ""));
       }
     }
   });
 
-  return { onSite, offSite };
+  // Residents learn who is with them right now.
+  const withResident = (p: RollCallPerson) => {
+    if (p.type !== "resident") return p;
+    const guests = companionsWith.get(p.visitorId) || [];
+    if (guests.length === 0) return p;
+    return { ...p, associatedWith: [`With ${guests.join(", ")}`] };
+  };
+
+  return { onSite: onSite.map(withResident), offSite };
 }
+
 
 /** Matches an attendance row back to a person on the roll call. */
 export function attendanceKey(row: {
