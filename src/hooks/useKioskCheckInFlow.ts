@@ -37,6 +37,8 @@ export function useKioskCheckInFlow() {
   const [hasCompanions, setHasCompanions] = useState<boolean | null>(null);
   const [outbreakMode, setOutbreakMode] = useState(false);
   const [badgePrintingEnabled, setBadgePrintingEnabled] = useState(false);
+  const [foodStepEnabled, setFoodStepEnabled] = useState(true);
+
   const [bringingFood, setBringingFood] = useState<boolean | null>(null);
   const [foodForm, setFoodForm] = useState<FoodFormState>(emptyFoodForm);
   const [visitedResidentId, setVisitedResidentId] = useState<string | null>(null);
@@ -66,7 +68,7 @@ export function useKioskCheckInFlow() {
     supabase
       .from("settings")
       .select("key, value")
-      .in("key", [`tc_content_${selectedType}`, "jurisdiction", "kiosk_resident_lookup_mode", `kiosk_resident_lookup_mode_${selectedType}`, "kiosk_staff_lookup_mode", `kiosk_staff_lookup_mode_${selectedType}`, "outbreak_mode", "badge_printing_enabled", `kiosk_returning_mobile_${selectedType}`, `kiosk_returning_qr_${selectedType}`, `kiosk_returning_name_${selectedType}`, `kiosk_suggest_last_resident_${selectedType}`])
+      .in("key", [`tc_content_${selectedType}`, "jurisdiction", "kiosk_resident_lookup_mode", `kiosk_resident_lookup_mode_${selectedType}`, "kiosk_staff_lookup_mode", `kiosk_staff_lookup_mode_${selectedType}`, "outbreak_mode", "badge_printing_enabled", `food_register_checkin_${selectedType}`, `kiosk_returning_mobile_${selectedType}`, `kiosk_returning_qr_${selectedType}`, `kiosk_returning_name_${selectedType}`, `kiosk_suggest_last_resident_${selectedType}`])
       .then(({ data }) => {
         const tc = data?.find((d) => d.key === `tc_content_${selectedType}`);
         const jur = data?.find((d) => d.key === "jurisdiction");
@@ -82,6 +84,7 @@ export function useKioskCheckInFlow() {
         if (jur?.value === "AU" || jur?.value === "UK") setJurisdiction(jur.value);
         setOutbreakMode(data?.find((d) => d.key === "outbreak_mode")?.value === "true");
         setBadgePrintingEnabled(data?.find((d) => d.key === "badge_printing_enabled")?.value === "true");
+        setFoodStepEnabled(data?.find((d) => d.key === `food_register_checkin_${selectedType}`)?.value !== "false");
         if (rlmValue === "show_all" || rlmValue === "search_first") setResidentLookupMode(rlmValue);
         if (slmValue === "search_first" || slmValue === "by_department" || slmValue === "free_text") setStaffLookupMode(slmValue);
         const isOn = (key: string) => data?.find((d) => d.key === key)?.value === "true";
@@ -152,7 +155,7 @@ export function useKioskCheckInFlow() {
       pipeline.push({ id: "visiting", label: "Visiting" });
     }
     // Food register — visitors/volunteers visiting a resident
-    if ((selectedType === "visitor" || selectedType === "volunteer") && visitedResidentId) {
+    if (foodStepEnabled && (selectedType === "visitor" || selectedType === "volunteer") && visitedResidentId) {
       pipeline.push({ id: "food", label: "Food" });
     }
     // Companions step (always after visiting/contractor)
@@ -171,7 +174,7 @@ export function useKioskCheckInFlow() {
     }
     pipeline.push({ id: "confirm", label: "Review" });
     return pipeline;
-  }, [selectedType, healthQuestions.length, tcContent, visitedResidentId]);
+  }, [selectedType, healthQuestions.length, tcContent, visitedResidentId, foodStepEnabled]);
 
   const updateField = (key: string, value: string) => {
     setFormValues((prev) => ({ ...prev, [key]: value }));

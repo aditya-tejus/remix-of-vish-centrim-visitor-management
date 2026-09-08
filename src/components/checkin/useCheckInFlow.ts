@@ -71,6 +71,8 @@ export function useCheckInFlow(open: boolean) {
   // Food register (visitors/volunteers visiting a resident)
   const [bringingFood, setBringingFood] = useState<boolean | null>(null);
   const [foodForm, setFoodForm] = useState<FoodFormState>(emptyFoodForm);
+  const [foodStepEnabled, setFoodStepEnabled] = useState(true);
+
 
   // Dynamic settings-driven fields
   const { data: dbQuestions = [] } = useActiveHealthQuestions(selectedType as any);
@@ -94,9 +96,11 @@ export function useCheckInFlow(open: boolean) {
     [residentItems, formData.selectPerson]
   );
   const foodStepApplies =
+    foodStepEnabled &&
     (selectedType === "visitor" || selectedType === "volunteer") &&
     formData.whomToVisit === "Resident" &&
     !!selectedResident;
+
 
   // Assemble step pipeline dynamically
   const steps = useMemo<StepId[]>(() => {
@@ -131,7 +135,9 @@ export function useCheckInFlow(open: boolean) {
         "branch_tc_url", "branch_privacy_url", "show_branch_docs_in_form", "jurisdiction",
         "badge_printing_enabled",
         `tc_content_${selectedType}`,
+        `food_register_checkin_${selectedType}`,
       ])
+
       .then(({ data }) => {
         if (data) {
           const map: Record<string, string> = {};
@@ -142,6 +148,8 @@ export function useCheckInFlow(open: boolean) {
           setTcContent(map[`tc_content_${selectedType}`] || null);
           if (map.jurisdiction === "UK" || map.jurisdiction === "AU") setJurisdiction(map.jurisdiction);
           setBadgePrintingEnabled(map.badge_printing_enabled === "true");
+          setFoodStepEnabled(map[`food_register_checkin_${selectedType}`] !== "false");
+
         }
       });
   }, [selectedType]);

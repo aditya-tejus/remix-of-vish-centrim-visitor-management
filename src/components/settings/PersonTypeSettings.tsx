@@ -1,7 +1,7 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Users, HardHat, Home, UserCog, Heart, ClipboardList, Users2, Stethoscope, Syringe, Camera, ScrollText, Bell, Zap, DoorOpen, CalendarClock, Search, Building2, ShieldCheck, UserSearch, RotateCcw } from "lucide-react";
+import { Users, HardHat, Home, UserCog, Heart, ClipboardList, Users2, Stethoscope, Syringe, Camera, ScrollText, Bell, Zap, DoorOpen, CalendarClock, Search, Building2, ShieldCheck, UserSearch, RotateCcw, UtensilsCrossed } from "lucide-react";
 import { FormFieldsManager } from "@/components/settings/FormFieldsManager";
 import { CompanionFieldsManager } from "@/components/settings/CompanionFieldsManager";
 import { HealthQuestionsManager } from "@/components/settings/HealthQuestionsManager";
@@ -15,6 +15,8 @@ import { ResidentLeaveSettingsTab } from "@/components/settings/ResidentLeaveSet
 import { ContractorEnforcementTab } from "@/components/settings/ContractorEnforcementTab";
 import { ContractorQuestionsTab } from "@/components/settings/ContractorQuestionsTab";
 import { ResidentPrivacyTab } from "@/components/settings/ResidentPrivacyTab";
+import { FoodRegisterSettingsTab } from "@/components/settings/FoodRegisterSettingsTab";
+
 import { StaffPrivacyTab } from "@/components/settings/StaffPrivacyTab";
 import { ReturningVisitorTab } from "@/components/settings/ReturningVisitorTab";
 
@@ -89,8 +91,10 @@ function getSections(type: string): SectionConfig[] {
   if (["visitor", "volunteer"].includes(type)) {
     sections.push(
       { id: "companions", label: "Companion Fields", icon: Users2, component: <CompanionFieldsManager visitorType={vt} /> },
+      { id: "food-register", label: "Food Register", icon: UtensilsCrossed, component: <FoodRegisterSettingsTab personType={type} /> },
     );
   }
+
 
   if (["visitor", "contractor", "volunteer"].includes(type)) {
     sections.push(
