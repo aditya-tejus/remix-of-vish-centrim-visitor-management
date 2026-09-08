@@ -46,7 +46,7 @@ export default function SettingsPage() {
           <main className="p-4 sm:p-6">
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Settings Navigation */}
-              <div className="lg:sticky lg:top-20 self-start w-full lg:w-auto">>
+              <div className="lg:sticky lg:top-20 self-start w-full lg:w-auto">
                 <SettingsNav active={active} onChange={setActive} />
               </div>
 
