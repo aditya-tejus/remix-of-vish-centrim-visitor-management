@@ -48,6 +48,19 @@ const CLASS_LABELS: Record<string, string> = {
 
 const AUTOMATED = ["visit", "food_register"];
 
+/** What actually happens today for each record class. No legal periods are supplied. */
+const HANDLING: Record<string, { label: string; tone: string }> = {
+  visit: { label: "Automated clean-up available", tone: "bg-success/10 text-success border-success/30" },
+  food_register: { label: "Automated clean-up available", tone: "bg-success/10 text-success border-success/30" },
+  person_identity: { label: "Manual process only", tone: "bg-warning/10 text-warning border-warning/30" },
+  screening_answers: { label: "Manual process only", tone: "bg-warning/10 text-warning border-warning/30" },
+  contractor_credentials: { label: "Manual process only", tone: "bg-warning/10 text-warning border-warning/30" },
+  emergency_event: { label: "Not supported yet — kept as a safety record", tone: "bg-muted text-muted-foreground border-border" },
+  badge_qr: { label: "Manual process only", tone: "bg-warning/10 text-warning border-warning/30" },
+  key_history: { label: "Manual process only", tone: "bg-warning/10 text-warning border-warning/30" },
+  audit_log: { label: "Not supported yet — audit records are never auto-removed", tone: "bg-muted text-muted-foreground border-border" },
+};
+
 const emptyNotice: Notice = {
   controller_name: "", controller_contact: "", privacy_contact: "",
   notice_url: "", notice_text: "", notice_version: "v1", jurisdiction: "", data_categories: "",
@@ -208,7 +221,10 @@ export function PrivacyRetentionCard() {
         <CardHeader>
           <CardTitle className="text-base">How long records are kept</CardTitle>
           <CardDescription>
-            Nothing is deleted until you set a period and switch it on. Records on legal hold are always skipped, and every run is logged.
+            These rules apply to <span className="font-medium text-foreground">all sites</span> unless a site sets its own.
+            Nothing is removed until you set a period and switch it on, and only the classes marked
+            "Automated clean-up available" can be actioned here — the rest are a manual process you carry out yourself.
+            Records on legal hold or safeguarding hold are always skipped, and every run is recorded in the audit trail.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -217,9 +233,10 @@ export function PrivacyRetentionCard() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium text-foreground">{CLASS_LABELS[p.record_class] || p.record_class}</p>
-                  {!AUTOMATED.includes(p.record_class) && (
-                    <Badge variant="outline" className="text-[10px]">Manual review only</Badge>
-                  )}
+                  <Badge variant="outline" className={`text-[10px] ${HANDLING[p.record_class]?.tone || ""}`}>
+                    {HANDLING[p.record_class]?.label || "Manual process only"}
+                  </Badge>
+                  <Badge variant="outline" className="text-[10px]">All sites</Badge>
                 </div>
                 <Switch disabled={!editable} checked={p.is_enabled} onCheckedChange={(v) => update(p.id, { is_enabled: v })} />
               </div>

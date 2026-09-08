@@ -59,3 +59,35 @@ Baseline recorded in the approved plan document.
 - Privacy notice details and per-record-class retention are configurable in Settings > Privacy and retention. No legal periods are supplied; nothing is deleted until switched on; legal holds are always skipped. Automated handlers exist for visits and the food register only.
 - Notification settings now state plainly that no email/SMS is sent; alerts are in-app and audited only.
 - Known: 47 database linter warnings remain — 18 intentionally anonymous kiosk RPCs, 28 staff RPCs that enforce permissions internally, and 1 extension in `public`. These need a documented review before go-live.
+
+## Stage 5 hardening review (done — not production-ready)
+- Default `PUBLIC` execute revoked on every database function; each function granted only
+  to the roles that need it. Unused `kiosk_prefill_visitor` (name -> contact details) removed
+  from the app surface.
+- Linter: 43 warnings — 1 extension in public, 15 anon-callable kiosk functions,
+  27 signed-in-callable functions. All classified and justified in `docs/SECURITY_REVIEW.md`.
+- Kiosk now blocked from reading settings whose key mentions email, recipient, phone,
+  contact or pin. Anonymous reads of visitors, residents, contractor credentials and all
+  emergency tables verified as denied (401).
+- Retention: `effective_retention_policy()` resolves site rule -> all-sites default and reports
+  the scope; `run_retention(record_class, branch_id)` is site-scoped, permission gated,
+  site-access checked, skips legal and safeguarding holds, and is audited.
+  Automated handlers: visits and food register only. Every other class is labelled
+  "Manual process only" or "Not supported yet" in Settings. No legal periods are supplied.
+  Legacy GDPR-page retention wording corrected — nothing is deleted on a schedule.
+- Emergency snapshots: a resolved or reviewed event rejects any new or changed roll call row,
+  so a closed event keeps its point-in-time record. Verified end to end with temporary records
+  (activation snapshot of 2, all outcome types, correction with reason, 7 audit actions,
+  closed-event insert and update both rejected, event resolved then reviewed). All temporary
+  records were deleted afterwards (verified 0 remaining).
+- Kiosk emergency model documented: shared bcrypt PIN, read/mark only, minimum fields,
+  5 failures in 15 minutes locks out, every attempt logged. Printed roll call is a fallback
+  only and is not synchronised.
+
+### Still open after this pass
+- [ ] No independent security or privacy review.
+- [ ] Returning-visitor lookup by exact name alone still returns that person's contact details.
+- [ ] Real retention periods, data controller and privacy contact details are unset.
+- [ ] No email or SMS delivery; notifications are in-app and audited only.
+- [ ] Kiosk devices are not bound to a site by a device credential.
+- [ ] Real Centrim Life integration APIs are unknown; adapters remain local prototype only.
