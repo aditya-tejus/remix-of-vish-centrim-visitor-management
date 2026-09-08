@@ -1102,6 +1102,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          pin_algo: string
           pin_hash: string
           updated_at: string
           updated_by: string | null
@@ -1109,6 +1110,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          pin_algo?: string
           pin_hash: string
           updated_at?: string
           updated_by?: string | null
@@ -1116,6 +1118,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          pin_algo?: string
           pin_hash?: string
           updated_at?: string
           updated_by?: string | null
@@ -2549,6 +2552,26 @@ export type Database = {
         }
         Returns: boolean
       }
+      kiosk_check_out: {
+        Args: { p_time?: string; p_visitor_id: string }
+        Returns: boolean
+      }
+      kiosk_contractor_lookup: {
+        Args: {
+          p_first?: string
+          p_last?: string
+          p_mobile?: string
+          p_qr?: string
+        }
+        Returns: {
+          first_name: string
+          outstanding_credentials: string[]
+          person_id: string
+          supplier_id: string
+          supplier_name: string
+          surname: string
+        }[]
+      }
       kiosk_pin_is_set: { Args: never; Returns: boolean }
       kiosk_prefill_visitor: {
         Args: { p_first: string; p_last: string }
@@ -2558,6 +2581,51 @@ export type Database = {
           mobile: string
           whom_to_visit: string
         }[]
+      }
+      kiosk_presence_list: {
+        Args: never
+        Returns: {
+          accompanied_by_name: string
+          additional_visitors: number
+          check_in_time: string
+          check_out_time: string
+          expected_return_date: string
+          first_name: string
+          group_id: string
+          id: string
+          leave_type: string
+          qr_code: string
+          status: string
+          surname: string
+          type: string
+          whom_to_visit: string
+        }[]
+      }
+      kiosk_resident_directory: {
+        Args: { p_search?: string }
+        Returns: {
+          area_name: string
+          first_name: string
+          room: string
+          status: string
+          surname: string
+          visitor_id: string
+        }[]
+      }
+      kiosk_resident_leave: {
+        Args: {
+          p_accompanied_by_name?: string
+          p_expected_return?: string
+          p_leave_type?: string
+          p_reason?: string
+          p_time?: string
+          p_visitor_id: string
+        }
+        Returns: boolean
+      }
+      kiosk_resident_return: {
+        Args: { p_time?: string; p_visitor_id: string }
+        Returns: boolean
       }
       kiosk_returning_lookup: {
         Args: {
@@ -2576,6 +2644,29 @@ export type Database = {
           surname: string
           visited_resident_ids: string[]
           whom_to_visit: string
+        }[]
+      }
+      kiosk_staff_directory: {
+        Args: { p_search?: string }
+        Returns: {
+          department: string
+          first_name: string
+          id: string
+          surname: string
+        }[]
+      }
+      kiosk_supplier_directory: {
+        Args: never
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
+      kiosk_watchlist_check: {
+        Args: { p_first: string; p_last: string }
+        Returns: {
+          alert_type: string
+          is_match: boolean
         }[]
       }
       resolve_setting: {
