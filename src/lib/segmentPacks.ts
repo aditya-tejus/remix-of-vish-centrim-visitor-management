@@ -116,7 +116,7 @@ export const SEGMENT_PACKS: Record<SegmentPackId, SegmentPack> = {
     },
     modules: {
       residentLeave: true,
-      keysRegister: false,
+      keysRegister: true,
       foodRegister: true,
       propertyFields: false,
       household: false,
@@ -190,7 +190,7 @@ export const SEGMENT_PACKS: Record<SegmentPackId, SegmentPack> = {
     },
     modules: {
       residentLeave: true,
-      keysRegister: false,
+      keysRegister: true,
       foodRegister: true,
       propertyFields: false,
       household: false,
