@@ -78,7 +78,8 @@ export default function Evacuation() {
   const activeDrill = activeDrills[0];
   const { data: attendance = [] } = useEvacuationAttendance(activeDrill?.id);
   const { data: points = [] } = useEvacuationPoints();
-  const { startDrill, markSafe, markUnsafe, endDrill, addAttendee } = useEvacuationMutations();
+  const { startDrill, markSafe, markUnsafe, endDrill, addAttendee, setEmergencyState } = useEvacuationMutations();
+  const { can } = usePermissions();
 
   const markedBy = user?.email || "Staff";
 
