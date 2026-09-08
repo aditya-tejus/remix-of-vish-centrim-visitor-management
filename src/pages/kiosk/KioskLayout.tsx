@@ -15,13 +15,6 @@ const ROUTE_LABELS: Record<string, string> = {
   "/kiosk/qr-scan": "Scan QR Code",
   "/kiosk/evacuation": "Emergency Roll Call",
 };
-const ROUTE_LABELS: Record<string, string> = {
-  "/kiosk/checkin": "Check In",
-  "/kiosk/checkout": "Check Out",
-  "/kiosk/resident-leave": "Resident Leave",
-  "/kiosk/qr-scan": "Scan QR Code",
-  "/kiosk/evacuation": "Emergency Roll Call",
-};
 
 export default function KioskLayout() {
   const navigate = useNavigate();
