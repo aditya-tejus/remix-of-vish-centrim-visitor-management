@@ -104,7 +104,10 @@ export function AppSidebar() {
   const isGroupActive = (group: NavGroup) =>
     group.items.some((item) => location.pathname === item.path);
 
-  const workbenchActive = location.pathname === "/";
+  const primaryItems = [
+    { title: "Visit list", path: "/", icon: ListChecks, match: ["/", "/visit-list"], badge: activeVisitorCount || null },
+    { title: "Today", path: "/today", icon: Home, match: ["/today"], badge: null as number | null },
+  ];
 
   return (
     <Sidebar className="border-r-0">
@@ -120,24 +123,35 @@ export function AppSidebar() {
       <div className="mx-4 h-px bg-sidebar-border" />
 
       <SidebarContent className="px-2 pt-3">
-        {/* Primary surface */}
-        <SidebarMenu className="px-1 pb-2">
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => navigate("/")}
-              isActive={workbenchActive}
-              tooltip="Today"
-              className={`h-10 gap-2.5 rounded-lg px-3 text-[13px] font-semibold ${
-                workbenchActive
-                  ? "bg-sidebar-accent text-sidebar-foreground"
-                  : "text-sidebar-muted hover:bg-[rgba(255,255,255,0.05)] hover:text-sidebar-foreground"
-              }`}
-            >
-              <Home className="h-4 w-4 shrink-0" />
-              <span>Today</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+        {/* Primary surfaces */}
+        <SidebarMenu className="space-y-0.5 px-1 pb-2">
+          {primaryItems.map((item) => {
+            const active = item.match.includes(location.pathname);
+            return (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton
+                  onClick={() => navigate(item.path)}
+                  isActive={active}
+                  tooltip={item.title}
+                  className={`h-10 gap-2.5 rounded-lg px-3 text-[13px] font-semibold ${
+                    active
+                      ? "bg-sidebar-accent text-sidebar-foreground"
+                      : "text-sidebar-muted hover:bg-[rgba(255,255,255,0.05)] hover:text-sidebar-foreground"
+                  }`}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span className="flex-1 text-left">{item.title}</span>
+                  {item.badge != null && item.badge > 0 && (
+                    <span className={`${badgeClasses.blue} flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold`}>
+                      {item.badge}
+                    </span>
+                  )}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
         </SidebarMenu>
+
 
         {navGroups.map((group) => (
           <Collapsible key={group.label} defaultOpen={isGroupActive(group) || group.label === "Visitor operations"}>
