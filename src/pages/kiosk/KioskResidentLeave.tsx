@@ -252,7 +252,12 @@ export default function KioskResidentLeave() {
           {filteredAway.length === 0 ? (
             <div className="text-center py-12 space-y-3">
               <Home className="h-12 w-12 text-muted-foreground/40 mx-auto" />
-              <p className="text-muted-foreground text-lg">No residents currently away</p>
+              <p className="text-muted-foreground text-lg">
+                {searchFirst && returnSearch.trim().length < 3
+                  ? "Type at least 3 letters of the name"
+                  : "No residents currently away"}
+              </p>
+
             </div>
           ) : (
             filteredAway.map((v) => (
