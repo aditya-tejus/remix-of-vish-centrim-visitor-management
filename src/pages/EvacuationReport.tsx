@@ -272,29 +272,51 @@ export default function EvacuationReport() {
                         {rows.length === 0 ? (
                           <p className="text-[13px] text-muted-foreground">No attendance records for this roll call.</p>
                         ) : (
-                          <div className="space-y-1.5">
-                            {rows.map((r) => (
-                              <div key={r.id} className={`rounded-lg border px-3 py-2 ${r.status === "unaccounted" ? "border-destructive/30 bg-destructive/5" : "border-border"}`}>
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                                  <span className="text-[13px] font-medium text-foreground">{r.person_name}</span>
-                                  <Badge variant="outline" className="text-[10px] capitalize">{r.person_type}</Badge>
-                                  {r.room_label && <span className="text-[12px] text-muted-foreground">{r.room_label}</span>}
-                                  {r.area_label && <span className="text-[12px] text-primary">{r.area_label}</span>}
-                                  {r.assistance_level && <span className="text-[12px] text-muted-foreground">{r.assistance_level}</span>}
-                                  {r.contact_phone && <span className="text-[12px] text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" />{r.contact_phone}</span>}
-                                  {r.emergency_contact_phone && (
-                                    <span className="text-[12px] text-muted-foreground">{r.emergency_contact_name || "Emergency"}: {r.emergency_contact_phone}</span>
+                          <div className="space-y-4">
+                            {groupRows(rows).map((g) => (
+                              <div key={g.area} className="space-y-1.5">
+                                <div className="flex flex-wrap items-baseline gap-2">
+                                  <span className="text-[13px] font-semibold text-foreground">{g.area}</span>
+                                  <span className="text-[11px] text-muted-foreground">{g.accounted} of {g.total} accounted for</span>
+                                  {g.wardens.length > 0 && (
+                                    <span className="text-[11px] text-muted-foreground">· Responsible: {g.wardens.join(", ")}</span>
                                   )}
-                                  <span className={`ml-auto text-[12px] font-medium ${r.status === "unaccounted" ? "text-destructive" : "text-success"}`}>
-                                    {r.status === "evacuated_offsite" && <Ambulance className="inline h-3 w-3 mr-1" />}
-                                    {statusText(r.status)}
-                                    {r.marked_safe_at ? ` · ${format(new Date(r.marked_safe_at), "HH:mm")}` : ""}
-                                    {r.marked_by ? ` · ${r.marked_by}` : ""}
-                                  </span>
                                 </div>
+                                {g.units.map((u) => (
+                                  <div key={u.unit || "none"} className="space-y-1.5">
+                                    {isVillageView && u.unit && (
+                                      <div className="px-1 text-[11px] font-medium text-muted-foreground">
+                                        {u.unit} — {u.people.length} {u.people.length === 1 ? "person" : "people"}
+                                      </div>
+                                    )}
+                                    {u.people.map((r) => (
+                                      <div key={r.id} className={`rounded-lg border px-3 py-2 ${r.status === "unaccounted" ? "border-destructive/30 bg-destructive/5" : "border-border"}`}>
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                                          <span className="text-[13px] font-medium text-foreground">{r.person_name}</span>
+                                          <Badge variant="outline" className="text-[10px] capitalize">{r.person_type}</Badge>
+                                          {r.room_label && <span className="text-[12px] text-muted-foreground">{r.room_label}</span>}
+                                          {r.assistance_level && <span className="text-[12px] text-muted-foreground">{r.assistance_level}</span>}
+                                          {r.contact_phone && <span className="text-[12px] text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" />{r.contact_phone}</span>}
+                                          {r.emergency_contact_phone && (
+                                            <span className="text-[12px] text-muted-foreground">{r.emergency_contact_name || "Emergency"}: {r.emergency_contact_phone}</span>
+                                          )}
+                                          {r.associated_with && <span className="text-[12px] text-muted-foreground">{r.associated_with}</span>}
+                                          {r.responsible_staff && <span className="text-[12px] text-muted-foreground">Warden: {r.responsible_staff}</span>}
+                                          <span className={`ml-auto text-[12px] font-medium ${r.status === "unaccounted" ? "text-destructive" : "text-success"}`}>
+                                            {r.status === "evacuated_offsite" && <Ambulance className="inline h-3 w-3 mr-1" />}
+                                            {statusText(r.status)}
+                                            {r.marked_safe_at ? ` · ${format(new Date(r.marked_safe_at), "HH:mm")}` : ""}
+                                            {r.marked_by ? ` · ${r.marked_by}` : ""}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ))}
                               </div>
                             ))}
                           </div>
+
                         )}
                       </div>
                     )}
