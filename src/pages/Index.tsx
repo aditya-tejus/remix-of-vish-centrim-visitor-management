@@ -28,7 +28,7 @@ const Index = () => {
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <SidebarInset className="flex-1">
+        <SidebarInset className="flex-1 min-w-0">
           <DashboardHeader onAddVisit={() => setAddDialogOpen(true)} onCheckOut={() => setCheckOutDialogOpen(true)} />
           <main className="p-6 space-y-6">
             <VisitorStats

@@ -71,7 +71,7 @@ export default function HomeWorkbench() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <SidebarInset className="flex-1">
+        <SidebarInset className="flex-1 min-w-0">
           <AppHeader
             title="Home"
             subtitle={format(currentTime, "EEEE, dd MMMM yyyy")}

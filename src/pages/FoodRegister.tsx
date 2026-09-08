@@ -78,7 +78,7 @@ export default function FoodRegisterPage() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <SidebarInset className="flex-1">
+        <SidebarInset className="flex-1 min-w-0">
           <AppHeader
             title="Food Register"
             subtitle="A record of food brought into the home for residents."

@@ -131,7 +131,7 @@ export default function VisitList() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <SidebarInset className="flex-1">
+        <SidebarInset className="flex-1 min-w-0">
           <AppHeader
             title="Visitor List"
             overstayedCount={overstayedCount}
