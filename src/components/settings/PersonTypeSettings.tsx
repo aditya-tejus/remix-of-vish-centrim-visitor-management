@@ -89,8 +89,10 @@ function getSections(type: string): SectionConfig[] {
   if (["visitor", "volunteer"].includes(type)) {
     sections.push(
       { id: "companions", label: "Companion Fields", icon: Users2, component: <CompanionFieldsManager visitorType={vt} /> },
+      { id: "food-register", label: "Food Register", icon: UtensilsCrossed, component: <FoodRegisterSettingsTab personType={type} /> },
     );
   }
+
 
   if (["visitor", "contractor", "volunteer"].includes(type)) {
     sections.push(

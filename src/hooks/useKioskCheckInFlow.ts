@@ -37,6 +37,8 @@ export function useKioskCheckInFlow() {
   const [hasCompanions, setHasCompanions] = useState<boolean | null>(null);
   const [outbreakMode, setOutbreakMode] = useState(false);
   const [badgePrintingEnabled, setBadgePrintingEnabled] = useState(false);
+  const [foodStepEnabled, setFoodStepEnabled] = useState(true);
+
   const [bringingFood, setBringingFood] = useState<boolean | null>(null);
   const [foodForm, setFoodForm] = useState<FoodFormState>(emptyFoodForm);
   const [visitedResidentId, setVisitedResidentId] = useState<string | null>(null);
