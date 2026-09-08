@@ -4,7 +4,13 @@ import { Visitor } from "@/types/visitor";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Clock, LogOut, X, ChevronRight, Ban, Bell, Home, ShieldAlert } from "lucide-react";
-import { formatDistanceToNow, format, isPast } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
+import {
+  useReturnNotificationPolicy,
+  isReturnOverdue,
+  isReturnEscalated,
+  recipientSummary,
+} from "@/hooks/useReturnNotificationPolicy";
 import { supabase } from "@/integrations/supabase/client";
 import { EscalateIncidentDialog } from "@/components/EscalateIncidentDialog";
 
