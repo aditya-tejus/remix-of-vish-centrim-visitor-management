@@ -573,23 +573,55 @@ export default function Evacuation() {
               groups.map((g) => {
                 const pending = g.people.filter((p) => statusOf(p) === "unaccounted").length;
                 const done = g.people.length - pending;
+                const wardens = [...new Set(g.people.map((p) => p.responsibleStaff).filter(Boolean))];
                 return (
                   <section key={g.label} className="space-y-2">
                     <div className="sticky top-[68px] z-10 flex items-center justify-between gap-3 rounded-lg border border-border bg-card/95 px-3 py-2 backdrop-blur-sm">
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-sm font-semibold text-foreground">{g.label}</h2>
-                        <span className={`text-xs font-medium ${pending === 0 ? "text-success" : "text-muted-foreground"}`}>
-                          {done} of {g.people.length} accounted for
-                        </span>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h2 className="text-sm font-semibold text-foreground">{g.label}</h2>
+                          <span className={`text-xs font-medium ${pending === 0 ? "text-success" : "text-muted-foreground"}`}>
+                            {done} of {g.people.length} accounted for
+                          </span>
+                        </div>
+                        {wardens.length > 0 && (
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">Responsible: {wardens.join(", ")}</p>
+                        )}
                       </div>
                       {pending > 0 && (
-                        <Button size="sm" disabled={busy} onClick={() => markGroupSafe(g)} className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-emerald-50">
+                        <Button size="sm" disabled={busy} onClick={() => markGroupSafe(g)} className="h-8 shrink-0 text-xs bg-emerald-600 hover:bg-emerald-700 text-emerald-50">
                           All {g.label.toLowerCase()} safe
                         </Button>
                       )}
                     </div>
-                    <div className="space-y-2">{g.people.map(renderPerson)}</div>
+                    {isVillageView && groupBy === "area" ? (
+                      <div className="space-y-3">
+                        {unitBlocks(g.people).map((b) => (
+                          <div key={b.unit || "none"} className="space-y-2">
+                            {b.unit && (
+                              <div className="flex flex-wrap items-center gap-2 px-1">
+                                <span className="text-[12px] font-semibold text-foreground">{roomLabel} {b.unit}</span>
+                                <span className="text-[11px] text-muted-foreground">
+                                  {b.people.length} {b.people.length === 1 ? "person" : "people"}
+                                </span>
+                                {b.people.every((p) => statusOf(p) !== "unaccounted") ? (
+                                  <span className="text-[11px] font-medium text-success">all accounted for</span>
+                                ) : (
+                                  <span className="text-[11px] font-medium text-destructive">
+                                    {b.people.filter((p) => statusOf(p) === "unaccounted").length} still to find
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            <div className="space-y-2">{b.people.map(renderPerson)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">{g.people.map(renderPerson)}</div>
+                    )}
                   </section>
+
                 );
               })
             )}
