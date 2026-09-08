@@ -176,7 +176,7 @@ export default function VisitList() {
               </div>
 
               {/* Centre: search */}
-              <div className="relative flex-1 max-w-md">
+              <div className="relative order-last sm:order-none w-full sm:w-auto sm:flex-1 min-w-0 sm:max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
                   placeholder="Search by name, phone, or visiting..."
