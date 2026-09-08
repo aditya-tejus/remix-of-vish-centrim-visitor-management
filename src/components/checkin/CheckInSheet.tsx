@@ -14,7 +14,7 @@ import { StepScreening } from "./StepScreening";
 import { StepConfirm } from "./StepConfirm";
 import { FoodFormFields } from "@/components/food/FoodFormFields";
 import { insertFoodRecord } from "@/lib/foodRegister";
-import { printBadgeAuto } from "@/lib/printBadge";
+import { printBadgeAuto, type BadgeData } from "@/lib/printBadge";
 import { Label } from "@/components/ui/label";
 
 interface CheckInSheetProps {
