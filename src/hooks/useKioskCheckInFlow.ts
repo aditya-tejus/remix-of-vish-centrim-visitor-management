@@ -155,7 +155,7 @@ export function useKioskCheckInFlow() {
       pipeline.push({ id: "visiting", label: "Visiting" });
     }
     // Food register — visitors/volunteers visiting a resident
-    if ((selectedType === "visitor" || selectedType === "volunteer") && visitedResidentId) {
+    if (foodStepEnabled && (selectedType === "visitor" || selectedType === "volunteer") && visitedResidentId) {
       pipeline.push({ id: "food", label: "Food" });
     }
     // Companions step (always after visiting/contractor)
