@@ -33,7 +33,10 @@ export interface RollCallPerson {
   /** "Resident", "Visitor", "Companion" … used for the person-type grouping. */
   typeLabel: string;
   area: string;
+  /** Display form, e.g. "Villa 14" / "Room 14". */
   room: string;
+  /** Bare unit identifier used to group everyone sharing one property. */
+  unit: string;
   phone: string;
   emergencyContactName: string;
   emergencyContactPhone: string;
@@ -44,7 +47,12 @@ export interface RollCallPerson {
   offSite: boolean;
   expectedReturn: Date | null;
   accompaniedBy: string;
+  /** Who this person is with right now — family, visitors, or the resident visited. */
+  associatedWith: string[];
+  /** Key worker / warden responsible for this person or their property. */
+  responsibleStaff: string;
 }
+
 
 export const UNASSIGNED_AREA = "No area recorded";
 
