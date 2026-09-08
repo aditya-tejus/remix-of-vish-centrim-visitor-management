@@ -100,6 +100,15 @@ export default function KioskCheckIn() {
 
 
 
+  // With only one person type enabled there is nothing to choose.
+  useEffect(() => {
+    if (step === "type" && TYPES.length === 1) {
+      flow.setSelectedType(TYPES[0].type as any);
+      const nextIdx = flow.steps.findIndex((s) => s.id === "type") + 1;
+      if (nextIdx > 0 && nextIdx < flow.steps.length) setStep(flow.steps[nextIdx].id);
+    }
+  }, [step, TYPES, flow.steps]);
+
   const goNext = () => {
     const nextIdx = currentIdx + 1;
     if (nextIdx < flow.steps.length) setStep(flow.steps[nextIdx].id);

@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { format } from "date-fns";
 import centrimLogo from "@/assets/centrim-life-logo.png";
 import kioskBg from "@/assets/kiosk-bg.jpg";
+import { usePersonTypes } from "@/hooks/usePersonTypes";
 
 const KIOSK_TILES = [
   {
@@ -72,8 +73,9 @@ function getGreeting() {
 
 export default function KioskHome() {
   const navigate = useNavigate();
+  const { residentKioskEnabled } = usePersonTypes();
   const heroTile = KIOSK_TILES.find((t) => t.hero)!;
-  const secondaryTiles = KIOSK_TILES.filter((t) => !t.hero);
+  const secondaryTiles = KIOSK_TILES.filter((t) => !t.hero && (t.path !== "/kiosk/resident-leave" || residentKioskEnabled));
 
   const [currentTime, setCurrentTime] = useState(new Date());
 
