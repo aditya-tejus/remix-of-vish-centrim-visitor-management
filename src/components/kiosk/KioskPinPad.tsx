@@ -8,7 +8,8 @@ import { motion } from "framer-motion";
 interface KioskPinPadProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  /** Receives the verified PIN so staff-only server functions can be called. */
+  onSuccess: (pin: string) => void;
 }
 
 const MAX_ATTEMPTS = 5;
