@@ -202,7 +202,7 @@ export function useKeys() {
     };
     const rows = count > 1
       ? Array.from({ length: count }, (_, i) => ({ ...base, copy_number: i + 1 }))
-      : [{ ...base, copy_number: input.copyNumber ?? null }];
+      : [{ ...base, copy_number: input.copyNumber ?? 1 }];
 
     const { error } = await (supabase.from("property_keys" as any) as any).insert(rows);
     if (!error) {
