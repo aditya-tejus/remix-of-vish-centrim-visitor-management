@@ -87,7 +87,7 @@ export function TabContextStats({ tab, visitors, allVisitors, onFilter, activeFi
 
   if (variant === "cards") {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 px-6 pt-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 px-4 sm:px-6 pt-3">
         {stats.map((stat) => {
           const active = activeFilter === stat.filterKey;
           const isAlert = stat.accent.includes("destructive") && stat.value > 0;
