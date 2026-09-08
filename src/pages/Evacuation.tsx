@@ -272,6 +272,9 @@ export default function Evacuation() {
     "Emergency contact": p.emergencyContactName,
     "Emergency phone": p.emergencyContactPhone,
     Visiting: p.host,
+    "With right now": p.associatedWith.join("; "),
+    "Responsible staff": p.responsibleStaff,
+
     "On site since": p.checkInTime ? format(p.checkInTime, "dd/MM/yyyy HH:mm") : "",
     Status: statusOf(p) === "safe" ? "Safe" : statusOf(p) === "evacuated_offsite" ? "Evacuated off-site" : "Not accounted for",
     "Marked at": statusByKey.get(p.key)?.at ? format(new Date(statusByKey.get(p.key)!.at!), "HH:mm") : "",
