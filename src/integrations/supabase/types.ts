@@ -389,6 +389,7 @@ export type Database = {
         Row: {
           area_label: string | null
           assistance_level: string | null
+          associated_with: string | null
           companion_index: number | null
           contact_phone: string | null
           created_at: string
@@ -403,6 +404,7 @@ export type Database = {
           parent_visitor_id: string | null
           person_name: string
           person_type: string
+          responsible_staff: string | null
           room_label: string | null
           status: string
           visitor_id: string | null
@@ -410,6 +412,7 @@ export type Database = {
         Insert: {
           area_label?: string | null
           assistance_level?: string | null
+          associated_with?: string | null
           companion_index?: number | null
           contact_phone?: string | null
           created_at?: string
@@ -424,6 +427,7 @@ export type Database = {
           parent_visitor_id?: string | null
           person_name: string
           person_type?: string
+          responsible_staff?: string | null
           room_label?: string | null
           status?: string
           visitor_id?: string | null
@@ -431,6 +435,7 @@ export type Database = {
         Update: {
           area_label?: string | null
           assistance_level?: string | null
+          associated_with?: string | null
           companion_index?: number | null
           contact_phone?: string | null
           created_at?: string
@@ -445,6 +450,7 @@ export type Database = {
           parent_visitor_id?: string | null
           person_name?: string
           person_type?: string
+          responsible_staff?: string | null
           room_label?: string | null
           status?: string
           visitor_id?: string | null
