@@ -176,11 +176,21 @@ export function useCheckInFlow(open: boolean) {
       return;
     }
     const q = searchQuery.toLowerCase();
-    supabase
+    let query = supabase
       .from("visitors")
       .select("id, first_name, surname, mobile, email, address")
       .or(`first_name.ilike.%${q}%,surname.ilike.%${q}%,mobile.ilike.%${q}%`)
-      .neq("type", "resident")
+      .neq("type", "resident");
+
+    // Site isolation: only offer people who have visited this site before.
+    // Records with no site stay visible only on the original/legacy site.
+    if (currentSiteId) {
+      query = isLegacySite
+        ? query.or(`branch_id.eq.${currentSiteId},branch_id.is.null`)
+        : query.eq("branch_id", currentSiteId);
+    }
+
+    query
       .order("check_in_time", { ascending: false })
       .limit(10)
       .then(({ data }) => {
