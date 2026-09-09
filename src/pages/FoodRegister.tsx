@@ -186,9 +186,6 @@ export default function FoodRegisterPage() {
                 </Table>
               </CardContent>
             </Card>
-          </main>
-        </SidebarInset>
-      </div>
 
       <AddFoodDialog open={addOpen} onOpenChange={setAddOpen} onSaved={refetch} />
 
