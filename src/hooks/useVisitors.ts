@@ -223,41 +223,53 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       });
       console.error("Failed to save visitor record", error);
       onSaveError?.();
+      return new Error("check-in-not-saved");
+    };
+
+    const settle = (realId: string) => {
+      setVisitors((prev) => prev.map((v) => (v.id === tempId ? { ...v, id: realId } : v)));
+      return { ...newVisitor, id: realId };
     };
 
     if (publicMode) {
       // Kiosk: purpose-specific server function. The kiosk has no table access.
-      supabase
+      const saved = supabase
         .rpc("kiosk_check_in" as any, { p_payload: payload as any })
         .then(({ data, error }) => {
           const row = Array.isArray(data) ? (data[0] as any) : (data as any);
-          if (error || !row?.visitor_id) return failed(error);
-          setVisitors((prev) =>
-            prev.map((v) => (v.id === tempId ? { ...v, id: row.visitor_id } : v))
-          );
+          if (error || !row?.visitor_id) throw failed(error);
+          return settle(row.visitor_id as string);
         });
-      return newVisitor;
+      return { visitor: newVisitor, saved };
     }
 
     // Staff: direct insert, guarded by site-scoped policies
-    supabase
+    const saved = supabase
       .from("visitors")
       .insert(payload as any)
       .select("id, qr_code")
       .single()
       .then(({ data, error }) => {
-        if (error || !data) return failed(error);
-        // Replace temp ID with real one
-        setVisitors((prev) =>
-          prev.map((v) => (v.id === tempId ? { ...v, id: (data as any).id } : v))
-        );
+        if (error || !data) throw failed(error);
+        return settle((data as any).id as string);
       });
 
-
-
-
-    return newVisitor;
+    return { visitor: newVisitor, saved };
   };
+
+  /** Fire-and-forget check-in, kept for callers that do not await the save. */
+  const addVisitor = (visitor: Omit<Visitor, "id">): Visitor => {
+    const { visitor: optimistic, saved } = submitVisitor(visitor);
+    saved.catch(() => undefined);
+    return optimistic;
+  };
+
+  /** Check-in that resolves only once the record is safely stored. */
+  const addVisitorAsync = async (visitor: Omit<Visitor, "id">): Promise<Visitor> => {
+    const { saved } = submitVisitor(visitor);
+    return saved;
+  };
+
 
   const markResidentAway = async (visitorId: string, details: {
     expectedReturnDate?: Date;
