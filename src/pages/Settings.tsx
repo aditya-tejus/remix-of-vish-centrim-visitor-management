@@ -9,6 +9,7 @@ import { PresenceTab } from "@/components/settings/PresenceTab";
 import { PrintingTab } from "@/components/settings/PrintingTab";
 import { KeysPolicyTab } from "@/components/settings/KeysPolicyTab";
 
+import { ContractorDocumentRulesCard } from "@/components/settings/ContractorDocumentRulesCard";
 import { ComplianceTab } from "@/components/settings/ComplianceTab";
 import { IntegrationTab } from "@/components/settings/IntegrationTab";
 import { AuditTrailTab } from "@/components/settings/AuditTrailTab";
@@ -104,7 +105,12 @@ export default function SettingsPage() {
                   {active === "presence" && <PresenceTab />}
                   {active === "printing" && <PrintingTab />}
                   {active === "keys" && <KeysPolicyTab />}
-                  {active === "compliance" && <ComplianceTab />}
+                  {active === "compliance" && (
+                    <div className="space-y-6">
+                      <ComplianceTab />
+                      <ContractorDocumentRulesCard />
+                    </div>
+                  )}
                   {active === "integration" && <IntegrationTab />}
                   {active === "audit" && (
                     <div className="space-y-6">

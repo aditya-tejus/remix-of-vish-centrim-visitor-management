@@ -84,6 +84,7 @@ export function AppSidebar() {
         { title: "Feedback responses", path: "/reports/feedback-responses" },
         { title: "Feedback reports", path: "/reports/feedback-reports" },
         { title: "Safety and compliance", path: "/gdpr" },
+        { title: "Contractor documents", path: "/contractor-documents" },
       ],
     },
     {

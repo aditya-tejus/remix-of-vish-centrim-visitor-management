@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useContractorQuestions, type ContractorQuestion } from "@/hooks/useContractorQuestions";
 import { fetchMandatoryCredentialKeys } from "@/hooks/useMandatoryCredentials";
 import { useOperatingContext } from "@/contexts/OperatingContext";
+import { useContractorVerdict } from "@/hooks/useContractorDocuments";
 
 
 /** The one question that decides how hard a missing credential bites */
@@ -85,6 +86,15 @@ export function ContractorScreening({
     });
     return () => { cancelled = true; };
   }, [siteId]);
+
+  // Authoritative document verdict from the server — the same one check-in and
+  // the kiosk enforce, so the screen can never be more generous than the rule.
+  const verdict = useContractorVerdict({
+    personId: person?.id ?? null,
+    supplierId: selectedSupplier?.id ?? null,
+    branchId: siteId,
+    kiosk,
+  });
 
 
   const nameKey = `${workerFirstName.trim().toLowerCase()}|${workerSurname.trim().toLowerCase()}|${workerMobile.replace(/\D/g, "")}`;
@@ -215,8 +225,14 @@ export function ContractorScreening({
       ? `${blockingNo.map((q) => q.label.replace(/\?$/, "")).join("; ")} — please see a staff member.`
       : null;
 
-  const blocked = gate.blocked || questionReason !== null;
-  const reason = gate.blocked ? gate.reason : questionReason ?? gate.reason;
+  // The server decides whether documents are good enough. The client checklist
+  // only ever adds caution on top — it can never clear a server block.
+  const blocked = verdict.blocked || gate.blocked || questionReason !== null;
+  const reason = verdict.blocked
+    ? verdict.reason
+    : gate.blocked
+    ? gate.reason
+    : questionReason ?? gate.reason;
 
   // Report the gate upward only when it actually changes — the callback is
   // usually an inline arrow, so it must stay out of the dependency list.

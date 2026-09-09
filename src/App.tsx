@@ -33,6 +33,7 @@ import OperationsReport from "./pages/OperationsReport";
 import EvacuationReport from "./pages/EvacuationReport";
 import PresenceLog from "./pages/PresenceLog";
 import VisitorReport from "./pages/VisitorReport";
+import ContractorDocumentReviews from "./pages/ContractorDocumentReviews";
 import VisitTrends from "./pages/VisitTrends";
 import ReportsPage from "./pages/Reports";
 import CoverageChecklist from "./pages/CoverageChecklist";
@@ -101,6 +102,7 @@ const App = () => (
             <Route path="/reports/trends" element={<Staff><VisitTrends /></Staff>} />
             <Route path="/reports/feedback-responses" element={<Staff><FeedbackResponses /></Staff>} />
             <Route path="/reports/feedback-reports" element={<Staff><FeedbackAnalytics /></Staff>} />
+            <Route path="/contractor-documents" element={<Staff><ContractorDocumentReviews /></Staff>} />
             <Route path="/audit-log" element={<Staff><AuditLogPage /></Staff>} />
             <Route path="/evacuation" element={<Staff><Evacuation /></Staff>} />
             <Route path="/feedback" element={<Navigate to="/reports/feedback-responses" replace />} />
