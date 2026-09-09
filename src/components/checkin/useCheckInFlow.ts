@@ -210,7 +210,7 @@ export function useCheckInFlow(open: boolean) {
           setPreviousVisitors(unique);
         }
       });
-  }, [searchQuery]);
+  }, [searchQuery, currentSiteId, isLegacySite]);
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return previousVisitors;
