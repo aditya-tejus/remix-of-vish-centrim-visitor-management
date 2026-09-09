@@ -392,3 +392,5 @@ Known limits after Phase 7E:
 - Directory de-duplication no longer collapses blank-contact or same-name people.
 - Outstanding in 8A: emergency roll call / presence log / badges / exports still read legacy visitor rows; the integrity report and historical reconciliation RPCs exist but have no admin screen yet; no party ordinal unique index until duplicates are reviewed.
 - Security linter: 51 warnings (baseline 47). The 4 new warnings are the four staff-callable attendance routines, which enforce permissions internally.
+
+- Phase 8A: added Settings > Audit "Attendance record check" (report + rehearsal repair, blocked when duplicates exist); companion departure times now mirrored from canonical attendance into the older visit record so roll call, exports and history agree. Still open: emergency/badge/export readers still read the mirrored older record rather than attendance rows directly; legacy "Unassigned" site holds 12 older arrivals with companions that need the repair run per site.

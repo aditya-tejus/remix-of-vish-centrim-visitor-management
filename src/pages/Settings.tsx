@@ -16,6 +16,7 @@ import { LockGovernanceTab } from "@/components/settings/LockGovernanceTab";
 import { KioskStaffPinCard } from "@/components/settings/KioskStaffPinCard";
 
 import { SurveyBuilder } from "@/components/feedback/SurveyBuilder";
+import { AttendanceIntegrityCard } from "@/components/settings/AttendanceIntegrityCard";
 import { SettingsSectionHeader } from "@/components/settings/SettingsSectionHeader";
 import { PreviewPanel } from "@/components/settings/preview/PreviewPanel";
 import { useSettingsAccess } from "@/hooks/useSettingsAccess";
@@ -104,7 +105,12 @@ export default function SettingsPage() {
                   {active === "keys" && <KeysPolicyTab />}
                   {active === "compliance" && <ComplianceTab />}
                   {active === "integration" && <IntegrationTab />}
-                  {active === "audit" && <AuditTrailTab />}
+                  {active === "audit" && (
+                    <div className="space-y-6">
+                      <AuditTrailTab />
+                      <AttendanceIntegrityCard />
+                    </div>
+                  )}
                   {active === "governance" && (
                     <div className="space-y-6">
                       <LockGovernanceTab />
