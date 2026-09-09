@@ -166,8 +166,9 @@ export function CheckOutSheet({
   };
 
   const handleConfirmCheckOut = async () => {
-    if (!selectedVisitor) return;
+    if (!selectedVisitor || checkingOut) return;
     setCheckingOut(selectedVisitor.id);
+    setCheckOutFailed(null);
     const name = `${selectedVisitor.firstName} ${selectedVisitor.surname}`;
     const dur = getDuration(selectedVisitor.checkInTime);
     const held = keysFor(selectedVisitor.id);
@@ -185,13 +186,20 @@ export function CheckOutSheet({
       ? planCompanionCheckout(selectedVisitor, leavingCompanions, true, at)
       : undefined;
     const companionNote = outcome && outcome.remainingCompanions > 0 ? ` · ${outcome.note}` : "";
-    await onCheckOut(
-      selectedVisitor.id,
-      `${checkoutReason}${keyNote}${companionNote}`.trim() || undefined,
-      timeOverride || undefined,
-      outcome
-    );
+    try {
+      await onCheckOut(
+        selectedVisitor.id,
+        `${checkoutReason}${keyNote}${companionNote}`.trim() || undefined,
+        timeOverride || undefined,
+        outcome
+      );
+    } catch {
+      setCheckingOut(null);
+      setCheckOutFailed("This departure was not saved. Check the connection and try again.");
+      return;
+    }
     setCheckingOut(null);
+
     setSuccessName(name);
     setSuccessDuration(dur);
     setShowSuccess(true);
