@@ -170,10 +170,9 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
   const submitVisitor = (visitor: Omit<Visitor, "id">): { visitor: Visitor; saved: Promise<Visitor> } => {
     const tempId = crypto.randomUUID();
     const newVisitor: Visitor = { ...visitor, id: tempId };
-
-    const newVisitor: Visitor = { ...visitor, id: tempId };
     // Optimistic update
     setVisitors((prev) => [newVisitor, ...prev]);
+
 
     const payload: Record<string, unknown> = {
       first_name: visitor.firstName,
