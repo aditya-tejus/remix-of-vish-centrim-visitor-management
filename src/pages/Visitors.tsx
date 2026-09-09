@@ -1,7 +1,5 @@
 import { useVisitors } from "@/hooks/useVisitors";
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { AppShell } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -115,23 +113,11 @@ export default function Visitors() {
   );
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <header className="sticky top-0 z-10 border-b border-border bg-card">
-            <div className="flex items-center justify-between px-6 h-14">
-              <div className="flex items-center gap-4">
-                <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-                <div>
-                  <h1 className="text-xl font-bold text-foreground leading-tight">Visitor Profiles</h1>
-                  <p className="text-[13px] text-muted-foreground">All contacts by type & watchlist</p>
-                </div>
-              </div>
-            </div>
-          </header>
-
-          <main className="p-4 sm:p-6 space-y-4">
+    <AppShell
+      title="Visitor Profiles"
+      subtitle="All contacts by type and watchlist"
+      mainClassName="p-4 sm:p-6 space-y-4"
+    >
             {/* Search */}
             <div className="relative max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -297,9 +283,6 @@ export default function Visitors() {
                 </div>
               </TabsContent>
             </Tabs>
-          </main>
-        </SidebarInset>
-      </div>
 
       {/* Visitor Profile Slide-over */}
       <VisitorProfile
@@ -314,6 +297,6 @@ export default function Visitors() {
         onOpenChange={setAddWatchlistOpen}
         onAdd={(entry) => addEntry.mutate(entry)}
       />
-    </SidebarProvider>
+    </AppShell>
   );
 }
