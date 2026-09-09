@@ -74,8 +74,16 @@ function getGreeting() {
 export default function KioskHome() {
   const navigate = useNavigate();
   const { residentKioskEnabled } = usePersonTypes();
+  const { siteName } = useOperatingContext();
+  const { fastLaneEnabled } = useKioskFastLane();
   const heroTile = KIOSK_TILES.find((t) => t.hero)!;
-  const secondaryTiles = KIOSK_TILES.filter((t) => !t.hero && (t.path !== "/kiosk/resident-leave" || residentKioskEnabled));
+  const secondaryTiles = KIOSK_TILES.filter(
+    (t) =>
+      !t.hero &&
+      (t.path !== "/kiosk/resident-leave" || residentKioskEnabled) &&
+      // No dead ends: the card tile only appears where cards/codes are issued.
+      (t.path !== "/kiosk/qr-scan" || fastLaneEnabled)
+  );
 
   const [currentTime, setCurrentTime] = useState(new Date());
 

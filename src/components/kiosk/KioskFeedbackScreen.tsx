@@ -111,7 +111,7 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
                       : "border-2 border-border bg-secondary/50"
                   }`}
                 >
-                  <span className="text-3xl">{e.emoji}</span>
+                  <e.icon className="h-8 w-8 text-foreground" aria-hidden="true" />
                   <span className="text-sm text-muted-foreground font-medium">{e.label}</span>
                 </button>
               ))}
