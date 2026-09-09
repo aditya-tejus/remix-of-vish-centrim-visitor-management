@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   MoreHorizontal, LogOut, Trash2, FileText, FileSpreadsheet, Users,
-  MessageSquare, KeyRound, ShieldAlert, AlertTriangle, UsersRound,
+  MessageSquare, KeyRound, ShieldAlert, AlertTriangle, UsersRound, Printer,
 } from "lucide-react";
 import { useOpenKeyIssues } from "@/hooks/useOpenKeyIssues";
 import { useWatchlist } from "@/hooks/useWatchlist";
@@ -25,6 +25,8 @@ import { CheckInReturnDialog } from "@/components/CheckInReturnDialog";
 import { useResidents } from "@/hooks/useResidents";
 import { useSiteStructure } from "@/hooks/useSiteStructure";
 import type { AttendanceParty } from "@/hooks/useAttendance";
+import { issueBadge } from "@/lib/badgeIssue";
+import { useSite } from "@/contexts/SiteContext";
 
 interface VisitorTableProps {
   visitors: Visitor[];
@@ -410,6 +412,15 @@ export function VisitorTable({
     );
   };
 
+  /** A companion gets their own badge, showing their own name. */
+  const printCompanionBadge = (party: AttendanceParty, visitor: Visitor) => {
+    const name = party.nameStatus === "named" ? party.displayName : `Companion ${party.companionIndex}`;
+    issueBadge(
+      { name, type: visitor.type, visiting: visitor.whomToVisit || undefined, date: party.checkInTime },
+      { siteId: currentSiteId, siteName: currentSite?.name ?? null }
+    );
+  };
+
   /** Each companion is shown as their own accountable person on the visit. */
   const renderCompanionRows = (visitor: Visitor) => {
     const companions = companionParties.filter(
@@ -460,7 +471,17 @@ export function VisitorTable({
             </Button>
           )}
         </TableCell>
-        <TableCell className="py-2" />
+        <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-[12px] gap-1.5"
+            onClick={() => printCompanionBadge(party, visitor)}
+          >
+            <Printer className="h-3.5 w-3.5" aria-hidden />
+            Print badge
+          </Button>
+        </TableCell>
       </TableRow>
     ));
   };
@@ -533,16 +554,26 @@ export function VisitorTable({
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-[12px] text-muted-foreground">In {format(party.checkInTime, "hh:mm a")}</span>
-            {!party.checkOutTime && canCheckOut && onCheckOutParty && (
+            <div className="flex items-center gap-2">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 className="h-9 text-[12px] gap-1.5"
-                onClick={() => onCheckOutParty(party.id)}
+                onClick={() => printCompanionBadge(party, visitor)}
               >
-                <LogOut className="h-3.5 w-3.5" aria-hidden /> Sign out
+                <Printer className="h-3.5 w-3.5" aria-hidden /> Print badge
               </Button>
-            )}
+              {!party.checkOutTime && canCheckOut && onCheckOutParty && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 text-[12px] gap-1.5"
+                  onClick={() => onCheckOutParty(party.id)}
+                >
+                  <LogOut className="h-3.5 w-3.5" aria-hidden /> Sign out
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       ));
