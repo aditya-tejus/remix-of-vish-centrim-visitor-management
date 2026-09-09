@@ -70,7 +70,7 @@ export function AppHeader({
       <div className="flex items-center justify-between gap-2 px-4 sm:px-6 min-h-14 py-2">
         {/* Left: sidebar trigger + page title */}
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-          <SidebarTrigger className="text-muted-foreground hover:text-foreground shrink-0" />
+          <SidebarTrigger aria-label="Toggle navigation" className="text-muted-foreground hover:text-foreground shrink-0" />
           {title && (
             <div className="min-w-0">
               <h1 className="text-lg sm:text-xl font-bold text-foreground leading-tight truncate">{title}</h1>
@@ -85,7 +85,7 @@ export function AppHeader({
         <div className="flex items-center gap-2 shrink-0">
           {/* Live clock */}
           <div className="hidden md:flex items-center gap-1.5 mr-1">
-            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+            <Clock className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
             <span className="text-[13px] font-mono font-medium text-muted-foreground tabular-nums">
               {format(now, "hh:mm a")}
             </span>
@@ -102,9 +102,14 @@ export function AppHeader({
                 ? "bg-warning/10 text-warning"
                 : "text-muted-foreground"
             }`}
-            title={cap ? `On-site visitors (limit ${cap})` : "Visitors currently on site"}
+            role="status"
+            aria-label={
+              cap
+                ? `${onSiteCount} visitors on site of a limit of ${cap}${atLimit ? ". At limit" : nearLimit ? ". Near limit" : ""}`
+                : `${onSiteCount} visitors currently on site`
+            }
           >
-            <Users className="h-3.5 w-3.5" />
+            <Users className="h-3.5 w-3.5" aria-hidden="true" />
             <span className="text-[13px] font-medium tabular-nums">
               {onSiteCount}{cap ? ` / ${cap}` : ""}
             </span>
@@ -119,6 +124,7 @@ export function AppHeader({
               <button
                 type="button"
                 onClick={toggleOutbreak}
+                aria-pressed={true}
                 disabled={!isAdmin || outbreakSaving}
                 title={
                   isAdmin
@@ -129,7 +135,7 @@ export function AppHeader({
                   isAdmin ? "hover:bg-destructive/20 cursor-pointer" : "cursor-default"
                 } disabled:opacity-70`}
               >
-                <ShieldAlert className="h-3.5 w-3.5" />
+                <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
                 <span className="text-[11px] font-semibold uppercase tracking-wide">Outbreak Mode On</span>
                 {isAdmin && <span className="text-[10px] font-medium opacity-70">Turn off</span>}
               </button>
@@ -141,11 +147,12 @@ export function AppHeader({
               <button
                 type="button"
                 onClick={toggleOutbreak}
+                aria-pressed={false}
                 disabled={outbreakSaving}
                 title="Turn Outbreak Mode on — blocks kiosk check-in on symptoms or high temperature"
                 className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded-lg mx-1 text-muted-foreground hover:text-foreground hover:bg-secondary"
               >
-                <ShieldAlert className="h-3.5 w-3.5" />
+                <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
                 <span className="text-[11px] font-medium">Outbreak Mode off</span>
               </button>
             </>

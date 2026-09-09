@@ -1,7 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { AppHeader } from "@/components/AppHeader";
+import { AppShell } from "@/components/AppShell";
 import { VisitorTable } from "@/components/VisitorTable";
 import { useVisitors } from "@/hooks/useVisitors";
 import { CheckInSheet } from "@/components/checkin/CheckInSheet";
@@ -165,13 +163,10 @@ export default function VisitList() {
   const searchEmpty = searchQuery.trim().length > 0 && rows.length === 0;
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <AppHeader title="Visitor List" overstayedCount={overstayedCount} />
-
+    <>
+    <AppShell title="Visitor list" overstayedCount={overstayedCount}>
           {/* Page command bar */}
+
           <div className="sticky top-12 z-[9] border-b border-border bg-card/95 backdrop-blur-sm">
             <div className="flex flex-wrap items-center justify-between px-4 sm:px-6 py-2.5 gap-y-2 gap-x-4">
               {/* Left: which site and which day */}
@@ -284,7 +279,7 @@ export default function VisitList() {
             </div>
           </div>
 
-          <main className="px-4 sm:px-6 pb-16 pt-1 min-w-0">
+          <div className="px-4 sm:px-6 pb-16 pt-1 min-w-0">
             {!canView ? (
               <PermissionDeniedState description="You do not have permission to see who is on site. Ask an administrator if you need this." />
             ) : !online ? (
@@ -314,11 +309,13 @@ export default function VisitList() {
                 showDestination={showDestination}
               />
             )}
-          </main>
+          </div>
 
           <KeyboardShortcutBar />
-        </SidebarInset>
-      </div>
+    </AppShell>
+
+
+
 
       <CheckInSheet open={addDialogOpen} onOpenChange={setAddDialogOpen} onAdd={addVisitorAsync} />
       <CheckOutSheet
@@ -341,6 +338,6 @@ export default function VisitList() {
       )}
       <VisitListQRDialog open={qrOpen} onOpenChange={setQrOpen} />
       <HandoverPrintDialog open={handoverOpen} onOpenChange={setHandoverOpen} visitors={dateVisitors} date={selectedDate} />
-    </SidebarProvider>
+    </>
   );
 }

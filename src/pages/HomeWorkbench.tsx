@@ -1,8 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { AppHeader } from "@/components/AppHeader";
+import { AppShell } from "@/components/AppShell";
 import { useVisitors } from "@/hooks/useVisitors";
 import { AddVisitDialog } from "@/components/AddVisitDialog";
 import { CheckOutSheet } from "@/components/CheckOutSheet";
@@ -68,20 +66,16 @@ export default function HomeWorkbench() {
   );
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <AppHeader
-            title="Home"
+    <>
+    <AppShell
+            title="Today"
             subtitle={format(currentTime, "EEEE, dd MMMM yyyy")}
             overstayedCount={overstayedCount}
             overdueCount={overdueResidents}
             draftCount={draftCount}
             pendingCount={pendingApprovals}
-          />
-
-          <main className="p-6 space-y-6">
+            mainClassName="p-6 space-y-6"
+          >
             {/* Outbreak Mode banner */}
             {outbreakMode && (
               <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
@@ -270,13 +264,11 @@ export default function HomeWorkbench() {
                 <DayGroupedHistory visitors={visitors} />
               </div>
             </div>
-          </main>
-        </SidebarInset>
-      </div>
+    </AppShell>
 
       <AddVisitDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onAdd={addVisitor} />
       <CheckOutSheet open={checkOutDialogOpen} onOpenChange={setCheckOutDialogOpen} visitors={visitors} onCheckOut={checkOutVisitor} />
       <ResidentOutingDialog open={residentLeaveOpen} onOpenChange={setResidentLeaveOpen} onMarkAway={markResidentAway} />
-    </SidebarProvider>
+    </>
   );
 }

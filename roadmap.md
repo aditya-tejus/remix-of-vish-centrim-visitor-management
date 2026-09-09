@@ -351,3 +351,11 @@ Known limits after Phase 7E:
 - No page, route, data, settings, permission or database change in this increment.
 - Limitation: existing screens still use arbitrary text sizes, h-screen, unlabelled icon
   buttons and symbol glyphs. Those are addressed in later increments.
+
+## Phase 7F — Increment 2A (shell, landmarks, navigation) — done
+- Added AppShell + SkipToContent; converted Visit list (`/`, `/visit-list`), Today (`/today`) and Residents (`/residents`).
+- AppShell renders a plain content column (not SidebarInset) so each converted route has exactly one `<main id="main-content">`.
+- AppSidebar: single labelled `nav`, real router links with `aria-current="page"`, group triggers expose `aria-expanded`, kiosk link labelled "Open kiosk (new tab)".
+- AppHeader: sidebar trigger labelled, occupancy exposed as a status with a spoken count, outbreak toggle exposes pressed state.
+- Verified: one main/h1/nav per converted route, skip link first in tab order and focuses main, no page errors, typecheck+build OK, Supabase linter unchanged at 47 warnings.
+- Known defect carried forward (pre-existing, not introduced here): `/residents` horizontal overflow — 27px at 768 and 142px at 1024. To fix in a later increment with the register/table work.

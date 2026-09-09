@@ -1,12 +1,11 @@
 import { useState, useMemo } from "react";
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { AppHeader } from "@/components/AppHeader";
+import { AppShell } from "@/components/AppShell";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useVisitors } from "@/hooks/useVisitors";
 import { useResidents, Resident } from "@/hooks/useResidents";
 import { useWings, useResidentDetails } from "@/hooks/useWings";
+import { useOperatingContext } from "@/contexts/OperatingContext";
 import { ResidentFilterBar } from "@/components/ResidentFilterBar";
 import { ResidentPresenceTable } from "@/components/ResidentPresenceTable";
 import { ResidentDirectoryTable } from "@/components/ResidentDirectoryTable";
@@ -23,6 +22,7 @@ export default function Residents() {
   const { data: wings = [] } = useWings();
   const { data: residentDetails = [] } = useResidentDetails();
   const { toast } = useToast();
+  const { terms } = useOperatingContext();
 
   const [outingOpen, setOutingOpen] = useState(false);
   const [outingMode, setOutingMode] = useState<"short" | "planned">("short");
@@ -168,13 +168,10 @@ export default function Residents() {
   ];
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <AppHeader
-            title="Residents"
-            subtitle="Manage resident presence, outings & returns"
+    <>
+    <AppShell
+            title={terms.residentPlural}
+            subtitle={`Manage ${terms.residentPlural.toLowerCase()} presence, outings and returns`}
             overdueCount={overdueCount}
             actions={
               <>
@@ -188,8 +185,7 @@ export default function Residents() {
                 </Button>
               </>
             }
-          />
-
+          >
           {/* Interactive count cards */}
           <div className="px-6 pt-4 pb-2">
             <div className="grid grid-cols-5 gap-3">
@@ -279,8 +275,7 @@ export default function Residents() {
               </TabsContent>
             </Tabs>
           </div>
-        </SidebarInset>
-      </div>
+    </AppShell>
 
       {/* Unified Outing Dialog */}
       <ResidentOutingDialog
@@ -313,6 +308,6 @@ export default function Residents() {
           });
         }}
       />
-    </SidebarProvider>
+    </>
   );
 }
