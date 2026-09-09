@@ -229,9 +229,25 @@ Verified by browser test (temporary records, purged afterwards):
 - With `kiosk_fast_lane_enabled` off, no card option appears on home, check-in or check-out.
 
 Known limitations (unchanged or new):
-- Kiosk site binding is `?site=` plus device memory. Not production-grade; requires an
+- Kiosk site binding is `?site=` plus device memory. Pilot-grade only, not production-grade; production requires an administrator-provisioned, cryptographically bound kiosk device credential. Also requires an
   administrator-provisioned, cryptographically bound device credential before wider rollout.
 - `kiosk_resident_directory` / `kiosk_staff_directory` are not yet site-parameterised.
 - Database linter baseline is now 47 warnings: 1 public extension, 17 anonymous-callable
   SECURITY DEFINER functions (the intentional kiosk surface, now including `kiosk_log_event`) and
   29 signed-in SECURITY DEFINER functions. No new class of warning was introduced.
+
+## Phase 7B hardening — site-scoped kiosk directory helpers
+
+Five anonymous kiosk helpers were recreated with an optional site parameter, fixed `search_path`,
+explicit `REVOKE`/`GRANT`, input validation and minimum response fields:
+`kiosk_resident_directory(text, uuid)`, `kiosk_staff_directory(text, uuid)`,
+`kiosk_supplier_directory(uuid)`, `kiosk_contractor_lookup(text,text,text,text,uuid)` and
+`kiosk_watchlist_check(text,text,uuid)`. Old unscoped signatures were dropped. Records with no site
+are returned only for the original legacy placeholder site. No tables or broad RLS policies changed.
+
+Security linter after this change: 47 warnings — 1 extension in public, 17 anonymous-callable
+SECURITY DEFINER functions (the intentional kiosk surface), 29 signed-in-callable SECURITY DEFINER
+functions. Unchanged from the Phase 7B baseline.
+
+Residual: kiosk device/site binding is pilot-grade; contractor credential verification is manual;
+browser exports are not tamper-evident.
