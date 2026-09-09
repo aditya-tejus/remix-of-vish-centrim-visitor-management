@@ -1,10 +1,7 @@
 import { useState } from "react";
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { AppShell } from "@/components/AppShell";
 import { SettingsNav, SettingsSection, SECTION_META } from "@/components/settings/SettingsNav";
 import { SettingsPageHeading } from "@/components/settings/SettingsScope";
-import { SiteSwitcher } from "@/components/SiteSwitcher";
 import { PersonTypeSettings } from "@/components/settings/PersonTypeSettings";
 import { PersonTypesTab } from "@/components/settings/PersonTypesTab";
 import { OperatingContextTab } from "@/components/settings/OperatingContextTab";
@@ -72,21 +69,11 @@ export default function SettingsPage() {
       value={{ canEdit: access.canEdit, audience: access.audience, deniedReason: access.deniedReason }}
     >
     <PersonTypesDraftProvider>
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <header className="sticky top-0 z-30 bg-card border-b border-border h-14 flex items-center justify-between px-6">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-              <div>
-                <h1 className="text-xl font-bold text-foreground leading-tight">Settings</h1>
-                <p className="text-[13px] text-muted-foreground">Decisions administrators make for this site.</p>
-              </div>
-            </div>
-            <SiteSwitcher compact />
-          </header>
-          <main className="p-4 sm:p-6">
+    <AppShell
+      title="Settings"
+      subtitle="Decisions administrators make for this site."
+      mainClassName="p-4 sm:p-6"
+    >
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Settings Navigation */}
               <div className="lg:sticky lg:top-20 self-start w-full lg:w-auto">
@@ -135,10 +122,7 @@ export default function SettingsPage() {
               )}
 
             </div>
-          </main>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+    </AppShell>
     </PersonTypesDraftProvider>
     </SettingsAccessProvider>
   );
