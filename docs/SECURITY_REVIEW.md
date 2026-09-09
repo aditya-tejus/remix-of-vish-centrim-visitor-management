@@ -327,3 +327,6 @@ Unreachable screens
   integration saves are not yet audited.
 - Save handling no longer reports success after a partial failure in Presence, Printing,
   Keys and fobs, Users and access, and Integrations.
+- Known wording exception outside this pass: Resident leave types keep a user-entered symbol
+  field (an icon character stored with each leave type). Changing it would alter stored data,
+  so it was left as-is and is recorded here rather than silently changed.
