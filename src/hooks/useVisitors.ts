@@ -237,18 +237,18 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
 
     if (publicMode) {
       // Kiosk: purpose-specific server function. The kiosk has no table access.
-      const saved = supabase
+      const saved = Promise.resolve(supabase
         .rpc("kiosk_check_in" as any, { p_payload: payload as any })
         .then(({ data, error }) => {
           const row = Array.isArray(data) ? (data[0] as any) : (data as any);
           if (error || !row?.visitor_id) throw failed(error);
           return settle(row.visitor_id as string);
-        });
+        }));
       return { visitor: newVisitor, saved };
     }
 
     // Staff: direct insert, guarded by site-scoped policies
-    const saved = supabase
+    const saved = Promise.resolve(supabase
       .from("visitors")
       .insert(payload as any)
       .select("id, qr_code")
@@ -256,7 +256,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       .then(({ data, error }) => {
         if (error || !data) throw failed(error);
         return settle((data as any).id as string);
-      });
+      }));
 
     return { visitor: newVisitor, saved };
   };
