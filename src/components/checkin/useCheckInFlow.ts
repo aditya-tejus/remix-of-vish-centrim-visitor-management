@@ -109,7 +109,8 @@ export function useCheckInFlow(open: boolean) {
   );
   const missingFieldsHint = missingFieldsMessage(missingFields);
 
-
+  const fallbackHealthQuestions = [
+    { id: "fever", question: "Do you have a fever or feel unusually warm?", type: "yesno" as const, required: true },
     { id: "cough", question: "Do you have a new continuous cough?", type: "yesno" as const, required: true },
     { id: "consent_screening", question: "I consent to compliance screening and temperature check", type: "checkbox" as const, required: true },
   ];
