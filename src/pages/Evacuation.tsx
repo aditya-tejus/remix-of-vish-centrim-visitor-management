@@ -215,6 +215,11 @@ export default function Evacuation() {
       toast({ title: "Not allowed", description: "You do not have permission to record roll call outcomes.", variant: "destructive" });
       return;
     }
+    if (!activeDrill) {
+      // Never let a tap silently declare a live emergency — it must be chosen.
+      setStartPrompt(true);
+      return;
+    }
     setBusy(true);
     try {
       const drill = await ensureDrill();
