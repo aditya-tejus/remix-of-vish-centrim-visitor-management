@@ -363,13 +363,18 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
         {/* Footer */}
         {!showSuccess && (
           <div className="shrink-0 border-t border-border bg-card px-6 py-4">
+            {saveFailed && (
+              <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-[13px] text-destructive">
+                This check-in was not saved. The details below are still here — check the connection and press Complete Check In again.
+              </div>
+            )}
             <div className="flex items-center justify-between">
-              <Button variant="ghost" size="sm" onClick={handleClose} className="text-muted-foreground text-[13px] h-10">
+              <Button variant="ghost" size="sm" onClick={handleClose} disabled={saving} className="text-muted-foreground text-[13px] h-10">
                 Cancel
               </Button>
               <div className="flex gap-2.5">
                 {!flow.isFirstStep && (
-                  <Button variant="outline" onClick={flow.goBack} className="gap-2 rounded-xl text-[13px] h-10 px-5">
+                  <Button variant="outline" onClick={flow.goBack} disabled={saving} className="gap-2 rounded-xl text-[13px] h-10 px-5">
                     <ArrowLeft className="h-3.5 w-3.5" /> Back
                   </Button>
                 )}
@@ -382,12 +387,13 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
                   <Button
                     onClick={handleSubmit}
                     className="gap-2 rounded-xl text-[14px] h-12 px-8 bg-success hover:bg-success/90 text-success-foreground font-semibold shadow-sm"
-                    disabled={!flow.canProceed}
+                    disabled={!flow.canProceed || saving}
                   >
                     <Check className="h-4.5 w-4.5" />
-                    Complete Check In
+                    {saving ? "Saving..." : saveFailed ? "Try again" : "Complete Check In"}
                   </Button>
                 )}
+
               </div>
             </div>
           </div>
