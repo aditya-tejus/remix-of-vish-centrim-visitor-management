@@ -96,7 +96,8 @@ export function clampRange(from: Date, to: Date): { window: DateWindow; capped: 
 
 export function formatDateInZone(date: Date, timeZone: string): string {
   const fmt = new Intl.DateTimeFormat("en-GB", { timeZone, day: "2-digit", month: "short", year: "numeric" });
-  return fmt.format(date).replace(/,/g, "");
+  // Some runtimes render September as "Sept"; keep three letters everywhere.
+  return fmt.format(date).replace(/,/g, "").replace("Sept", "Sep");
 }
 
 export function formatTimeInZone(date: Date, timeZone: string): string {
