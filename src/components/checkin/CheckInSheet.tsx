@@ -27,12 +27,12 @@ interface CheckInSheetProps {
 
 }
 
-const stepConfig: Record<string, { label: string; icon: string }> = {
-  identify: { label: "Identify", icon: "1" },
-  details: { label: "Details", icon: "2" },
-  food: { label: "Food", icon: "F" },
-  screening: { label: "Screening", icon: "3" },
-  confirm: { label: "Confirm", icon: "4" },
+const stepLabels: Record<string, string> = {
+  identify: "Identify",
+  details: "Details",
+  food: "Food",
+  screening: "Screening",
+  confirm: "Confirm",
 };
 
 export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
@@ -168,7 +168,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
             {flow.steps.map((s, i) => {
               const isActive = i === flow.currentStepIndex;
               const isComplete = i < flow.currentStepIndex;
-              const cfg = stepConfig[s] || { label: s, icon: `${i + 1}` };
+              const cfg = { label: stepLabels[s] || s, icon: `${i + 1}` };
               return (
                 <div key={s} className="flex items-center flex-1 gap-1">
                   <div className="flex items-center gap-2 flex-1">
