@@ -1,8 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { AppShell } from "@/components/AppShell";
 import { useVisitors } from "@/hooks/useVisitors";
 import { Visitor, VisitorType } from "@/types/visitor";
 import { Badge } from "@/components/ui/badge";
