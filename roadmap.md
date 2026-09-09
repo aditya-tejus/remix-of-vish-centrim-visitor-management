@@ -453,3 +453,18 @@ Known limits after Phase 7E:
 - No schema, migration, access-rule, RPC or seed-data change.
 - Verified live (signed in): visitor with a companion at Riverstone shows "Came with Adam" and a sign-out button; a contractor shows company/work fields, "Documents outstanding" and read-only document states; opening another site's person shows "Visitor not found". Full suite 44 passing; typecheck and build pass.
 - Prototype limits: a profile only resolves for records the visit list loads (today's arrivals and anyone still on site), so an older visit opened directly reports "not found" — unchanged from before this stage. Food register context matches on the recorded name for non-residents. Keys are matched through this person's own arrivals at the current site rather than a key-level site filter. Contractor company shows only where a supplier is linked on the arrival. None of this is production compliance evidence.
+
+## Phase 8C Part 1 — Visitor Report screen and exports (complete)
+- New Reports card and route `/reports/visitor-report`. Nothing else in navigation moved.
+- Defaults to the current Monday–Sunday week worked out in the site's own time zone, with previous/next week and an optional custom date range capped at 31 days (the end date is shortened and the screen says so).
+- Users with more than one site get a site picker on the report only; it does not change the site selected everywhere else. Single-site users see their current site.
+- Attendance records are authoritative. A saved visitor record is used only where that visit has no attendance record, and every such line reads "Older record".
+- One line per accountable person per visit. Companions have their own line, their own arrival and departure, and read "With <main visitor>".
+- "Still on site" (arrived today, no sign-out) is never confused with "No sign-out recorded" (arrived on an earlier day, never signed out).
+- Search, person-type filter, missing-sign-out filter, four totals, an empty-week message, and 100 lines at a time with "Show more".
+- CSV and print (browser print to PDF) are available only with the export permission, and both carry site, period, time zone and generated-at.
+- The check-in question column shows a status only (Clear / Needs attention / Blocked) and only for staff with the screening permission. Answers, temperatures and vaccination details are never included anywhere in this report.
+- `src/lib/weeklyReport.ts` is the one composition used by the screen, the CSV and the printable page, so the three cannot disagree.
+- Tests: `src/test/weeklyReport.test.ts` (16 passing) covers week boundaries and time zones, the 31-day cap, companions, still-on-site vs missing sign-out, legacy marking, canonical taking precedence, unnamed companions, site isolation, empty weeks, screening permission gating, filters and export shape. Full suite 60 passing; typecheck and build pass; live check verified on a real week.
+- Prototype limits: attendance-record rows carry no screening status of their own yet, so the check-in question column reads "Not recorded" for them; sites with no time zone recorded fall back to the device time zone with a visible note; the report reads at most 2,000 rows per period; "printable PDF" is the browser's own print dialog.
+- Not in this slice (Phase 8C Part 2): weekly email subscriptions, recipients, scheduled sending and delivery records. No sender domain is configured for this project, so no email can be sent until the customer sets up a domain they own.
