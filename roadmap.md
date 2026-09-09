@@ -175,3 +175,9 @@ Blockers before production
   suppliers and properties.
 - Pilot control: manual contractor document verification, operator-set retention periods,
   printed emergency roll-call fallback.
+
+Stage 6C recovery pass
+- Closed emergencies are now fully immutable apart from the post-event review; reopening or
+  editing a resolved/reviewed event raises an error (verified by test). This was the one
+  "fix now" item the review turned up.
+- Temporary test records for this stage purged (evacuation drill, visitor, derived rows).
