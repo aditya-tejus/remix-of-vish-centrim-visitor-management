@@ -310,6 +310,10 @@ export function useKioskCheckInFlow() {
     setPersonQr,
     steps,
     activeFormFields,
+    activeFields,
+    missingFields,
+    missingFieldsHint,
+    isFieldOn: (key: string) => isFieldEnabled(activeFields, key),
 
     healthQuestions,
     vaccinationFields,
