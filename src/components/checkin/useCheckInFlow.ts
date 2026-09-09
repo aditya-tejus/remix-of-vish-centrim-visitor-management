@@ -9,6 +9,7 @@ import { Supplier } from "@/hooks/useSuppliers";
 import { FoodFormState, emptyFoodForm, isFoodFormValid } from "@/components/food/FoodFormFields";
 import { useOperatingContext, siteScopedKey } from "@/contexts/OperatingContext";
 import { resolveTermsContent } from "@/lib/segmentPacks";
+import { useSite } from "@/contexts/SiteContext";
 
 
 export type StepId = "identify" | "details" | "food" | "screening" | "confirm";
