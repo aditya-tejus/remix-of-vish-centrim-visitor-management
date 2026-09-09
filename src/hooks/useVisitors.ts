@@ -135,7 +135,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     }
     setLoading(false);
 
-  }, [publicMode, currentSiteId, isLegacySite]);
+  }, [publicMode, currentSiteId, isLegacySite, kioskSiteId]);
 
 
 

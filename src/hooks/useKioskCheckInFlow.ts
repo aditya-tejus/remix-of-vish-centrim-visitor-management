@@ -143,6 +143,7 @@ export function useKioskCheckInFlow() {
         p_last: hasName ? params.surname!.trim() : null,
         p_mobile: hasMobile ? params.mobile!.trim() : null,
         p_qr: hasQr ? params.qr!.trim().toUpperCase() : null,
+        p_branch_id: siteId ?? null,
       });
       const prev = Array.isArray(data) ? (data[0] as any) : null;
       if (!prev) return null;
