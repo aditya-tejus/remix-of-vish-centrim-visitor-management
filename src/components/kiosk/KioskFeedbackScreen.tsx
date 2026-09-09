@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { useFeedbackSurveys, useFeedbackQuestions, useFeedbackMutations } from "@/hooks/useFeedback";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ExternalLink, MessageSquare, SkipForward } from "lucide-react";
+import { ExternalLink, MessageSquare, SkipForward, Angry, Frown, Meh, Smile, Laugh } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
@@ -14,11 +14,11 @@ interface KioskFeedbackScreenProps {
 }
 
 const EMOJI_SCALE = [
-  { value: 1, emoji: "😠", label: "Very Poor" },
-  { value: 2, emoji: "😕", label: "Poor" },
-  { value: 3, emoji: "😐", label: "OK" },
-  { value: 4, emoji: "😊", label: "Good" },
-  { value: 5, emoji: "😍", label: "Excellent" },
+  { value: 1, icon: Angry, label: "Very Poor" },
+  { value: 2, icon: Frown, label: "Poor" },
+  { value: 3, icon: Meh, label: "OK" },
+  { value: 4, icon: Smile, label: "Good" },
+  { value: 5, icon: Laugh, label: "Excellent" },
 ];
 
 export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onComplete }: KioskFeedbackScreenProps) {
