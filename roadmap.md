@@ -359,3 +359,9 @@ Known limits after Phase 7E:
 - AppHeader: sidebar trigger labelled, occupancy exposed as a status with a spoken count, outbreak toggle exposes pressed state.
 - Verified: one main/h1/nav per converted route, skip link first in tab order and focuses main, no page errors, typecheck+build OK, Supabase linter unchanged at 47 warnings.
 - Known defect carried forward (pre-existing, not introduced here): `/residents` horizontal overflow — 27px at 768 and 142px at 1024. To fix in a later increment with the register/table work.
+
+## Phase 7F — Increment 2B (shell conversion batch 2) — done
+- Converted Visitors, Visitor Profile (incl. not-found), Calendar and Settings to the shared AppShell.
+- One main, one h1, one labelled main nav and one skip link per route; Settings keeps a single site switcher (header only).
+- Named the icon-only back, more-actions and calendar month/close controls.
+- Tracked, pre-existing: Residents horizontal overflow; Settings preview column overflow at 1024px (body layout, deferred to the Settings visual increment).
