@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
+import { useAttendance } from "@/hooks/useAttendance";
 import { VisitorTable } from "@/components/VisitorTable";
 import { useVisitors } from "@/hooks/useVisitors";
 import { CheckInSheet } from "@/components/checkin/CheckInSheet";
