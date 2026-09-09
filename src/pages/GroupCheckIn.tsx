@@ -323,6 +323,6 @@ export default function GroupCheckIn() {
         onDeny={() => setWatchlistOpen(false)}
       />
       )}
-    </SidebarProvider>
+    </AppShell>
   );
 }
