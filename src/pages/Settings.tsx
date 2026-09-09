@@ -19,14 +19,42 @@ import { LockGovernanceTab } from "@/components/settings/LockGovernanceTab";
 import { KioskStaffPinCard } from "@/components/settings/KioskStaffPinCard";
 
 import { SurveyBuilder } from "@/components/feedback/SurveyBuilder";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { SettingsSectionHeader } from "@/components/settings/SettingsSectionHeader";
+import { PreviewPanel } from "@/components/settings/preview/PreviewPanel";
+import { useSettingsAccess } from "@/hooks/useSettingsAccess";
 
 const personTypes: SettingsSection[] = ["visitor", "contractor", "resident", "staff", "volunteer"];
 
+/** Sections where seeing the result before saving genuinely helps. */
+const PREVIEW_SECTIONS: SettingsSection[] = [
+  "person-types", "visitor", "contractor", "volunteer", "staff", "printing", "context",
+];
+
+/** Honest note about where each section's values are stored today. */
+const STORAGE_NOTE: Partial<Record<SettingsSection, string>> = {
+  context: "Stored on the site record itself, so it applies to this site only.",
+  "person-types": "Saved for this site. Sites without their own value use the account-wide value.",
+  visitor: "Some values are saved per site, others are shared across the account — each row says which.",
+  contractor: "Some values are saved per site, others are shared across the account — each row says which.",
+  volunteer: "Some values are saved per site, others are shared across the account — each row says which.",
+  staff: "Some values are saved per site, others are shared across the account — each row says which.",
+  resident: "Some values are saved per site, others are shared across the account — each row says which.",
+  presence: "Saved for this site.",
+  printing: "Shared across the account — there is one badge setup, not one per site.",
+  keys: "Saved for this site.",
+  feedback: "Shared across the account.",
+  compliance: "Shared across the account.",
+  governance: "Shared across the account.",
+  audit: "A record of changes, not a setting. Nothing here is saved.",
+  integration: "A description of what could connect. Nothing is connected and nothing is saved.",
+};
+
 export default function SettingsPage() {
   const [active, setActive] = useState<SettingsSection>("context");
+  const access = useSettingsAccess(active);
 
   const isPersonType = personTypes.includes(active);
+
 
   return (
     <SidebarProvider>
