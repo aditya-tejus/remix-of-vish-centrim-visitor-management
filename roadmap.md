@@ -243,3 +243,11 @@ Not done / limitations:
   device binding; production needs an administrator-provisioned, cryptographically bound kiosk credential.
 - Resident and staff directory helpers used at the kiosk are not yet site-parameterised.
 - No external notification delivery, printer hardware, pre-registration or invitations (out of scope).
+
+## Phase 7B hardening — site-scoped kiosk directory helpers (in progress)
+- [ ] Site-scope resident, staff, supplier, contractor and watchlist kiosk helpers
+- [ ] Pass the kiosk site through the directory hooks and local adapters
+- [ ] Legacy no-site behaviour limited to the original legacy site only
+- [ ] Hide room numbers in show-all resident lookup
+- [ ] Remove the dead card-lane route from the person-type screen
+- [ ] Align pilot-grade site-binding wording in roadmap and security review
