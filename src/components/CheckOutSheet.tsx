@@ -128,14 +128,28 @@ export function CheckOutSheet({
 
   const handleBulkCheckOut = async () => {
     setBulkBusy(true);
+    setCheckOutFailed(null);
+    const failures: string[] = [];
     for (const v of bulkVisitors) {
-      await onCheckOut(v.id, "Checked out by reception", bulkTimeOverride || undefined);
+      try {
+        await onCheckOut(v.id, "Checked out by reception", bulkTimeOverride || undefined);
+      } catch {
+        failures.push(`${v.firstName} ${v.surname}`);
+      }
     }
     setBulkBusy(false);
+    if (failures.length > 0) {
+      // Keep the sheet open so nobody is told someone left when they did not.
+      setCheckOutFailed(
+        `Not saved for ${failures.join(", ")}. Check the connection and try again.`
+      );
+      return;
+    }
     setBulkTimeOverride(null);
     onPreSelectedClear?.();
     onOpenChange(false);
   };
+
 
   const keysFor = (visitorId: string) => openIssues.filter((i) => i.visitorId === visitorId);
 
