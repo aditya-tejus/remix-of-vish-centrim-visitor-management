@@ -67,13 +67,13 @@ export default function CalendarPage() {
             <div className="flex-1 min-w-0">
               {/* Month Navigation */}
               <div className="flex items-center justify-between mb-4">
-                <Button variant="ghost" size="icon" onClick={() => setCurrentMonth((m) => subMonths(m, 1))}>
+                <Button variant="ghost" size="icon" aria-label="Previous month" onClick={() => setCurrentMonth((m) => subMonths(m, 1))}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <h2 className="text-lg font-bold text-foreground">
                   {format(currentMonth, "MMMM yyyy")}
                 </h2>
-                <Button variant="ghost" size="icon" onClick={() => setCurrentMonth((m) => addMonths(m, 1))}>
+                <Button variant="ghost" size="icon" aria-label="Next month" onClick={() => setCurrentMonth((m) => addMonths(m, 1))}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -148,7 +148,7 @@ export default function CalendarPage() {
                         {selectedVisitors.length} visit{selectedVisitors.length !== 1 ? "s" : ""}
                       </p>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedDate(null)}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Close day details" onClick={() => setSelectedDate(null)}>
                       <X className="h-3.5 w-3.5" />
                     </Button>
                   </div>
