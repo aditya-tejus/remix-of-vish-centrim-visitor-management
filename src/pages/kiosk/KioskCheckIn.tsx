@@ -766,7 +766,11 @@ export default function KioskCheckIn() {
                               name={person.name}
                               subtitle={
                                 visitingMode === "resident"
-                                  ? `${person.room || "—"} ${person.wing ? `• ${person.wing}` : ""}`
+                                  ? // Room numbers are shown only when the person has searched for
+                                    // someone specific; a browsable list never displays them.
+                                    flow.residentLookupMode === "search_first"
+                                    ? `${person.room || "—"} ${person.wing ? `• ${person.wing}` : ""}`
+                                    : person.wing || ""ravel
                                   : `${person.role} ${person.department ? `• ${person.department}` : ""}`
                               }
                               accentColor="primary"

@@ -114,24 +114,26 @@ export interface ResidentDirectoryService {
   /** Staff context. Returns identity plus location only. */
   listResidents(siteId?: string | null): Promise<ResidentRef[]>;
   /** Kiosk context. Search-only, minimum fields, no clinical data. */
-  searchResidentsPublic(search: string): Promise<ResidentRef[]>;
+  searchResidentsPublic(search: string, siteId?: string | null): Promise<ResidentRef[]>;
   /** Staff context only. Support/clinical information for evacuation and duty of care. */
   getSupportInfo(residentIds: string[]): Promise<ResidentSupportInfo[]>;
 }
 
 export interface StaffDirectoryService {
   listStaff(siteId?: string | null): Promise<StaffRef[]>;
-  searchStaffPublic(search: string): Promise<StaffRef[]>;
+  searchStaffPublic(search: string, siteId?: string | null): Promise<StaffRef[]>;
 }
 
 export interface SupplierDirectoryService {
   listSuppliers(siteId?: string | null): Promise<SupplierRef[]>;
-  listSuppliersPublic(): Promise<SupplierRef[]>;
+  listSuppliersPublic(siteId?: string | null): Promise<SupplierRef[]>;
   findWorker(params: {
     firstName?: string;
     surname?: string;
     mobile?: string;
     qr?: string;
+    /** Kiosk context: recognition never crosses sites. */
+    siteId?: string | null;
   }): Promise<ContractorWorkerRef | null>;
 }
 
