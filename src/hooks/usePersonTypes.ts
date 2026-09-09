@@ -18,6 +18,8 @@ export interface PersonTypeConfigRow {
   destinationRequired: boolean;
   /** Check-in questions apply. */
   screeningApplies: boolean;
+  /** Vaccination details asked at sign-in (only when questions apply). */
+  vaccinationApplies: boolean;
   /** Privacy acknowledgement asked at sign-in. */
   privacyApplies: boolean;
   /** Badge and QR issued. */
@@ -69,7 +71,7 @@ export const PERSON_TYPE_DEFAULTS: {
 
 const FLAG_KEYS = [
   "kiosk", "desk", "label", "staffvisible", "destination",
-  "screening", "privacy", "badge", "rollcall",
+  "screening", "vaccination", "privacy", "badge", "rollcall",
 ] as const;
 
 const keysFor = (t: PersonTypeId) => FLAG_KEYS.map((f) => `person_type_${f}_${t}`);
@@ -105,6 +107,7 @@ function build(map: Record<string, string>, siteId: string | null): PersonTypeCo
       staffVisible: bool("staffvisible", true),
       destinationRequired: bool("destination", d.destinationRequired),
       screeningApplies: bool("screening", d.screeningApplies),
+      vaccinationApplies: bool("vaccination", d.screeningApplies),
       privacyApplies: bool("privacy", d.privacyApplies),
       badgeApplies: bool("badge", d.badgeApplies),
       rollCallIncluded: bool("rollcall", d.rollCallIncluded),

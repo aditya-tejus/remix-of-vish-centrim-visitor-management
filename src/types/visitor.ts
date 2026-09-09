@@ -48,6 +48,10 @@ export interface Visitor {
   accompaniedBy?: string;
   accompaniedByName?: string;
   healthAnswers?: Record<string, any>;
+  /** Overall check-in question outcome: clear, flagged or blocked. */
+  screeningOutcome?: "clear" | "flagged" | "blocked";
+  /** Which questions raised a concern, and how serious — never the answers themselves. */
+  screeningFlags?: { question_id: string; severity: string; action: string }[];
   contractorScreening?: Record<string, any>;
   supplierId?: string;
   qrCode?: string;
