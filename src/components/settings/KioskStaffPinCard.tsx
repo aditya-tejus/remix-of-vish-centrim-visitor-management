@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { KeyRound, ShieldCheck } from "lucide-react";
+import { useSectionAccess } from "@/components/settings/SettingsAccessContext";
 
 /**
  * Staff PIN used to open the hidden evacuation roll call on the kiosk.
@@ -14,6 +15,7 @@ import { KeyRound, ShieldCheck } from "lucide-react";
  */
 export function KioskStaffPinCard() {
   const { toast } = useToast();
+  const { canEdit } = useSectionAccess();
   const [pin, setPin] = useState("");
   const [confirm, setConfirm] = useState("");
   const [saving, setSaving] = useState(false);
@@ -25,6 +27,7 @@ export function KioskStaffPinCard() {
   useEffect(() => { refresh(); }, []);
 
   const save = async () => {
+    if (!canEdit) return;
     if (!/^[0-9]{4,8}$/.test(pin)) {
       toast({ title: "PIN must be 4 to 8 digits", variant: "destructive" });
       return;
