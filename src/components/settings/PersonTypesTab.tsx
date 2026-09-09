@@ -4,7 +4,10 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { usePersonTypes, PersonTypeConfigRow, PersonTypeExtras } from "@/hooks/usePersonTypes";
+import { usePersonTypes, PersonTypeConfigRow, PersonTypeExtras, PERSON_TYPE_DEFAULTS } from "@/hooks/usePersonTypes";
+import { useSettingsAccess } from "@/hooks/useSettingsAccess";
+import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
+import { RotateCcw, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useOperatingContext, siteScopedKey } from "@/contexts/OperatingContext";
 import { SettingExplainer } from "@/components/settings/SettingExplainer";
@@ -139,6 +142,17 @@ export function PersonTypesTab() {
                   onChange={(e) => update(r.type, { kioskLabel: e.target.value })}
                   className="h-9 w-44 text-sm"
                 />
+                {canEdit && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 text-[12px]"
+                    onClick={() => resetRowToDefault(r.type)}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
+                    Reset to default
+                  </Button>
+                )}
               </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2">
@@ -181,7 +195,7 @@ export function PersonTypesTab() {
               <Switch
                 checked={extraRows[key]}
                 disabled={!canEdit}
-                onCheckedChange={(v) => setExtraRows((prev) => ({ ...prev, [key]: v }))}
+                onCheckedChange={(v) => { setDirty(true); setExtraRows((prev) => ({ ...prev, [key]: v })); }}
               />
             </label>
           ))}
@@ -197,9 +211,34 @@ export function PersonTypesTab() {
         they are never described as visitors. Residents are not a sign-in type: their switch controls the resident leave tile on the kiosk.
       </p>
 
+      {validationError && (
+        <p className="flex items-center gap-2 text-[13px] font-medium text-destructive">
+          <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+          {validationError}
+        </p>
+      )}
+
+      {saveError && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive bg-destructive/5 p-3">
+          <p className="text-[13px] text-destructive">{saveError}</p>
+          <Button variant="outline" size="sm" onClick={save} disabled={saving}>Try again</Button>
+        </div>
+      )}
+
       {canEdit && (
-        <div className="flex justify-end">
-          <Button onClick={save} disabled={saving || !canEdit}>{saving ? "Saving…" : "Save changes"}</Button>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {dirty && !saveError && (
+            <span className="text-[12px] text-muted-foreground">You have changes that are not saved yet.</span>
+          )}
+          {!dirty && savedAt && (
+            <span className="flex items-center gap-1.5 text-[12px] text-success">
+              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+              Saved
+            </span>
+          )}
+          <Button onClick={save} disabled={saving || !canEdit || !dirty || !!validationError}>
+            {saving ? "Saving…" : "Save changes"}
+          </Button>
         </div>
       )}
     </div>
