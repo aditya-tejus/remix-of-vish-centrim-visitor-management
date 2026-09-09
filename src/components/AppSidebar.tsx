@@ -196,31 +196,48 @@ export function AppSidebar() {
           </Collapsible>
         ))}
 
-        {/* Emergency — always visible, visually distinct, never noisy */}
+        {/* Settings, emergency and kiosk — always visible */}
         <div className="mt-2 px-1">
-          <SidebarMenu>
+          <SidebarMenu className="space-y-0.5">
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={location.pathname === "/evacuation"}
-                tooltip="Emergency roll call"
-                className="h-9 gap-2.5 rounded-lg border border-destructive/40 px-3 text-[13px] font-semibold text-destructive-foreground/90 hover:bg-destructive/20"
+                isActive={location.pathname === "/settings"}
+                tooltip="Settings"
+                className={`h-10 gap-2.5 rounded-lg px-3 text-[13px] font-semibold ${
+                  location.pathname === "/settings"
+                    ? "bg-sidebar-accent text-sidebar-foreground"
+                    : "text-sidebar-muted hover:bg-[rgba(255,255,255,0.05)] hover:text-sidebar-foreground"
+                }`}
               >
-                <NavLink to="/evacuation" aria-current={location.pathname === "/evacuation" ? "page" : undefined}>
-                  <Siren className="h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
-                  <span>Emergency roll call</span>
+                <NavLink to="/settings" aria-current={location.pathname === "/settings" ? "page" : undefined}>
+                  <Settings className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span className="flex-1 text-left">Settings</span>
                 </NavLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                tooltip="Open kiosk in a new tab"
+                isActive={location.pathname === "/evacuation"}
+                tooltip="Emergency Roll Call"
+                className="h-9 gap-2.5 rounded-lg border border-destructive/40 px-3 text-[13px] font-semibold text-destructive-foreground/90 hover:bg-destructive/20"
+              >
+                <NavLink to="/evacuation" aria-current={location.pathname === "/evacuation" ? "page" : undefined}>
+                  <Siren className="h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
+                  <span>Emergency Roll Call</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                tooltip="Kiosk Mode opens in a new tab"
                 className="h-9 gap-2.5 rounded-lg px-3 text-[13px] font-medium text-sidebar-muted hover:bg-[rgba(255,255,255,0.05)] hover:text-sidebar-foreground"
               >
                 <a href="/kiosk" target="_blank" rel="noopener noreferrer">
-                  <Layers className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  <span>Open kiosk (new tab)</span>
+                  <MonitorSmartphone className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>Kiosk Mode (new tab)</span>
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -228,6 +245,7 @@ export function AppSidebar() {
         </div>
         </nav>
       </SidebarContent>
+
 
 
       <SidebarFooter className="px-3 pb-4">
