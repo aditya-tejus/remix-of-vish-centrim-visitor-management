@@ -33,8 +33,29 @@ function formatVisitorForExport(visitor: Visitor) {
   };
 }
 
+/**
+ * Companions are exported as their own line, tagged with the person they
+ * arrived with, so an export matches who was actually on site.
+ */
+function companionRows(visitor: Visitor) {
+  const base = formatVisitorForExport(visitor);
+  return (visitor.companionDetails || []).map((c: any, i: number) => ({
+    ...base,
+    "First Name": (c?.name || c?.companion_name || `Companion ${i + 1}`) as string,
+    "Surname": "",
+    "Email": c?.email || "",
+    "Mobile": c?.phone || c?.mobile || "",
+    "Address": "",
+    "Additional Visitors": "0",
+    "With": `${visitor.firstName} ${visitor.surname}`,
+  }));
+}
+
 export function exportVisitorsToCSV(visitors: Visitor[], filename?: string) {
-  const rows = visitors.map(formatVisitorForExport);
+  const rows = visitors.flatMap((v) => [
+    { ...formatVisitorForExport(v), With: "" },
+    ...companionRows(v),
+  ]);
   if (rows.length === 0) return;
 
   const headers = Object.keys(rows[0]);

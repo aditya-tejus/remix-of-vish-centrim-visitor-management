@@ -7,31 +7,104 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useVisitors } from "@/hooks/useVisitors";
+import { useAttendance } from "@/hooks/useAttendance";
 import { format, subDays } from "date-fns";
 import { Download, Search, ClipboardList, Filter } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PresenceLog() {
   const { visitors, loading } = useVisitors();
+  const { parties } = useAttendance();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [dateRange, setDateRange] = useState("7");
 
+  /**
+   * One row per accountable person. Companions come from the canonical
+   * attendance record; where an older arrival has none, the saved companion
+   * names are used so nobody disappears from the log.
+   */
+  const rows = useMemo(() => {
+    const byVisitor = new Map<string, typeof parties>();
+    parties.filter((p) => !p.isPrimary && p.legacyVisitorId).forEach((p) => {
+      const list = byVisitor.get(p.legacyVisitorId!) || [];
+      list.push(p);
+      byVisitor.set(p.legacyVisitorId!, list as typeof parties);
+    });
+
+    const out: {
+      key: string;
+      name: string;
+      type: string;
+      checkInTime: Date;
+      checkOutTime: Date | null;
+      whomToVisit: string;
+      status: string;
+      companionOf: string | null;
+    }[] = [];
+
+    visitors.forEach((v) => {
+      const mainName = `${v.firstName} ${v.surname}`;
+      out.push({
+        key: v.id,
+        name: mainName,
+        type: v.type,
+        checkInTime: v.checkInTime,
+        checkOutTime: v.checkOutTime ?? null,
+        whomToVisit: v.whomToVisit || "",
+        status: v.status,
+        companionOf: null,
+      });
+
+      const canonical = byVisitor.get(v.id) || [];
+      if (canonical.length > 0) {
+        canonical.forEach((p) => {
+          out.push({
+            key: p.id,
+            name: p.displayName,
+            type: v.type,
+            checkInTime: p.checkInTime,
+            checkOutTime: p.checkOutTime,
+            whomToVisit: v.whomToVisit || "",
+            status: p.checkOutTime ? "checked-out" : "checked-in",
+            companionOf: mainName,
+          });
+        });
+      } else {
+        (v.companionDetails || []).forEach((c: any, i: number) => {
+          const name = c?.name || c?.companion_name || `Companion ${i + 1}`;
+          out.push({
+            key: `${v.id}-companion-${i}`,
+            name,
+            type: v.type,
+            checkInTime: v.checkInTime,
+            checkOutTime: v.checkOutTime ?? null,
+            whomToVisit: v.whomToVisit || "",
+            status: v.status,
+            companionOf: mainName,
+          });
+        });
+      }
+    });
+    return out;
+  }, [visitors, parties]);
+
   const filtered = useMemo(() => {
     const cutoff = subDays(new Date(), parseInt(dateRange));
-    let list = visitors.filter((v) => v.checkInTime >= cutoff);
+    let list = rows.filter((v) => v.checkInTime >= cutoff);
     if (typeFilter !== "all") list = list.filter((v) => v.type === typeFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
-      list = list.filter((v) => `${v.firstName} ${v.surname}`.toLowerCase().includes(q) || v.whomToVisit?.toLowerCase().includes(q));
+      list = list.filter((v) => v.name.toLowerCase().includes(q) || v.whomToVisit?.toLowerCase().includes(q));
     }
     return list.sort((a, b) => b.checkInTime.getTime() - a.checkInTime.getTime());
-  }, [visitors, search, typeFilter, dateRange]);
+  }, [rows, search, typeFilter, dateRange]);
 
   const exportCSV = () => {
-    const headers = ["Name", "Type", "Check-In", "Check-Out", "Duration", "Visiting", "Status"];
-    const rows = filtered.map((v) => [
-      `${v.firstName} ${v.surname}`,
+    const headers = ["Name", "With", "Type", "Check-In", "Check-Out", "Duration", "Visiting", "Status"];
+    const csvRows = filtered.map((v) => [
+      v.name,
+      v.companionOf || "",
       v.type,
       format(v.checkInTime, "dd/MM/yyyy HH:mm"),
       v.checkOutTime ? format(v.checkOutTime, "dd/MM/yyyy HH:mm") : "",
@@ -39,7 +112,7 @@ export default function PresenceLog() {
       v.whomToVisit || "",
       v.status,
     ]);
-    const csv = [headers.join(","), ...rows.map((r) => r.map((c) => `"${c}"`).join(","))].join("\n");
+    const csv = [headers.join(","), ...csvRows.map((r) => r.map((c) => `"${c}"`).join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -111,6 +184,7 @@ export default function PresenceLog() {
                   <TableHeader>
                     <TableRow className="bg-muted/50">
                       <TableHead className="text-[11px] uppercase tracking-wider">Name</TableHead>
+                      <TableHead className="text-[11px] uppercase tracking-wider">With</TableHead>
                       <TableHead className="text-[11px] uppercase tracking-wider">Type</TableHead>
                       <TableHead className="text-[11px] uppercase tracking-wider">Check-In</TableHead>
                       <TableHead className="text-[11px] uppercase tracking-wider">Check-Out</TableHead>
@@ -120,8 +194,9 @@ export default function PresenceLog() {
                   </TableHeader>
                   <TableBody>
                     {filtered.slice(0, 200).map((v) => (
-                      <TableRow key={v.id}>
-                        <TableCell className="font-medium text-sm">{v.firstName} {v.surname}</TableCell>
+                      <TableRow key={v.key}>
+                        <TableCell className="font-medium text-sm">{v.name}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{v.companionOf || "—"}</TableCell>
                         <TableCell><Badge variant="outline" className="text-[10px] capitalize">{v.type}</Badge></TableCell>
                         <TableCell className="text-sm">{format(v.checkInTime, "dd MMM HH:mm")}</TableCell>
                         <TableCell className="text-sm">{v.checkOutTime ? format(v.checkOutTime, "dd MMM HH:mm") : "—"}</TableCell>

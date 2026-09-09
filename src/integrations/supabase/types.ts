@@ -3003,6 +3003,21 @@ export type Database = {
       }
       current_user_site_ids: { Args: never; Returns: string[] }
       default_site_id: { Args: never; Returns: string }
+      duplicate_party_details: {
+        Args: { p_branch_id?: string }
+        Returns: {
+          check_in_time: string
+          check_out_time: string
+          companion_index: number
+          display_name: string
+          is_primary: boolean
+          name_status: string
+          party_id: string
+          status: string
+          visit_id: string
+          visit_label: string
+        }[]
+      }
       effective_retention_policy: {
         Args: { p_branch_id?: string; p_record_class: string }
         Returns: {
@@ -3242,6 +3257,7 @@ export type Database = {
         }
         Returns: string
       }
+      renumber_visit_party: { Args: { p_party_id: string }; Returns: number }
       resolve_setting: {
         Args: {
           p_branch_id?: string
@@ -3269,6 +3285,15 @@ export type Database = {
           issue: string
           records: number
           sample_ids: string[]
+        }[]
+      }
+      visit_integrity_samples: {
+        Args: { p_branch_id?: string; p_issue: string; p_limit?: number }
+        Returns: {
+          detail: string
+          label: string
+          occurred_at: string
+          record_id: string
         }[]
       }
     }
