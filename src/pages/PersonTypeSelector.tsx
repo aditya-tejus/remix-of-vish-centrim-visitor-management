@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppShell } from "@/components/AppShell";
 import { AddVisitDialog } from "@/components/AddVisitDialog";
 import { useVisitors } from "@/hooks/useVisitors";
 import { User, Truck, Heart, Users, UserSquare2, QrCode, ArrowRight, UsersRound } from "lucide-react";
@@ -45,21 +44,12 @@ export default function PersonTypeSelector() {
   };
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <header className="sticky top-0 z-10 bg-card border-b border-border">
-            <div className="flex items-center gap-4 px-6 h-14">
-              <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-              <div>
-                <h1 className="text-xl font-bold text-foreground">New Check-In</h1>
-                <p className="text-[13px] text-muted-foreground">Select the type of person checking in</p>
-              </div>
-            </div>
-          </header>
-
-          <main className="p-6">
+    <>
+      <AppShell
+        title="New Check-In"
+        subtitle="Select the type of person checking in"
+        mainClassName="p-6"
+      >
             <div className="max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
               {PERSON_TYPES.map((pt) => (
                 <button
@@ -110,10 +100,8 @@ export default function PersonTypeSelector() {
                 <ArrowRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
             </div>
-          </main>
-        </SidebarInset>
-      </div>
+      </AppShell>
       <AddVisitDialog open={dialogOpen} onOpenChange={setDialogOpen} onAdd={addVisitor} initialType={selectedType as any} />
-    </SidebarProvider>
+    </>
   );
 }

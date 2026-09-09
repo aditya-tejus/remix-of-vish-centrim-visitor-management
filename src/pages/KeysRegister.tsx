@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { AppSidebar } from "@/components/AppSidebar";
-import { AppHeader } from "@/components/AppHeader";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -342,23 +340,18 @@ export default function KeysRegister() {
   const holderName = (k: PropertyKey) => k.currentIssue?.issuedToName || "";
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <AppHeader
-            title="Keys Register"
-            subtitle="Every property key, who has it right now, and when it is due back."
-            actions={
-              canView && canExport ? (
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={exportRegister} disabled={keys.length === 0}>
-                  <Download className="h-3.5 w-3.5" /> Export register
-                </Button>
-              ) : undefined
-            }
-          />
-
-          <main className="p-6 space-y-6">
+    <AppShell
+      title="Keys Register"
+      subtitle="Every property key, who has it right now, and when it is due back."
+      actions={
+        canView && canExport ? (
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={exportRegister} disabled={keys.length === 0}>
+            <Download className="h-3.5 w-3.5" /> Export register
+          </Button>
+        ) : undefined
+      }
+      mainClassName="p-6 space-y-6"
+    >
             {!permsLoading && !canView ? (
               <PermissionDeniedState description="You do not have access to the keys and fobs register at this site. Ask an administrator if you need it." />
             ) : (
@@ -572,9 +565,6 @@ export default function KeysRegister() {
             )}
             </>
             )}
-          </main>
-        </SidebarInset>
-      </div>
 
       <AddKeyDialog open={addOpen} onOpenChange={setAddOpen} residents={residents} onAdd={addKey} />
 
@@ -815,6 +805,6 @@ export default function KeysRegister() {
           })()}
         </SheetContent>
       </Sheet>
-    </SidebarProvider>
+    </AppShell>
   );
 }
