@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { VisitorType, Visitor, CompanionDetail } from "@/types/visitor";
 import { useActiveHealthQuestions, useActiveVaccinationFields } from "@/hooks/useHealthQuestions";
-import { useCompanionFields } from "@/hooks/useFormFields";
+import { useCompanionFields, useFormFields } from "@/hooks/useFormFields";
+import { mergeCompanionFields, missingCompanionFields } from "@/lib/companionFields";
 import { useResidents } from "@/hooks/useResidents";
 import { useStaffMembers } from "@/hooks/useStaffMembers";
 import { supabase } from "@/integrations/supabase/client";
