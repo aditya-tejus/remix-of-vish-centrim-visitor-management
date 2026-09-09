@@ -428,3 +428,14 @@ Known limits after Phase 7E:
 - Tests: `src/test/screeningOutcome.test.ts` (11 passing) covers switched-off policy, no configured step, questions without rules, warning/flag, critical/block, several questions at once, missing answers, record-only, and temperature. Full suite 20 passing; typecheck and build pass; live check-in screen verified.
 - Security linter: 56 warnings (was 54). The 2 new ones are the supervisor-approval routine and the audit helper; both refuse to act without the right permission and are not callable anonymously.
 - Prototype limits: rules are per question, not per site (a question belongs to a person type); severity wording is staff guidance only; none of this is production compliance evidence.
+
+## Phase 8B-3 (slice 1) — Canonical accountable-person reader and consumer cutover (complete)
+- `src/lib/accountablePeople.ts` is the one read model for "who was actually here": one row per person (the person who signed in, plus each companion), never merged by name, email, phone or personal code. Two people with no contact details recorded stay two rows.
+- Attendance records win. An arrival with no attendance records falls back to the saved visitor record and its saved companion names, and is labelled "older record" so the evidence quality is obvious. Headcount-only arrivals still show one row per person, read-only.
+- `src/hooks/useAccountablePeople.ts` applies the current site (legacy site also matches unassigned records).
+- Visit List rows and phone cards, badge printing and the visitor CSV export all read through the shared model. Companion badges now print a "With <main visitor>" line. The CSV gained a "Record" column (attendance record / older record).
+- Visitor history now looks for the person's attendance records first and shows every visit they were on, whether they signed in themselves or came with somebody else; the older name/phone match is only used when there are no attendance records.
+- Companion-only sign-out is unchanged and is only offered where an attendance record exists; older companion lines are read-only, with no "add name" action.
+- Nothing was written, merged, renamed or reconciled. No schema, access-rule or settings change.
+- Tests: `src/test/accountablePeople.test.ts` (7 passing) covers two blank-contact arrivals, primary plus companions, companion-only sign-out, attendance-versus-older fallback, site isolation, export row counts and no merging. Full suite 27 passing; typecheck and build pass; live Visit List verified (companion shown as their own line "With Adam John").
+- Still open: the wider profile foundation, contractor profile view, weekly report, kiosk binding, contractor verification queue and historical reconciliation apply.

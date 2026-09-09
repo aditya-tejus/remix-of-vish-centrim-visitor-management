@@ -15,6 +15,8 @@ export interface AttendanceParty {
   nameStatus: string;
   checkInTime: Date;
   checkOutTime: Date | null;
+  /** Site this visit belongs to. */
+  branchId: string | null;
 }
 
 /**
@@ -59,6 +61,7 @@ export function useAttendance(options: { onlyOpen?: boolean } = {}) {
           nameStatus: row.name_status,
           checkInTime: new Date(row.check_in_time),
           checkOutTime: row.check_out_time ? new Date(row.check_out_time) : null,
+          branchId: row.visits?.branch_id ?? null,
         }))
       );
     }

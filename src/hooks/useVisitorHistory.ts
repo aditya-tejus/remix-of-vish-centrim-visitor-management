@@ -18,7 +18,12 @@ export interface VisitHistoryEntry {
   bodyTemperature: number | null;
   checkoutReason: string | null;
   leaveType: string | null;
+  /** Where this line came from: an attendance record, or an older saved record. */
+  source: "canonical" | "legacy";
+  /** How this person was on that visit. */
+  role: "primary" | "companion" | "unknown";
 }
+
 
 /**
  * A person's full visit history, not just today's records.
@@ -38,7 +43,11 @@ export function useVisitorHistory(visitor: Visitor | null | undefined) {
     let active = true;
     if (!firstName && !personQr) { setVisits([]); setLoading(false); return; }
 
-    const map = (rows: any[]): VisitHistoryEntry[] =>
+    const map = (
+      rows: any[],
+      source: "canonical" | "legacy",
+      roleById: Record<string, "primary" | "companion"> = {}
+    ): VisitHistoryEntry[] =>
       rows.map((r) => ({
         id: r.id,
         checkInTime: new Date(r.check_in_time),
@@ -54,6 +63,8 @@ export function useVisitorHistory(visitor: Visitor | null | undefined) {
         bodyTemperature: r.body_temperature ?? null,
         checkoutReason: r.checkout_reason ?? null,
         leaveType: r.leave_type ?? null,
+        source,
+        role: roleById[r.id] ?? "unknown",
       }));
 
     (async () => {
@@ -68,6 +79,62 @@ export function useVisitorHistory(visitor: Visitor | null | undefined) {
           : q.eq("branch_id", currentSiteId);
       };
 
+      /**
+       * Attendance records first: find the person behind this arrival, then
+       * every visit they were recorded on, whether they signed in themselves
+       * or came with somebody else.
+       */
+      const visitorId = visitor?.id;
+      let personId: string | null = null;
+      if (visitorId) {
+        const { data } = await supabase
+          .from("visit_parties")
+          .select("person_id, visits!inner(legacy_visitor_id)")
+          .eq("visits.legacy_visitor_id", visitorId)
+          .not("person_id", "is", null)
+          .limit(1);
+        personId = (data as any[])?.[0]?.person_id ?? null;
+      }
+
+      const roleById: Record<string, "primary" | "companion"> = {};
+      if (personId) {
+        let q: any = supabase
+          .from("visit_parties")
+          .select("is_primary, check_in_time, visits!inner(branch_id, legacy_visitor_id)")
+          .eq("person_id", personId)
+          .order("check_in_time", { ascending: false })
+          .limit(200);
+        q = !currentSiteId
+          ? q
+          : isLegacySite
+            ? q.or(`branch_id.eq.${currentSiteId},branch_id.is.null`, { foreignTable: "visits" })
+            : q.eq("visits.branch_id", currentSiteId);
+        const { data: partyRows } = await q;
+        const ids: string[] = [];
+        ((partyRows as any[]) || []).forEach((p) => {
+          const legacyId = p.visits?.legacy_visitor_id;
+          if (!legacyId) return;
+          if (!ids.includes(legacyId)) ids.push(legacyId);
+          roleById[legacyId] = p.is_primary ? "primary" : "companion";
+        });
+        if (ids.length > 0) {
+          const { data } = await supabase
+            .from("visitors")
+            .select("*")
+            .in("id", ids)
+            .order("check_in_time", { ascending: false })
+            .limit(200);
+          rows = data || [];
+        }
+        if (rows.length > 0) {
+          if (!active) return;
+          setVisits(map(rows, "canonical", roleById));
+          setLoading(false);
+          return;
+        }
+      }
+
+      // No attendance records for this person: fall back to the saved records.
       if (personQr) {
         const { data } = await scoped(
           supabase.from("visitors").select("*").eq("person_qr", personQr)
@@ -87,9 +154,10 @@ export function useVisitorHistory(visitor: Visitor | null | undefined) {
       }
 
       if (!active) return;
-      setVisits(map(rows));
+      setVisits(map(rows, "legacy"));
       setLoading(false);
     })();
+
 
     return () => { active = false; };
   }, [visitor?.id, personQr, firstName, surname, mobile, currentSiteId, isLegacySite]);

@@ -25,6 +25,7 @@ import { CheckInReturnDialog } from "@/components/CheckInReturnDialog";
 import { useResidents } from "@/hooks/useResidents";
 import { useSiteStructure } from "@/hooks/useSiteStructure";
 import type { AttendanceParty } from "@/hooks/useAttendance";
+import { companionRowsForVisitor, type AccountableRow } from "@/lib/accountablePeople";
 import { issueBadge } from "@/lib/badgeIssue";
 import { useSite } from "@/contexts/SiteContext";
 
@@ -143,7 +144,7 @@ export function VisitorTable({
   const isWatchlisted = (v: Visitor) => !!checkVisitor(v.firstName, v.surname);
 
   const handleSingleCSV = (visitor: Visitor) => {
-    exportVisitorsToCSV([visitor], `visitor-${visitor.firstName}-${visitor.surname}.csv`);
+    exportVisitorsToCSV([visitor], `visitor-${visitor.firstName}-${visitor.surname}.csv`, companionParties);
     toast({ title: "CSV Exported", description: `Record for ${visitor.firstName} ${visitor.surname} exported.` });
   };
 
@@ -415,42 +416,43 @@ export function VisitorTable({
   };
 
   /** A companion gets their own badge, showing their own name. */
-  const printCompanionBadge = (party: AttendanceParty, visitor: Visitor) => {
-    const name = party.nameStatus === "named" ? party.displayName : `Companion ${party.companionIndex}`;
+  const printCompanionBadge = (row: AccountableRow, visitor: Visitor) => {
     issueBadge(
-      { name, type: visitor.type, visiting: visitor.whomToVisit || undefined, date: party.checkInTime },
-      { siteId: currentSiteId, siteName: currentSite?.name ?? null }
+      {
+        name: row.name,
+        type: visitor.type,
+        visiting: visitor.whomToVisit || undefined,
+        date: row.checkInTime,
+        companionOf: row.withPrimaryName || undefined,
+      },
+      { siteId: currentSiteId, siteName: currentSite?.name ?? null, visitorId: visitor.id }
     );
   };
 
   /** Each companion is shown as their own accountable person on the visit. */
-  const renderCompanionRows = (visitor: Visitor) => {
-    const companions = companionParties.filter(
-      (p) => p.legacyVisitorId === visitor.id && !p.isPrimary
-    );
-    return companions.map((party) => (
-      <TableRow key={party.id} className="bg-muted/20">
+  const renderCompanionRows = (visitor: Visitor) =>
+    companionRowsForVisitor(visitor, companionParties).map((row) => (
+      <TableRow key={row.key} className="bg-muted/20">
         <TableCell className="py-2 w-9" />
         <TableCell className="py-2">
           <div className="flex items-center gap-2 pl-4">
             <UsersRound className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
             <div className="flex flex-col">
-              <span className="text-[13px] text-foreground">
-                {party.nameStatus === "named" ? party.displayName : `Companion ${party.companionIndex} (name not recorded)`}
-              </span>
+              <span className="text-[13px] text-foreground">{row.name}</span>
               <span className="text-[11px] text-muted-foreground">
-                With {visitor.firstName} {visitor.surname}
-                {party.relationship ? ` · ${party.relationship}` : ""}
+                With {row.withPrimaryName}
+                {row.relationship ? ` · ${row.relationship}` : ""}
+                {row.source === "legacy" ? " · older record" : ""}
               </span>
             </div>
           </div>
         </TableCell>
         <TableCell className="py-2">
-          <span className="text-[13px] font-mono text-foreground">{format(party.checkInTime, "hh:mm a")}</span>
+          <span className="text-[13px] font-mono text-foreground">{format(row.checkInTime, "hh:mm a")}</span>
         </TableCell>
         <TableCell className="py-2">
-          {party.checkOutTime ? (
-            <span className="text-[13px] font-mono text-foreground">{format(party.checkOutTime, "hh:mm a")}</span>
+          {row.checkOutTime ? (
+            <span className="text-[13px] font-mono text-foreground">{format(row.checkOutTime, "hh:mm a")}</span>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-success">
               <span className="h-1.5 w-1.5 rounded-full bg-success" />
@@ -461,12 +463,12 @@ export function VisitorTable({
         <TableCell className="py-2" />
         {columns.some((c) => c.key === "companions") && <TableCell className="py-2" />}
         <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
-          {!party.checkOutTime && canCheckOut && onCheckOutParty && (
+          {!row.checkOutTime && canCheckOut && onCheckOutParty && row.partyId && (
             <Button
               variant="outline"
               size="sm"
               className="h-8 text-[12px] gap-1.5"
-              onClick={() => onCheckOutParty(party.id)}
+              onClick={() => onCheckOutParty(row.partyId!)}
             >
               <LogOut className="h-3.5 w-3.5" aria-hidden />
               Sign out
@@ -478,7 +480,7 @@ export function VisitorTable({
             variant="ghost"
             size="sm"
             className="h-8 text-[12px] gap-1.5"
-            onClick={() => printCompanionBadge(party, visitor)}
+            onClick={() => printCompanionBadge(row, visitor)}
           >
             <Printer className="h-3.5 w-3.5" aria-hidden />
             Print badge
@@ -486,7 +488,7 @@ export function VisitorTable({
         </TableCell>
       </TableRow>
     ));
-  };
+
 
   /** Narrow screens get the same information as a stacked card. */
   const renderCard = (visitor: Visitor) => {
@@ -525,28 +527,23 @@ export function VisitorTable({
 
   /** On phones each companion gets their own card, tagged to who they arrived with. */
   const renderCompanionCards = (visitor: Visitor) =>
-    companionParties
-      .filter((p) => p.legacyVisitorId === visitor.id && !p.isPrimary)
-      .map((party) => (
-        <div key={party.id} className="p-4 pl-8 space-y-2 bg-muted/20">
+    companionRowsForVisitor(visitor, companionParties).map((row) => (
+        <div key={row.key} className="p-4 pl-8 space-y-2 bg-muted/20">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-start gap-2">
               <UsersRound className="h-4 w-4 text-muted-foreground mt-0.5" aria-hidden />
               <div>
-                <p className="text-[14px] font-medium text-foreground">
-                  {party.nameStatus === "named"
-                    ? party.displayName
-                    : `Companion ${party.companionIndex} (name not recorded)`}
-                </p>
+                <p className="text-[14px] font-medium text-foreground">{row.name}</p>
                 <p className="text-[12px] text-muted-foreground">
-                  With {visitor.firstName} {visitor.surname}
-                  {party.relationship ? ` · ${party.relationship}` : ""}
+                  With {row.withPrimaryName}
+                  {row.relationship ? ` · ${row.relationship}` : ""}
+                  {row.source === "legacy" ? " · older record" : ""}
                 </p>
               </div>
             </div>
-            {party.checkOutTime ? (
+            {row.checkOutTime ? (
               <span className="text-[12px] text-muted-foreground">
-                Out {format(party.checkOutTime, "hh:mm a")}
+                Out {format(row.checkOutTime, "hh:mm a")}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-success">
@@ -555,28 +552,29 @@ export function VisitorTable({
             )}
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[12px] text-muted-foreground">In {format(party.checkInTime, "hh:mm a")}</span>
+            <span className="text-[12px] text-muted-foreground">In {format(row.checkInTime, "hh:mm a")}</span>
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-9 text-[12px] gap-1.5"
-                onClick={() => printCompanionBadge(party, visitor)}
+                onClick={() => printCompanionBadge(row, visitor)}
               >
                 <Printer className="h-3.5 w-3.5" aria-hidden /> Print badge
               </Button>
-              {!party.checkOutTime && canCheckOut && onCheckOutParty && (
+              {!row.checkOutTime && canCheckOut && onCheckOutParty && row.partyId && (
                 <Button
                   variant="outline"
                   size="sm"
                   className="h-9 text-[12px] gap-1.5"
-                  onClick={() => onCheckOutParty(party.id)}
+                  onClick={() => onCheckOutParty(row.partyId!)}
                 >
                   <LogOut className="h-3.5 w-3.5" aria-hidden /> Sign out
                 </Button>
               )}
             </div>
           </div>
+
         </div>
       ));
 
