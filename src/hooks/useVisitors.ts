@@ -532,6 +532,8 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     refresh: fetchVisitors,
     addVisitor,
     addVisitorAsync,
+    /** Save that resolves only once stored, so a form can retry without duplicating. */
+    submitVisitor,
     /** Last successful read of the list, so the desk can see how fresh it is. */
     lastUpdated,
 
