@@ -3,7 +3,7 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, UserPlus, ShieldAlert, UtensilsCrossed, Printer } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CheckCircle2, UserPlus, ShieldAlert, ShieldCheck, UtensilsCrossed, Printer } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { Visitor } from "@/types/visitor";
@@ -27,12 +27,12 @@ interface CheckInSheetProps {
 
 }
 
-const stepConfig: Record<string, { label: string; icon: string }> = {
-  identify: { label: "Identify", icon: "1" },
-  details: { label: "Details", icon: "2" },
-  food: { label: "Food", icon: "F" },
-  screening: { label: "Screening", icon: "3" },
-  confirm: { label: "Confirm", icon: "4" },
+const stepLabels: Record<string, string> = {
+  identify: "Identify",
+  details: "Details",
+  food: "Food",
+  screening: "Screening",
+  confirm: "Confirm",
 };
 
 export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
@@ -43,6 +43,8 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
   const [createdVisitorId, setCreatedVisitorId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
+  const [approving, setApproving] = useState(false);
+  const [overrideError, setOverrideError] = useState<string | null>(null);
   // A ref, not state, so a fast second tap cannot slip through before a re-render.
   const submittingRef = useRef(false);
   const { currentSite, currentSiteId } = useSite();
@@ -102,25 +104,23 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
       });
     }
 
-    if (flow.screeningFlagged && flow.overrideReason.trim()) {
+    // Flagged (not blocked) sign-ins are recorded server-side, so the entry
+    // cannot be skipped from the browser.
+    if (flow.screeningFlagged && !flow.screeningBlocked && flow.overrideReason.trim()) {
       const name = `${flow.formData.firstName} ${flow.formData.surname}`.trim();
-      supabase.auth.getUser().then(({ data }) => {
-        supabase.from("audit_log").insert({
-          action: "health_screening_override",
-          performed_by: data.user?.email || "Staff",
-          user_id: data.user?.id ?? null,
-          records_affected: 1,
-          change_reason: flow.overrideReason.trim(),
-          details: {
-            visitor_name: name,
-            visitor_type: flow.selectedType,
-            symptom_flag: flow.hasSymptomFlag,
-            body_temperature: flow.formData.bodyTemperature || null,
-            overridden_at: new Date().toISOString(),
-          } as any,
-        }).then(() => undefined);
-      });
+      supabase.rpc("log_audit", {
+        _action: "screening.flag_accepted",
+        _details: {
+          visitor_name: name,
+          visitor_type: flow.selectedType,
+          outcome: flow.screeningEvaluation.outcome,
+          flags: flow.screeningEvaluation.flags.map((f) => ({ question_id: f.questionId, severity: f.severity })),
+        } as any,
+        _records: 1,
+        _reason: flow.overrideReason.trim(),
+      }).then(() => undefined);
     }
+
     setSuccessName(fullName);
     setSuccessBadge({
       name: fullName,
@@ -168,7 +168,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
             {flow.steps.map((s, i) => {
               const isActive = i === flow.currentStepIndex;
               const isComplete = i < flow.currentStepIndex;
-              const cfg = stepConfig[s] || { label: s, icon: `${i + 1}` };
+              const cfg = { label: stepLabels[s] || s, icon: `${i + 1}` };
               return (
                 <div key={s} className="flex items-center flex-1 gap-1">
                   <div className="flex items-center gap-2 flex-1">
@@ -307,6 +307,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
                   bodyTemperature={flow.formData.bodyTemperature}
                   onTemperatureChange={(val) => flow.updateField("bodyTemperature", val)}
                   dbVaccFields={flow.dbVaccFields}
+                  evaluation={flow.screeningEvaluation}
                   jurisdiction={flow.jurisdiction}
                   contractorScreeningAnswers={flow.contractorScreeningAnswers}
                   setContractorScreeningAnswers={flow.setContractorScreeningAnswers}
@@ -337,26 +338,70 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
               )}
 
               {flow.step === "confirm" && flow.screeningFlagged && (
-                <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-2">
+                <div
+                  className={`mt-4 rounded-xl border p-4 space-y-3 ${
+                    flow.screeningBlocked ? "border-destructive/40 bg-destructive/5" : "border-warning/40 bg-warning/5"
+                  }`}
+                >
                   <div className="flex items-start gap-2">
-                    <ShieldAlert className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
-                    <div className="space-y-0.5">
-                      <p className="text-[13px] font-semibold text-destructive">Health screening flagged</p>
+                    <ShieldAlert
+                      className={`h-4 w-4 mt-0.5 shrink-0 ${flow.screeningBlocked ? "text-destructive" : "text-warning"}`}
+                      aria-hidden="true"
+                    />
+                    <div className="space-y-1">
+                      <p className={`text-[13px] font-semibold ${flow.screeningBlocked ? "text-destructive" : "text-warning-foreground"}`}>
+                        {flow.screeningBlocked ? "Sign-in blocked by check-in questions" : "Check-in questions need staff attention"}
+                      </p>
+                      <ul className="text-[12px] text-muted-foreground space-y-0.5">
+                        {flow.screeningEvaluation.flags.map((f) => (
+                          <li key={`${f.questionId}-${f.severity}`}>
+                            {f.message}
+                            {f.action === "block" ? " — blocks sign-in" : ""}
+                          </li>
+                        ))}
+                      </ul>
                       <p className="text-[12px] text-muted-foreground">
-                        {flow.hasHighTemperature ? `Temperature ${flow.formData.bodyTemperature}°C is above 37.8°C. ` : ""}
-                        {flow.hasSymptomFlag ? "A symptom was reported. " : ""}
-                        A staff override is required to continue, and it will be recorded in the audit trail.
+                        {flow.overrideApprovedBy
+                          ? `Approved by ${flow.overrideApprovedBy} and recorded in the audit trail.`
+                          : flow.screeningBlocked
+                            ? "A supervisor with the right permission must approve this, with a reason of at least 10 characters."
+                            : "A staff reason of at least 10 characters is required to continue, and it is recorded in the audit trail."}
                       </p>
                     </div>
                   </div>
-                  <Textarea
-                    value={flow.overrideReason}
-                    onChange={(e) => flow.setOverrideReason(e.target.value)}
-                    placeholder="Reason for allowing this check-in (required)"
-                    className="min-h-[64px] text-[13px] rounded-lg"
-                  />
+                  {!flow.overrideApprovedBy && (
+                    <>
+                      <Textarea
+                        value={flow.overrideReason}
+                        onChange={(e) => flow.setOverrideReason(e.target.value)}
+                        placeholder="Reason for allowing this check-in (at least 10 characters)"
+                        aria-label="Reason for allowing this check-in"
+                        className="min-h-[64px] text-[13px] rounded-lg"
+                      />
+                      {overrideError && (
+                        <p className="text-[12px] text-destructive" role="alert">{overrideError}</p>
+                      )}
+                      {flow.screeningBlocked && (
+                        <Button
+                          variant="outline"
+                          className="gap-2 rounded-xl text-[13px] h-10"
+                          disabled={!flow.overrideValid || approving}
+                          onClick={async () => {
+                            setApproving(true);
+                            const err = await flow.approveBlockedScreening();
+                            setApproving(false);
+                            setOverrideError(err);
+                          }}
+                        >
+                          <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                          {approving ? "Recording approval…" : "Supervisor approve"}
+                        </Button>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
+
             </div>
           )}
         </div>

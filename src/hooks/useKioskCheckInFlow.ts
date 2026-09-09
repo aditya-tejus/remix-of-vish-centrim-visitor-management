@@ -12,6 +12,8 @@ import { FoodFormState, emptyFoodForm, isFoodFormValid } from "@/components/food
 import { usePersonTypes } from "@/hooks/usePersonTypes";
 import { useOperatingContext, siteScopedKey } from "@/contexts/OperatingContext";
 import { resolveTermsContent } from "@/lib/segmentPacks";
+import { resolveScreeningPolicy, screeningStepApplies } from "@/lib/screeningPolicy";
+import { evaluateScreening, type ScreeningRuleQuestion } from "@/lib/screeningOutcome";
 
 export type KioskStepId = "type" | "details" | "visiting" | "food" | "companions" | "screening" | "contractor" | "terms" | "confirm";
 
@@ -70,8 +72,10 @@ export function useKioskCheckInFlow() {
     [personTypes, selectedType]
   );
   const destinationRequired = typeConfig?.destinationRequired ?? selectedType !== "contractor";
-  const screeningApplies = typeConfig?.screeningApplies ?? true;
-  const privacyApplies = typeConfig?.privacyApplies ?? true;
+  // Exactly the same rule set as the front desk.
+  const policy = useMemo(() => resolveScreeningPolicy(typeConfig || null), [typeConfig]);
+  const screeningApplies = policy.screeningEnabled;
+  const privacyApplies = policy.privacyRequired;
   const badgeApplies = typeConfig?.badgeApplies ?? true;
 
   // Dynamic form fields
@@ -84,10 +88,12 @@ export function useKioskCheckInFlow() {
   const activeFields = useMemo(() => resolveCheckInFields(formFields), [formFields]);
 
   // Health questions
-  const { data: healthQuestions = [] } = useActiveHealthQuestions(selectedType as any);
+  const { data: dbHealthQuestions = [] } = useActiveHealthQuestions(selectedType as any);
+  const healthQuestions = policy.screeningEnabled ? dbHealthQuestions : [];
 
   // Vaccination fields
-  const { data: vaccinationFields = [] } = useActiveVaccinationFields(selectedType as any);
+  const { data: dbVaccinationFields = [] } = useActiveVaccinationFields(selectedType as any);
+  const vaccinationFields = policy.vaccinationEnabled ? dbVaccinationFields : [];
 
   // Residents & staff for "who are you visiting" picker
   const { residents } = useResidents({ publicMode: true, siteId });
@@ -201,7 +207,7 @@ export function useKioskCheckInFlow() {
       pipeline.push({ id: "contractor", label: "Screening" });
     }
     // Health screening (if questions configured)
-    if (screeningApplies && healthQuestions.length > 0) {
+    if (screeningStepApplies(policy, { questionCount: healthQuestions.length, vaccinationFieldCount: vaccinationFields.length })) {
       pipeline.push({ id: "screening", label: "Health" });
     }
     // T&C
@@ -210,7 +216,7 @@ export function useKioskCheckInFlow() {
     }
     pipeline.push({ id: "confirm", label: "Review" });
     return pipeline;
-  }, [selectedType, healthQuestions.length, tcContent, visitedResidentId, foodStepEnabled, destinationRequired, screeningApplies, privacyApplies, modules.foodRegister]);
+  }, [selectedType, policy, vaccinationFields.length, healthQuestions.length, tcContent, visitedResidentId, foodStepEnabled, destinationRequired, screeningApplies, privacyApplies, modules.foodRegister]);
 
   const updateField = (key: string, value: string) => {
     setFormValues((prev) => ({ ...prev, [key]: value }));
@@ -242,8 +248,6 @@ export function useKioskCheckInFlow() {
   const missingFieldsHint = missingFieldsMessage(missingFields);
   const detailsValid = missingFields.length === 0;
 
-  const hasYesFlags = healthQuestions.some((q) => q.type === "yesno" && healthAnswers[q.id] === true);
-
   // Temperature can arrive either as a form field or as a numeric screening answer
   const bodyTemperature = useMemo(() => {
     const candidates: unknown[] = [
@@ -261,11 +265,18 @@ export function useKioskCheckInFlow() {
     return null;
   }, [formValues, healthAnswers]);
 
-  const highTemperature = bodyTemperature !== null && bodyTemperature > 37.8;
-  const screeningFlagged = hasYesFlags || highTemperature;
-  // Unattended kiosk: during Outbreak Mode a positive symptom or high temperature
-  // hard-stops the check-in. Outside outbreak periods it is flagged for staff instead.
-  const screeningBlocked = outbreakMode && screeningFlagged;
+  // Same configured rules as the desk. The kiosk has no override: a blocked
+  // outcome always sends the person to reception.
+  const evaluation = useMemo(
+    () => evaluateScreening(healthQuestions as unknown as ScreeningRuleQuestion[], healthAnswers, { bodyTemperature }),
+    [healthQuestions, healthAnswers, bodyTemperature]
+  );
+  const hasYesFlags = evaluation.flags.some((f) => f.questionId !== "body_temperature");
+  const highTemperature = evaluation.flags.some((f) => f.questionId === "body_temperature");
+  const screeningFlagged = evaluation.flagged;
+  // Unattended kiosk: a rule that blocks, or any concern during Outbreak Mode,
+  // hard-stops the check-in and asks the person to see reception.
+  const screeningBlocked = evaluation.blocked || (outbreakMode && screeningFlagged);
 
   // Outstanding keys or fobs: at an unattended kiosk we ask the person to see
   // reception rather than silently letting them in.
@@ -315,6 +326,8 @@ export function useKioskCheckInFlow() {
     missingFieldsHint,
     isFieldOn: (key: string) => isFieldEnabled(activeFields, key),
 
+    policy,
+    screeningEvaluation: evaluation,
     healthQuestions,
     vaccinationFields,
     residents,

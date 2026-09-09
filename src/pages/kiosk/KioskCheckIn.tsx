@@ -235,13 +235,19 @@ export default function KioskCheckIn() {
       whomToVisit: flow.formValues.whomToVisit || "",
       address: flow.isFieldOn("address") ? flow.formValues.address || "" : "",
       status: "checked-in",
-      healthDeclaration: allHealthClear,
-      healthAnswers: { ...flow.healthAnswers, ...flow.contractorAnswers },
+      healthDeclaration: flow.policy.screeningEnabled ? allHealthClear : false,
+      healthAnswers: flow.policy.screeningEnabled
+        ? { ...flow.healthAnswers, ...flow.contractorAnswers }
+        : (Object.keys(flow.contractorAnswers).length ? { ...flow.contractorAnswers } : undefined),
+      screeningOutcome: flow.policy.screeningEnabled ? flow.screeningEvaluation.outcome : undefined,
+      screeningFlags: flow.policy.screeningEnabled && flow.screeningEvaluation.flags.length
+        ? flow.screeningEvaluation.flags.map((f) => ({ question_id: f.questionId, severity: f.severity, action: f.action }))
+        : undefined,
       additionalVisitors: flow.companions.length,
       comments: flow.formValues.comments || "",
       retentionExpiry: new Date(Date.now() + 86400000 * 60),
-      acknowledgedPrivacy: flow.privacyAcknowledged,
-      bodyTemperature: flow.bodyTemperature ?? undefined,
+      acknowledgedPrivacy: flow.policy.privacyRequired ? flow.privacyAcknowledged : false,
+      bodyTemperature: flow.policy.screeningEnabled ? flow.bodyTemperature ?? undefined : undefined,
       contractorScreening: flow.selectedType === "contractor" ? flow.contractorAnswers : undefined,
       supplierId: flow.selectedSupplier?.id || undefined,
       qrCode: primaryQr,

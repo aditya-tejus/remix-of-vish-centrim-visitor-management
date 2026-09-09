@@ -25,6 +25,8 @@ interface DbVisitor {
   comments: string;
   body_temperature: number | null;
   health_answers: Record<string, boolean>;
+  screening_outcome?: string | null;
+  screening_flags?: any;
   privacy_acknowledged: boolean;
   created_at: string;
   expected_return_date: string | null;
@@ -75,6 +77,8 @@ function dbToVisitor(row: DbVisitor): Visitor {
     accompaniedBy: row.accompanied_by ?? undefined,
     accompaniedByName: row.accompanied_by_name ?? undefined,
     healthAnswers: row.health_answers ?? undefined,
+    screeningOutcome: (row.screening_outcome as any) ?? undefined,
+    screeningFlags: (row.screening_flags as any) ?? undefined,
     qrCode: row.qr_code ?? undefined,
     personQr: row.person_qr ?? undefined,
     groupId: row.group_id ?? undefined,
@@ -216,6 +220,8 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       body_temperature: visitor.bodyTemperature ?? null,
       privacy_acknowledged: visitor.acknowledgedPrivacy,
       health_answers: (visitor.healthAnswers || {}) as any,
+      screening_outcome: visitor.screeningOutcome ?? null,
+      screening_flags: (visitor.screeningFlags ?? null) as any,
       contractor_screening: (visitor.contractorScreening || {}) as any,
       supplier_id: visitor.supplierId ?? null,
       qr_code: visitor.qrCode ?? null,

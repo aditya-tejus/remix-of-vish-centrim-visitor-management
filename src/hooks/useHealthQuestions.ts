@@ -13,6 +13,12 @@ export interface HealthQuestion {
   sort_order: number;
   is_active: boolean;
   visitor_type: VisitorType;
+  /** Outcome rules (all optional — questions without rules behave as before). */
+  expected_answer?: string | null;
+  warning_answers?: string[];
+  severity?: "info" | "warning" | "critical";
+  staff_message?: string | null;
+  outcome_action?: "none" | "flag" | "block";
 }
 
 export interface VaccinationField {
@@ -38,6 +44,7 @@ export function useHealthQuestions(visitorType?: VisitorType) {
       return (data || []).map((d: any) => ({
         ...d,
         options: Array.isArray(d.options) ? d.options : [],
+        warning_answers: Array.isArray(d.warning_answers) ? d.warning_answers : [],
       })) as HealthQuestion[];
     },
   });
@@ -54,6 +61,7 @@ export function useActiveHealthQuestions(visitorType?: VisitorType) {
       return (data || []).map((d: any) => ({
         ...d,
         options: Array.isArray(d.options) ? d.options : [],
+        warning_answers: Array.isArray(d.warning_answers) ? d.warning_answers : [],
       })) as HealthQuestion[];
     },
   });
@@ -105,6 +113,11 @@ export function useHealthQuestionMutations() {
         options: q.options as any,
         sort_order: q.sort_order,
         visitor_type: q.visitor_type,
+        expected_answer: q.expected_answer ?? null,
+        warning_answers: (q.warning_answers ?? []) as any,
+        severity: q.severity ?? "info",
+        staff_message: q.staff_message ?? null,
+        outcome_action: q.outcome_action ?? "none",
       });
       if (error) throw error;
     },

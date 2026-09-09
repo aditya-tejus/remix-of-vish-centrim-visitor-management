@@ -42,18 +42,8 @@ export function useCompanionFields(visitorType?: VisitorType) {
   return useFormFields(visitorType, "companion_");
 }
 
-/** Every configuration change to check-in fields is written to the audit trail. */
-async function logFieldChange(action: string, details: Record<string, unknown>) {
-  const { data: auth } = await supabase.auth.getUser();
-  await supabase.from("audit_log").insert({
-    action,
-    performed_by: auth.user?.email || "Staff",
-    user_id: auth.user?.id ?? null,
-    records_affected: 1,
-    details: details as any,
-    change_reason: "Check-in field configuration changed",
-  });
-}
+// Check-in field changes are recorded by the database itself, so exactly one
+// audit entry is written per change and it cannot be skipped from the browser.
 
 export function useFormFieldMutations() {
   const qc = useQueryClient();
@@ -65,7 +55,6 @@ export function useFormFieldMutations() {
         .from("form_fields" as any)
         .insert(field as any);
       if (error) throw error;
-      await logFieldChange("form_field_created", { field_key: field.field_key, visitor_type: field.visitor_type, label: field.label });
     },
     onSuccess: invalidate,
   });
@@ -77,7 +66,6 @@ export function useFormFieldMutations() {
         .update({ ...fields, updated_at: new Date().toISOString() } as any)
         .eq("id", id);
       if (error) throw error;
-      await logFieldChange("form_field_updated", { field_id: id, changes: fields });
     },
     onSuccess: invalidate,
   });
@@ -89,7 +77,6 @@ export function useFormFieldMutations() {
         .delete()
         .eq("id", id);
       if (error) throw error;
-      await logFieldChange("form_field_deleted", { field_id: id });
     },
     onSuccess: invalidate,
   });

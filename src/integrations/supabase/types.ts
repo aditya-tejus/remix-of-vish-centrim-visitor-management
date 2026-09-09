@@ -1059,42 +1059,57 @@ export type Database = {
       health_questions: {
         Row: {
           created_at: string
+          expected_answer: string | null
           id: string
           is_active: boolean
           options: Json | null
+          outcome_action: string
           placeholder: string | null
           question: string
           required: boolean
+          severity: string
           sort_order: number
+          staff_message: string | null
           type: string
           updated_at: string
           visitor_type: string
+          warning_answers: Json
         }
         Insert: {
           created_at?: string
+          expected_answer?: string | null
           id?: string
           is_active?: boolean
           options?: Json | null
+          outcome_action?: string
           placeholder?: string | null
           question: string
           required?: boolean
+          severity?: string
           sort_order?: number
+          staff_message?: string | null
           type?: string
           updated_at?: string
           visitor_type?: string
+          warning_answers?: Json
         }
         Update: {
           created_at?: string
+          expected_answer?: string | null
           id?: string
           is_active?: boolean
           options?: Json | null
+          outcome_action?: string
           placeholder?: string | null
           question?: string
           required?: boolean
+          severity?: string
           sort_order?: number
+          staff_message?: string | null
           type?: string
           updated_at?: string
           visitor_type?: string
+          warning_answers?: Json
         }
         Relationships: []
       }
@@ -2643,6 +2658,8 @@ export type Database = {
           qr_code: string | null
           return_notification_opt_in: boolean | null
           safeguarding_hold: boolean | null
+          screening_flags: Json | null
+          screening_outcome: string | null
           signature_url: string | null
           status: string
           supplier_id: string | null
@@ -2696,6 +2713,8 @@ export type Database = {
           qr_code?: string | null
           return_notification_opt_in?: boolean | null
           safeguarding_hold?: boolean | null
+          screening_flags?: Json | null
+          screening_outcome?: string | null
           signature_url?: string | null
           status?: string
           supplier_id?: string | null
@@ -2749,6 +2768,8 @@ export type Database = {
           qr_code?: string | null
           return_notification_opt_in?: boolean | null
           safeguarding_hold?: boolean | null
+          screening_flags?: Json | null
+          screening_outcome?: string | null
           signature_url?: string | null
           status?: string
           supplier_id?: string | null
@@ -3237,6 +3258,10 @@ export type Database = {
           _reason?: string
           _records?: number
         }
+        Returns: string
+      }
+      override_screening_block: {
+        Args: { p_context?: Json; p_reason: string }
         Returns: string
       }
       reconcile_visit_parties: {

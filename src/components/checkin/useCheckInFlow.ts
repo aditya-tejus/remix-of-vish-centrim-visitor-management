@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { VisitorType, Visitor, CompanionDetail } from "@/types/visitor";
 import { useActiveHealthQuestions, useActiveVaccinationFields } from "@/hooks/useHealthQuestions";
+import { usePersonTypes } from "@/hooks/usePersonTypes";
+import { resolveScreeningPolicy, screeningStepApplies } from "@/lib/screeningPolicy";
+import { evaluateScreening, type ScreeningRuleQuestion } from "@/lib/screeningOutcome";
 import { useCompanionFields, useFormFields } from "@/hooks/useFormFields";
 import { mergeCompanionFields, missingCompanionFields, normaliseCompanion } from "@/lib/companionFields";
 import {
@@ -68,6 +71,7 @@ export function useCheckInFlow(open: boolean) {
 
   const [healthAnswers, setHealthAnswers] = useState<Record<string, any>>({});
   const [overrideReason, setOverrideReason] = useState("");
+  const [overrideApprovedBy, setOverrideApprovedBy] = useState<string | null>(null);
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [companions, setCompanions] = useState<CompanionDetail[]>([]);
   // Held for the whole attempt, including retries, so one arrival is saved once.
@@ -90,10 +94,17 @@ export function useCheckInFlow(open: boolean) {
 
 
   // Dynamic settings-driven fields
+  const { personTypes } = usePersonTypes();
+  // One shared rule set for the desk and the kiosk.
+  const policy = useMemo(
+    () => resolveScreeningPolicy(personTypes.find((p) => p.type === (selectedType as any)) || null),
+    [personTypes, selectedType]
+  );
   const { data: dbQuestions = [] } = useActiveHealthQuestions(selectedType as any);
   const { data: dbVaccFields = [] } = useActiveVaccinationFields(selectedType as any);
   const { data: companionFieldsConfig = [] } = useCompanionFields(selectedType as any);
   const { data: mainVisitorFields = [] } = useFormFields(selectedType as any, "");
+
   // Companion-only fields, plus the main visitor's own fields where they still
   // make sense for a second person on the same arrival.
   const activeCompanionFields = useMemo(
@@ -109,12 +120,11 @@ export function useCheckInFlow(open: boolean) {
   );
   const missingFieldsHint = missingFieldsMessage(missingFields);
 
-  const fallbackHealthQuestions = [
-    { id: "fever", question: "Do you have a fever or feel unusually warm?", type: "yesno" as const, required: true },
-    { id: "cough", question: "Do you have a new continuous cough?", type: "yesno" as const, required: true },
-    { id: "consent_screening", question: "I consent to compliance screening and temperature check", type: "checkbox" as const, required: true },
-  ];
-  const healthQuestions = dbQuestions.length > 0 ? dbQuestions : fallbackHealthQuestions;
+  // Nothing is invented: if a site has switched check-in questions off, or has
+  // configured none, the desk asks nothing.
+  const healthQuestions = policy.screeningEnabled ? dbQuestions : [];
+  const vaccinationFields = policy.vaccinationEnabled ? dbVaccFields : [];
+
 
   const residentItems = useMemo(() => dbResidents.map(r => ({ id: r.visitorId, name: r.name, room: r.room, wing: r.wing })), [dbResidents]);
   const staffItems = useMemo(() => dbStaff.map(s => ({ id: s.id, name: s.name, role: s.role, department: s.department || "" })), [dbStaff]);
@@ -140,15 +150,21 @@ export function useCheckInFlow(open: boolean) {
 
     if (foodStepApplies) pipeline.push("food");
 
-    // Screening: only if there are health questions OR it's a contractor
-    const hasScreening = selectedType === "contractor" || healthQuestions.length > 0 || dbVaccFields.length > 0;
-    if (hasScreening) {
+    // Screening: only when this site asks this person type something
+    if (
+      screeningStepApplies(policy, {
+        questionCount: healthQuestions.length,
+        vaccinationFieldCount: vaccinationFields.length,
+        isContractor: selectedType === "contractor",
+      })
+    ) {
       pipeline.push("screening");
     }
 
     pipeline.push("confirm");
     return pipeline;
-  }, [selectedType, healthQuestions.length, dbVaccFields.length, foodStepApplies]);
+  }, [selectedType, healthQuestions.length, vaccinationFields.length, foodStepApplies, policy]);
+
 
   const currentStepIndex = steps.indexOf(step);
   const totalSteps = steps.length;
@@ -282,6 +298,7 @@ export function useCheckInFlow(open: boolean) {
     });
     setHealthAnswers({});
     setOverrideReason("");
+    setOverrideApprovedBy(null);
     setPrivacyAcknowledged(false);
     setCompanions([]);
     setPhoto(null);
@@ -293,11 +310,41 @@ export function useCheckInFlow(open: boolean) {
     setRequestId(crypto.randomUUID());
   };
 
-  // Health screening gate (attended desk: staff may override with a recorded reason)
-  const hasSymptomFlag = Object.values(healthAnswers).some((v) => v === true);
-  const hasHighTemperature = !!formData.bodyTemperature && parseFloat(formData.bodyTemperature) > 37.8;
-  const screeningFlagged = hasSymptomFlag || hasHighTemperature;
-  const overrideValid = overrideReason.trim().length >= 3;
+  // Configured question outcomes. Questions with no rules keep their previous
+  // behaviour, so nothing changes for sites that have not set rules up.
+  const bodyTemperature = formData.bodyTemperature ? parseFloat(formData.bodyTemperature) : null;
+  const evaluation = useMemo(
+    () =>
+      evaluateScreening(
+        healthQuestions as unknown as ScreeningRuleQuestion[],
+        healthAnswers,
+        { bodyTemperature: Number.isNaN(bodyTemperature as number) ? null : bodyTemperature }
+      ),
+    [healthQuestions, healthAnswers, bodyTemperature]
+  );
+  const hasSymptomFlag = evaluation.flags.some((f) => f.questionId !== "body_temperature");
+  const hasHighTemperature = evaluation.flags.some((f) => f.questionId === "body_temperature");
+  const screeningFlagged = evaluation.flagged;
+  const screeningBlocked = evaluation.blocked;
+  // A blocked sign-in needs a supervisor approval with a written reason.
+  const overrideValid = overrideReason.trim().length >= 10;
+
+  /** Records the supervisor approval server-side; returns an error message on refusal. */
+  const approveBlockedScreening = useCallback(async (): Promise<string | null> => {
+    if (!overrideValid) return "Enter a reason of at least 10 characters.";
+    const { error } = await supabase.rpc("override_screening_block" as any, {
+      p_reason: overrideReason.trim(),
+      p_context: {
+        person_type: selectedType,
+        outcome: evaluation.outcome,
+        flags: evaluation.flags.map((f) => ({ question_id: f.questionId, severity: f.severity })),
+      } as any,
+    });
+    if (error) return error.message || "You do not have permission to approve this check-in.";
+    const { data } = await supabase.auth.getUser();
+    setOverrideApprovedBy(data.user?.email || "Supervisor");
+    return null;
+  }, [overrideValid, overrideReason, selectedType, evaluation]);
 
   // The screening step owns credential evaluation and reports the gate up
   const contractorBlocked = selectedType === "contractor" && contractorGate.blocked;
@@ -321,11 +368,17 @@ export function useCheckInFlow(open: boolean) {
         // Contractors are blocked when the highest-risk credential is missing/expired
         return !contractorBlocked;
       case "confirm":
-        return privacyAcknowledged && !contractorBlocked && (!screeningFlagged || overrideValid);
+        return (
+          (!policy.privacyRequired || privacyAcknowledged) &&
+          !contractorBlocked &&
+          (!screeningBlocked || !!overrideApprovedBy) &&
+          (!screeningFlagged || overrideValid || !!overrideApprovedBy)
+        );
       default:
         return true;
     }
-  }, [step, missingFields, privacyAcknowledged, screeningFlagged, overrideValid, contractorBlocked, bringingFood, foodForm, companionsComplete]);
+  }, [step, missingFields, privacyAcknowledged, policy.privacyRequired, screeningFlagged, screeningBlocked, overrideApprovedBy, overrideValid, contractorBlocked, bringingFood, foodForm, companionsComplete]);
+
 
 
   const buildVisitor = (): Omit<Visitor, "id"> => {
@@ -353,20 +406,28 @@ export function useCheckInFlow(open: boolean) {
       whomToVisit: formData.selectPerson,
       address: enabled.address,
       status: "checked-in",
-      healthDeclaration: allHealthClear && formData.healthDeclaration,
+      healthDeclaration: policy.screeningEnabled ? allHealthClear && formData.healthDeclaration : false,
       additionalVisitors: companions.length,
       companionDetails: companions.length > 0 ? companions.map(normaliseCompanion) : undefined,
       comments: formData.comments,
-      bodyTemperature: formData.bodyTemperature ? parseFloat(formData.bodyTemperature) : undefined,
-      influenzaVaccineDate: formData.influenzaVaccineDate || undefined,
-      covidDose1Date: formData.covidDose1Date || undefined,
-      covidDose2Date: formData.covidDose2Date || undefined,
+      bodyTemperature: policy.screeningEnabled && formData.bodyTemperature ? parseFloat(formData.bodyTemperature) : undefined,
+      influenzaVaccineDate: policy.vaccinationEnabled ? formData.influenzaVaccineDate || undefined : undefined,
+      covidDose1Date: policy.vaccinationEnabled ? formData.covidDose1Date || undefined : undefined,
+      covidDose2Date: policy.vaccinationEnabled ? formData.covidDose2Date || undefined : undefined,
       retentionExpiry: new Date(Date.now() + 86400000 * 60),
-      acknowledgedPrivacy: privacyAcknowledged,
-      healthAnswers: { ...healthAnswers, ...contractorScreeningAnswers },
+      acknowledgedPrivacy: policy.privacyRequired ? privacyAcknowledged : false,
+      healthAnswers: policy.screeningEnabled
+        ? { ...healthAnswers, ...contractorScreeningAnswers }
+        : (Object.keys(contractorScreeningAnswers).length ? { ...contractorScreeningAnswers } : undefined),
+      // The outcome only — never a second copy of the answers themselves.
+      screeningOutcome: policy.screeningEnabled ? evaluation.outcome : undefined,
+      screeningFlags: policy.screeningEnabled && evaluation.flags.length
+        ? evaluation.flags.map((f) => ({ question_id: f.questionId, severity: f.severity, action: f.action }))
+        : undefined,
       // Proper link to the resident being visited, not just the typed name
       visitedResidentIds: selectedResident ? [selectedResident.id] : undefined,
     };
+
   };
 
   return {
@@ -384,8 +445,9 @@ export function useCheckInFlow(open: boolean) {
     formData, updateField, setFormData,
 
     // Health / screening
+    policy,
     healthQuestions, healthAnswers, setHealthAnswers,
-    dbVaccFields, contractorScreeningAnswers, setContractorScreeningAnswers,
+    dbVaccFields: vaccinationFields, contractorScreeningAnswers, setContractorScreeningAnswers,
     selectedSupplier, setSelectedSupplier, jurisdiction,
     contractorBlocked, contractorBlockReason: selectedType === "contractor" ? contractorGate.reason : null,
     setContractorGate,
@@ -418,7 +480,10 @@ export function useCheckInFlow(open: boolean) {
     // Badge printing
     badgePrintingEnabled,
 
-    // Health screening override
-    screeningFlagged, hasSymptomFlag, hasHighTemperature, overrideReason, setOverrideReason,
+    // Screening outcome and supervisor approval
+    screeningFlagged, screeningBlocked, screeningEvaluation: evaluation,
+    hasSymptomFlag, hasHighTemperature,
+    overrideReason, setOverrideReason, overrideValid,
+    overrideApprovedBy, approveBlockedScreening,
   };
 }
