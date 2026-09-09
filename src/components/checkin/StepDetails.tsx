@@ -20,7 +20,7 @@ interface StepDetailsProps {
   staffItems: { id: string; name: string; role: string; department: string }[];
   companions: CompanionDetail[];
   setCompanions: React.Dispatch<React.SetStateAction<CompanionDetail[]>>;
-  activeCompanionFields: { id: string; field_key: string; label: string; required: boolean }[];
+  activeCompanionFields: CompanionFieldSpec[];
   photo: string | null;
   setPhoto: (photo: string | null) => void;
   onChangeProfile: () => void;
