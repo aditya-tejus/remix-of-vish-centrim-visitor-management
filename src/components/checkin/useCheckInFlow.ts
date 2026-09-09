@@ -393,6 +393,9 @@ export function useCheckInFlow(open: boolean) {
     // Companions
     companions, setCompanions, activeCompanionFields, companionsComplete,
 
+    // Configured fields for the main person
+    activeFields, missingFields, missingFieldsHint,
+
     // Photo
     photo, setPhoto,
 
