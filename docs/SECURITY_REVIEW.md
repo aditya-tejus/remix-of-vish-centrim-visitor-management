@@ -190,3 +190,9 @@ re-siting or changing counts raises an error. Verified by test: an edit to the p
 was blocked, a reopen to `active` was blocked, and adding a review note succeeded. The
 trigger function is not executable by `anon` or `authenticated`; linter is back to the
 documented 45-warning baseline with no new warning.
+
+## Phase 7A verification pass (2026-09-09)
+
+- **Resident directory site isolation (fixed).** The authenticated resident query in `src/hooks/useResidents.ts` previously returned residents from all sites. It now filters on the current site, and records with no site are visible only on the original/legacy site so they are never mixed into newer sites. This affects every signed-in surface that lists residents: check-in destination, residents, food register, keys, evacuation.
+- The kiosk resident directory is unchanged and still goes through the restricted `kiosk_resident_directory` function returning name, room and area only.
+- No database, policy, grant, permission or settings changes were made in this pass. Security linter remains at the documented baseline.
