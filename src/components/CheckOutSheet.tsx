@@ -75,6 +75,7 @@ export function CheckOutSheet({
   const [keyKeepReason, setKeyKeepReason] = useState("");
   const [successName, setSuccessName] = useState("");
   const [successDuration, setSuccessDuration] = useState("");
+  const [successStaying, setSuccessStaying] = useState(0);
   const [bulkTimeOverride, setBulkTimeOverride] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   /** Plain message shown when a departure did not save, so nothing looks done that isn't. */
