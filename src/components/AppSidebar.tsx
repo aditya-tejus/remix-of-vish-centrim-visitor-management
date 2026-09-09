@@ -149,7 +149,7 @@ export function AppSidebar() {
         {navGroups.map((group) => (
           <Collapsible
             key={group.label}
-            defaultOpen={isGroupActive(group) || group.label === "Visitor operations"}
+            defaultOpen={isGroupActive(group)}
             className="group/nav-group"
           >
             <SidebarGroup>
