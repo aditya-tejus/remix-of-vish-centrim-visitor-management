@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppHeader } from "@/components/AppHeader";
@@ -13,22 +12,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Plus, QrCode, LogOut, ChevronLeft, ChevronRight, CalendarDays,
-  X, Printer, Search,
+  X, Printer, Search, RefreshCw,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, isSameDay, addDays, subDays, isToday } from "date-fns";
 import { Visitor } from "@/types/visitor";
 import { useResidents } from "@/hooks/useResidents";
-import { useOverstayPolicy } from "@/hooks/useOverstayPolicy";
 import { VisitListQRDialog } from "@/components/VisitListQRDialog";
 import { HandoverPrintDialog } from "@/components/HandoverPrintDialog";
-import { TabContextStats } from "@/components/TabContextStats";
-import { LoadingState, ErrorState, OfflineState } from "@/components/states";
+import { LoadingState, ErrorState, OfflineState, PermissionState } from "@/components/states";
+import { useVisitViews, VisitViewKey } from "@/hooks/useVisitViews";
+import { VisitViewSwitch } from "@/components/visitlist/VisitViewSwitch";
+import { usePersonTypes } from "@/hooks/usePersonTypes";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useSite } from "@/contexts/SiteContext";
 
 export default function VisitList() {
-  const navigate = useNavigate();
-  const { visitors, loading, error, refresh, addVisitor, checkOutVisitor, checkInReturn, deleteVisitor, overstayedCount } = useVisitors();
+  const {
+    visitors, loading, error, refresh, addVisitorAsync, checkOutVisitor,
+    checkInReturn, deleteVisitor, overstayedCount, lastUpdated,
+  } = useVisitors();
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [checkOutSheetOpen, setCheckOutSheetOpen] = useState(false);
@@ -37,11 +43,19 @@ export default function VisitList() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [feedbackVisitor, setFeedbackVisitor] = useState<Visitor | null>(null);
   // Reception opens on the live picture: who is in the building right now.
-  const [activeFilter, setActiveFilter] = useState<string | null>("checked-in");
-  const [activeTab, setActiveTab] = useState<string>("all");
+  const [activeView, setActiveView] = useState<VisitViewKey>("on-site");
+  // Person-type chips always start at All — a filter left on by the last shift
+  // must never hide people from the next one.
+  const [activeType, setActiveType] = useState<string>("all");
   const [handoverOpen, setHandoverOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [bulkCheckOutIds, setBulkCheckOutIds] = useState<string[]>([]);
+  const [showDestination, setShowDestination] = useState(true);
+
+  const { deskTypes } = usePersonTypes();
+  const { can, loading: permsLoading } = usePermissions();
+  const { role } = useAuth();
+  const { currentSiteName } = useSite();
 
   useEffect(() => {
     const up = () => setOnline(true);
@@ -51,7 +65,20 @@ export default function VisitList() {
     return () => { window.removeEventListener("online", up); window.removeEventListener("offline", down); };
   }, []);
 
-  // Keyboard shortcuts
+  // Reuse the existing destination privacy setting rather than adding another one.
+  useEffect(() => {
+    supabase
+      .from("settings")
+      .select("value")
+      .eq("key", "badge_show_destination")
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.value !== undefined && data?.value !== null) {
+          setShowDestination(String(data.value) !== "false");
+        }
+      });
+  }, []);
+
   useKeyboardShortcuts({
     onNewVisit: () => setAddDialogOpen(true),
     onQuickCheckOut: () => setCheckOutSheetOpen(true),
@@ -59,15 +86,15 @@ export default function VisitList() {
   });
 
   // Date-filtered visitors (non-residents only)
-  const filteredVisitors = useMemo(
+  const dateVisitors = useMemo(
     () => visitors
       .filter((v) => v.type !== "resident")
       .filter((v) => isSameDay(v.checkInTime, selectedDate)),
     [visitors, selectedDate]
   );
 
-  // Search filter — includes the resident being visited, so typing a resident's
-  // name brings up everyone who came to see them.
+  // Search includes the resident being visited, so typing a resident's name
+  // brings up everyone who came to see them.
   const { residents } = useResidents();
   const residentNameById = useMemo(() => {
     const map: Record<string, string> = {};
@@ -76,46 +103,48 @@ export default function VisitList() {
   }, [residents]);
 
   const searchedVisitors = useMemo(() => {
-    if (!searchQuery.trim()) return filteredVisitors;
+    if (!searchQuery.trim()) return dateVisitors;
     const q = searchQuery.toLowerCase();
-    return filteredVisitors.filter((v) =>
+    return dateVisitors.filter((v) =>
       `${v.firstName} ${v.surname}`.toLowerCase().includes(q) ||
       v.mobile.toLowerCase().includes(q) ||
       (v.whomToVisit || "").toLowerCase().includes(q) ||
       (v.email || "").toLowerCase().includes(q) ||
       (v.visitedResidentIds || []).some((id) => (residentNameById[id] || "").includes(q))
     );
-  }, [filteredVisitors, searchQuery, residentNameById]);
+  }, [dateVisitors, searchQuery, residentNameById]);
 
-  const { isOverstayed } = useOverstayPolicy();
-
-  // Counts follow the selected tab and search, but not the status filter,
-  // so the numbers never disagree with what the desk sees.
-  const tabVisitors = useMemo(
-    () => (activeTab === "all" ? searchedVisitors : searchedVisitors.filter((v) => v.type === activeTab)),
-    [searchedVisitors, activeTab]
+  const typeVisitors = useMemo(
+    () => (activeType === "all" ? searchedVisitors : searchedVisitors.filter((v) => v.type === activeType)),
+    [searchedVisitors, activeType]
   );
 
-  // Status filter from the counter row
-  const displayVisitors = useMemo(() => {
-    if (!activeFilter || activeFilter === "all") return searchedVisitors;
-    switch (activeFilter) {
-      case "checked-in": return searchedVisitors.filter(v => v.status === "checked-in");
-      case "checked-out": return searchedVisitors.filter(v => v.status === "checked-out");
-      case "overstayed": return searchedVisitors.filter(isOverstayed);
-      default: return searchedVisitors;
-    }
-  }, [searchedVisitors, activeFilter, isOverstayed]);
+  // "Expected back" only exists where residents are tracked away with a return time.
+  const scheduledAvailable = useMemo(
+    () => visitors.some((v) => v.type === "resident"),
+    [visitors]
+  );
 
-  const filterLabels: Record<string, string> = {
-    "checked-in": "On site now",
-    "checked-out": "Left today",
-    "overstayed": "Overdue",
-  };
+  const { views, rowsFor } = useVisitViews({
+    dayVisitors: typeVisitors,
+    allVisitors: visitors,
+    selectedDate,
+    scheduledAvailable,
+  });
 
-  const handleStatCardClick = (key: string) => {
-    setActiveFilter(prev => prev === key ? null : key);
-  };
+  const currentView = views.find((v) => v.key === activeView) ?? views[0];
+  const rows = rowsFor(currentView.key);
+
+  const typeChips = useMemo(
+    () => [
+      { value: "all", label: "All" },
+      ...deskTypes.map((t) => ({ value: t.type, label: t.label })),
+    ],
+    [deskTypes]
+  );
+
+  const countForType = (type: string) =>
+    type === "all" ? searchedVisitors.length : searchedVisitors.filter((v) => v.type === type).length;
 
   const handleCheckOutFromTable = (visitorId: string) => {
     setCheckOutPreSelectedId(visitorId);
@@ -127,49 +156,55 @@ export default function VisitList() {
     setCheckOutSheetOpen(true);
   };
 
+  const canView = permsLoading || can("presence.view");
+  const canCheckIn = permsLoading || can("checkin.create");
+  const canCheckOut = permsLoading || can("checkout.perform");
+  const canExport = can("data.export");
+  const canDelete = role === "admin";
+
+  const searchEmpty = searchQuery.trim().length > 0 && rows.length === 0;
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <SidebarInset className="flex-1 min-w-0">
-          <AppHeader
-            title="Visitor List"
-            overstayedCount={overstayedCount}
-          />
+          <AppHeader title="Visitor List" overstayedCount={overstayedCount} />
 
-          {/* ZONE B — Page command bar */}
+          {/* Page command bar */}
           <div className="sticky top-12 z-[9] border-b border-border bg-card/95 backdrop-blur-sm">
             <div className="flex flex-wrap items-center justify-between px-4 sm:px-6 py-2.5 gap-y-2 gap-x-4">
-              {/* Left: clock + date nav */}
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="text-[13px] text-muted-foreground font-medium">
-                  {format(selectedDate, "EEE, dd MMM yyyy")}
-                </span>
+              {/* Left: which site and which day */}
+              <div className="flex items-center gap-3 shrink-0 min-w-0">
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[13px] font-medium text-foreground truncate">
+                    {currentSiteName || "This site"}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    {format(selectedDate, "EEE, dd MMM yyyy")}
+                    {!isToday(selectedDate) && " · not today"}
+                  </span>
+                </div>
                 <div className="flex items-center gap-0.5">
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSelectedDate(d => subDays(d, 1))}>
-                    <ChevronLeft className="h-3.5 w-3.5" />
+                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Previous day" onClick={() => setSelectedDate(d => subDays(d, 1))}>
+                    <ChevronLeft className="h-4 w-4" />
                   </Button>
                   {!isToday(selectedDate) && (
-                    <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={() => setSelectedDate(new Date())}>
+                    <Button variant="ghost" size="sm" className="h-8 text-[12px] px-2" onClick={() => setSelectedDate(new Date())}>
                       Today
                     </Button>
                   )}
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSelectedDate(d => addDays(d, 1))}>
-                    <ChevronRight className="h-3.5 w-3.5" />
+                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Next day" onClick={() => setSelectedDate(d => addDays(d, 1))}>
+                    <ChevronRight className="h-4 w-4" />
                   </Button>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-6 w-6">
-                        <CalendarDays className="h-3.5 w-3.5" />
+                      <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Pick a date">
+                        <CalendarDays className="h-4 w-4" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={(date) => date && setSelectedDate(date)}
-                        initialFocus
-                      />
+                      <Calendar mode="single" selected={selectedDate} onSelect={(date) => date && setSelectedDate(date)} initialFocus />
                     </PopoverContent>
                   </Popover>
                 </div>
@@ -177,16 +212,18 @@ export default function VisitList() {
 
               {/* Centre: search */}
               <div className="relative order-last sm:order-none w-full sm:w-auto sm:flex-1 min-w-0 sm:max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" aria-hidden />
                 <Input
-                  placeholder="Search by name, phone, or visiting..."
+                  aria-label="Search visits"
+                  placeholder="Search name, phone, or who they are visiting"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-8 pl-9 text-[13px] bg-muted/50 border-transparent focus:border-border focus:bg-card"
+                  className="h-9 pl-9 text-[13px] bg-muted/50 border-transparent focus:border-border focus:bg-card"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery("")}
+                    aria-label="Clear search"
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -194,76 +231,88 @@ export default function VisitList() {
                 )}
               </div>
 
-              {/* Right: actions */}
+              {/* Right: primary action first, supporting actions after */}
               <div className="flex items-center gap-1.5 shrink-0">
-                <Button onClick={() => setAddDialogOpen(true)} size="sm" className="h-8 text-[13px] gap-1.5 px-4 bg-primary hover:bg-primary/90 shadow-sm">
-                  <Plus className="h-3.5 w-3.5" />
-                  Check In
-                </Button>
-                <Button variant="ghost" size="sm" className="h-8 text-[13px] gap-1.5 text-muted-foreground" onClick={() => setCheckOutSheetOpen(true)}>
-                  <LogOut className="h-3.5 w-3.5" />
-                  <span className="hidden xl:inline">Check Out</span>
-                </Button>
-                <Button variant="ghost" size="sm" className="h-8 text-[13px] gap-1.5 text-muted-foreground" onClick={() => setQrOpen(true)}>
-                  <QrCode className="h-3.5 w-3.5" />
+                {canCheckIn && (
+                  <Button onClick={() => setAddDialogOpen(true)} size="sm" className="h-9 text-[13px] gap-1.5 px-4 shadow-sm">
+                    <Plus className="h-4 w-4" aria-hidden />
+                    Check In
+                  </Button>
+                )}
+                {canCheckOut && (
+                  <Button variant="ghost" size="sm" className="h-9 text-[13px] gap-1.5 text-muted-foreground" onClick={() => setCheckOutSheetOpen(true)}>
+                    <LogOut className="h-4 w-4" aria-hidden />
+                    <span className="hidden xl:inline">Check Out</span>
+                  </Button>
+                )}
+                <Button variant="ghost" size="sm" className="h-9 text-[13px] gap-1.5 text-muted-foreground" onClick={() => setQrOpen(true)}>
+                  <QrCode className="h-4 w-4" aria-hidden />
                   <span className="hidden xl:inline">QR</span>
                 </Button>
-                <Button variant="ghost" size="sm" className="h-8 text-[13px] gap-1.5 text-muted-foreground" onClick={() => setHandoverOpen(true)}>
-                  <Printer className="h-3.5 w-3.5" />
+                <Button variant="ghost" size="sm" className="h-9 text-[13px] gap-1.5 text-muted-foreground" onClick={() => setHandoverOpen(true)}>
+                  <Printer className="h-4 w-4" aria-hidden />
                   <span className="hidden xl:inline">Handover</span>
                 </Button>
               </div>
             </div>
           </div>
 
-          {/* Counters — the live picture, readable the moment the page opens */}
-          <TabContextStats
-            variant="cards"
-            tab={activeTab}
-            visitors={tabVisitors}
-            allVisitors={searchedVisitors}
-            onFilter={handleStatCardClick}
-            activeFilter={activeFilter}
-          />
+          {/* One switch decides what the list shows */}
+          <VisitViewSwitch views={views} active={currentView.key} onChange={setActiveView} />
 
-          {/* Filter pill */}
-          {activeFilter && activeFilter !== "all" && filterLabels[activeFilter] && (
-            <div className="px-6 pb-1">
-              <div className="inline-flex items-center gap-1.5 bg-primary/10 text-primary rounded-full px-3 py-1 text-xs font-medium">
-                Filtering: {filterLabels[activeFilter]}
-                <button onClick={() => setActiveFilter(null)} className="ml-1 hover:bg-primary/20 rounded-full p-0.5">
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
+          {/* Person-type chips, always starting at All */}
+          <div className="flex items-center gap-2 overflow-x-auto px-4 sm:px-6 py-2">
+            {typeChips.map((chip) => (
+              <button
+                key={chip.value}
+                onClick={() => setActiveType(chip.value)}
+                aria-pressed={activeType === chip.value}
+                className={`shrink-0 rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                  activeType === chip.value
+                    ? "border-primary/40 bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {chip.label} <span className="tabular-nums">{countForType(chip.value)}</span>
+              </button>
+            ))}
+            <div className="ml-auto hidden sm:flex items-center gap-2 text-[11px] text-muted-foreground">
+              {lastUpdated && <span>Updated {format(lastUpdated, "hh:mm a")}</span>}
+              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Refresh list" onClick={() => refresh()}>
+                <RefreshCw className="h-3.5 w-3.5" />
+              </Button>
             </div>
-          )}
+          </div>
 
-          {/* ZONE D — Table */}
-          <main className="px-6 pb-16 pt-2">
-            {!online ? (
-              <OfflineState
-                description="You are offline. The list below may be out of date — check-ins will save once the connection returns."
-              />
+          <main className="px-4 sm:px-6 pb-16 pt-1 min-w-0">
+            {!canView ? (
+              <PermissionState description="You do not have permission to see who is on site. Ask an administrator if you need this." />
+            ) : !online ? (
+              <OfflineState description="You are offline. The list below may be out of date — check-ins will save once the connection returns." />
             ) : loading && visitors.length === 0 ? (
               <LoadingState rows={6} label="Loading today's visits" />
             ) : error ? (
-              <ErrorState
-                description={error}
-                action={<Button variant="outline" onClick={() => refresh()}>Try again</Button>}
-              />
+              <ErrorState description={error} action={<Button variant="outline" onClick={() => refresh()}>Try again</Button>} />
             ) : (
-            <VisitorTable
-              visitors={displayVisitors}
-              onCheckOut={handleCheckOutFromTable}
-              onCheckOutMany={handleCheckOutMany}
-              onCheckInReturn={checkInReturn}
-              onDelete={deleteVisitor}
-              onFeedback={(v) => setFeedbackVisitor(v)}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              onFilter={setActiveFilter}
-              activeFilter={activeFilter}
-            />
+              <VisitorTable
+                visitors={rows}
+                onCheckOut={handleCheckOutFromTable}
+                onCheckOutMany={handleCheckOutMany}
+                onCheckInReturn={checkInReturn}
+                onDelete={deleteVisitor}
+                onFeedback={(v) => setFeedbackVisitor(v)}
+                personType={activeType}
+                emptyTitle={searchEmpty ? "No matches" : currentView.emptyTitle}
+                emptyDescription={
+                  searchEmpty
+                    ? `Nothing on this day matches "${searchQuery}". Try a different spelling, or clear the search.`
+                    : currentView.emptyDescription
+                }
+                canCheckOut={canCheckOut}
+                canExport={canExport}
+                canDelete={canDelete}
+                showDestination={showDestination}
+              />
             )}
           </main>
 
@@ -271,7 +320,7 @@ export default function VisitList() {
         </SidebarInset>
       </div>
 
-      <CheckInSheet open={addDialogOpen} onOpenChange={setAddDialogOpen} onAdd={addVisitor} />
+      <CheckInSheet open={addDialogOpen} onOpenChange={setAddDialogOpen} onAdd={addVisitorAsync} />
       <CheckOutSheet
         open={checkOutSheetOpen}
         onOpenChange={setCheckOutSheetOpen}
@@ -291,7 +340,7 @@ export default function VisitList() {
         />
       )}
       <VisitListQRDialog open={qrOpen} onOpenChange={setQrOpen} />
-      <HandoverPrintDialog open={handoverOpen} onOpenChange={setHandoverOpen} visitors={filteredVisitors} date={selectedDate} />
+      <HandoverPrintDialog open={handoverOpen} onOpenChange={setHandoverOpen} visitors={dateVisitors} date={selectedDate} />
     </SidebarProvider>
   );
 }
