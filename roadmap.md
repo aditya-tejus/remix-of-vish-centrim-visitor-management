@@ -439,3 +439,17 @@ Known limits after Phase 7E:
 - Nothing was written, merged, renamed or reconciled. No schema, access-rule or settings change.
 - Tests: `src/test/accountablePeople.test.ts` (7 passing) covers two blank-contact arrivals, primary plus companions, companion-only sign-out, attendance-versus-older fallback, site isolation, export row counts and no merging. Full suite 27 passing; typecheck and build pass; live Visit List verified (companion shown as their own line "With Adam John").
 - Still open: the wider profile foundation, contractor profile view, weekly report, kiosk binding, contractor verification queue and historical reconciliation apply.
+
+## Phase 8B-3b — Visitor and contractor profile foundation (complete)
+- The profile page is now one ordered story: who this is and where they are, what needs attention, this visit, details, visit history, activity. Everything below "this visit" is collapsed until asked for. Route, navigation and reception actions (check out, check in again, badge, feedback, edit, export, delete) are unchanged.
+- `src/lib/profileSections.ts` composes the sections from data already loaded — nothing is written, created or repaired. Covered by `src/test/profileSections.test.ts` (17 passing).
+- Needs-attention items are words plus a Lucide icon, never colour alone: restricted access, watchlist, screening warning, screening block, keys held or overdue, contractor documents outstanding.
+- Companions come from canonical attendance: each shows their own arrival and departure time, "With <main visitor>", and a sign-out button only where an attendance record exists. Older companion lines are read-only and marked "older record".
+- Contractor profiles show company, work type, work location, screening result and a read-only compliance document list (`ContractorCredentialSummary`) built from the existing credential tables. No uploads, no confirmations, no queue, and no new contractor, supplier or person records.
+- Details follow the check-in field configuration for that person type. A switched-off field is never shown as current; a value kept from before the change appears only in the collapsed "Historic information no longer collected" block, visible to administer-settings holders.
+- Screening detail needs the screening permission, keys need the keys permission, contractor documents need the contractor documents permission, activity needs the export permission.
+- Activity is built from this person's own arrivals at the current site. The audit log itself carries no site column, so it is deliberately not shown on the profile; the audit page remains the place for it.
+- Visit history is paged 20 at a time.
+- No schema, migration, access-rule, RPC or seed-data change.
+- Verified live (signed in): visitor with a companion at Riverstone shows "Came with Adam" and a sign-out button; a contractor shows company/work fields, "Documents outstanding" and read-only document states; opening another site's person shows "Visitor not found". Full suite 44 passing; typecheck and build pass.
+- Prototype limits: a profile only resolves for records the visit list loads (today's arrivals and anyone still on site), so an older visit opened directly reports "not found" — unchanged from before this stage. Food register context matches on the recorded name for non-residents. Keys are matched through this person's own arrivals at the current site rather than a key-level site filter. Contractor company shows only where a supplier is linked on the arrival. None of this is production compliance evidence.
