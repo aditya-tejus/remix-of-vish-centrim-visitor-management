@@ -4,6 +4,7 @@
  * kiosk itself reads.
  */
 import { usePersonTypes } from "@/hooks/usePersonTypes";
+import { usePersonTypesDraft } from "./personTypesDraft";
 import { useActiveHealthQuestions, VisitorType } from "@/hooks/useHealthQuestions";
 import { useSiteStructure } from "@/hooks/useSiteStructure";
 import { useOperatingContext } from "@/contexts/OperatingContext";
@@ -16,7 +17,9 @@ export function KioskPreview({ personType }: { personType: string }) {
   const { areaLabel, roomLabel } = useSiteStructure();
   const { siteName, pack } = useOperatingContext();
 
-  const cfg = personTypes.find((p) => p.type === personType);
+  const { draft } = usePersonTypesDraft();
+  const unsaved = !!draft?.dirty;
+  const cfg = (unsaved ? draft.rows : personTypes).find((p) => p.type === personType);
   if (loading) return <p className="text-[13px] text-muted-foreground">Loading preview…</p>;
   if (!cfg) return <p className="text-[13px] text-muted-foreground">This type is not configured for the kiosk.</p>;
 
@@ -52,6 +55,11 @@ export function KioskPreview({ personType }: { personType: string }) {
         </p>
         <p className="text-[13px] text-muted-foreground">
           Wording follows the {pack.label} setting.
+        </p>
+        <p className="mt-1 text-[12px] text-muted-foreground">
+          {unsaved
+            ? "Preview of your unsaved visitor type changes. Check-in questions shown are the saved ones."
+            : "Shows your saved settings. Save a change before it appears here."}
         </p>
       </div>
 

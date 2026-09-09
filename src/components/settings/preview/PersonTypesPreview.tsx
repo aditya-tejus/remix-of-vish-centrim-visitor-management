@@ -3,6 +3,7 @@
  * person-type configuration the kiosk reads. Sample only; nothing is saved.
  */
 import { usePersonTypes } from "@/hooks/usePersonTypes";
+import { usePersonTypesDraft } from "./personTypesDraft";
 import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
 import { Users, HardHat, Heart, UserCog, Home, UserPlus } from "lucide-react";
 
@@ -17,7 +18,10 @@ const ICONS: Record<string, typeof Users> = {
 
 export function PersonTypesPreview() {
   const { personTypes, loading } = usePersonTypes();
-  const shown = personTypes.filter((p) => p.kioskEnabled);
+  const { draft } = usePersonTypesDraft();
+  const unsaved = !!draft?.dirty;
+  const source = unsaved ? draft.rows : personTypes;
+  const shown = source.filter((p) => p.kioskEnabled);
 
   if (loading) return <p className="text-[13px] text-muted-foreground">Loading preview…</p>;
 
@@ -32,7 +36,9 @@ export function PersonTypesPreview() {
   return (
     <div className="space-y-2">
       <p className="text-[12px] text-muted-foreground">
-        This is the choice shown on the kiosk welcome screen.
+        {unsaved
+          ? "Preview of your changes. Nothing is saved until you choose Save changes."
+          : "This is the choice shown on the kiosk welcome screen."}
       </p>
       <div className="space-y-2">
         {shown.map((p) => {
