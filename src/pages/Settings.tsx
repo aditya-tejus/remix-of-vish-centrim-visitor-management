@@ -19,6 +19,7 @@ import { KioskDevicesCard } from "@/components/settings/KioskDevicesCard";
 
 import { SurveyBuilder } from "@/components/feedback/SurveyBuilder";
 import { AttendanceIntegrityCard } from "@/components/settings/AttendanceIntegrityCard";
+import { DemoDataCard } from "@/components/settings/DemoDataCard";
 import { SettingsSectionHeader } from "@/components/settings/SettingsSectionHeader";
 import { PreviewPanel } from "@/components/settings/preview/PreviewPanel";
 import { useSettingsAccess } from "@/hooks/useSettingsAccess";
@@ -116,6 +117,7 @@ export default function SettingsPage() {
                     <div className="space-y-6">
                       <AuditTrailTab />
                       <AttendanceIntegrityCard />
+                      <DemoDataCard />
                     </div>
                   )}
                   {active === "governance" && (
