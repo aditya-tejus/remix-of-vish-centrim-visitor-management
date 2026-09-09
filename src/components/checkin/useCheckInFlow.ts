@@ -325,7 +325,7 @@ export function useCheckInFlow(open: boolean) {
       default:
         return true;
     }
-  }, [step, formData, privacyAcknowledged, screeningFlagged, overrideValid, contractorBlocked, bringingFood, foodForm, companionsComplete]);
+  }, [step, missingFields, privacyAcknowledged, screeningFlagged, overrideValid, contractorBlocked, bringingFood, foodForm, companionsComplete]);
 
 
   const buildVisitor = (): Omit<Visitor, "id"> => {
