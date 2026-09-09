@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { KeyRound } from "lucide-react";
+import { KeyRound, AlertTriangle } from "lucide-react";
 import { DEFAULT_KEY_POLICY, fetchKeyPolicy, KeyPolicy } from "@/hooks/useKeyPolicy";
 
 const LOAN_OPTIONS = [
