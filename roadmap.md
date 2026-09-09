@@ -336,3 +336,18 @@ Known limits after Phase 7E:
   previews state that they show saved settings.
 - Limitation: only Visitor types has a live draft preview. Other sections need a save first.
 - Limitation: read-only behaviour is code-verified only; no restricted account exists to test with.
+
+## Phase 7F increment 1 (design tokens, status model, shared building blocks)
+- Added an emergency colour role (separate from error red), focus-ring tokens, radius roles,
+  row-height and touch-target tokens. Existing brand tokens are unchanged.
+- Focus is now visible on every control by a single global rule, and the operating system
+  reduced-motion setting now switches off animation and transitions across the product.
+- Added one shared status model: every status has a word, a plain-language description,
+  a Lucide icon and a colour tone, so status can be read with colour ignored.
+- Added three shared building blocks: StatusBadge, PageHeader and DataTableShell. They frame
+  existing components rather than replacing them.
+- Added docs/DESIGN_SYSTEM.md covering colour roles, type scale, spacing, radii, focus,
+  motion, icon rules, accessibility rules and responsive principles.
+- No page, route, data, settings, permission or database change in this increment.
+- Limitation: existing screens still use arbitrary text sizes, h-screen, unlabelled icon
+  buttons and symbol glyphs. Those are addressed in later increments.
