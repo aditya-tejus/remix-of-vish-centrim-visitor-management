@@ -312,6 +312,9 @@ export default function VisitList() {
           </div>
 
           <KeyboardShortcutBar />
+    </AppShell>
+
+
 
 
       <CheckInSheet open={addDialogOpen} onOpenChange={setAddDialogOpen} onAdd={addVisitorAsync} />
