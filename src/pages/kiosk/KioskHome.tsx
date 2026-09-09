@@ -122,7 +122,7 @@ export default function KioskHome() {
               {getGreeting()}
             </h1>
             <p className="text-base sm:text-lg text-muted-foreground">
-              Welcome to Sydney Care Centre
+              {siteName ? `Welcome to ${siteName}` : "Welcome"}
             </p>
             <p className="text-sm text-muted-foreground/70 font-medium tabular-nums">
               {format(currentTime, "EEEE, d MMMM yyyy · h:mm a")}
