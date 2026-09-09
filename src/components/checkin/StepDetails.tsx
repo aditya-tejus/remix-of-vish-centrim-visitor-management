@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CompanionDetail, VisitorType } from "@/types/visitor";
 import { CheckInFormData, VisitorProfile } from "./useCheckInFlow";
 import { useRef, useState, useCallback } from "react";
+import type { CompanionFieldSpec } from "@/lib/companionFields";
 
 interface StepDetailsProps {
   formData: CheckInFormData;
