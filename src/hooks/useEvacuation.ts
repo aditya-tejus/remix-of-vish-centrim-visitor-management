@@ -133,14 +133,16 @@ export function useEvacuationPoints() {
   });
 }
 
-export function useEvacuationDrills(status?: string) {
+export function useEvacuationDrills(status?: string, branchId?: string | null) {
   return useQuery({
-    queryKey: ["evacuation-drills", status],
+    queryKey: ["evacuation-drills", status, branchId ?? null],
     queryFn: async () => {
       let query = supabase.from("evacuation_drills" as any).select("*").order("started_at", { ascending: false });
       // "active" means the event is still being worked on, paused included.
       if (status === "active") query = query.in("state", ["draft", "active", "paused"]);
       else if (status) query = query.eq("state", status);
+      // Events belong to one site; never surface another site's emergency.
+      if (branchId) query = query.eq("branch_id", branchId);
       const { data, error } = await query;
       if (error) throw error;
       return (data || []) as unknown as EvacuationDrill[];
@@ -148,6 +150,7 @@ export function useEvacuationDrills(status?: string) {
 
   });
 }
+
 
 export function useEvacuationAttendance(drillId?: string) {
   const qc = useQueryClient();
@@ -232,7 +235,9 @@ export function useEvacuationMutations() {
       if (people.length > 0) {
         const rows = people.map((p) => ({
           drill_id: drillId,
+          branch_id: branchId || null,
           status: "unaccounted",
+
           ...seedColumns(p),
         }));
         const { error: attError } = await supabase
@@ -334,12 +339,14 @@ export function useEvacuationMutations() {
 
   // Adds someone who arrived after the roll call started
   const addAttendee = useMutation({
-    mutationFn: async ({ drillId, person, status, pointId, markedBy }: { drillId: string; person: RollCallSeed; status?: AttendanceStatus; pointId?: string; markedBy?: string }) => {
+    mutationFn: async ({ drillId, person, status, pointId, markedBy, branchId }: { drillId: string; person: RollCallSeed; status?: AttendanceStatus; pointId?: string; markedBy?: string; branchId?: string | null }) => {
       const { data, error } = await supabase
         .from("evacuation_attendance" as any)
         .insert({
           drill_id: drillId,
+          branch_id: branchId || null,
           ...seedColumns(person),
+
           status: status || "unaccounted",
           marked_safe_at: status && status !== "unaccounted" ? new Date().toISOString() : null,
           marked_by: markedBy || null,

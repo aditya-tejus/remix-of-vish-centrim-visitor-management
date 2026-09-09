@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.inherit_attendance_branch() FROM PUBLIC, anon, authenticated;

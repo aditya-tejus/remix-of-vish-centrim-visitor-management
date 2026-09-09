@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
@@ -24,13 +24,16 @@ import {
   ACCOUNTED_STATUSES,
 } from "@/hooks/useEvacuation";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useSite } from "@/contexts/SiteContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
   AlertTriangle, CheckCircle2, Search, Shield, Clock, Users, Download, Printer,
   Home, MapPin, Phone, Accessibility, ArrowDown, PlaneTakeoff, Ambulance,
+  WifiOff, RefreshCw, ChevronDown, ChevronRight, Lock, Siren, ClipboardCheck,
 } from "lucide-react";
 import { format, differenceInMinutes } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { enqueueOutcome, flushQueue, readQueue, clearQueueFor } from "@/lib/emergencyQueue";
 import {
   buildRollCall, sortPeople, attendanceKey, RollCallPerson,
   ASSISTANCE_ORDER, assistanceLabel, UNASSIGNED_AREA,
@@ -54,12 +57,23 @@ const ASSIST_STYLE: Record<string, string> = {
   unknown: "bg-destructive/10 text-destructive border-destructive/30",
 };
 
+/** Who needs attention first: still missing, then needing help, then found. */
+const STATUS_PRIORITY: Record<string, number> = {
+  unaccounted: 0,
+  assistance_required: 1,
+  not_located: 2,
+  safe_elsewhere: 3,
+  evacuated_offsite: 4,
+  safe: 5,
+};
+
 export default function Evacuation() {
   const { visitors } = useVisitors();
   const { residents } = useResidents();
   const { user } = useAuth();
   const { areaLabel, roomLabel, structure } = useSiteStructure();
   const isVillageView = structure === "rv" || structure === "mixed";
+  const { currentSiteId, currentSite } = useSite();
 
   const { isUK } = useJurisdiction();
   const { toast } = useToast();
@@ -73,17 +87,29 @@ export default function Evacuation() {
   const [busy, setBusy] = useState(false);
   const [closing, setClosing] = useState(false);
   const [closeReason, setCloseReason] = useState("");
+  const [confirmClose, setConfirmClose] = useState(false);
   const [eventClass, setEventClass] = useState<"drill" | "real">("real");
+  const [startPrompt, setStartPrompt] = useState(false);
   const [reviewNotes, setReviewNotes] = useState("");
   const [correcting, setCorrecting] = useState<RollCallPerson | null>(null);
   const [correctionReason, setCorrectionReason] = useState("");
+  const [offline, setOffline] = useState(!navigator.onLine);
+  const [pending, setPending] = useState(readQueue().length);
+  const [retrying, setRetrying] = useState(false);
+  const [showOffSite, setShowOffSite] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
-  const { data: activeDrills = [] } = useEvacuationDrills("active");
+  const { data: activeDrills = [] } = useEvacuationDrills("active", currentSiteId);
   const activeDrill = activeDrills[0];
   const { data: attendance = [] } = useEvacuationAttendance(activeDrill?.id);
   const { data: points = [] } = useEvacuationPoints();
   const { startDrill, markSafe, markUnsafe, endDrill, addAttendee, setEmergencyState } = useEvacuationMutations();
   const { can } = usePermissions();
+
+  const canActivate = can("emergency.activate");
+  const canMark = can("emergency.mark_safe");
+  const canExport = can("emergency.export");
+  const isDrillEvent = activeDrill ? activeDrill.event_class === "drill" : eventClass === "drill";
 
   const markedBy = user?.email || "Staff";
 
@@ -93,8 +119,10 @@ export default function Evacuation() {
   );
 
 
+
+
   const statusByKey = useMemo(() => {
-    const map = new Map<string, { id: string; status: AttendanceStatus; at: string | null; point: string | null }>();
+    const map = new Map<string, { id: string; status: AttendanceStatus; at: string | null; point: string | null; seededAt: string | null }>();
     attendance.forEach((a) => {
       const key = attendanceKey(a as any);
       if (key) map.set(key, {
@@ -102,16 +130,38 @@ export default function Evacuation() {
         status: (a.status as AttendanceStatus) || "unaccounted",
         at: a.marked_safe_at,
         point: a.evacuation_point_id,
+        seededAt: (a as any).created_at || null,
       });
     });
     return map;
   }, [attendance]);
+
+  // Any change to the shared roll call refreshes this, so staff can see the list is live.
+  useEffect(() => { setLastUpdated(new Date()); }, [attendance]);
+
+  useEffect(() => {
+    const on = () => { setOffline(false); void retryPending(); };
+    const off = () => setOffline(true);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const statusOf = (p: RollCallPerson): AttendanceStatus =>
     statusByKey.get(p.key)?.status || "unaccounted";
 
   /** Only "safe", "safe elsewhere" and "evacuated off-site" close a person off. */
   const accountedFor = (p: RollCallPerson) => ACCOUNTED_STATUSES.includes(statusOf(p));
+
+  /** Someone who arrived after the snapshot was taken is shown separately. */
+  const isLateArrival = (p: RollCallPerson) => {
+    if (!activeDrill?.snapshot_at) return false;
+    const snap = new Date(activeDrill.snapshot_at).getTime();
+    const seeded = statusByKey.get(p.key)?.seededAt;
+    if (seeded) return new Date(seeded).getTime() > snap + 60_000;
+    return !!p.checkInTime && p.checkInTime.getTime() > snap;
+  };
 
   const seedOf = (p: RollCallPerson): RollCallSeed => ({
     name: p.name,
@@ -131,7 +181,7 @@ export default function Evacuation() {
 
   const ensureDrill = async (): Promise<EvacuationDrill> => {
     if (activeDrill) return activeDrill;
-    if (!can("emergency.activate")) {
+    if (!canActivate) {
       throw new Error("You do not have permission to activate an emergency.");
     }
     return await startDrill.mutateAsync({
@@ -139,13 +189,29 @@ export default function Evacuation() {
       people: onSite.map(seedOf),
       eventClass,
       eventType: eventClass === "drill" ? "drill" : "emergency",
+      branchId: currentSiteId,
     });
+  };
+
+  /** Re-sends outcomes recorded while the connection was down. IDs and status only. */
+  const retryPending = async () => {
+    if (readQueue().length === 0) { setPending(0); return; }
+    setRetrying(true);
+    try {
+      const { pending: left } = await flushQueue(activeDrill?.id);
+      setPending(left);
+      if (left === 0) toast({ title: "Roll call synced", description: "Outcomes recorded while offline have been saved." });
+    } catch {
+      setPending(readQueue().length);
+    } finally {
+      setRetrying(false);
+    }
   };
 
   /** Records an outcome for a group of people, creating the event if needed. */
   const setStatusFor = async (people: RollCallPerson[], status: AttendanceStatus, reason?: string) => {
     if (people.length === 0) return;
-    if (!can("emergency.mark_safe")) {
+    if (!canMark) {
       toast({ title: "Not allowed", description: "You do not have permission to record roll call outcomes.", variant: "destructive" });
       return;
     }
@@ -160,17 +226,28 @@ export default function Evacuation() {
 
       for (const p of people) {
         const attId = found.get(p.key);
-        if (attId) {
-          if (status === "unaccounted") await markUnsafe.mutateAsync({ id: attId, reason });
-          else await markSafe.mutateAsync({ id: attId, status, pointId: assemblyPoint || undefined, markedBy });
-        } else {
-          await addAttendee.mutateAsync({
-            drillId: drill.id,
-            person: seedOf(p),
-            status,
-            pointId: assemblyPoint || undefined,
-            markedBy,
-          });
+        try {
+          if (attId) {
+            if (status === "unaccounted") await markUnsafe.mutateAsync({ id: attId, reason });
+            else await markSafe.mutateAsync({ id: attId, status, pointId: assemblyPoint || undefined, markedBy });
+          } else {
+            await addAttendee.mutateAsync({
+              drillId: drill.id,
+              person: seedOf(p),
+              status,
+              pointId: assemblyPoint || undefined,
+              markedBy,
+              branchId: currentSiteId,
+            });
+          }
+        } catch (err: any) {
+          // Only an existing line can be queued safely: identifiers and status, nothing personal.
+          if (attId && !/closed/i.test(err?.message || "")) {
+            enqueueOutcome({ attendanceId: attId, drillId: drill.id, status, markedAt: new Date().toISOString() });
+            setPending(readQueue().length);
+          } else {
+            throw err;
+          }
         }
       }
     } catch (e: any) {
@@ -179,6 +256,7 @@ export default function Evacuation() {
       setBusy(false);
     }
   };
+
 
   /** Undoing an outcome is a correction and always needs a reason. */
   const togglePerson = (p: RollCallPerson) => {
@@ -231,6 +309,12 @@ export default function Evacuation() {
 
   interface Group { label: string; sublabel?: string; people: RollCallPerson[] }
 
+  /** Outstanding people rise to the top of every list; found people settle below. */
+  const byPriority = (people: RollCallPerson[]) =>
+    sortPeople(people)
+      .slice()
+      .sort((a, b) => (STATUS_PRIORITY[statusOf(a)] ?? 9) - (STATUS_PRIORITY[statusOf(b)] ?? 9));
+
   const groups = useMemo((): Group[] => {
     const map = new Map<string, RollCallPerson[]>();
     const push = (k: string, p: RollCallPerson) => {
@@ -248,19 +332,28 @@ export default function Evacuation() {
     let entries = [...map.entries()];
     if (groupBy === "assistance") {
       entries.sort(([a], [b]) => ASSISTANCE_ORDER.indexOf(a as any) - ASSISTANCE_ORDER.indexOf(b as any));
-      return entries.map(([k, people]) => ({ label: assistanceLabel(k as any), people: sortPeople(people) }));
+      return entries.map(([k, people]) => ({ label: assistanceLabel(k as any), people: byPriority(people) }));
     }
     if (groupBy === "status") {
       entries.sort(([a]) => (a === "Not accounted for" ? -1 : 1));
     } else {
-      entries.sort(([a], [b]) => a.localeCompare(b));
+      // Areas with people still to find come first.
+      entries.sort(([a, pa], [b, pb]) => {
+        const oa = pa.filter((p) => !accountedFor(p)).length;
+        const ob = pb.filter((p) => !accountedFor(p)).length;
+        if (!!oa !== !!ob) return oa ? -1 : 1;
+        return a.localeCompare(b);
+      });
     }
-    return entries.map(([k, people]) => ({ label: k, people: sortPeople(people) }));
+    return entries.map(([k, people]) => ({ label: k, people: byPriority(people) }));
   }, [filtered, groupBy, statusByKey]);
 
   const safeCount = onSite.filter((p) => accountedFor(p)).length;
   const unaccountedCount = onSite.length - safeCount;
   const offSiteCount = offSite.length;
+  const assistanceCount = onSite.filter((p) => statusOf(p) === "assistance_required").length;
+  const lateCount = onSite.filter(isLateArrival).length;
+
 
   const markGroupSafe = async (g: Group) => {
     const pending = g.people.filter((p) => !accountedFor(p));
@@ -287,8 +380,17 @@ export default function Evacuation() {
 
   const finishRollCall = async () => {
     if (!activeDrill) return;
+    const isLive = activeDrill.event_class !== "drill";
     if (unaccountedCount > 0 && !closeReason.trim()) {
       toast({ title: "Reason required", description: "Record why people are still unaccounted for before closing.", variant: "destructive" });
+      return;
+    }
+    if (isLive && !closeReason.trim()) {
+      toast({ title: "Reason required", description: "Closing a live emergency needs a short account of the outcome.", variant: "destructive" });
+      return;
+    }
+    if (isLive && !confirmClose) {
+      toast({ title: "Confirmation required", description: "Tick the confirmation before closing a live emergency.", variant: "destructive" });
       return;
     }
     await setEmergencyState.mutateAsync({
@@ -298,11 +400,15 @@ export default function Evacuation() {
       reason: closeReason.trim() || undefined,
       reviewNotes: reviewNotes.trim() || undefined,
     });
+    clearQueueFor(activeDrill.id);
+    setPending(readQueue().length);
     setClosing(false);
     setCloseReason("");
+    setConfirmClose(false);
     setReviewNotes("");
-    toast({ title: "Emergency closed", description: `${safeCount} of ${onSite.length} accounted for.` });
+    toast({ title: isDrillEvent ? "Drill closed" : "Emergency closed", description: `${safeCount} of ${onSite.length} accounted for. This record can no longer be changed.` });
   };
+
 
   /** Pause holds the event open without losing the snapshot; resume continues it. */
   const togglePause = async () => {
@@ -397,26 +503,32 @@ export default function Evacuation() {
       : "Retain as evidence for the Aged Care Quality Standards — emergency and disaster management.";
 
     const html = `<!DOCTYPE html><html><head><title>Roll Call</title><style>
-      body{font-family:Arial,sans-serif;margin:24px;color:#111}
+      @page{size:A4 portrait;margin:12mm}
+      body{font-family:Arial,sans-serif;margin:0;color:#111}
       h1{color:#dc2626;font-size:20px;margin:0 0 2px}
       .sub{color:#6b7280;font-size:12px;margin-bottom:14px}
+      .kind{display:inline-block;border:2px solid #111;padding:2px 8px;font-weight:bold;font-size:12px;margin-bottom:8px}
       .summary{display:flex;gap:20px;margin-bottom:12px;font-size:13px}
       table{width:100%;border-collapse:collapse;font-size:11px}
       th,td{padding:6px 8px;border-bottom:1px solid #e5e7eb;text-align:left;vertical-align:top}
       th{background:#fef2f2;color:#dc2626}
+      tr{page-break-inside:avoid}
+      thead{display:table-header-group}
       tr.grp td{background:#f3f4f6;font-weight:bold}
       tr.safe td{background:#f0fdf4} tr.danger td{background:#fff}
       h2{font-size:14px;margin:20px 0 6px}
       .footer{margin-top:20px;font-size:10px;color:#6b7280;border-top:1px solid #e5e7eb;padding-top:10px}
     </style></head><body>
       <h1>Emergency Roll Call</h1>
-      <div class="sub">${date}</div>
+      <div class="kind">${isDrillEvent ? "PRACTICE DRILL — NOT A REAL EMERGENCY" : "LIVE EMERGENCY"}</div>
+      <div class="sub">${currentSite?.name ? `${currentSite.name} · ` : ""}${date}</div>
       <div class="summary">
         <span><strong>On site:</strong> ${onSite.length}</span>
         <span><strong>Accounted for:</strong> ${safeCount}</span>
         <span><strong>Not accounted for:</strong> ${unaccountedCount}</span>
         <span><strong>Off site:</strong> ${offSiteCount}</span>
       </div>
+
       <table><thead><tr><th></th><th>Name</th><th>Type</th><th>Assistance</th><th>Phone</th><th>Emergency contact</th><th>With / visiting</th><th>Status</th></tr></thead>
       <tbody>${body}</tbody></table>
       ${offSiteCount ? `<h2>Off site — accounted for elsewhere</h2><table><tbody>${offSiteRows}</tbody></table>` : ""}
@@ -474,6 +586,10 @@ export default function Evacuation() {
               {p.assistance.flags.map((f) => (
                 <span key={f} className="text-[10px] rounded-md border border-warning/30 bg-warning/10 text-warning px-1.5 py-0.5 font-medium">{f}</span>
               ))}
+              {isLateArrival(p) && (
+                <span className="text-[10px] rounded-md border border-primary/30 bg-primary/10 text-primary px-1.5 py-0.5 font-medium">Arrived after roll call started</span>
+              )}
+
             </div>
 
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
@@ -573,7 +689,7 @@ export default function Evacuation() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                {!activeDrill && (
+                {!activeDrill && canActivate && (
                   <Select value={eventClass} onValueChange={(v) => setEventClass(v as "drill" | "real")}>
                     <SelectTrigger className="h-9 w-[150px] text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -582,7 +698,12 @@ export default function Evacuation() {
                     </SelectContent>
                   </Select>
                 )}
-                {activeDrill && (
+                {!activeDrill && canActivate && (
+                  <Button size="sm" disabled={busy} onClick={() => setStartPrompt(true)} className="h-9 gap-1.5 bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    <Siren className="h-3.5 w-3.5" /> Start {eventClass === "drill" ? "drill" : "emergency"}
+                  </Button>
+                )}
+                {activeDrill && canActivate && (
                   <Button variant="outline" size="sm" disabled={busy} onClick={togglePause} className="h-9 text-xs">
                     {activeDrill.state === "paused" ? "Resume" : "Pause"}
                   </Button>
@@ -598,30 +719,58 @@ export default function Evacuation() {
                     </SelectContent>
                   </Select>
                 )}
-                <Button variant="outline" size="sm" onClick={exportCSV} className="h-9 gap-1.5"><Download className="h-3.5 w-3.5" /> CSV</Button>
-                <Button variant="outline" size="sm" onClick={printList} className="h-9 gap-1.5"><Printer className="h-3.5 w-3.5" /> Print sheet</Button>
-                {unaccountedCount > 0 && onSite.length > 0 && (
+                {canExport && <Button variant="outline" size="sm" onClick={exportCSV} className="h-9 gap-1.5"><Download className="h-3.5 w-3.5" /> CSV</Button>}
+                {canExport && <Button variant="outline" size="sm" onClick={printList} className="h-9 gap-1.5"><Printer className="h-3.5 w-3.5" /> Print sheet</Button>}
+                {canMark && unaccountedCount > 0 && onSite.length > 0 && (
                   <Button size="sm" disabled={busy} onClick={markAllSafe} className="h-9 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-emerald-50">
                     <CheckCircle2 className="h-3.5 w-3.5" /> All safe
                   </Button>
                 )}
-                {safeCount > 0 && <Button variant="ghost" size="sm" disabled={busy} onClick={resetAll} className="h-9 text-xs">Reset</Button>}
-                {activeDrill && (
-                  <Button variant="outline" size="sm" disabled={busy} onClick={() => setClosing(true)} className="h-9 text-xs">End roll call</Button>
+                {canMark && safeCount > 0 && <Button variant="ghost" size="sm" disabled={busy} onClick={resetAll} className="h-9 text-xs">Reset</Button>}
+                {activeDrill && canActivate && (
+                  <Button variant="outline" size="sm" disabled={busy} onClick={() => setClosing(true)} className="h-9 gap-1.5 text-xs"><ClipboardCheck className="h-3.5 w-3.5" /> End roll call</Button>
                 )}
               </div>
             </div>
           </header>
 
           <main className="p-4 sm:p-6 space-y-5 pb-28 lg:pb-6">
-            <div className={`rounded-xl border px-4 py-2.5 text-sm flex items-center gap-2 ${activeDrill ? "border-destructive/30 bg-destructive/5 text-destructive" : "border-border bg-muted/40 text-muted-foreground"}`}>
+            {!canMark && (
+              <div className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-2.5 text-sm text-foreground flex items-start gap-2">
+                <Lock className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>You can view the roll call, but recording outcomes, corrections, closing and exporting need emergency permissions. Ask a manager to grant them.</span>
+              </div>
+            )}
+
+            {(offline || pending > 0) && (
+              <div className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-2.5 text-sm text-foreground flex flex-wrap items-center gap-2">
+                <WifiOff className="h-4 w-4 shrink-0" />
+                <span>
+                  {offline ? "No connection. " : ""}
+                  {pending > 0 ? `${pending} outcome${pending === 1 ? "" : "s"} waiting to save (person reference and status only).` : "Outcomes will be saved when the connection returns."}
+                </span>
+                {pending > 0 && (
+                  <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" disabled={retrying} onClick={retryPending}>
+                    <RefreshCw className={`h-3.5 w-3.5 ${retrying ? "animate-spin" : ""}`} /> {retrying ? "Retrying" : "Retry now"}
+                  </Button>
+                )}
+              </div>
+            )}
+
+            <div className={`rounded-xl border px-4 py-2.5 text-sm flex flex-wrap items-center gap-2 ${activeDrill && !isDrillEvent ? "border-destructive/30 bg-destructive/5 text-destructive" : activeDrill ? "border-primary/30 bg-primary/5 text-primary" : "border-border bg-muted/40 text-muted-foreground"}`}>
               <Shield className="h-4 w-4 shrink-0" />
               {activeDrill ? (
-                <span>Roll call running since {format(new Date(activeDrill.started_at), "HH:mm")} — shared live with every device.</span>
+                <span>
+                  <strong>{isDrillEvent ? "Practice drill" : "Live emergency"}</strong>
+                  {activeDrill.state === "paused" ? " (paused)" : ""} running since {format(new Date(activeDrill.started_at), "HH:mm")}
+                  {currentSite?.name ? ` at ${currentSite.name}` : ""} — shared live with every device.
+                </span>
               ) : (
-                <span>No roll call running. Marking the first person starts one and shares it live with every device.</span>
+                <span>No roll call running. Starting one takes a snapshot of everyone on site right now.</span>
               )}
+              <span className="ml-auto text-xs opacity-80">Updated {format(lastUpdated, "HH:mm:ss")}</span>
             </div>
+
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="rounded-xl border border-border bg-card p-4 text-center">
@@ -641,6 +790,22 @@ export default function Evacuation() {
                 <p className="text-xs text-muted-foreground">Off site (on leave)</p>
               </div>
             </div>
+
+            {(assistanceCount > 0 || lateCount > 0) && (
+              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                {assistanceCount > 0 && (
+                  <span className="flex items-center gap-1 rounded-lg border border-warning/30 bg-warning/10 px-2.5 py-1 text-foreground">
+                    <Accessibility className="h-3.5 w-3.5" /> {assistanceCount} needing help to get out
+                  </span>
+                )}
+                {lateCount > 0 && (
+                  <span className="flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-foreground">
+                    <Clock className="h-3.5 w-3.5" /> {lateCount} arrived after the roll call started
+                  </span>
+                )}
+              </div>
+            )}
+
 
             <div className="flex flex-wrap gap-2">
               <div className="relative flex-1 min-w-[220px]">
@@ -741,11 +906,17 @@ export default function Evacuation() {
 
             {offSite.length > 0 && (
               <section className="space-y-2">
-                <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2">
+                <button
+                  type="button"
+                  onClick={() => setShowOffSite((v) => !v)}
+                  className="w-full flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-left"
+                >
+                  {showOffSite ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                   <PlaneTakeoff className="h-4 w-4 text-muted-foreground" />
                   <h2 className="text-sm font-semibold text-foreground">Off site — accounted for elsewhere</h2>
-                  <span className="text-xs text-muted-foreground">{offSite.length} residents</span>
-                </div>
+                  <span className="ml-auto text-xs font-semibold text-muted-foreground">{offSite.length}</span>
+                </button>
+                {showOffSite && (
                 <div className="space-y-2">
                   {sortPeople(offSite).map((p) => (
                     <div key={p.key} className="rounded-xl border border-border bg-muted/20 p-3">
@@ -766,8 +937,10 @@ export default function Evacuation() {
                     </div>
                   ))}
                 </div>
+                )}
               </section>
             )}
+
           </main>
 
           {/* Mobile action bar */}
@@ -798,9 +971,11 @@ export default function Evacuation() {
                   {unaccountedCount > 0 ? `, ${unaccountedCount} still missing.` : "."}
                 </DialogDescription>
               </DialogHeader>
-              {unaccountedCount > 0 && (
+              {(unaccountedCount > 0 || !isDrillEvent) && (
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-foreground">Why are these people unaccounted for?</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {unaccountedCount > 0 ? "Why are these people unaccounted for?" : "What was the outcome of this emergency?"}
+                  </p>
                   <Textarea
                     value={closeReason}
                     onChange={(e) => setCloseReason(e.target.value)}
@@ -820,12 +995,52 @@ export default function Evacuation() {
                 />
                 <p className="text-[12px] text-muted-foreground">Adding notes marks this event as reviewed.</p>
               </div>
+              {!isDrillEvent && (
+                <label className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm">
+                  <input type="checkbox" className="mt-0.5 h-4 w-4" checked={confirmClose} onChange={(e) => setConfirmClose(e.target.checked)} />
+                  <span>I confirm this live emergency is over and the record can be closed. Once closed it cannot be changed.</span>
+                </label>
+              )}
               <DialogFooter>
                 <Button variant="outline" onClick={() => setClosing(false)}>Keep going</Button>
                 <Button onClick={finishRollCall} disabled={busy}>End roll call</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          <Dialog open={startPrompt} onOpenChange={setStartPrompt}>
+            <DialogContent className="rounded-xl">
+              <DialogHeader>
+                <DialogTitle>Start {eventClass === "drill" ? "a practice drill" : "a live emergency"}</DialogTitle>
+                <DialogDescription>
+                  This takes a snapshot of the {onSite.length} people on site{currentSite?.name ? ` at ${currentSite.name}` : ""} and shares the roll call with every device.
+                  {eventClass === "drill" ? " It is clearly marked as a drill." : " Only do this for a real emergency."}
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setStartPrompt(false)}>Cancel</Button>
+                <Button
+                  className={eventClass === "drill" ? "" : "bg-destructive text-destructive-foreground hover:bg-destructive/90"}
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    try {
+                      await ensureDrill();
+                      setStartPrompt(false);
+                      toast({ title: eventClass === "drill" ? "Drill started" : "Emergency started", description: `${onSite.length} people in the roll call.` });
+                    } catch (e: any) {
+                      toast({ title: "Could not start", description: e?.message || "Please try again.", variant: "destructive" });
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  Start now
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
 
           <Dialog open={!!correcting} onOpenChange={(o) => !o && setCorrecting(null)}>
             <DialogContent className="rounded-xl">
