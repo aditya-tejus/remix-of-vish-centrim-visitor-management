@@ -41,6 +41,7 @@ export function StepDetails({
   companions,
   setCompanions,
   activeCompanionFields,
+  activeFields,
   photo,
   setPhoto,
   onChangeProfile,
