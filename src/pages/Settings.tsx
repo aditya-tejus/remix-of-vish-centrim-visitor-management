@@ -52,14 +52,26 @@ const STORAGE_NOTE: Partial<Record<SettingsSection, string>> = {
   integration: "A description of what could connect. Nothing is connected and nothing is saved.",
 };
 
+/** Applies the read-only fence, except where a section saves nothing. */
+function SectionBody({ fenced, children }: { fenced: boolean; children: React.ReactNode }) {
+  if (!fenced) return <>{children}</>;
+  return <ReadOnlyFence>{children}</ReadOnlyFence>;
+}
+
 export default function SettingsPage() {
   const [active, setActive] = useState<SettingsSection>("context");
   const access = useSettingsAccess(active);
 
   const isPersonType = personTypes.includes(active);
+  // Audit and exports saves nothing; its export button keeps its own narrower permission.
+  const fenced = active !== "audit";
 
 
   return (
+    <SettingsAccessProvider
+      value={{ canEdit: access.canEdit, audience: access.audience, deniedReason: access.deniedReason }}
+    >
+    <PersonTypesDraftProvider>
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
@@ -95,7 +107,7 @@ export default function SettingsPage() {
                   deniedReason={access.deniedReason}
                   storageNote={STORAGE_NOTE[active]}
                 />
-                <ReadOnlyFence>
+                <SectionBody fenced={fenced}>
                   {isPersonType && <PersonTypeSettings type={active} readOnly={!access.canEdit} />}
                   {active === "context" && <OperatingContextTab />}
                   {active === "person-types" && <PersonTypesTab />}
@@ -112,7 +124,7 @@ export default function SettingsPage() {
                       <KioskStaffPinCard />
                     </div>
                   )}
-                </ReadOnlyFence>
+                </SectionBody>
               </div>
 
               {/* See the result before saving */}
@@ -127,5 +139,7 @@ export default function SettingsPage() {
         </SidebarInset>
       </div>
     </SidebarProvider>
+    </PersonTypesDraftProvider>
+    </SettingsAccessProvider>
   );
 }
