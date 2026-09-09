@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { VisitorType, Visitor, CompanionDetail } from "@/types/visitor";
 import { useActiveHealthQuestions, useActiveVaccinationFields } from "@/hooks/useHealthQuestions";
+import { usePersonTypes } from "@/hooks/usePersonTypes";
+import { resolveScreeningPolicy, screeningStepApplies } from "@/lib/screeningPolicy";
+import { evaluateScreening, type ScreeningRuleQuestion } from "@/lib/screeningOutcome";
 import { useCompanionFields, useFormFields } from "@/hooks/useFormFields";
 import { mergeCompanionFields, missingCompanionFields, normaliseCompanion } from "@/lib/companionFields";
 import {
@@ -90,10 +93,17 @@ export function useCheckInFlow(open: boolean) {
 
 
   // Dynamic settings-driven fields
+  const { personTypes } = usePersonTypes();
+  // One shared rule set for the desk and the kiosk.
+  const policy = useMemo(
+    () => resolveScreeningPolicy(personTypes.find((p) => p.type === (selectedType as any)) || null),
+    [personTypes, selectedType]
+  );
   const { data: dbQuestions = [] } = useActiveHealthQuestions(selectedType as any);
   const { data: dbVaccFields = [] } = useActiveVaccinationFields(selectedType as any);
   const { data: companionFieldsConfig = [] } = useCompanionFields(selectedType as any);
   const { data: mainVisitorFields = [] } = useFormFields(selectedType as any, "");
+
   // Companion-only fields, plus the main visitor's own fields where they still
   // make sense for a second person on the same arrival.
   const activeCompanionFields = useMemo(
@@ -109,12 +119,11 @@ export function useCheckInFlow(open: boolean) {
   );
   const missingFieldsHint = missingFieldsMessage(missingFields);
 
-  const fallbackHealthQuestions = [
-    { id: "fever", question: "Do you have a fever or feel unusually warm?", type: "yesno" as const, required: true },
-    { id: "cough", question: "Do you have a new continuous cough?", type: "yesno" as const, required: true },
-    { id: "consent_screening", question: "I consent to compliance screening and temperature check", type: "checkbox" as const, required: true },
-  ];
-  const healthQuestions = dbQuestions.length > 0 ? dbQuestions : fallbackHealthQuestions;
+  // Nothing is invented: if a site has switched check-in questions off, or has
+  // configured none, the desk asks nothing.
+  const healthQuestions = policy.screeningEnabled ? dbQuestions : [];
+  const vaccinationFields = policy.vaccinationEnabled ? dbVaccFields : [];
+
 
   const residentItems = useMemo(() => dbResidents.map(r => ({ id: r.visitorId, name: r.name, room: r.room, wing: r.wing })), [dbResidents]);
   const staffItems = useMemo(() => dbStaff.map(s => ({ id: s.id, name: s.name, role: s.role, department: s.department || "" })), [dbStaff]);
@@ -140,15 +149,21 @@ export function useCheckInFlow(open: boolean) {
 
     if (foodStepApplies) pipeline.push("food");
 
-    // Screening: only if there are health questions OR it's a contractor
-    const hasScreening = selectedType === "contractor" || healthQuestions.length > 0 || dbVaccFields.length > 0;
-    if (hasScreening) {
+    // Screening: only when this site asks this person type something
+    if (
+      screeningStepApplies(policy, {
+        questionCount: healthQuestions.length,
+        vaccinationFieldCount: vaccinationFields.length,
+        isContractor: selectedType === "contractor",
+      })
+    ) {
       pipeline.push("screening");
     }
 
     pipeline.push("confirm");
     return pipeline;
-  }, [selectedType, healthQuestions.length, dbVaccFields.length, foodStepApplies]);
+  }, [selectedType, healthQuestions.length, vaccinationFields.length, foodStepApplies, policy]);
+
 
   const currentStepIndex = steps.indexOf(step);
   const totalSteps = steps.length;
