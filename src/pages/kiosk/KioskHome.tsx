@@ -6,6 +6,8 @@ import { format } from "date-fns";
 import centrimLogo from "@/assets/centrim-life-logo.png";
 import kioskBg from "@/assets/kiosk-bg.jpg";
 import { usePersonTypes } from "@/hooks/usePersonTypes";
+import { useOperatingContext } from "@/contexts/OperatingContext";
+import { useKioskFastLane } from "@/hooks/useKioskFastLane";
 
 const KIOSK_TILES = [
   {
@@ -74,8 +76,16 @@ function getGreeting() {
 export default function KioskHome() {
   const navigate = useNavigate();
   const { residentKioskEnabled } = usePersonTypes();
+  const { siteName } = useOperatingContext();
+  const { fastLaneEnabled } = useKioskFastLane();
   const heroTile = KIOSK_TILES.find((t) => t.hero)!;
-  const secondaryTiles = KIOSK_TILES.filter((t) => !t.hero && (t.path !== "/kiosk/resident-leave" || residentKioskEnabled));
+  const secondaryTiles = KIOSK_TILES.filter(
+    (t) =>
+      !t.hero &&
+      (t.path !== "/kiosk/resident-leave" || residentKioskEnabled) &&
+      // No dead ends: the card tile only appears where cards/codes are issued.
+      (t.path !== "/kiosk/qr-scan" || fastLaneEnabled)
+  );
 
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -112,7 +122,7 @@ export default function KioskHome() {
               {getGreeting()}
             </h1>
             <p className="text-base sm:text-lg text-muted-foreground">
-              Welcome to Sydney Care Centre
+              {siteName ? `Welcome to ${siteName}` : "Welcome"}
             </p>
             <p className="text-sm text-muted-foreground/70 font-medium tabular-nums">
               {format(currentTime, "EEEE, d MMMM yyyy · h:mm a")}

@@ -4,6 +4,9 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { RotateCcw } from "lucide-react";
+import { siteScopedKey, useOperatingContext } from "@/contexts/OperatingContext";
+
+const FAST_LANE_KEY = "kiosk_fast_lane_enabled";
 
 interface Props {
   personType: string;
@@ -34,13 +37,16 @@ const OPTIONS = [
 
 export function ReturningVisitorTab({ personType }: Props) {
   const [values, setValues] = useState<Record<string, boolean>>({});
+  const [fastLane, setFastLane] = useState(false);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  const { siteId } = useOperatingContext();
 
   const keyFor = (suffix: string) => `${suffix}_${personType}`;
+  const fastLaneKey = siteId ? siteScopedKey(FAST_LANE_KEY, siteId) : FAST_LANE_KEY;
 
   useEffect(() => {
-    const keys = OPTIONS.map((o) => keyFor(o.suffix));
+    const keys = [...OPTIONS.map((o) => keyFor(o.suffix)), fastLaneKey, FAST_LANE_KEY];
     supabase
       .from("settings")
       .select("key, value")
@@ -51,14 +57,21 @@ export function ReturningVisitorTab({ personType }: Props) {
           next[o.suffix] = data?.find((d) => d.key === keyFor(o.suffix))?.value === "true";
         }
         setValues(next);
+        const raw =
+          data?.find((d) => d.key === fastLaneKey)?.value ??
+          data?.find((d) => d.key === FAST_LANE_KEY)?.value;
+        setFastLane(raw === "true");
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [personType]);
+  }, [personType, fastLaneKey]);
 
   const save = async () => {
     setSaving(true);
     await supabase.from("settings").upsert(
-      OPTIONS.map((o) => ({ key: keyFor(o.suffix), value: values[o.suffix] ? "true" : "false" })),
+      [
+        ...OPTIONS.map((o) => ({ key: keyFor(o.suffix), value: values[o.suffix] ? "true" : "false" })),
+        { key: fastLaneKey, value: fastLane ? "true" : "false" },
+      ],
       { onConflict: "key" }
     );
     setSaving(false);
@@ -88,6 +101,19 @@ export function ReturningVisitorTab({ personType }: Props) {
           />
         </div>
       ))}
+
+      <div className="flex items-center justify-between gap-4 border-t border-border pt-4">
+        <div>
+          <p className="text-sm font-medium text-foreground">Show the card scan tile on the kiosk</p>
+          <p className="text-xs text-muted-foreground">
+            Only turn this on where this site issues visitor cards or codes. When off, the kiosk hides the tile
+            instead of offering a dead end. Scanning a card fills in details only — questions and terms are
+            always still asked.
+          </p>
+        </div>
+        <Switch checked={fastLane} onCheckedChange={setFastLane} />
+      </div>
+
 
       <Button size="sm" onClick={save} disabled={saving}>
         {saving ? "Saving…" : "Save"}

@@ -203,3 +203,35 @@ documented 45-warning baseline with no new warning.
 - The lookup shows name, and phone/email only where already held for that person at that site; no destination, resident or screening information is exposed at this step.
 - Failure testing used browser-level request blocking in the test session only. No production code, permission, policy or server-function change was made for testing, and no kiosk access path was altered.
 - Remaining limitation: this lookup matches on name and phone text; there is no verified identity check, so staff confirmation remains the control.
+
+## Phase 7B — kiosk access review
+
+Changes:
+- `kiosk_presence_list(p_branch_id)` and `kiosk_returning_lookup(..., p_branch_id)` replaced their
+  unparameterised versions. Called with the kiosk's site they return that site's rows only; called with
+  no site they behave as before (legacy compatibility). Execute revoked from PUBLIC and granted to
+  `anon, authenticated, service_role`, matching the existing kiosk function pattern.
+- New `kiosk_log_event(p_purpose, p_outcome, p_branch_id, p_detail)` writes to `kiosk_access_log` only.
+  The kiosk's direct `audit_log` insert was removed, so unauthenticated devices no longer write personal
+  details into the audit record.
+- Removed `src/pages/QRFastLane.tsx`: unrouted, authenticated-context duplicate that checked people in
+  with `healthDeclaration: false` and no terms. Confirmed unused before deletion.
+- Card/code recognition is prefill-only. Screening, terms and privacy acknowledgement remain explicit
+  user actions and cannot be satisfied by scanning.
+
+Verified by browser test (temporary records, purged afterwards):
+- Unknown code, cross-site code and own-site code paths behave correctly; a Willowbrook code at the
+  Riverstone kiosk is not recognised.
+- Kiosk network trace during scan, recognition, check-out and check-in showed zero direct requests to
+  `visitors`, `property_keys`, `key_issues`, `food_register`, `contractor_credentials`, `audit_log` or
+  `resident_details`.
+- Idle reset after 90 seconds returns to the attract screen and clears entered personal details.
+- With `kiosk_fast_lane_enabled` off, no card option appears on home, check-in or check-out.
+
+Known limitations (unchanged or new):
+- Kiosk site binding is `?site=` plus device memory. Not production-grade; requires an
+  administrator-provisioned, cryptographically bound device credential before wider rollout.
+- `kiosk_resident_directory` / `kiosk_staff_directory` are not yet site-parameterised.
+- Database linter baseline is now 47 warnings: 1 public extension, 17 anonymous-callable
+  SECURITY DEFINER functions (the intentional kiosk surface, now including `kiosk_log_event`) and
+  29 signed-in SECURITY DEFINER functions. No new class of warning was introduced.

@@ -3,79 +3,109 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useVisitors } from "@/hooks/useVisitors";
-import { useToast } from "@/hooks/use-toast";
-import { QrCode, Camera, CameraOff, Keyboard, ArrowLeft, CheckCircle2, LogOut, AlertTriangle, UserRoundPlus } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useOperatingContext } from "@/contexts/OperatingContext";
+import { QrCode, Camera, CameraOff, Keyboard, ArrowLeft, LogOut, AlertTriangle, UserRoundPlus, UserRoundCheck, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Html5Qrcode } from "html5-qrcode";
 
-type ScanResult = { type: "checkin" | "checkout" | "already-out" | "notfound"; visitor?: any };
+/**
+ * Fast Lane: a personal card or visit code only *recognises* someone. It never
+ * checks anyone in on its own — screening questions, terms and acknowledgements
+ * always stay explicit steps in the normal check-in flow.
+ */
+/** Stopping a scanner that never started throws synchronously — never let that crash the screen. */
+function safeStop(scanner: Html5Qrcode | null) {
+  if (!scanner) return;
+  try {
+    const result = scanner.stop();
+    if (result && typeof (result as any).catch === "function") (result as any).catch(() => {});
+  } catch {
+    /* scanner was not running */
+  }
+}
+
+type Prefill = {
+  firstName: string;
+  surname: string;
+  email: string;
+  mobile: string;
+  address: string;
+  personQr: string | null;
+};
+
+type ScanResult =
+  | { type: "recognised"; prefill: Prefill }
+  | { type: "on-site"; visitor: any }
+  | { type: "checked-out"; visitor: any }
+  | { type: "notfound" }
+  | { type: "error" };
 
 export default function KioskQRScan() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const mode = searchParams.get("mode");
-  const { visitors, addVisitor, checkOutVisitor } = useVisitors({ publicMode: true });
-  const { toast } = useToast();
+  const { siteId: kioskSiteId } = useOperatingContext();
+  const { visitors, checkOutVisitor } = useVisitors({ publicMode: true, siteId: kioskSiteId });
 
   const [manualCode, setManualCode] = useState("");
   const [result, setResult] = useState<ScanResult | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [checkoutError, setCheckoutError] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState(false);
   const [inputMode, setInputMode] = useState<"camera" | "manual">("camera");
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const lookupAndAct = useCallback((code: string) => {
-    const trimmed = code.trim();
-    if (!trimmed) return;
+  const lookupCode = useCallback(
+    async (code: string) => {
+      const trimmed = code.trim().toUpperCase();
+      if (!trimmed || busy) return;
+      setBusy(true);
+      setCheckoutError(false);
 
-    // Match by id, qr_code, or full name
-    const match = visitors.find(
-      (v) => v.id === trimmed ||
-        v.qrCode === trimmed ||
-        `${v.firstName} ${v.surname}`.toLowerCase() === trimmed.toLowerCase()
-    );
-
-    if (!match) {
-      setResult({ type: "notfound" });
-      return;
-    }
-
-    if (match.status === "checked-in") {
-      if (mode === "checkin") {
-        setResult({ type: "checkin", visitor: match });
-        toast({ title: "Already checked in", description: `${match.firstName} is already here.` });
-      } else {
-        checkOutVisitor(match.id);
-        setResult({ type: "checkout", visitor: match });
-        toast({ title: "Checked Out", description: `${match.firstName} ${match.surname} checked out via QR.` });
+      // Someone already on site at this kiosk's site is offered check out.
+      const active = visitors.find((v) => v.qrCode === trimmed && v.status === "checked-in");
+      if (active) {
+        setResult({ type: "on-site", visitor: active });
+        setBusy(false);
+        return;
       }
-    } else {
-      if (mode === "checkout") {
-        setResult({ type: "already-out", visitor: match });
-      } else {
-        addVisitor({
-          firstName: match.firstName,
-          surname: match.surname,
-          email: match.email,
-          mobile: match.mobile,
-          type: match.type,
-          checkInTime: new Date(),
-          checkOutTime: null,
-          whomToVisit: match.whomToVisit,
-          address: match.address,
-          status: "checked-in",
-          healthDeclaration: false,
-          additionalVisitors: 0,
-          comments: "QR scan check-in",
-          retentionExpiry: new Date(Date.now() + 86400000 * 60),
-          acknowledgedPrivacy: match.acknowledgedPrivacy,
-        });
-        setResult({ type: "checkin", visitor: match });
-        toast({ title: "Checked In", description: `Welcome back, ${match.firstName}!` });
+
+      // Otherwise ask the restricted lookup to recognise the code. It returns at
+      // most one person's own saved details, scoped to this kiosk's site.
+      const { data, error } = await supabase.rpc("kiosk_returning_lookup" as any, {
+        p_first: null,
+        p_last: null,
+        p_mobile: null,
+        p_qr: trimmed,
+        p_branch_id: kioskSiteId,
+      });
+      setBusy(false);
+      if (error) {
+        setResult({ type: "error" });
+        return;
       }
-    }
-  }, [visitors, mode, addVisitor, checkOutVisitor, toast]);
+      const prev = Array.isArray(data) ? (data[0] as any) : null;
+      if (!prev) {
+        setResult({ type: "notfound" });
+        return;
+      }
+      setResult({
+        type: "recognised",
+        prefill: {
+          firstName: prev.first_name || "",
+          surname: prev.surname || "",
+          email: prev.email || "",
+          mobile: prev.mobile || "",
+          address: prev.address || "",
+          personQr: prev.person_qr || null,
+        },
+      });
+    },
+    [visitors, busy, kioskSiteId]
+  );
 
   useEffect(() => {
     if (inputMode !== "camera" || result) return;
@@ -89,8 +119,8 @@ export default function KioskQRScan() {
           { facingMode: "environment" },
           { fps: 10, qrbox: { width: 250, height: 250 } },
           (decodedText) => {
-            lookupAndAct(decodedText);
-            scanner?.stop().catch(() => {});
+            void lookupCode(decodedText);
+            safeStop(scanner);
           },
           () => {}
         );
@@ -106,76 +136,121 @@ export default function KioskQRScan() {
     startScanner();
 
     return () => {
-      scanner?.stop().catch(() => {});
+      safeStop(scanner);
       scannerRef.current = null;
       setCameraActive(false);
     };
-  }, [inputMode, result, lookupAndAct]);
+  }, [inputMode, result, lookupCode]);
 
   const handleManualSubmit = () => {
-    lookupAndAct(manualCode);
+    void lookupCode(manualCode);
     setManualCode("");
   };
 
   const handleReset = () => {
     setResult(null);
     setManualCode("");
+    setCheckoutError(false);
+  };
+
+  const continueToCheckIn = (prefill?: Prefill) => {
+    navigate("/kiosk/checkin", { state: prefill ? { fastLane: prefill } : undefined });
+  };
+
+  const handleCheckOut = async (visitorId: string) => {
+    setBusy(true);
+    setCheckoutError(false);
+    try {
+      await checkOutVisitor(visitorId);
+      setResult({ type: "checked-out", visitor: (result as any).visitor });
+    } catch {
+      setCheckoutError(true);
+    } finally {
+      setBusy(false);
+    }
   };
 
   // Result screen
   if (result) {
-    const v = result.visitor;
     return (
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full space-y-6 text-center">
-        {result.type === "checkin" && (
+        {result.type === "recognised" && (
           <>
             <div className="h-20 w-20 rounded-full bg-success/10 text-success flex items-center justify-center mx-auto">
-              <CheckCircle2 className="h-12 w-12" />
+              <UserRoundCheck className="h-12 w-12" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground">Welcome, {v?.firstName}!</h2>
-            <p className="text-lg text-muted-foreground">You have been checked in successfully.</p>
+            <h2 className="text-2xl font-bold text-foreground">Welcome back, {result.prefill.firstName}</h2>
+            <p className="text-lg text-muted-foreground">
+              We have your details ready. There are still a few questions to confirm before you are checked in.
+            </p>
+            <Button onClick={() => continueToCheckIn(result.prefill)} className="w-full h-14 text-base gap-2">
+              <UserRoundPlus className="h-5 w-5" /> Continue Check In
+            </Button>
           </>
         )}
-        {result.type === "checkout" && (
-          <>
-            <div className="h-20 w-20 rounded-full bg-warning/10 text-warning flex items-center justify-center mx-auto">
-              <LogOut className="h-12 w-12" />
-            </div>
-            <h2 className="text-2xl font-bold text-foreground">Goodbye, {v?.firstName}!</h2>
-            <p className="text-lg text-muted-foreground">You have been checked out.</p>
-          </>
-        )}
-        {result.type === "already-out" && (
+
+        {result.type === "on-site" && (
           <>
             <div className="h-20 w-20 rounded-full bg-info/10 text-info flex items-center justify-center mx-auto">
-              <AlertTriangle className="h-12 w-12" />
+              <LogOut className="h-12 w-12" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground">{v ? `${v.firstName} ${v.surname}` : ""}</h2>
-            <p className="text-lg text-muted-foreground">This person is not currently checked in.</p>
+            <h2 className="text-2xl font-bold text-foreground">You are already checked in</h2>
+            <p className="text-lg text-muted-foreground">Would you like to check out now?</p>
+            {checkoutError && (
+              <p className="text-base text-destructive font-medium">
+                We could not save that. Please try again.
+              </p>
+            )}
+            <Button onClick={() => handleCheckOut(result.visitor.id)} disabled={busy} className="w-full h-14 text-base gap-2">
+              {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogOut className="h-5 w-5" />}
+              {checkoutError ? "Try Again" : "Check Out"}
+            </Button>
           </>
         )}
+
+        {result.type === "checked-out" && (
+          <>
+            <div className="h-20 w-20 rounded-full bg-success/10 text-success flex items-center justify-center mx-auto">
+              <LogOut className="h-12 w-12" />
+            </div>
+            <h2 className="text-2xl font-bold text-foreground">Thank you, you are checked out</h2>
+            <p className="text-lg text-muted-foreground">Have a safe trip home.</p>
+          </>
+        )}
+
         {result.type === "notfound" && (
+          <>
+            <div className="h-20 w-20 rounded-full bg-warning/10 text-warning flex items-center justify-center mx-auto">
+              <AlertTriangle className="h-12 w-12" />
+            </div>
+            <h2 className="text-2xl font-bold text-foreground">We could not read that code</h2>
+            <p className="text-lg text-muted-foreground">
+              The code may have expired or belong to another site. You can still check in by typing your details.
+            </p>
+            <Button onClick={() => continueToCheckIn()} className="w-full h-14 text-base gap-2">
+              <UserRoundPlus className="h-5 w-5" /> Check In Manually
+            </Button>
+          </>
+        )}
+
+        {result.type === "error" && (
           <>
             <div className="h-20 w-20 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mx-auto">
               <AlertTriangle className="h-12 w-12" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground">Not Found</h2>
-            <p className="text-lg text-muted-foreground">No visitor found with this code.</p>
+            <h2 className="text-2xl font-bold text-foreground">Something went wrong</h2>
+            <p className="text-lg text-muted-foreground">Please try again, or check in by typing your details.</p>
           </>
         )}
-        <div className="flex gap-3 pt-4">
+
+        <div className="flex gap-3 pt-2">
           <Button variant="secondary" onClick={handleReset} className="flex-1 h-14 text-base gap-2 border border-border">
-            <QrCode className="h-5 w-5" /> Scan Another
+            <QrCode className="h-5 w-5" /> Try Another Code
           </Button>
-          <Button onClick={() => navigate("/kiosk/home")} className="flex-1 h-14 text-base gap-2">
+          <Button variant="secondary" onClick={() => navigate("/kiosk/home")} className="flex-1 h-14 text-base gap-2 border border-border">
             Done
           </Button>
         </div>
-        {result.type === "notfound" && (
-          <Button variant="secondary" onClick={() => navigate("/kiosk/checkin")} className="w-full h-14 text-base gap-2 border border-border">
-            <UserRoundPlus className="h-5 w-5" /> Check In Manually
-          </Button>
-        )}
       </motion.div>
     );
   }
@@ -183,9 +258,11 @@ export default function KioskQRScan() {
   return (
     <div className="w-full space-y-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-foreground">Scan QR Code</h2>
+        <h2 className="text-2xl font-bold text-foreground">Scan Your Code</h2>
         <p className="text-lg text-muted-foreground mt-1">
-          {mode === "checkin" ? "Scan your visitor card to check in" : mode === "checkout" ? "Scan your visitor card to check out" : "Scan your visitor card or QR code"}
+          {mode === "checkout"
+            ? "Scan your visitor card to check out"
+            : "Scan your visitor card to fill in your details faster"}
         </p>
       </div>
 
@@ -200,7 +277,7 @@ export default function KioskQRScan() {
           <Camera className="h-5 w-5" /> Camera
         </button>
         <button
-          onClick={() => { setInputMode("manual"); scannerRef.current?.stop().catch(() => {}); }}
+          onClick={() => { setInputMode("manual"); safeStop(scannerRef.current); }}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-[48px] ${
             inputMode === "manual" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground border border-border active:bg-accent"
           }`}
@@ -220,11 +297,11 @@ export default function KioskQRScan() {
             <div className="rounded-xl border-2 border-destructive/20 bg-destructive/5 p-4 text-center space-y-2">
               <CameraOff className="h-8 w-8 text-destructive mx-auto" />
               <p className="text-sm text-destructive font-medium">Camera not available</p>
-              <p className="text-sm text-muted-foreground">Please use the manual code entry instead.</p>
+              <p className="text-sm text-muted-foreground">Please type your code instead.</p>
             </div>
           )}
           {cameraActive && (
-            <p className="text-center text-sm text-muted-foreground animate-pulse">Point the camera at a QR code...</p>
+            <p className="text-center text-sm text-muted-foreground animate-pulse">Point the camera at your code...</p>
           )}
         </div>
       )}
@@ -235,22 +312,25 @@ export default function KioskQRScan() {
             <div className="h-16 w-16 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
               <QrCode className="h-8 w-8" />
             </div>
-            <p className="text-center text-sm text-muted-foreground">Enter the code from your visitor card or QR badge</p>
+            <p className="text-center text-sm text-muted-foreground">Enter the code printed on your visitor card</p>
             <Input
               value={manualCode}
               onChange={(e) => setManualCode(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
-              placeholder="Visitor code or full name..."
+              placeholder="Your visitor code"
               className="h-14 text-lg text-center"
               autoFocus
             />
-            <Button onClick={handleManualSubmit} disabled={!manualCode.trim()} className="w-full h-14 text-base gap-2">
-              Look Up
+            <Button onClick={handleManualSubmit} disabled={!manualCode.trim() || busy} className="w-full h-14 text-base gap-2">
+              {busy && <Loader2 className="h-5 w-5 animate-spin" />} Look Up
             </Button>
           </div>
         </div>
       )}
 
+      <Button variant="secondary" onClick={() => continueToCheckIn()} className="w-full h-14 text-base gap-2 border border-border">
+        <UserRoundPlus className="h-5 w-5" /> No code? Check in here
+      </Button>
       <Button variant="secondary" onClick={() => navigate("/kiosk/home")} className="w-full h-14 text-base gap-2 border border-border">
         <ArrowLeft className="h-5 w-5" /> Back to Home
       </Button>

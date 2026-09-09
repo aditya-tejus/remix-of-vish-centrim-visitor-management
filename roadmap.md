@@ -220,3 +220,26 @@ All five remaining checks run against the live preview with temporary records, t
 | Double submit (check-in and checkout) | Pass | Second rapid click rejected while saving; one insert and one update observed. |
 
 Failures were simulated with test-only browser request blocking. No production code, permissions, policies or server functions were weakened for testing; the exact blocked request was recorded in each run.
+
+## Phase 7B — Kiosk experience and card Fast Lane (built)
+
+Done:
+- Kiosk welcome/attract and home now show the configured site name instead of a hard-coded one.
+- Card/code recognition (`/kiosk/qr-scan`) rewritten: a code only *recognises* a person and pre-fills
+  their name and contact details. Screening questions, terms and acknowledgements remain explicit steps.
+- Someone already on site who scans their card is offered check out (with a retry if the save fails).
+- Camera failure falls back to typing the code; an unrecognised or out-of-site code offers ordinary check-in.
+- The card tile is hidden on the kiosk home, check-in and check-out screens when the site does not
+  issue cards (`kiosk_fast_lane_enabled`, per site, editable under Returning Visitors settings).
+- Kiosk on-site list and returning-person lookup are now site-scoped, so one kiosk never sees another site's people.
+- Kiosk no longer writes to the audit table directly; blocked screenings are recorded through a narrow
+  kiosk event log (purpose, outcome, site only).
+- Removed the unrouted, unsafe duplicate QR page (`src/pages/QRFastLane.tsx`), which re-checked people in
+  without screening or terms.
+- Replaced the emoji satisfaction scale with professional icons.
+
+Not done / limitations:
+- Site is still chosen by `?site=` and remembered on the device. This is a pilot arrangement, not secure
+  device binding; production needs an administrator-provisioned, cryptographically bound kiosk credential.
+- Resident and staff directory helpers used at the kiosk are not yet site-parameterised.
+- No external notification delivery, printer hardware, pre-registration or invitations (out of scope).

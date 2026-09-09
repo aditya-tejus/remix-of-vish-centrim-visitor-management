@@ -95,7 +95,10 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     // Kiosk (unauthenticated) reads go through a narrow server function that returns
     // presence only — never visit history or personal details.
     if (publicMode) {
-      const { data, error } = await supabase.rpc("kiosk_presence_list" as any);
+      // Scoped to the kiosk's own site so one building never lists another's people.
+      const { data, error } = await supabase.rpc("kiosk_presence_list" as any, {
+        p_branch_id: kioskSiteId ?? currentSiteId ?? null,
+      });
       if (error) {
         setError("We could not reach the system. Please try again.");
       } else if (data) {
@@ -132,7 +135,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     }
     setLoading(false);
 
-  }, [publicMode, currentSiteId, isLegacySite]);
+  }, [publicMode, currentSiteId, isLegacySite, kioskSiteId]);
 
 
 

@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { KioskInput } from "@/components/kiosk/KioskInput";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
 import { useKioskCheckInFlow, KioskStepId } from "@/hooks/useKioskCheckInFlow";
 import { isKioskQrTokenValid } from "@/lib/kioskQrToken";
 import { usePersonTypes } from "@/hooks/usePersonTypes";
+import { useKioskFastLane } from "@/hooks/useKioskFastLane";
 
 import {
   UserRound, Truck, Heart, UserCog, ArrowLeft, ArrowRight, Shield, ScrollText,
@@ -48,6 +49,7 @@ export default function KioskCheckIn() {
   const { addVisitor } = useVisitors({ publicMode: true, siteId: kioskSiteId, onSaveError: handleSaveError });
   const flow = useKioskCheckInFlow();
   const { kioskTypes } = usePersonTypes();
+  const { fastLaneEnabled } = useKioskFastLane();
   const TYPES = useMemo(
     () => kioskTypes
       .filter((t) => t.type in TYPE_DEFS)
@@ -88,21 +90,39 @@ export default function KioskCheckIn() {
   useEffect(() => {
     if (!flow.screeningBlocked || alertedRef.current) return;
     alertedRef.current = true;
-    void supabase.from("audit_log").insert({
-      action: "kiosk_health_block",
-      performed_by: "Kiosk",
-      records_affected: 1,
-      details: {
-        name: `${flow.formValues.firstName || ""} ${flow.formValues.surname || ""}`.trim() || "Unknown",
-        visitor_type: flow.selectedType,
-        symptom_flag: flow.hasYesFlags,
-        body_temperature: flow.bodyTemperature,
-        blocked_at: new Date().toISOString(),
-      } as any,
-    }).then(({ error }) => {
-      if (error) alertedRef.current = false;
-    });
-  }, [flow.screeningBlocked, flow.hasYesFlags, flow.bodyTemperature, flow.formValues, flow.selectedType]);
+    // Logged through a narrow server function: purpose, outcome and site only —
+    // the kiosk never writes personal details into the audit record itself.
+    void supabase
+      .rpc("kiosk_log_event" as any, {
+        p_purpose: "check_in_screening",
+        p_outcome: "blocked",
+        p_branch_id: kioskSiteId ?? null,
+        p_detail: flow.selectedType || null,
+      })
+      .then(({ error }: { error: unknown }) => {
+        if (error) alertedRef.current = false;
+      });
+  }, [flow.screeningBlocked, flow.selectedType, kioskSiteId]);
+
+  // Fast Lane: a recognised card fills in name and contact details only.
+  // Screening questions, terms and acknowledgements stay explicit steps below.
+  const location = useLocation();
+  const fastLanePrefill = (location.state as any)?.fastLane;
+  const prefilledRef = useRef(false);
+  useEffect(() => {
+    if (!fastLanePrefill || prefilledRef.current) return;
+    prefilledRef.current = true;
+    flow.setFormValues((fv: Record<string, string>) => ({
+      ...fv,
+      firstName: fv.firstName || fastLanePrefill.firstName || "",
+      surname: fv.surname || fastLanePrefill.surname || "",
+      email: fv.email || fastLanePrefill.email || "",
+      mobile: fv.mobile || fastLanePrefill.mobile || "",
+      address: fv.address || fastLanePrefill.address || "",
+    }));
+    if (fastLanePrefill.personQr) flow.setPersonQr(fastLanePrefill.personQr);
+    setReturningChecked(true);
+  }, [fastLanePrefill]);
 
 
 
@@ -407,11 +427,13 @@ export default function KioskCheckIn() {
                 </button>
               ))}
             </div>
-            <div className="text-center pt-2">
-              <Button variant="secondary" onClick={() => navigate("/kiosk/qr-scan?mode=checkin")} className="h-12 gap-2 text-base border border-border">
-                <QrCode className="h-5 w-5" /> I have a QR code / visitor card
-              </Button>
-            </div>
+            {fastLaneEnabled && (
+              <div className="text-center pt-2">
+                <Button variant="secondary" onClick={() => navigate("/kiosk/qr-scan?mode=checkin")} className="h-12 gap-2 text-base border border-border">
+                  <QrCode className="h-5 w-5" /> I have a visitor card
+                </Button>
+              </div>
+            )}
           </motion.div>
         )}
 

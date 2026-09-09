@@ -3036,6 +3036,15 @@ export type Database = {
           status: string
         }[]
       }
+      kiosk_log_event: {
+        Args: {
+          p_branch_id?: string
+          p_detail?: string
+          p_outcome: string
+          p_purpose: string
+        }
+        Returns: undefined
+      }
       kiosk_open_key_holds: {
         Args: { p_person_qr: string }
         Returns: {
@@ -3054,7 +3063,7 @@ export type Database = {
         }[]
       }
       kiosk_presence_list: {
-        Args: never
+        Args: { p_branch_id?: string }
         Returns: {
           accompanied_by_name: string
           additional_visitors: number
@@ -3100,6 +3109,7 @@ export type Database = {
       }
       kiosk_returning_lookup: {
         Args: {
+          p_branch_id?: string
           p_first?: string
           p_last?: string
           p_mobile?: string
