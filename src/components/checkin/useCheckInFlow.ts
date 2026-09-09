@@ -86,7 +86,13 @@ export function useCheckInFlow(open: boolean) {
   const { data: dbQuestions = [] } = useActiveHealthQuestions(selectedType as any);
   const { data: dbVaccFields = [] } = useActiveVaccinationFields(selectedType as any);
   const { data: companionFieldsConfig = [] } = useCompanionFields(selectedType as any);
-  const activeCompanionFields = companionFieldsConfig.filter((f) => f.is_active).sort((a, b) => a.sort_order - b.sort_order);
+  const { data: mainVisitorFields = [] } = useFormFields(selectedType as any, "");
+  // Companion-only fields, plus the main visitor's own fields where they still
+  // make sense for a second person on the same arrival.
+  const activeCompanionFields = useMemo(
+    () => mergeCompanionFields(companionFieldsConfig, mainVisitorFields),
+    [companionFieldsConfig, mainVisitorFields]
+  );
 
   const fallbackHealthQuestions = [
     { id: "fever", question: "Do you have a fever or feel unusually warm?", type: "yesno" as const, required: true },
