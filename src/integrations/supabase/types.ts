@@ -2444,36 +2444,45 @@ export type Database = {
         Row: {
           check_in_time: string
           check_out_time: string | null
+          companion_index: number
           created_at: string
           display_name: string
           id: string
           is_primary: boolean
+          name_status: string
           person_id: string | null
           relationship: string | null
+          status: string
           updated_at: string
           visit_id: string
         }
         Insert: {
           check_in_time?: string
           check_out_time?: string | null
+          companion_index?: number
           created_at?: string
           display_name: string
           id?: string
           is_primary?: boolean
+          name_status?: string
           person_id?: string | null
           relationship?: string | null
+          status?: string
           updated_at?: string
           visit_id: string
         }
         Update: {
           check_in_time?: string
           check_out_time?: string | null
+          companion_index?: number
           created_at?: string
           display_name?: string
           id?: string
           is_primary?: boolean
+          name_status?: string
           person_id?: string | null
           relationship?: string | null
+          status?: string
           updated_at?: string
           visit_id?: string
         }
@@ -2599,6 +2608,7 @@ export type Database = {
           check_in_time: string
           check_out_time: string | null
           checkout_reason: string | null
+          client_request_id: string | null
           comments: string | null
           companion_details: Json | null
           compliance_status: string | null
@@ -2651,6 +2661,7 @@ export type Database = {
           check_in_time?: string
           check_out_time?: string | null
           checkout_reason?: string | null
+          client_request_id?: string | null
           comments?: string | null
           companion_details?: Json | null
           compliance_status?: string | null
@@ -2703,6 +2714,7 @@ export type Database = {
           check_in_time?: string
           check_out_time?: string | null
           checkout_reason?: string | null
+          client_request_id?: string | null
           comments?: string | null
           companion_details?: Json | null
           compliance_status?: string | null
@@ -2774,6 +2786,7 @@ export type Database = {
           branch_id: string
           check_in_time: string
           check_out_time: string | null
+          client_request_id: string | null
           created_at: string
           destination_label: string | null
           destination_resident_person_id: string | null
@@ -2791,6 +2804,7 @@ export type Database = {
           branch_id: string
           check_in_time?: string
           check_out_time?: string | null
+          client_request_id?: string | null
           created_at?: string
           destination_label?: string | null
           destination_resident_person_id?: string | null
@@ -2808,6 +2822,7 @@ export type Database = {
           branch_id?: string
           check_in_time?: string
           check_out_time?: string | null
+          client_request_id?: string | null
           created_at?: string
           destination_label?: string | null
           destination_resident_person_id?: string | null
@@ -2964,6 +2979,19 @@ export type Database = {
       }
     }
     Functions: {
+      attendance_sync_guard_on: { Args: never; Returns: boolean }
+      check_in_party: {
+        Args: { p_payload: Json }
+        Returns: {
+          party_count: number
+          visit_id: string
+          visitor_id: string
+        }[]
+      }
+      check_out_party: {
+        Args: { p_party_ids: string[]; p_reason?: string; p_time?: string }
+        Returns: number
+      }
       current_user_site_ids: { Args: never; Returns: string[] }
       default_site_id: { Args: never; Returns: string }
       effective_retention_policy: {
@@ -3187,6 +3215,14 @@ export type Database = {
         }
         Returns: string
       }
+      reconcile_visit_parties: {
+        Args: { p_branch_id?: string; p_dry_run?: boolean }
+        Returns: {
+          parties_created: number
+          placeholders_created: number
+          visits_created: number
+        }[]
+      }
       record_privacy_ack: {
         Args: {
           p_branch_id?: string
@@ -3218,6 +3254,14 @@ export type Database = {
       set_kiosk_pin: { Args: { p_pin: string }; Returns: undefined }
       user_can_access_site: { Args: { _branch_id: string }; Returns: boolean }
       verify_kiosk_pin: { Args: { p_pin: string }; Returns: boolean }
+      visit_integrity_report: {
+        Args: { p_branch_id?: string }
+        Returns: {
+          issue: string
+          records: number
+          sample_ids: string[]
+        }[]
+      }
     }
     Enums: {
       app_permission:

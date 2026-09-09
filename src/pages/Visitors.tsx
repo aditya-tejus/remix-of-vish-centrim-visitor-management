@@ -52,11 +52,21 @@ export default function Visitors() {
     toast({ title: "Checked In", description: `${v.firstName} ${v.surname} has been checked in.` });
   };
 
+  // One row per person. People are only treated as the same person when they
+  // share a personal code or a real contact detail — never on a blank field,
+  // and never on name alone, so two different people called Jane Smith with no
+  // contact details stay separate.
   const uniqueVisitors = useMemo(() => {
     const seen = new Map<string, typeof visitors[0]>();
     visitors.forEach((v) => {
-      const key = v.email || v.mobile;
-      if (!seen.has(key)) seen.set(key, v);
+      const email = (v.email || "").trim().toLowerCase();
+      const mobile = (v.mobile || "").replace(/[^0-9]/g, "");
+      const identity =
+        (v.personQr && `qr:${v.personQr}`) ||
+        (email && `email:${email}`) ||
+        (mobile.length >= 6 && `mobile:${mobile}`) ||
+        `record:${v.id}`;
+      if (!seen.has(identity)) seen.set(identity, v);
     });
     return Array.from(seen.values());
   }, [visitors]);

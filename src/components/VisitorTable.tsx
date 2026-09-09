@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import { Visitor } from "@/types/visitor";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { CheckInReturnDialog } from "@/components/CheckInReturnDialog";
 import { useResidents } from "@/hooks/useResidents";
 import { useSiteStructure } from "@/hooks/useSiteStructure";
+import type { AttendanceParty } from "@/hooks/useAttendance";
 
 interface VisitorTableProps {
   visitors: Visitor[];
@@ -41,6 +42,10 @@ interface VisitorTableProps {
   canExport?: boolean;
   canDelete?: boolean;
   showDestination?: boolean;
+  /** Companions recorded as individual people on these visits. */
+  companionParties?: AttendanceParty[];
+  /** Signs out one companion on their own, leaving the rest of the visit open. */
+  onCheckOutParty?: (partyId: string) => void;
 }
 
 /** Times are what the desk is asked about; duration is supporting detail. */
@@ -93,6 +98,8 @@ export function VisitorTable({
   emptyTitle = "Nothing to show",
   emptyDescription = "No records match the current view.",
   canCheckOut = true, canExport = true, canDelete = false, showDestination = true,
+  companionParties = [],
+  onCheckOutParty,
 }: VisitorTableProps) {
   const [returnVisitor, setReturnVisitor] = useState<Visitor | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -403,6 +410,61 @@ export function VisitorTable({
     );
   };
 
+  /** Each companion is shown as their own accountable person on the visit. */
+  const renderCompanionRows = (visitor: Visitor) => {
+    const companions = companionParties.filter(
+      (p) => p.legacyVisitorId === visitor.id && !p.isPrimary
+    );
+    return companions.map((party) => (
+      <TableRow key={party.id} className="bg-muted/20">
+        <TableCell className="py-2 w-9" />
+        <TableCell className="py-2">
+          <div className="flex items-center gap-2 pl-4">
+            <UsersRound className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+            <div className="flex flex-col">
+              <span className="text-[13px] text-foreground">
+                {party.nameStatus === "named" ? party.displayName : `Companion ${party.companionIndex} (name not recorded)`}
+              </span>
+              <span className="text-[11px] text-muted-foreground">
+                With {visitor.firstName} {visitor.surname}
+                {party.relationship ? ` · ${party.relationship}` : ""}
+              </span>
+            </div>
+          </div>
+        </TableCell>
+        <TableCell className="py-2">
+          <span className="text-[13px] font-mono text-foreground">{format(party.checkInTime, "hh:mm a")}</span>
+        </TableCell>
+        <TableCell className="py-2">
+          {party.checkOutTime ? (
+            <span className="text-[13px] font-mono text-foreground">{format(party.checkOutTime, "hh:mm a")}</span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-success">
+              <span className="h-1.5 w-1.5 rounded-full bg-success" />
+              On site
+            </span>
+          )}
+        </TableCell>
+        <TableCell className="py-2" />
+        {columns.some((c) => c.key === "companions") && <TableCell className="py-2" />}
+        <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
+          {!party.checkOutTime && canCheckOut && onCheckOutParty && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-[12px] gap-1.5"
+              onClick={() => onCheckOutParty(party.id)}
+            >
+              <LogOut className="h-3.5 w-3.5" aria-hidden />
+              Sign out
+            </Button>
+          )}
+        </TableCell>
+        <TableCell className="py-2" />
+      </TableRow>
+    ));
+  };
+
   /** Narrow screens get the same information as a stacked card. */
   const renderCard = (visitor: Visitor) => {
     const onSite = visitor.status === "checked-in";
@@ -491,7 +553,14 @@ export function VisitorTable({
                   <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
-              <TableBody>{visitors.map((visitor) => renderRow(visitor))}</TableBody>
+              <TableBody>
+                {visitors.map((visitor) => (
+                  <Fragment key={visitor.id}>
+                    {renderRow(visitor)}
+                    {renderCompanionRows(visitor)}
+                  </Fragment>
+                ))}
+              </TableBody>
             </Table>
           </div>
 

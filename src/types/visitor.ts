@@ -7,8 +7,13 @@ export interface CompanionDetail {
   relation?: string;
   /** ISO time this companion left, when they leave separately from the main visitor. */
   checkedOutAt?: string;
+  /** Chosen deliberately by reception from people already known at this site. */
+  person_id?: string;
+  /** "true" when reception asked for this companion to be remembered as a new person. */
+  create_person?: string;
   [key: string]: string | undefined;
 }
+
 
 
 export interface Visitor {
@@ -47,6 +52,9 @@ export interface Visitor {
   supplierId?: string;
   qrCode?: string;
   personQr?: string;
+  /** Stable per attempt, so a retry after a timeout cannot create a second arrival. */
+  clientRequestId?: string;
+
   groupId?: string;
   /** Group arrivals: the shared group name, carried on every attendee's own record. */
   groupLabel?: string;

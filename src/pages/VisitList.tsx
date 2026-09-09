@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
+import { useAttendance } from "@/hooks/useAttendance";
 import { VisitorTable } from "@/components/VisitorTable";
 import { useVisitors } from "@/hooks/useVisitors";
 import { CheckInSheet } from "@/components/checkin/CheckInSheet";
@@ -33,6 +34,18 @@ export default function VisitList() {
     visitors, loading, error, refresh, addVisitorAsync, checkOutVisitor,
     checkInReturn, deleteVisitor, overstayedCount, lastUpdated,
   } = useVisitors();
+
+  // Companions are individually accountable people on the same visit.
+  const { parties, checkOutPeople } = useAttendance();
+
+  const handleCheckOutCompanion = async (partyId: string) => {
+    try {
+      await checkOutPeople([partyId]);
+      refresh();
+    } catch {
+      /* the list keeps showing them on site until the sign-out succeeds */
+    }
+  };
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [checkOutSheetOpen, setCheckOutSheetOpen] = useState(false);
@@ -291,6 +304,8 @@ export default function VisitList() {
             ) : (
               <VisitorTable
                 visitors={rows}
+                companionParties={parties}
+                onCheckOutParty={handleCheckOutCompanion}
                 onCheckOut={handleCheckOutFromTable}
                 onCheckOutMany={handleCheckOutMany}
                 onCheckInReturn={checkInReturn}

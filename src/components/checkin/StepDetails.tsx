@@ -3,7 +3,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Camera, Check, X, Users, Phone, Mail, UserCircle, MapPin, MessageSquare } from "lucide-react";
+import { Plus, Trash2, Camera, Check, X, Users, Phone, Mail, UserCircle, MapPin, MessageSquare, Search, UserCheck, UserPlus } from "lucide-react";
+import { usePeopleLookup } from "@/hooks/usePeopleLookup";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CompanionDetail, VisitorType } from "@/types/visitor";
 import { CheckInFormData, VisitorProfile } from "./useCheckInFlow";
 import { useRef, useState, useCallback } from "react";
@@ -286,15 +288,21 @@ export function StepDetails({
               <div className="grid grid-cols-2 gap-2.5">
                 {activeCompanionFields.map((f) => {
                   const key = f.field_key.replace("companion_", "");
+                  const missing = f.required && !String(companion[key] || "").trim();
                   return (
                     <div key={f.id} className="space-y-1">
                       <Label className="text-[11px] font-medium">{f.label}{f.required && <span className="text-destructive ml-0.5">*</span>}</Label>
                       <Input value={companion[key] || ""} onChange={(e) => setCompanions((prev) => prev.map((c, i) => i === cIdx ? { ...c, [key]: e.target.value } : c))}
                         placeholder={f.label} className="rounded-lg h-9 text-[13px]" />
+                      {missing && <p className="text-[11px] text-destructive">{f.label} is needed before signing in</p>}
                     </div>
                   );
                 })}
               </div>
+              <CompanionIdentity
+                companion={companion}
+                onChange={(patch) => setCompanions((prev) => prev.map((c, i) => (i === cIdx ? { ...c, ...patch } : c)))}
+              />
             </div>
           ))}
           {companions.length === 0 && (
@@ -304,6 +312,96 @@ export function StepDetails({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+
+/**
+ * Lets reception recognise a companion who is already known at this site, or
+ * deliberately record them as a new person. A name on its own never links
+ * anyone automatically.
+ */
+function CompanionIdentity({
+  companion,
+  onChange,
+}: {
+  companion: CompanionDetail;
+  onChange: (patch: CompanionDetail) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const { matches, searching } = usePeopleLookup(query);
+
+  if (companion.person_id) {
+    return (
+      <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
+        <span className="flex items-center gap-1.5 text-[12px] text-foreground">
+          <UserCheck className="h-3.5 w-3.5" aria-hidden /> Linked to someone already known here
+        </span>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-[12px]"
+          onClick={() => onChange({ person_id: undefined })}
+        >
+          Unlink
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search people already known here (optional)"
+          aria-label="Search people already known at this site"
+          className="rounded-lg h-9 pl-8 text-[13px]"
+        />
+      </div>
+      {query.trim().length >= 2 && (
+        <div className="rounded-lg border border-border divide-y divide-border">
+          {searching && <p className="px-3 py-2 text-[12px] text-muted-foreground">Searching…</p>}
+          {!searching && matches.length === 0 && (
+            <p className="px-3 py-2 text-[12px] text-muted-foreground">No one here matches that. Enter their details above.</p>
+          )}
+          {matches.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => {
+                onChange({
+                  person_id: m.id,
+                  name: `${m.firstName} ${m.surname}`.trim(),
+                  phone: m.mobile || companion.phone,
+                  email: m.email || companion.email,
+                  create_person: undefined,
+                });
+                setQuery("");
+              }}
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-[12px] hover:bg-muted"
+            >
+              <span>
+                {m.firstName} {m.surname}
+                {m.mobile ? ` · ${m.mobile}` : ""}
+              </span>
+              <span className="text-muted-foreground">{m.strongMatch ? "Contact matches" : "Name matches"}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <label className="flex items-center gap-2 text-[12px] text-muted-foreground">
+        <Checkbox
+          checked={companion.create_person === "true"}
+          onCheckedChange={(checked) => onChange({ create_person: checked ? "true" : undefined })}
+        />
+        <span className="flex items-center gap-1.5">
+          <UserPlus className="h-3.5 w-3.5" aria-hidden /> Remember this companion for future visits
+        </span>
+      </label>
     </div>
   );
 }
