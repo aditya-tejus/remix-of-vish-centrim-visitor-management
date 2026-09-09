@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useJurisdiction } from "@/hooks/useJurisdiction";
 import { useSiteStructure } from "@/hooks/useSiteStructure";
+import { useSite } from "@/contexts/SiteContext";
 import { format, differenceInMinutes } from "date-fns";
 import { Shield, Download, Printer, CheckCircle2, AlertTriangle, ChevronDown, Clock, Phone, Ambulance } from "lucide-react";
 
@@ -50,6 +51,7 @@ export default function EvacuationReport() {
   const [attendance, setAttendance] = useState<Record<string, AttendanceRecord[]>>({});
   const { isUK } = useJurisdiction();
   const { areaLabel, roomLabel, structure } = useSiteStructure();
+  const { currentSiteId } = useSite();
   const isVillageView = structure === "rv" || structure === "mixed";
 
   /** Stage, then property — a couple sharing one villa sits under one heading. */
@@ -87,16 +89,23 @@ export default function EvacuationReport() {
     : "Evidence for the Aged Care Quality Standards — emergency and disaster management, and the Aged Care Act 1997. Retain drill and roll call records for accreditation review.";
 
   useEffect(() => {
-    supabase
+    let cancelled = false;
+    setLoading(true);
+    let query = supabase
       .from("evacuation_drills")
       .select("*")
       .order("started_at", { ascending: false })
-      .limit(50)
-      .then(({ data }) => {
-        setDrills((data || []) as any);
-        setLoading(false);
-      });
-  }, []);
+      .limit(50);
+    // History belongs to the site you are working in.
+    if (currentSiteId) query = query.eq("branch_id", currentSiteId);
+    query.then(({ data }) => {
+      if (cancelled) return;
+      setDrills((data || []) as any);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [currentSiteId]);
+
 
   const loadAttendance = async (drillId: string) => {
     if (attendance[drillId]) return;

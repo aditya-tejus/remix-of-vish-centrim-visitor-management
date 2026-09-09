@@ -285,3 +285,17 @@ Known limits after Phase 7C:
 - Roll call lists every group member individually with the organiser's name and contact; this was
   reviewed in code rather than by starting a live emergency.
 - Badges still print through the browser; no label-printer hardware is connected.
+
+## Phase 7D — emergency mode and evacuation report (complete)
+- [x] Focused Emergency Mode with drill vs live distinction and permission-gated actions
+- [x] Explicit start step — marking a person can no longer silently declare a live emergency
+- [x] Site stamping and site isolation for events, roll-call lines and history
+- [x] Priority ordering (outstanding first), large totals, search/filter, jump to next
+- [x] Snapshot vs late arrivals; off-site collapsed by default with count visible
+- [x] Corrections with reasons; live resolve needs a reason and explicit confirmation; closed events immutable in the database
+- [x] A4 paper fallback with drill/live banner; minimal offline retry queue (IDs and status only)
+
+Known Phase 7D limitations:
+- Offline queue holds only a roll-call line reference and status; if browser storage is unavailable the outcome is not queued.
+- Roll call was verified with temporary drill data at one site; no live emergency was run against real operations.
+- Second-person approval for closing an emergency is intentionally out of scope.

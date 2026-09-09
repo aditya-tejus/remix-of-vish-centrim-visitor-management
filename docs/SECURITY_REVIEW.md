@@ -269,3 +269,12 @@ browser exports are not tamper-evident.
   without a site.
 - Security linter after this phase: 47 warnings, unchanged in category and count from Phase 7B
   (1 extension in public, 17 anonymous-callable and 29 signed-in-callable definer functions).
+
+
+## Phase 7D — emergency mode
+
+- Emergency events and roll-call lines are always stamped with the current site; a database trigger fills the site on any roll-call line created without one. Event lists and evacuation history are filtered by the current site.
+- Entry to the emergency screen is visible to signed-in staff; activating, recording outcomes, correcting, closing and exporting remain permission-gated, and users without those permissions see a read-only explanation.
+- Closing a live emergency requires a written outcome and an explicit confirmation. Closed events stay immutable through the existing database guard; queued offline outcomes for a closed event are discarded rather than reopening it.
+- The offline retry queue stores only a roll-call line reference, event reference, chosen status and timestamp. No names, phone numbers, room details, assistance levels or clinical notes are written to browser storage.
+- Security linter total unchanged at 47 warnings: 1 public extension, 17 anonymous-callable SECURITY DEFINER functions, 29 signed-in-callable functions.
