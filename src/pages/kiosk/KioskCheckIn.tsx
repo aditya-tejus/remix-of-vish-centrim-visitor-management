@@ -102,6 +102,26 @@ export default function KioskCheckIn() {
       });
   }, [flow.screeningBlocked, flow.selectedType, kioskSiteId]);
 
+  // Fast Lane: a recognised card fills in name and contact details only.
+  // Screening questions, terms and acknowledgements stay explicit steps below.
+  const location = useLocation();
+  const fastLanePrefill = (location.state as any)?.fastLane;
+  const prefilledRef = useRef(false);
+  useEffect(() => {
+    if (!fastLanePrefill || prefilledRef.current) return;
+    prefilledRef.current = true;
+    flow.setFormValues((fv: Record<string, string>) => ({
+      ...fv,
+      firstName: fv.firstName || fastLanePrefill.firstName || "",
+      surname: fv.surname || fastLanePrefill.surname || "",
+      email: fv.email || fastLanePrefill.email || "",
+      mobile: fv.mobile || fastLanePrefill.mobile || "",
+      address: fv.address || fastLanePrefill.address || "",
+    }));
+    if (fastLanePrefill.personQr) flow.setPersonQr(fastLanePrefill.personQr);
+    setReturningChecked(true);
+  }, [fastLanePrefill]);
+
 
 
   // With only one person type enabled there is nothing to choose.
