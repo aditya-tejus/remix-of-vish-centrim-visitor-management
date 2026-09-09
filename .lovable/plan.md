@@ -1,140 +1,174 @@
-# Phase 8C — Weekly visitor activity report and site email delivery
+# Phase 8D — Provisioned kiosk device binding
 
-Two parts: a **Visitor Report** screen at `Reports > Visitor Report`, and an optional
-**weekly email** of that same report to named recipients per site.
+Today a kiosk decides which site it belongs to from `?site=<id>` in the address bar,
+remembered in browser storage (`kioskSiteId()` in `src/contexts/OperatingContext.tsx`),
+and every kiosk server function takes the site as a plain argument it trusts. Anyone who
+edits the address can point a kiosk at another site, and clearing the browser detaches it.
 
-## Part 1 — Visitor Report screen (no email required)
+This phase replaces that with a device that is **provisioned once by an administrator**
+and then proves who it is on every request.
 
-New route `/reports/visitor-report`, added as a card on the existing Reports page.
-Nothing else in navigation moves.
+## How it will work for staff
 
-**Week control:** current week by default (Mon–Sun in the site's timezone), with
-Previous / Next week buttons and a "Custom range" option limited to 31 days.
+**Provisioning (Settings > Kiosk devices).** An administrator adds a device: friendly
+name (e.g. "Main entrance tablet"), site, optional note. The screen shows a one-time
+activation code (12 characters, grouped for reading aloud) valid for 15 minutes,
+displayed once with a copy action. The code is never shown again; only a hashed form is
+stored.
 
-**Site control:** users with more than one site get a site picker defaulting to the
-current site; single-site users see the current site only, no picker.
+**Activation (on the kiosk).** An unbound kiosk shows "This device is not set up yet"
+with a code entry pad. On a correct code the server issues a long-lived device token,
+marks the code used, and the kiosk stores the token in the safest place available. From
+then on the kiosk opens straight into its bound site with the site name always visible in
+the footer. No staff login is needed for visitor check-in or check-out.
 
-**Table:** one row per accountable person per visit — a companion is its own row.
-Columns:
+**Managing devices.** The list shows each device: name, site, status (active / suspended /
+revoked / awaiting activation), last seen, app version, and last check-in performed.
+Actions: rename, rotate credential, suspend and resume, revoke, and "Replace device"
+(revoke + issue a fresh activation code in one step). Multiple kiosks per site are normal.
 
-1. Name
-2. Person type
-3. Role — "Main visitor" or "With <primary name>"
-4. Arrived — date and time
-5. Destination — resident visited, or work location / area for contractors
-6. Left — time, or "Still on site", or "No sign-out recorded"
-7. Record — blank for canonical, "Older record" for legacy fallback
-8. Screening — only for users with `screening.view`: Clear / Needs attention / Blocked.
-   Never the answers, never a health value.
+**Re-provisioning.** A kiosk cannot change site by itself. Changing site means an
+administrator revokes it and issues a new code — the kiosk then shows the not-set-up
+screen again.
 
-Search by name, filter by person type and by "no sign-out recorded". Totals above the
-table: people, visits, still on site, missing sign-outs.
+## Failure states (each an explicit kiosk screen, Lucide icon plus text)
 
-**Export:** CSV via the existing export path, and a print-friendly layout (browser
-print to PDF) with site name, week, timezone and generated-at stamp. Both are gated on
-`data.export`; the screen itself on `presence.view`.
-
-Dates render in the site's regional format (AU/UK both `dd MMM yyyy`, 12-hour time per
-the existing convention) using the site's `timezone` column, falling back to the
-browser timezone with a visible note when it is not set.
-
-## Part 2 — Weekly email delivery
-
-**Prerequisite that blocks this part:** this project has no sender domain configured, so
-no email can be sent today. Part 2 ships only after the customer sets up a domain they
-own. Part 1 is built first and is fully useful without it. No screen will ever show a
-send as successful unless the provider accepted it.
-
-Once a domain exists:
-
-- **Settings per site:** enable/disable, recipient list (add/remove, each address
-  confirmed as an operational recipient), send day (default Monday), send time (default
-  08:00 site time), timezone shown read-only from the site.
-- **Send now** button sends the previous full week to the configured recipients and is
-  recorded exactly like a scheduled send.
-- **Email body:** site name, week, totals, and the same table minus the screening
-  column by default. A per-site switch can include a screening *status* column only;
-  answers, temperatures and vaccination detail are never included. A line states the
-  email contains personal information and is for named staff only.
-- **Delivery record:** every attempt writes site, week, recipients, status
-  (sent / failed / skipped-duplicate), provider message id and error text.
+| Situation | Kiosk shows |
+| --- | --- |
+| No credential yet | "This device is not set up yet" + code entry |
+| Revoked or suspended | "This kiosk has been turned off. Please ask a staff member." — no visitor actions |
+| Expired credential | Same message plus "needs setting up again" |
+| Code already used / wrong / expired | Inline "That code cannot be used. Ask an administrator for a new one." |
+| Offline | Existing offline queue continues; banner "Working offline — records will be sent when the connection returns" |
+| Site mismatch (URL says another site) | Address parameter is ignored entirely; bound site is shown |
+| Clock skew | Server decides all expiry; the kiosk never validates time itself |
 
 ## Technical section
 
-**Data.** Canonical `visit_parties` joined to `visits` is authoritative; legacy
-`visitors` rows are used only where no canonical visit exists and are flagged as older
-records. Reuse `buildAccountableRows` composition and add a pure
-`src/lib/weeklyReport.ts` that turns a week window plus rows into report rows —
-so screen, CSV and email render from one function.
+### Data model (additive, public schema, GRANTs + RLS on each)
 
-**Reads.** One security-definer RPC `weekly_visit_report(site_id, from, to)` returning
-already-site-scoped rows, so the email job and the screen use identical data. The
-screen may also read through existing hooks; the RPC exists because the scheduled job
-runs without a user session.
+- `kiosk_devices` — `id`, `branch_id` (not null), `name`, `status`
+  (`pending`/`active`/`suspended`/`revoked`), `token_hash`, `token_prefix` (first 8 chars,
+  for display only), `token_issued_at`, `token_expires_at`, `last_seen_at`,
+  `last_seen_version`, `created_by`, `revoked_by`, `revoked_at`, timestamps.
+- `kiosk_activation_codes` — `id`, `device_id`, `code_hash`, `expires_at`, `used_at`,
+  `used_ip_hash`, `created_by`, `attempts`.
+- `kiosk_device_events` — append-only: `device_id`, `branch_id`, `event`
+  (`provisioned` / `activated` / `activation_failed` / `rotated` / `suspended` /
+  `resumed` / `revoked` / `replaced` / `auth_failed` / `heartbeat`), `actor_user_id`,
+  `detail jsonb`, `created_at`.
 
-**New tables (additive, public schema, GRANTs + RLS on each):**
+Grants: `authenticated` reads devices and events, `service_role` full. No `anon` grant
+anywhere — the kiosk never reads these tables directly, only through functions. RLS:
+device and event reads require `settings.administer` **and** `user_can_access_site`;
+writes only through the definer functions below.
 
-- `report_subscriptions` — one row per site: enabled, send_dow, send_time,
-  include_screening_status, created/updated by.
-- `report_recipients` — subscription id, email, added by, active.
-- `report_sends` — subscription id, site id, week_start, week_end, status,
-  recipient_count, provider_message_id, error, sent_at.
-  Unique on `(site_id, week_start)` for scheduled sends — this is the duplicate guard.
-  Manual test sends are marked `is_manual` and excluded from that constraint.
+Secrets are stored hashed with `pgcrypto` (`crypt`/`gen_salt('bf')`), matching the
+existing `kiosk_security` PIN pattern. Full token and full activation code exist in
+memory only during the call that creates them.
 
-Read access to all three requires `settings.administer`; sends are written only by the
-service role inside the job.
+### Server functions (security definer, mirroring existing `kiosk_*` patterns)
 
-**Job.** An edge function `send-weekly-visit-report` runs hourly and sends for any site
-whose local day/time has just passed and which has no scheduled send row for that week.
-It inserts the `report_sends` row first (unique index makes a concurrent second run a
-no-op), then sends, then updates status. A failed send is retried on the next hourly
-run up to 3 times, then left as failed and visible in settings. Email goes through
-Lovable's own email infrastructure (queue + templates), not a third-party account, and
-not through Outlook — the Outlook connector would send from one person's mailbox, which
-is wrong for a site notification.
+- `kiosk_provision_device(p_branch_id, p_name)` → device id + one-time code. Requires
+  `settings.administer` and site access.
+- `kiosk_activate(p_code, p_device_label)` → device token, site id, site name. Callable
+  by `anon`. Marks the code used inside the same transaction (a second attempt fails).
+- `kiosk_device_context(p_token)` → site id, name, status, jurisdiction. Called on kiosk
+  start and on resume; updates `last_seen_at`.
+- `kiosk_rotate_token(p_device_id)`, `kiosk_set_device_status(p_device_id, p_status)`,
+  `kiosk_replace_device(p_device_id)` — all `settings.administer` + site access.
+- A shared internal `kiosk_resolve_device(p_token)` returns the site id or raises. **Every
+  existing kiosk function gains a `p_device_token` argument** and derives `p_branch_id`
+  from it, ignoring any client-supplied site: `kiosk_check_in`, `kiosk_check_out`,
+  `kiosk_presence_list`, `kiosk_resident_directory`, `kiosk_staff_directory`,
+  `kiosk_supplier_directory`, `kiosk_returning_lookup`, `kiosk_contractor_lookup`,
+  `kiosk_watchlist_check`, `kiosk_resident_leave`, `kiosk_resident_return`,
+  `kiosk_prefill_visitor`, `kiosk_open_key_holds`, and the emergency family.
 
-**Audit.** Enabling/disabling, recipient changes, schedule changes, manual sends and
-send outcomes each write an `audit_log` entry with the acting user and site.
+Rate limiting: activation attempts capped at 5 per device and 20 per hour per source
+(counted in `kiosk_activation_codes.attempts` and `kiosk_device_events`); failed token
+resolution capped likewise, each failure logged as `auth_failed`. No edge function is
+needed — all of this is database-side, consistent with the existing kiosk design.
 
-**Retention.** `report_sends` keeps status metadata only — never the report body, never
-recipient personal data beyond the email addresses in `report_recipients`. Rows older
-than 12 months are purged by the existing cleanup function.
+### Client
 
-**Rollback.** Part 1 is a new route only. Part 2 disables by turning subscriptions off;
-dropping the three tables and the function removes it with no effect on visits.
+- `src/lib/kioskDevice.ts` — token storage. Preference order: IndexedDB (survives
+  storage-clear prompts less often than localStorage but is the best broadly supported
+  option), falling back to `localStorage`. The token is opaque; losing it means
+  re-provisioning, which is the intended safe failure. Non-extractable WebCrypto key
+  material is noted as a later hardening step, not built now.
+- `src/contexts/KioskDeviceContext.tsx` — resolves the device on kiosk start, exposes
+  `{ deviceToken, siteId, siteName, status }`, heartbeats every 10 minutes.
+- `kioskSiteId()` is removed; `OperatingContext` takes the site from the device context
+  for `/kiosk/*` routes and from `SiteContext` for staff routes. The `?site=` parameter is
+  ignored on kiosk routes.
+- Kiosk hooks pass `p_device_token` instead of `p_branch_id`.
+- New screens: `KioskActivation.tsx` (code entry, reusing the `KioskPinPad` visual
+  language) and a device-blocked state in `KioskErrorState.tsx`.
+- `src/components/settings/KioskDevicesCard.tsx` — device list and actions, added to the
+  existing kiosk settings section. No navigation change.
+
+### Behaviour of kiosk-originated records
+
+Unchanged in substance, correctly attributed in origin:
+
+- **Privacy** — acknowledgements recorded against the bound site, `device` set to the
+  device name instead of a generic "Kiosk".
+- **Screening** — same configured questions and outcomes; no override on the kiosk, as now.
+- **Companions** — created as canonical parties exactly as today, under the bound site.
+- **Badges** — printing follows the site setting; the device name appears in the audit entry.
+- **Emergency attendance** — the staff PIN path is unchanged, but the roll call is now
+  scoped by the bound device rather than a passed site id.
+
+### Audit
+
+Every provision, activation, activation failure, rotation, suspend/resume, revoke,
+replace and kiosk configuration change writes both a `kiosk_device_events` row and an
+`audit_log` entry with the acting user and site. Token values never appear in either.
+
+### AU/UK separation
+
+Devices are bound to a site, and a site already carries its jurisdiction and pack, so an
+AU device can never resolve UK configuration. Nothing about server separation changes.
 
 ## Defaults chosen
 
-Week Mon–Sun, current week default; custom range max 31 days; screen needs
-`presence.view`, export needs `data.export`, email settings need `settings.administer`;
-send Monday 08:00 site time; screening status excluded from email by default; retries 3;
-Lovable email infrastructure as the provider; page size 100 with "Show more".
+Activation code 12 characters, single use, 15-minute expiry; device token 256-bit random,
+365-day expiry with a warning in settings from 30 days out; heartbeat every 10 minutes;
+5 activation attempts per code; devices per site unlimited; provisioning and management
+require `settings.administer`; revoked devices keep their history and are shown greyed in
+the list rather than deleted.
 
 ## Acceptance criteria
 
-- Companions appear as their own rows with "With <primary name>" and their own times.
-- A person still on site shows "Still on site"; a past visit with no sign-out shows
-  "No sign-out recorded" — the two are never conflated.
-- Switching site never shows another site's people; the RPC rejects a site the user
-  cannot access.
-- An empty week renders a plain "No visits recorded for this week" state, and the email
-  for an empty week still sends with a zero summary.
-- Legacy rows are marked "Older record".
-- Running the job twice for the same site and week sends once.
-- A user without export permission sees the table but no CSV or print action.
-- A user without `screening.view` never sees the screening column, on screen or in CSV.
-- No screen or log claims a send succeeded unless the provider accepted it.
+- A kiosk with no credential offers only activation — no visitor action is reachable.
+- Editing `?site=` on an activated kiosk changes nothing; the bound site stays.
+- Clearing browser storage returns the kiosk to activation, never to another site.
+- The same activation code cannot be used twice; the second attempt is logged and refused.
+- A revoked or suspended device is refused server-side within one call, even if the token
+  is replayed from another machine.
+- Check-in performed on a device writes the bound site, whatever the client sends.
+- The full token and full code appear exactly once, at creation, and are never re-readable.
+- Two kiosks at one site operate independently, each with its own last-seen.
+- A user without `settings.administer` cannot see or manage devices.
+- No screen shows a device as active unless the server said so.
 
 ## Tests
 
-Unit tests over `weeklyReport.ts`: week boundaries across a timezone, companion rows,
-missing vs still-on-site, legacy marking, site isolation, empty week, screening
-gating, CSV shape. Plus a duplicate-send test against the unique constraint, an
-unauthorised-site RPC test, and an email preview render test. Then typecheck, build,
-full test run and an authenticated live check of the report screen.
+Pure tests over token storage and the device context reducer (unbound, active, suspended,
+expired, offline). Database tests: activation happy path, replay refused, expired code,
+revoked token refused, cross-site token cannot read another site's presence, site derived
+from token overrides a spoofed argument, rate limit trips, audit rows written. Plus
+typecheck, build, full suite and a live activation-then-check-in run.
+
+## Rollback
+
+All tables and functions are additive. The updated kiosk functions keep `p_branch_id`
+accepted but ignored for one release, so an unmigrated kiosk fails closed rather than
+crossing sites. Rolling back means restoring `kioskSiteId()` and dropping the three
+tables; no visit data is affected.
 
 ## Out of scope
 
-Kiosk device binding; contractor document verification; seed data; navigation or broad
-UI redesign; historical reconciliation apply; any change to the profile pages.
+Weekly email delivery; contractor document verification queue; seed data; navigation or
+broad UI redesign; historical reconciliation apply.
