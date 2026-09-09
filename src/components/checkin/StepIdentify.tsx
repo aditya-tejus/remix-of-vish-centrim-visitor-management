@@ -1,15 +1,15 @@
 import { VisitorType } from "@/types/visitor";
 import { Input } from "@/components/ui/input";
-import { Search, Check, Phone, QrCode, UserPlus } from "lucide-react";
+import { Search, Check, Phone, QrCode, UserPlus, User, Wrench, HeartHandshake, Briefcase } from "lucide-react";
 import { VisitorProfile } from "./useCheckInFlow";
 import { usePersonTypes } from "@/hooks/usePersonTypes";
 import { useEffect } from "react";
 
-const allTypeChips: { type: VisitorType; label: string; emoji: string; desc: string }[] = [
-  { type: "visitor", label: "Visitor", emoji: "👋", desc: "Family, friends, guests" },
-  { type: "contractor", label: "Contractor", emoji: "🔧", desc: "Trades, maintenance" },
-  { type: "volunteer", label: "Volunteer", emoji: "🤝", desc: "Activities, support" },
-  { type: "staff", label: "Staff", emoji: "💼", desc: "Employees, agency" },
+const allTypeChips: { type: VisitorType; label: string; Icon: React.ElementType; desc: string }[] = [
+  { type: "visitor", label: "Visitor", Icon: User, desc: "Family, friends, guests" },
+  { type: "contractor", label: "Contractor", Icon: Wrench, desc: "Trades, maintenance" },
+  { type: "volunteer", label: "Volunteer", Icon: HeartHandshake, desc: "Activities, support" },
+  { type: "staff", label: "Staff", Icon: Briefcase, desc: "Employees, agency" },
 ];
 
 interface StepIdentifyProps {
@@ -76,7 +76,7 @@ export function StepIdentify({
                   : "border-border hover:border-primary/30 hover:bg-muted/30 hover:shadow-sm"
               }`}
             >
-              <span className="text-2xl">{tc.emoji}</span>
+              <tc.Icon className="h-6 w-6 text-primary" aria-hidden />
               <span className={`text-[12px] font-bold ${selectedType === tc.type ? "text-primary" : "text-foreground"}`}>
                 {tc.label}
               </span>
