@@ -178,3 +178,15 @@ Not granted to anon: `kiosk_emergency_gate` (internal), `kiosk_prefill_visitor` 
 - Broad legacy public read policies remain on reference tables (`branches`, `person_types`,
   `wings`, feedback configuration). These carry no personal data and are required by the
   kiosk before sign-in.
+
+### Stage 6C recovery pass — closed emergency records
+
+A gap was found and fixed: the roll call of a closed emergency was already immutable
+(`trg_guard_closed_emergency` on `evacuation_attendance`), but the event row itself could
+still be edited or reopened. `guard_closed_drill()` now runs before every update on
+`evacuation_drills`: once an event is `resolved` or `reviewed`, the only permitted change
+is adding the post-event review (and `resolved -> reviewed`). Reopening, retiming,
+re-siting or changing counts raises an error. Verified by test: an edit to the people count
+was blocked, a reopen to `active` was blocked, and adding a review note succeeded. The
+trigger function is not executable by `anon` or `authenticated`; linter is back to the
+documented 45-warning baseline with no new warning.
