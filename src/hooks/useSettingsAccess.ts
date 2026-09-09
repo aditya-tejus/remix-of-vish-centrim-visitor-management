@@ -44,11 +44,11 @@ const SECTION_AUDIENCE: Record<SettingsSection, string> = {
 };
 
 export function useSettingsAccess(section: SettingsSection) {
-  const { can, isLoading } = usePermissions();
+  const { can, loading } = usePermissions();
   const permission = SECTION_PERMISSION[section];
   const canEdit = can(permission);
   return {
-    loading: isLoading,
+    loading,
     canEdit,
     permission,
     audience: SECTION_AUDIENCE[section],
