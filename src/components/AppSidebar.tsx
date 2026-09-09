@@ -48,30 +48,35 @@ export function AppSidebar() {
     (v) => v.type === "resident" && v.status !== "checked-in"
   ).length;
 
-  const navGroups: NavGroup[] = [
-    ...(modules.keysRegister || modules.foodRegister
-      ? [{
-          label: "Registers",
-          icon: KeyRound,
-          items: [
-            ...(modules.foodRegister ? [{ title: "Food Register", path: "/food-register", icon: UtensilsCrossed }] : []),
-            ...(modules.keysRegister ? [{ title: "Keys & Fob Register", path: "/keys", icon: KeyRound }] : []),
-          ],
-        }]
-      : []),
-    {
-      label: "Reports",
-      icon: BarChart3,
-      items: [
-        { title: "Visitor Report", path: "/reports/visitor-report" },
-        { title: "Feedback Responses", path: "/reports/feedback-responses" },
-        { title: "Feedback Reports", path: "/reports/feedback-reports" },
-        { title: "Safety & Compliance", path: "/gdpr" },
-        { title: "Presence Log", path: "/reports/presence" },
-        { title: "Audit Log", path: "/audit-log" },
-      ],
+  const model = buildNavigation(
+    { foodRegister: !!modules.foodRegister, keysRegister: !!modules.keysRegister },
+    terms.residentPlural
+  );
+
+  const ICONS: Record<string, LucideIcon> = {
+    Today: LayoutDashboard,
+    "Visitor List": ListChecks,
+    [terms.residentPlural]: Home,
+    "Visitor Profiles": IdCard,
+    "Food Register": UtensilsCrossed,
+    "Keys & Fob Register": KeyRound,
+    Registers: KeyRound,
+    Reports: BarChart3,
+  };
+
+  const BADGES: Record<string, { count: number; variant: NavItem["badgeVariant"] }> = {
+    "Visitor List": {
+      count: todayOverstayed || activeVisitorCount,
+      variant: todayOverstayed > 0 ? "red" : "blue",
     },
-  ];
+    [terms.residentPlural]: { count: residentsAwayCount, variant: "amber" },
+  };
+
+  const navGroups: NavGroup[] = model.groups.map((group) => ({
+    label: group.label,
+    icon: ICONS[group.label] ?? BarChart3,
+    items: group.items.map((item) => ({ title: item.title, path: item.path })),
+  }));
 
   const badgeClasses: Record<string, string> = {
     blue: "bg-sidebar-primary text-sidebar-primary-foreground",
@@ -83,16 +88,15 @@ export function AppSidebar() {
   const isGroupActive = (group: NavGroup) =>
     group.items.some((item) => location.pathname === item.path);
 
-  const primaryItems: (NavItem & { match: string[] })[] = [
-    { title: "Today", path: "/today", icon: LayoutDashboard, match: ["/today", "/"], badge: null },
-    {
-      title: "Visitor List", path: "/visit-list", icon: ListChecks, match: ["/visit-list"],
-      badge: todayOverstayed || activeVisitorCount || null,
-      badgeVariant: todayOverstayed > 0 ? "red" : "blue",
-    },
-    { title: terms.residentPlural, path: "/residents", icon: Home, match: ["/residents"], badge: residentsAwayCount || null, badgeVariant: "amber" },
-    { title: "Visitor Profiles", path: "/visitors", icon: IdCard, match: ["/visitors"], badge: null },
-  ];
+  const primaryItems: (NavItem & { match: string[] })[] = model.primary.map((entry) => ({
+    title: entry.title,
+    path: entry.path,
+    icon: ICONS[entry.title],
+    match: entry.match ?? [entry.path],
+    badge: BADGES[entry.title]?.count || null,
+    badgeVariant: BADGES[entry.title]?.variant,
+  }));
+
 
 
 
