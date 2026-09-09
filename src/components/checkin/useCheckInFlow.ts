@@ -331,6 +331,12 @@ export function useCheckInFlow(open: boolean) {
   const buildVisitor = (): Omit<Visitor, "id"> => {
     const allHealthClear = Object.values(healthAnswers).every((v) => v === false);
     const visitQr = crypto.randomUUID().slice(0, 12).toUpperCase();
+    // Details the site has switched off are never written to the arrival.
+    const enabled = pickEnabledValues(
+      formData as unknown as Record<string, unknown>,
+      activeFields,
+      ["email", "mobile", "address"]
+    );
     return {
       qrCode: visitQr,
       clientRequestId: requestId,
@@ -339,13 +345,13 @@ export function useCheckInFlow(open: boolean) {
 
       firstName: formData.firstName,
       surname: formData.surname,
-      email: formData.email,
-      mobile: formData.mobile,
+      email: enabled.email,
+      mobile: enabled.mobile,
       type: selectedType,
       checkInTime: checkInTimeOverride ? (() => { const now = new Date(); const [h, m] = checkInTimeOverride.split(":").map(Number); now.setHours(h, m, 0, 0); return now; })() : new Date(),
       checkOutTime: null,
       whomToVisit: formData.selectPerson,
-      address: formData.address,
+      address: enabled.address,
       status: "checked-in",
       healthDeclaration: allHealthClear && formData.healthDeclaration,
       additionalVisitors: companions.length,
