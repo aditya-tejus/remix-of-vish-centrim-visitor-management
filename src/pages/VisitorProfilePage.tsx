@@ -229,7 +229,7 @@ export default function VisitorProfilePage() {
   
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                      <Button variant="outline" size="sm" aria-label="More actions for this visitor" className="h-8 w-8 p-0">
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
