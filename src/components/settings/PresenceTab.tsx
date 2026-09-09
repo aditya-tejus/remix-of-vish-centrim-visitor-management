@@ -46,9 +46,11 @@ export function PresenceTab() {
       .upsert({ key: "jurisdiction", value: jurisdiction }, { onConflict: "key" });
     setSaving(false);
     if (error) {
-      toast({ title: "Error", description: "Failed to save jurisdiction setting.", variant: "destructive" });
+      setJurisdictionError("The country setting was not saved. Your choice is still on screen — try again.");
+      toast({ title: "Country setting was not saved", variant: "destructive" });
     } else {
-      toast({ title: "Saved", description: `Jurisdiction set to ${jurisdiction === "AU" ? "Australia" : "United Kingdom"}.` });
+      setJurisdictionError(null);
+      toast({ title: "Saved", description: `Country set to ${jurisdiction === "AU" ? "Australia" : "United Kingdom"}.` });
     }
   };
 
@@ -59,17 +61,21 @@ export function PresenceTab() {
       { key: "outbreak_mode", value: outbreakMode ? "true" : "false" },
       { key: "site_structure", value: siteStructure },
     ];
-    let failed = false;
+    const failed: string[] = [];
     for (const row of rows) {
       const { error } = await supabase.from("settings").upsert(row, { onConflict: "key" });
-      if (error) failed = true;
+      if (error) failed.push(LABELS[row.key] || row.key);
     }
     setSavingOps(false);
-    toast(
-      failed
-        ? { title: "Error", description: "Could not save occupancy settings.", variant: "destructive" }
-        : { title: "Saved", description: "Occupancy and outbreak settings updated." }
-    );
+    if (failed.length) {
+      setOpsError(
+        `Could not save: ${failed.join(", ")}. Your choices are still on screen — try again.`
+      );
+      toast({ title: "Occupancy settings were not saved", variant: "destructive" });
+      return;
+    }
+    setOpsError(null);
+    toast({ title: "Saved", description: "Occupancy and outbreak settings updated." });
   };
 
   if (!loaded) return null;

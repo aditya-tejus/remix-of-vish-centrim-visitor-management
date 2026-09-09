@@ -22,6 +22,7 @@ export function PrintingTab() {
   const [includeQr, setIncludeQr] = useState(true);
   const [showDestination, setShowDestination] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     supabase
@@ -58,11 +59,21 @@ export function PrintingTab() {
       { key: "badge_include_qr", value: includeQr ? "true" : "false" },
       { key: "badge_show_destination", value: showDestination ? "true" : "false" },
     ];
+    const failed: string[] = [];
     for (const s of settings) {
-      await supabase.from("settings").upsert(s, { onConflict: "key" });
+      const { error } = await supabase.from("settings").upsert(s, { onConflict: "key" });
+      if (error) failed.push(s.key);
     }
-    toast({ title: "Printing settings saved" });
     setSaving(false);
+    if (failed.length) {
+      setSaveError(
+        `${failed.length} of ${settings.length} printing settings could not be saved. Your choices are still on screen — try again.`
+      );
+      toast({ title: "Printing settings were not saved", variant: "destructive" });
+      return;
+    }
+    setSaveError(null);
+    toast({ title: "Printing settings saved" });
   };
 
   return (
@@ -185,6 +196,12 @@ export function PrintingTab() {
             </div>
           </div>
 
+          {saveError && (
+            <p className="mb-3 flex items-start gap-2 rounded-xl border border-destructive bg-destructive/5 p-3 text-[13px] text-destructive">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
+              {saveError}
+            </p>
+          )}
           <Button onClick={save} disabled={saving} className="gap-1.5">
             <Save className="h-3.5 w-3.5" /> {saving ? "Saving..." : "Save Changes"}
           </Button>
