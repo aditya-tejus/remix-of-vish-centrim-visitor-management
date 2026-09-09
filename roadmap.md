@@ -299,3 +299,22 @@ Known Phase 7D limitations:
 - Offline queue holds only a roll-call line reference and status; if browser storage is unavailable the outcome is not queued.
 - Roll call was verified with temporary drill data at one site; no live emergency was run against real operations.
 - Second-person approval for closing an emergency is intentionally out of scope.
+
+## Phase 7E — settings consolidation and configuration previews (complete)
+- [x] Ten unreachable settings screens identified and left in place, clearly marked as not in use; navigation shows one home per decision
+- [x] Plain-language section header on every settings section: purpose, who can change it, where the values are stored
+- [x] Scope labels corrected to match real storage (site-saved vs one account-wide value); no false "override" is shown
+- [x] Read-only experience for people without the needed permission — values visible, controls disabled, reason explained
+- [x] Previews for kiosk sign-in, badge, visitor-type chooser and check-in questions, built from live configuration
+- [x] Badge preview uses the same code that prints the real badge
+- [x] Reset to default, unsaved-changes warning, validation, save failure with retry and a saved confirmation on the visitor types screen
+- [x] Existing granular permissions kept; no new permission, key, table or policy
+
+Known limits after Phase 7E:
+- Settings values were not migrated: they still live in the flat settings table, some per site and some account-wide.
+  Because of that, true inheritance ("inherited from organisation") is not shown anywhere — labels describe actual storage only.
+- Audit entries are written by some settings screens (visitor types, operating context, keys policy, kiosk code, privacy)
+  but not all. The screens that do not write one are listed in docs/SECURITY_REVIEW.md; no screen claims to be audited when it is not.
+- The unsaved-changes warning and the full save/retry pattern are implemented on the visitor types screen; other screens keep
+  their existing save behaviour unchanged.
+- The ten unreachable screens are preserved on disk, not deleted.

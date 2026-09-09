@@ -1,3 +1,11 @@
+/**
+ * NOT IN USE (Phase 7E).
+ *
+ * This screen is not reachable from Settings. Its controls are covered by the
+ * per-visitor-type screens that Settings does show, so keeping it visible would
+ * mean the same decision existed in two places. The file is kept, unchanged in
+ * behaviour, so nothing is lost if a control here still needs a home.
+ */
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

@@ -278,3 +278,38 @@ browser exports are not tamper-evident.
 - Closing a live emergency requires a written outcome and an explicit confirmation. Closed events stay immutable through the existing database guard; queued offline outcomes for a closed event are discarded rather than reopening it.
 - The offline retry queue stores only a roll-call line reference, event reference, chosen status and timestamp. No names, phone numbers, room details, assistance levels or clinical notes are written to browser storage.
 - Security linter total unchanged at 47 warnings: 1 public extension, 17 anonymous-callable SECURITY DEFINER functions, 29 signed-in-callable functions.
+
+## Phase 7E — settings consolidation and configuration previews
+
+No database migration, RLS change, permission change or settings-value change was made in this phase.
+
+Access control
+- Settings sections are gated by the existing granular permissions: `settings.administer` for most sections,
+  `privacy.manage` for privacy and retention, `keys.manage` for the keys and fobs policy. No permission was
+  widened and no new permission was added.
+- Without the permission, values are visible and controls are disabled, with the reason stated on screen.
+  This is a presentation gate; the database policies remain the enforcing layer.
+
+Scope and storage
+- Scope labels now describe how a value is actually stored. Values written with a site suffix are labelled
+  "This site"; flat values shared across the account are labelled "All sites". No screen shows an inherited or
+  overridden state, because no visible setting currently resolves through the scoped-settings table.
+
+Audit coverage (gap stated openly)
+- Writes an audit entry: visitor types, operating context, keys and fobs policy, kiosk staff code, privacy and retention.
+- Does not write an audit entry: person-type check-in fields, check-in questions, vaccination fields, companion fields,
+  photo and signature, terms per type, alerts, automation, returning visitors, resident privacy, staff privacy,
+  resident leave, return notifications, food register, contractor enforcement, contractor questions, presence,
+  printing and feedback surveys.
+- No screen states or implies that a change is audited when it is not. Broadening audit coverage remains open work.
+
+Previews
+- Previews are read-only and use sample details only. The badge preview renders through the same code path as
+  printing, with the automatic print call removed. No real person's data is used and nothing is written.
+
+Unreachable screens
+- Ten settings components remain in the project but are not reachable from Settings: Alerts, Automation, Health screening,
+  Auto checkout, Feedback settings, Profiles and badges, Terms and conditions, Notifications, Leave approval and
+  Site documents. Each is marked in the file as not in use. Their controls are covered by the per-visitor-type screens,
+  except leave approval, whose overlap with the resident leave screen was not conclusively verified — it is therefore
+  preserved rather than removed.

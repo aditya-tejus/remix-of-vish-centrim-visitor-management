@@ -4,7 +4,10 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { usePersonTypes, PersonTypeConfigRow, PersonTypeExtras } from "@/hooks/usePersonTypes";
+import { usePersonTypes, PersonTypeConfigRow, PersonTypeExtras, PERSON_TYPE_DEFAULTS } from "@/hooks/usePersonTypes";
+import { useSettingsAccess } from "@/hooks/useSettingsAccess";
+import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
+import { RotateCcw, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useOperatingContext, siteScopedKey } from "@/contexts/OperatingContext";
 import { SettingExplainer } from "@/components/settings/SettingExplainer";
@@ -28,15 +31,47 @@ export function PersonTypesTab() {
   const [extraRows, setExtraRows] = useState<PersonTypeExtras>(extras);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
-  const canEdit = role === "admin";
+  const access = useSettingsAccess("person-types");
+  const canEdit = access.canEdit || role === "admin";
+  const [dirty, setDirty] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  useUnsavedGuard(dirty && canEdit);
 
-  useEffect(() => { if (!loading) { setRows(personTypes); setExtraRows(extras); } }, [loading, personTypes, extras]);
+  useEffect(() => { if (!loading) { setRows(personTypes); setExtraRows(extras); setDirty(false); } }, [loading, personTypes, extras]);
 
-  const update = (type: string, patch: Partial<PersonTypeConfigRow>) =>
+  const update = (type: string, patch: Partial<PersonTypeConfigRow>) => {
+    setDirty(true);
     setRows((prev) => prev.map((r) => (r.type === type ? { ...r, ...patch } : r)));
+  };
+
+  /** A kiosk name has to be usable on a tile. */
+  const nameError = (r: PersonTypeConfigRow) => {
+    const v = r.kioskLabel.trim();
+    if (v.length === 0) return null; // empty falls back to the built-in name
+    if (v.length > 30) return "Keep the kiosk name to 30 characters or fewer.";
+    return null;
+  };
+  const validationError = rows.map(nameError).find(Boolean) || null;
+
+  const resetRowToDefault = (type: string) => {
+    const d = PERSON_TYPE_DEFAULTS.find((x) => x.type === type);
+    if (!d) return;
+    update(type, {
+      kioskLabel: d.label,
+      destinationRequired: d.destinationRequired,
+      screeningApplies: d.screeningApplies,
+      privacyApplies: d.privacyApplies,
+      badgeApplies: d.badgeApplies,
+      rollCallIncluded: d.rollCallIncluded,
+    });
+  };
 
   const save = async () => {
+    if (validationError) return;
     setSaving(true);
+    setSaveError(null);
+
     const k = (key: string) => siteScopedKey(key, siteId);
     const payload = rows.flatMap((r) => [
       { key: k(`person_type_kiosk_${r.type}`), value: r.kioskEnabled ? "true" : "false" },
@@ -56,17 +91,26 @@ export function PersonTypesTab() {
       { key: k("group_attendee_phone"), value: extraRows.groupAttendeePhoneEnabled ? "true" : "false" },
       { key: k("group_organiser_declared_terms"), value: extraRows.organiserDeclaredTermsEnabled ? "true" : "false" },
     );
-    await supabase.from("settings").upsert(payload, { onConflict: "key" });
-    await supabase.from("audit_log").insert({
-      action: "settings_update",
-      performed_by: "Staff",
-      records_affected: payload.length,
-      details: { setting: "person_types", site: siteName ?? "account default", value: rows.map((r) => ({ type: r.type, kiosk: r.kioskEnabled, desk: r.deskEnabled, label: r.kioskLabel })) } as any,
-      change_reason: "Person type availability and workflow rules updated",
-    });
-    await reload();
-    setSaving(false);
-    toast({ title: "Visitor types saved" });
+    try {
+      const { error } = await supabase.from("settings").upsert(payload, { onConflict: "key" });
+      if (error) throw error;
+      await supabase.from("audit_log").insert({
+        action: "settings_update",
+        performed_by: "Staff",
+        records_affected: payload.length,
+        details: { setting: "person_types", site: siteName ?? "account default", value: rows.map((r) => ({ type: r.type, kiosk: r.kioskEnabled, desk: r.deskEnabled, label: r.kioskLabel })) } as any,
+        change_reason: "Person type availability and workflow rules updated",
+      });
+      await reload();
+      setDirty(false);
+      setSavedAt(new Date());
+      window.dispatchEvent(new Event("centrim:settings-saved"));
+      toast({ title: "Visitor types saved" });
+    } catch {
+      setSaveError("Your changes were not saved. Nothing has been changed yet — check your connection and try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -99,6 +143,17 @@ export function PersonTypesTab() {
                   onChange={(e) => update(r.type, { kioskLabel: e.target.value })}
                   className="h-9 w-44 text-sm"
                 />
+                {canEdit && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 text-[12px]"
+                    onClick={() => resetRowToDefault(r.type)}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
+                    Reset to default
+                  </Button>
+                )}
               </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2">
@@ -141,7 +196,7 @@ export function PersonTypesTab() {
               <Switch
                 checked={extraRows[key]}
                 disabled={!canEdit}
-                onCheckedChange={(v) => setExtraRows((prev) => ({ ...prev, [key]: v }))}
+                onCheckedChange={(v) => { setDirty(true); setExtraRows((prev) => ({ ...prev, [key]: v })); }}
               />
             </label>
           ))}
@@ -157,9 +212,34 @@ export function PersonTypesTab() {
         they are never described as visitors. Residents are not a sign-in type: their switch controls the resident leave tile on the kiosk.
       </p>
 
+      {validationError && (
+        <p className="flex items-center gap-2 text-[13px] font-medium text-destructive">
+          <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+          {validationError}
+        </p>
+      )}
+
+      {saveError && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive bg-destructive/5 p-3">
+          <p className="text-[13px] text-destructive">{saveError}</p>
+          <Button variant="outline" size="sm" onClick={save} disabled={saving}>Try again</Button>
+        </div>
+      )}
+
       {canEdit && (
-        <div className="flex justify-end">
-          <Button onClick={save} disabled={saving || !canEdit}>{saving ? "Saving…" : "Save changes"}</Button>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {dirty && !saveError && (
+            <span className="text-[12px] text-muted-foreground">You have changes that are not saved yet.</span>
+          )}
+          {!dirty && savedAt && (
+            <span className="flex items-center gap-1.5 text-[12px] text-success">
+              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+              Saved
+            </span>
+          )}
+          <Button onClick={save} disabled={saving || !canEdit || !dirty || !!validationError}>
+            {saving ? "Saving…" : "Save changes"}
+          </Button>
         </div>
       )}
     </div>
