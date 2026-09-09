@@ -6,10 +6,12 @@ import QRCode from "react-qr-code";
 import centrimLogo from "@/assets/centrim-life-logo.png";
 import kioskBg from "@/assets/kiosk-bg.jpg";
 import { createKioskQrToken } from "@/lib/kioskQrToken";
+import { useOperatingContext } from "@/contexts/OperatingContext";
 
 
 export default function KioskAttract() {
   const navigate = useNavigate();
+  const { siteName } = useOperatingContext();
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -63,7 +65,7 @@ export default function KioskAttract() {
 
         {/* Facility name */}
         <p className="text-base text-muted-foreground font-medium">
-          Welcome to Sydney Care Centre
+          {siteName ? `Welcome to ${siteName}` : "Welcome"}
         </p>
 
         {/* Bold CTA */}
