@@ -314,7 +314,7 @@ export function useCheckInFlow(open: boolean) {
       case "identify":
         return true; // Can always proceed (new or returning)
       case "details":
-        return !!(formData.firstName && formData.surname) && companionsComplete;
+        return missingFields.length === 0 && companionsComplete;
       case "food":
         return bringingFood === false || (bringingFood === true && isFoodFormValid(foodForm));
       case "screening":
