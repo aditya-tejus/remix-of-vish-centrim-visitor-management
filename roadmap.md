@@ -181,3 +181,15 @@ Stage 6C recovery pass
   editing a resolved/reviewed event raises an error (verified by test). This was the one
   "fix now" item the review turned up.
 - Temporary test records for this stage purged (evacuation drill, visitor, derived rows).
+
+## Phase 7A — reception workflow and Visit List (in progress)
+
+Tasks:
+- [ ] Visit List views: On site now, Overdue, Recent activity, Scheduled (limited, resident leave returns only)
+- [ ] Person-type chips (reset to All each session), search with useful no-match panel, last-updated marker
+- [ ] Primary vs secondary row actions; delete stays admin-only
+- [ ] Responsive card layout at 375px / 768px
+- [ ] Duplicate-submit prevention and save-failure retry preserving entered data
+- [ ] Check-out failure retry
+- [ ] Privacy-safe destination display
+- [ ] Docs update (roadmap, SECURITY_REVIEW)
