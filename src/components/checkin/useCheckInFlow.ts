@@ -71,6 +71,7 @@ export function useCheckInFlow(open: boolean) {
 
   const [healthAnswers, setHealthAnswers] = useState<Record<string, any>>({});
   const [overrideReason, setOverrideReason] = useState("");
+  const [overrideApprovedBy, setOverrideApprovedBy] = useState<string | null>(null);
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [companions, setCompanions] = useState<CompanionDetail[]>([]);
   // Held for the whole attempt, including retries, so one arrival is saved once.
@@ -297,6 +298,7 @@ export function useCheckInFlow(open: boolean) {
     });
     setHealthAnswers({});
     setOverrideReason("");
+    setOverrideApprovedBy(null);
     setPrivacyAcknowledged(false);
     setCompanions([]);
     setPhoto(null);
@@ -326,7 +328,6 @@ export function useCheckInFlow(open: boolean) {
   const screeningBlocked = evaluation.blocked;
   // A blocked sign-in needs a supervisor approval with a written reason.
   const overrideValid = overrideReason.trim().length >= 10;
-  const [overrideApprovedBy, setOverrideApprovedBy] = useState<string | null>(null);
 
   /** Records the supervisor approval server-side; returns an error message on refusal. */
   const approveBlockedScreening = useCallback(async (): Promise<string | null> => {
