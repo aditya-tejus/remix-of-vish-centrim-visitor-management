@@ -1,146 +1,191 @@
-# Phase 7B Hardening — Directory Site Scope and Linter Delta (review only)
+# Phase 7C — Person types, volunteers and group arrivals
 
-Reviewed at the current working tree (Phase 7B implementation). No code, schema, permission or policy
-was changed. Findings below are each backed by a read of the function definitions in the database, the
-migration files and the calling code.
+Goal: support the way people actually arrive (one visitor, a volunteer shift, a bus of ten
+family members or a school choir) without making ordinary visitor check-in any longer and
+without inventing a second people or group system.
 
-## Findings
+## What exists today (verified)
 
-### 1. Kiosk resident directory returns residents from every site — High. Blocks closure.
-`kiosk_resident_directory(p_search text)` has no site parameter and no site filter. It is executable by
-`anon` and returns resident first name, surname, **room number**, **area/wing name** and status for up to
-300 residents across all sites. A kiosk at Riverstone (or anyone calling the public API unauthenticated)
-can retrieve Willowbrook residents and their room numbers.
-Call sites: `src/hooks/useResidents.ts` (public mode), `src/services/adapters/local/index.ts`
-(`searchResidentsPublic`). Neither supplies a site because the function accepts none. Used by
-`useKioskCheckInFlow` and `KioskResidentLeave`.
+- Five person types are already configurable per site (Visitor, Contractor, Volunteer, Staff,
+  Resident), each with switches for kiosk/desk visibility, name shown on the kiosk, questions,
+  privacy, badge and roll-call inclusion.
+- Volunteer is already a full type: it gets questions, privacy, a badge and roll-call inclusion,
+  and can be recorded as visiting a resident. It has no volunteer-specific details.
+- The check-in record already has a group field, and the kiosk already uses it when someone
+  brings companions. Companions are also written as individual people on the visit.
+- The old Group Check-In screen is unreachable (its address redirects to the visit list). It
+  records the group only as free text in the comments, does not use the real group field, does
+  not ask the check-in questions, does not ask for privacy consent, does not issue badges, is
+  not tied to a site and does not wait for each save to succeed. It cannot be reused as is.
+- The New Check-In chooser always shows every enabled type plus a code-scan card, even when a
+  site only allows one type.
+- The emergency roll call is built from everyone currently on site, including companions, so any
+  attendee saved as their own record is automatically counted.
+- Badges already have a lifecycle (issued, reprinted, voided) with an audit entry for each print.
 
-### 2. Kiosk staff directory returns staff from every site — Medium. Blocks closure.
-`kiosk_staff_directory(p_search text)` is `anon`-executable, has no site parameter, and returns name and
-department for up to 300 active staff across all sites. Call sites: `useStaffMembers` (public mode),
-`LocalPrototypeStaffDirectory.searchStaffPublic`, consumed by `useKioskCheckInFlow`.
+## The plan
 
-### 3. Supplier and contractor helpers are also unscoped — Medium (contractor), Low (supplier).
-`kiosk_supplier_directory()` lists every active supplier name across sites.
-`kiosk_contractor_lookup(mobile, qr, first, last)` matches contractor people across all sites and returns
-identity, supplier and outstanding credential labels. A contractor known at one site is recognised at
-another site's kiosk, and the code can be used unauthenticated as a mobile-number/name recognition oracle.
-Call sites: `useSuppliers`, `useContractorPeople.findWorker`, `LocalPrototypeSupplierDirectory`.
+### 1. Person Type Selector
 
-### 4. Watchlist decision helper is unscoped — Low.
-`kiosk_watchlist_check(first, last)` is `anon`-executable and returns a match decision across all sites.
-It exposes only a boolean plus alert type — no reason, instructions or register — so the disclosure is
-minimal, but it is a cross-site name-guessing oracle. Recommend scoping in the same pass, not separately.
+- Skipped entirely when only one type is enabled for that place (front desk or kiosk): the person
+  goes straight into that check-in. No dead-end screen.
+- Skipped when a returning person is recognised by their code and their type is already known;
+  staff can still change it before saving.
+- Never skipped when two or more types are enabled.
+- At most five cards are visible: Visitor, Contractor, Volunteer, Staff, Other. Fixed order,
+  Visitor always first. Each card is an icon plus a written label — no icon-only cards, no emojis.
+- "Other" is hidden unless a site explicitly turns it on. When on, it behaves as a Visitor with a
+  short mandatory "reason for visit" line, and reports it under its own name so it can be reviewed.
+- The code-scan card keeps its current behaviour and stays hidden where codes are not issued.
 
-### 5. Information beyond minimum kiosk need — Medium, part of finding 1.
-Room number and area name are the only fields returned by any kiosk directory that are not needed to
-*choose* a person. They are needed for the staff-side destination display, not for the resident-leave and
-"who are you visiting" pickers, where a name (and room only when the site's lookup mode requires
-disambiguation) is enough. No contact, clinical, risk, DoLS or emergency-contact data is exposed by any
-kiosk helper — that was checked field by field.
+### 2. Volunteers
 
-### 6. Security-linter delta 45 to 47 — Informational. Does not block closure.
-Current: 1 extension in public, 17 anonymous-callable SECURITY DEFINER functions, 29 signed-in-callable
-SECURITY DEFINER functions. The full `pg_proc` inventory shows all 17 anonymous entries are `kiosk_*`
-functions. `kiosk_presence_list` and `kiosk_returning_lookup` were *replaced* with site-aware versions, so
-they carry their existing single count each. The only function added in Phase 7B is `kiosk_log_event`,
-which is counted once in the anonymous lint and once in the signed-in lint. That is the entire +2:
-45 = 1 + 16 + 28, 47 = 1 + 17 + 29. No new class of warning, no newly exposed table.
+- Volunteer stays the existing type; no new person system.
+- Adds, only for volunteers and only when the site turns each on: role or programme, supervising
+  staff member, and expected finish time. All three are optional by default.
+- Volunteer questions and terms come from the existing per-type question and privacy settings.
+  Nothing is silently pre-answered.
+- Regular volunteers are recognised by the same returning-person lookup that visitors use, and
+  the same badge rules apply.
 
-### 7. Orphaned navigation after deleting `QRFastLane.tsx` — Low. Does not block closure, but is a dead end.
-The component was removed and `/qr-fast-lane` redirects to `/` in `src/App.tsx`, so nothing is broken at
-build time. However `src/pages/PersonTypeSelector.tsx:28` still navigates to `/qr-fast-lane`, which now
-silently lands the user on the visit list, and `src/pages/CoverageChecklist.tsx` still lists that path
-twice as a live feature. No permission or grant changed as a result of the deletion.
+### 3. Group arrivals
 
-### 8. Kiosk logging change — no orphaned calls, no permission regression. Informational.
-`kiosk_log_event` is called only from `src/pages/kiosk/KioskCheckIn.tsx`. Execute is revoked from PUBLIC
-and granted to `anon, authenticated, service_role`, matching the existing kiosk pattern. It writes to
-`kiosk_access_log` only, which stays admin-read with no anonymous select. The kiosk's former direct
-`audit_log` insert is gone with no remaining references.
+One organiser, many attendees, one shared arrival:
 
-### 9. Site binding documentation — Low. Wording should be tightened.
-`roadmap.md` describes the `?site=` plus device-memory arrangement as "a pilot arrangement, not secure
-device binding". `docs/SECURITY_REVIEW.md` says "Not production-grade" but does not use the word pilot in
-the Phase 7B section. The claim is present and honest; it should be made explicit and identical in both.
+- An organiser starts the group arrival, gives the group a short name (for example "Rosewood
+  Primary Choir"), says who or where they are visiting, and adds attendees by name.
+- Every attendee is saved as their own check-in record, tied to the shared group. There is no
+  second group table beyond the existing group field on each record; the group name is carried
+  on each attendee's record so lists and reports can show it.
+- Questions and terms: the organiser answers the shared terms once on the group's behalf and this
+  is recorded as an organiser-declared answer with the organiser's name against every attendee.
+  Where the site marks a question as "each person must answer", the kiosk or desk asks it per
+  attendee. No question is quietly auto-answered without being labelled as organiser-declared.
+- Anyone on the alert list is flagged at the moment their name is entered, before the group is
+  saved, using the existing site-scoped alert check.
 
-## Remediation plan (smallest correct change)
+### 4. Partial completion and failures
 
-**A. Add an optional site parameter to the five unscoped kiosk helpers.** One migration, following the
-pattern already used for `kiosk_presence_list` and `kiosk_returning_lookup`: `p_branch_id uuid DEFAULT NULL`,
-filter `(p_branch_id IS NULL OR <table>.branch_id = p_branch_id)`, keep `SECURITY DEFINER`,
-`SET search_path = public`, `REVOKE ALL ... FROM PUBLIC`, re-grant to `anon, authenticated, service_role`.
-Null keeps existing behaviour for legacy/all-site callers, so nothing regresses.
+- Attendees are saved one at a time. If some save and others fail, the group is shown as partly
+  arrived: the saved attendees are on site and accountable, and the failed ones stay on screen
+  with a Retry button. Nothing is silently dropped, and no one is double-saved on retry.
+- A group can be added to later in the day (late arrivals join the same group).
+- Leaving the screen with unsaved attendees warns first.
 
-- `kiosk_resident_directory(p_search, p_branch_id)` — filter on `visitors.branch_id`, tolerating legacy
-  null-site residents exactly as the Phase 7A desktop hook does.
-- `kiosk_staff_directory(p_search, p_branch_id)` — filter on `staff_members.branch_id`.
-- `kiosk_supplier_directory(p_branch_id)` — filter on `suppliers_min.branch_id`.
-- `kiosk_contractor_lookup(p_mobile, p_qr, p_first, p_last, p_branch_id)` — filter on
-  `contractor_people.branch_id`.
-- `kiosk_watchlist_check(p_first, p_last, p_branch_id)` — filter on `visitor_watchlist.branch_id`,
-  keeping entries with a null site visible to every site (a group-wide alert must not be silently dropped).
+### 5. Checkout
 
-Old signatures are dropped in the same migration so no unscoped overload stays callable.
+- Individual checkout always works: any attendee can leave on their own, and the group stays open
+  for the rest.
+- Group checkout is a convenience on top: "Check out this group" lists everyone still on site with
+  tick boxes, all ticked by default, and departs only those ticked.
+- The visit list shows a group as a single line that expands to the individuals, with a count of
+  who is still on site. Overdue tracking stays per person, using the existing rules.
 
-**B. Pass the kiosk's site at every public call site.** No new site plumbing is invented; the site already
-resolved by `useOperatingContext()` / `useSite()` is threaded through the existing `publicMode` options.
+### 6. Badges
 
-- `useResidents({ publicMode, siteId })`, `useStaffMembers({ publicMode, siteId })`,
-  `useSuppliers({ publicMode, siteId })` gain an optional `siteId` and forward it.
-- `useKioskCheckInFlow` passes its existing `siteId` to residents, staff and the watchlist check.
-- `KioskResidentLeave` passes its site to `useResidents`.
-- `useContractorPeople.findWorker` and the local adapter's public directory methods accept and forward a
-  site.
-- `useWatchlist({ publicMode })` gains a site for `checkVisitorRemote`.
+- Badges follow the existing per-type rule. When badges apply, each attendee gets their own badge
+  with their own code; printing is per person or "print all for this group".
+- Reprinting uses the existing reprint path and is written to the audit trail as before.
 
-**C. Trim room and area to what the picker needs.** Keep room in the returned row (the resident-leave
-confirmation and search-first disambiguation rely on it), but confirm no kiosk screen renders area/room for
-residents the person has not searched for. If the "show all" resident lookup mode lists rooms for every
-resident, suppress the room column in that mode and keep it in search-first results only.
+### 7. Emergency roll call
 
-**D. Clear the dead Fast Lane path.** Point `PersonTypeSelector` at `/kiosk/qr-scan` (or remove the branch)
-and mark the two `CoverageChecklist` rows as superseded by the kiosk scan screen.
+- Every attendee already counts individually because they are individual records; the roll call
+  additionally shows the group name and organiser next to each attendee so staff can sweep a
+  group together and still mark people one by one.
+- Marking safe stays per person. There is no "mark whole group safe" shortcut.
 
-**E. Align documentation.** State in both `roadmap.md` and `docs/SECURITY_REVIEW.md`, in the same words,
-that site selection by URL plus device memory is pilot-grade only and that production requires an
-administrator-provisioned, cryptographically bound kiosk device credential.
+### 8. Privacy, site isolation, permissions, audit
 
-## Expected files, migrations, RLS and RPC changes
+- All group and volunteer reads and writes are stamped with the current site and never cross sites.
+- The kiosk never displays contact details, rooms in browse mode, or other attendees' details
+  beyond first name and surname on the confirmation screen.
+- Creating a group arrival requires the existing "check someone in" permission; group checkout
+  requires the existing checkout permission; editing an attendee's details requires the existing
+  person-edit permission.
+- New audit entries: group created, attendee added, attendee save failed, group checkout, and
+  organiser-declared terms (recording the organiser's name and how many attendees it covered).
+  Badge and check-in audit entries stay as they are.
 
-- One migration: recreate the five helpers with `p_branch_id`, drop the old signatures, re-apply
-  revoke/grant. No table, RLS policy or grant on any table changes. No destructive statements.
-- `src/hooks/useResidents.ts`, `useStaffMembers.ts`, `useSuppliers.ts`, `useWatchlist.ts`,
-  `useContractorPeople.ts`, `useKioskCheckInFlow.ts`.
-- `src/services/adapters/local/index.ts` and the matching service contract signatures.
-- `src/pages/kiosk/KioskResidentLeave.tsx`, `src/pages/PersonTypeSelector.tsx`,
-  `src/pages/CoverageChecklist.tsx`.
+### 9. States
+
+Every new screen gets the shared loading, empty, error, permission-denied and offline states
+already used elsewhere. Offline: the group screen refuses new saves with a clear message rather
+than pretending to save.
+
+### 10. Tablet and kiosk
+
+- Group arrival is primarily a front-desk/tablet task: a single scrolling list of attendee rows,
+  large touch targets, no horizontal scrolling at tablet width.
+- On the kiosk, a group tile appears only if the site enables it; it collects the organiser and
+  attendee names with the same large-target keyboard, and never shows resident or staff details.
+
+## Technical detail
+
+Files expected to change:
+
+- `src/hooks/usePersonTypes.ts` — add the "Other" type (off by default), volunteer field switches,
+  and a helper for "how many types are enabled here".
+- `src/pages/PersonTypeSelector.tsx` — skip logic, fixed order, "Other" card, labelled icons.
+- `src/components/checkin/StepIdentify.tsx`, `useCheckInFlow.ts`, `src/hooks/useKioskCheckInFlow.ts` —
+  volunteer fields and "Other" reason; ordinary visitor flow unchanged in length.
+- `src/pages/GroupCheckIn.tsx` — rewritten on the current check-in pipeline; route restored.
+- New: `src/hooks/useGroupVisits.ts`, `src/components/groups/GroupAttendeeRows.tsx`,
+  `src/components/groups/GroupCheckOutSheet.tsx`.
+- `src/pages/VisitList.tsx`, `src/components/VisitorTable.tsx` — collapsible group rows.
+- `src/components/CheckOutSheet.tsx` — group-aware individual checkout wording.
+- `src/hooks/useEvacuation.ts`, `src/pages/Evacuation.tsx`, `src/pages/EvacuationReport.tsx` —
+  show group name and organiser per attendee.
+- `src/lib/badgeIssue.ts` — print-all-for-group helper reusing the existing badge lifecycle.
+- `src/components/settings/PersonTypesTab.tsx` — the new switches, with plain-English explanations.
+- `src/App.tsx` — restore the group route.
 - `roadmap.md`, `docs/SECURITY_REVIEW.md`.
-- Expected linter outcome: unchanged at 47. Rewriting existing anonymous kiosk functions does not add
-  warnings; no function is added or removed.
 
-## Tests required
+Database: one migration, additive only — `group_label` and `group_organiser` text columns on the
+check-in table (the existing group field stays the key), plus `volunteer_role`,
+`volunteer_supervisor` and `volunteer_expected_end`. No new tables, no new group or people model,
+no policy widening; existing site-scoped policies already cover these columns. The kiosk group
+path reuses the existing narrow kiosk check-in function with the extra fields passed through, so
+no new anonymous database access is added.
 
-1. Direct anonymous calls to each of the five helpers with Riverstone's site: no Willowbrook person,
-   staff member, supplier, contractor or watchlist match is returned, and vice versa.
-2. Anonymous call with no site: legacy behaviour unchanged (no error, results returned).
-3. Riverstone kiosk resident picker, staff picker, contractor recognition and supplier list show only
-   Riverstone entries; repeat at Willowbrook.
-4. Watchlist: a Riverstone entry does not trigger at the Willowbrook kiosk; a group-wide (null-site)
-   entry triggers at both.
-5. Resident-leave flow still finds and marks a resident away and back.
-6. Search-first and show-all resident lookup modes both behave, with room shown only where intended.
-7. Signed-in reception behaviour from Phase 7A is unchanged: visit list, check-in destination picker,
-   staff and supplier lists.
-8. `/qr-fast-lane` no longer reachable from the person-type screen; the kiosk scan screen still works.
-9. Typecheck, build and security linter; confirm 47 with the same three categories.
-10. All temporary test records purged and verified at zero.
+## Acceptance tests
 
-## Closure assessment
+1. One enabled type: chooser is skipped; two or more: chooser shown in fixed order.
+2. "Other" hidden by default; visible only when enabled, and requires a reason.
+3. Ordinary visitor check-in has the same number of steps as today.
+4. Volunteer check-in with and without the optional fields; questions and terms explicit.
+5. Group of five saved: five individual records, one shared group, correct site.
+6. Forced failure on attendee three: two on site, one retryable, no duplicate on retry.
+7. Late attendee joins the same group.
+8. One attendee leaves alone; group stays open; then group checkout departs the rest.
+9. Roll call lists all five individually with group name; marking safe is per person.
+10. Badges: per person and print-all; reprint audited.
+11. Site A group invisible at site B, kiosk and desk.
+12. Permission-denied and offline states behave.
+13. Tablet width: no horizontal scrolling.
+14. Phase 7A visit list and 7B kiosk behaviour unchanged.
+15. All temporary test records purged and verified at zero; typecheck, build and security linter
+    run, with the linter compared against the current 47 documented warnings.
 
-- Findings 1 and 2 (and the contractor part of 3) block Phase 7B closure: a kiosk in one care home can
-  currently retrieve residents, room numbers and staff from another, which is exactly the cross-site
-  isolation guarantee this phase claims.
-- Findings 4, 7, 9 do not block closure but should be fixed in the same pass because they are one-line
-  changes in files already being touched.
-- Findings 6 and 8 are informational; the linter delta is fully accounted for and needs no work.
+## Non-goals
+
+Pre-registration or invitations, external notifications, printer hardware, biometrics or facial
+recognition, contractor credential expansion, emergency redesign, settings consolidation,
+recurring group bookings, per-attendee photos, and anything in Phase 7D–7F.
+
+## Risks
+
+- Group screens are where a "quick" flow tends to grow; the guard is that ordinary visitor
+  check-in code paths are not touched except for the volunteer/Other fields.
+- Organiser-declared terms are an operational convenience with real regulatory weight; they must be
+  clearly labelled as declared by the organiser, never presented as each attendee's own answer.
+- Partial saves are the most likely source of an inaccurate on-site list; retry behaviour must be
+  tested with forced failures, not assumed.
+
+## Open questions
+
+1. Should organiser-declared terms be allowed at all at your sites, or must every adult attendee
+   answer for themselves (with the organiser answering only for children)?
+2. Do you want "Other" at all, or should sites simply rename Visitor?
+3. For a group, is a name-only attendee record enough, or do you need a phone number for at least
+   the organiser plus anyone under a duty-of-care arrangement?
+4. Should group checkout be allowed from the kiosk, or front desk only?
