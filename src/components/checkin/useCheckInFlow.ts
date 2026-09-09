@@ -290,12 +290,7 @@ export function useCheckInFlow(open: boolean) {
   // Every companion must satisfy the fields configured for this person type
   // before anyone can be signed in.
   const companionsComplete = useMemo(
-    () =>
-      companions.every((c) =>
-        activeCompanionFields
-          .filter((f) => f.required)
-          .every((f) => String(c[f.field_key.replace("companion_", "")] || "").trim().length > 0)
-      ),
+    () => companions.every((c) => missingCompanionFields(c as any, activeCompanionFields).length === 0),
     [companions, activeCompanionFields]
   );
 
