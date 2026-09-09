@@ -113,6 +113,8 @@ export function VisitorTable({
   const { isOverstayed, hoursFor } = useOverstayPolicy();
   const { residents } = useResidents();
   const { areaLabel, roomLabel } = useSiteStructure();
+  const { currentSiteId, currentSite } = useSite();
+
 
   /** Resolve the person being visited to a real resident record where we can. */
   const residentFor = (visitor: Visitor) => {
