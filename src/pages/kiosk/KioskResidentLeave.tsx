@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 import { useNavigate } from "react-router-dom";
+import { useOperatingContext } from "@/contexts/OperatingContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useResidents } from "@/hooks/useResidents";
@@ -17,8 +18,9 @@ type Mode = "select" | "leaving" | "leaving-confirm" | "returning" | "returning-
 
 export default function KioskResidentLeave() {
   const navigate = useNavigate();
+  const { siteId: kioskSiteId } = useOperatingContext();
   const { residents } = useResidents({ publicMode: true });
-  const { visitors, checkOutVisitor, checkInReturn } = useVisitors({ publicMode: true });
+  const { visitors, checkOutVisitor, checkInReturn } = useVisitors({ publicMode: true, siteId: kioskSiteId });
   const { data: leaveTypes = [] } = useActiveLeaveTypes();
   const { toast } = useToast();
 

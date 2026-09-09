@@ -21,6 +21,7 @@ import { KioskPersonCard } from "@/components/kiosk/KioskPersonCard";
 import { useKioskCheckInFlow, KioskStepId } from "@/hooks/useKioskCheckInFlow";
 import { isKioskQrTokenValid } from "@/lib/kioskQrToken";
 import { usePersonTypes } from "@/hooks/usePersonTypes";
+import { useKioskFastLane } from "@/hooks/useKioskFastLane";
 
 import {
   UserRound, Truck, Heart, UserCog, ArrowLeft, ArrowRight, Shield, ScrollText,
@@ -48,6 +49,7 @@ export default function KioskCheckIn() {
   const { addVisitor } = useVisitors({ publicMode: true, siteId: kioskSiteId, onSaveError: handleSaveError });
   const flow = useKioskCheckInFlow();
   const { kioskTypes } = usePersonTypes();
+  const { fastLaneEnabled } = useKioskFastLane();
   const TYPES = useMemo(
     () => kioskTypes
       .filter((t) => t.type in TYPE_DEFS)
@@ -425,11 +427,13 @@ export default function KioskCheckIn() {
                 </button>
               ))}
             </div>
-            <div className="text-center pt-2">
-              <Button variant="secondary" onClick={() => navigate("/kiosk/qr-scan?mode=checkin")} className="h-12 gap-2 text-base border border-border">
-                <QrCode className="h-5 w-5" /> I have a QR code / visitor card
-              </Button>
-            </div>
+            {fastLaneEnabled && (
+              <div className="text-center pt-2">
+                <Button variant="secondary" onClick={() => navigate("/kiosk/qr-scan?mode=checkin")} className="h-12 gap-2 text-base border border-border">
+                  <QrCode className="h-5 w-5" /> I have a visitor card
+                </Button>
+              </div>
+            )}
           </motion.div>
         )}
 

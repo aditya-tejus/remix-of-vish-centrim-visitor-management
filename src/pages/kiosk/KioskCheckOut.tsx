@@ -13,6 +13,8 @@ import { KioskSuccessScreen } from "@/components/kiosk/KioskSuccessScreen";
 import { KioskFeedbackScreen } from "@/components/kiosk/KioskFeedbackScreen";
 import { KioskSkeletonList } from "@/components/kiosk/KioskSkeleton";
 import { KioskErrorState } from "@/components/kiosk/KioskErrorState";
+import { useOperatingContext } from "@/contexts/OperatingContext";
+import { useKioskFastLane } from "@/hooks/useKioskFastLane";
 
 type Phase = "search" | "companions" | "confirm" | "feedback" | "done";
 
@@ -20,7 +22,9 @@ const OVERSTAY_MS = 8 * 3600000;
 
 export default function KioskCheckOut() {
   const navigate = useNavigate();
-  const { visitors, checkOutVisitor, loading } = useVisitors({ publicMode: true });
+  const { siteId: kioskSiteId } = useOperatingContext();
+  const { fastLaneEnabled } = useKioskFastLane();
+  const { visitors, checkOutVisitor, loading } = useVisitors({ publicMode: true, siteId: kioskSiteId });
   const { toast } = useToast();
   const [phase, setPhase] = useState<Phase>("search");
   const [search, setSearch] = useState("");
@@ -249,9 +253,11 @@ export default function KioskCheckOut() {
         <h2 className="text-2xl font-bold text-foreground">Check Out</h2>
         <p className="text-sm text-muted-foreground mt-1">Find your name below</p>
       </div>
-      <Button variant="secondary" onClick={() => navigate("/kiosk/qr-scan?mode=checkout")} className="w-full h-12 text-base gap-2 border border-border">
-        <QrCode className="h-5 w-5" /> Scan QR Code Instead
-      </Button>
+      {fastLaneEnabled && (
+        <Button variant="secondary" onClick={() => navigate("/kiosk/qr-scan?mode=checkout")} className="w-full h-12 text-base gap-2 border border-border">
+          <QrCode className="h-5 w-5" /> Scan Your Card Instead
+        </Button>
+      )}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" aria-hidden="true" />
         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search your name..." className="pl-12 h-14 text-lg" autoFocus aria-label="Search visitors" />
