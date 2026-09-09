@@ -1884,6 +1884,7 @@ export type Database = {
           branch_id: string | null
           created_at: string
           default_person_type: string | null
+          demo_seed_run_id: string | null
           email: string | null
           external_id: string | null
           external_source: string | null
@@ -1901,6 +1902,7 @@ export type Database = {
           branch_id?: string | null
           created_at?: string
           default_person_type?: string | null
+          demo_seed_run_id?: string | null
           email?: string | null
           external_id?: string | null
           external_source?: string | null
@@ -1918,6 +1920,7 @@ export type Database = {
           branch_id?: string | null
           created_at?: string
           default_person_type?: string | null
+          demo_seed_run_id?: string | null
           email?: string | null
           external_id?: string | null
           external_source?: string | null
