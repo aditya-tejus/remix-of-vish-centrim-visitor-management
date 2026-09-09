@@ -58,7 +58,7 @@ export function useSuppliers({ publicMode = false, siteId = null }: UseSuppliers
       .order("name");
     if (data) setSuppliers(data as Supplier[]);
     setLoading(false);
-  }, [publicMode]);
+  }, [publicMode, siteId]);
 
   useEffect(() => {
     fetchSuppliers();

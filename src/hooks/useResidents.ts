@@ -135,7 +135,7 @@ export function useResidents(options: UseResidentsOptions = {}) {
       setResidents(mapped);
     }
     setLoading(false);
-  }, [publicMode, currentSiteId, isLegacySite]);
+  }, [publicMode, siteId, currentSiteId, isLegacySite]);
 
   useEffect(() => {
     fetchResidents();

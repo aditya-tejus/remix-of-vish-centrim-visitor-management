@@ -45,9 +45,11 @@ function normaliseName(first: string, last: string) {
 interface UseWatchlistOptions {
   /** Kiosk / unauthenticated context: the register itself is never readable. */
   publicMode?: boolean;
+  /** Kiosk context: only this site's entries are checked. */
+  siteId?: string | null;
 }
 
-export function useWatchlist({ publicMode = false }: UseWatchlistOptions = {}) {
+export function useWatchlist({ publicMode = false, siteId = null }: UseWatchlistOptions = {}) {
   const qc = useQueryClient();
 
   const query = useQuery({
@@ -147,6 +149,7 @@ export function useWatchlist({ publicMode = false }: UseWatchlistOptions = {}) {
     const { data, error } = await supabase.rpc("kiosk_watchlist_check" as any, {
       p_first: firstName,
       p_last: surname,
+      p_branch_id: siteId ?? null,
     });
     const row = (data as any[])?.[0];
     if (error || !row?.is_match) return null;

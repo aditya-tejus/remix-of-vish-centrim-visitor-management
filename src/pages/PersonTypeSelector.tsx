@@ -25,7 +25,7 @@ export default function PersonTypeSelector() {
 
   const handleSelect = (type: string) => {
     if (type === "qr") {
-      navigate("/qr-fast-lane");
+      navigate("/kiosk/qr-scan");
       return;
     }
     setSelectedType(type);

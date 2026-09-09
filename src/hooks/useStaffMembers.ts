@@ -70,7 +70,7 @@ export function useStaffMembers({ publicMode = false, siteId = null }: UseStaffM
       );
     }
     setLoading(false);
-  }, [publicMode]);
+  }, [publicMode, siteId]);
 
   useEffect(() => {
     fetchStaff();

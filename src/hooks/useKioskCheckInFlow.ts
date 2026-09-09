@@ -87,11 +87,11 @@ export function useKioskCheckInFlow() {
   const { data: vaccinationFields = [] } = useActiveVaccinationFields(selectedType as any);
 
   // Residents & staff for "who are you visiting" picker
-  const { residents } = useResidents({ publicMode: true });
-  const { staff } = useStaffMembers({ publicMode: true });
+  const { residents } = useResidents({ publicMode: true, siteId });
+  const { staff } = useStaffMembers({ publicMode: true, siteId });
 
   // Watchlist
-  const { checkVisitorRemote } = useWatchlist({ publicMode: true });
+  const { checkVisitorRemote } = useWatchlist({ publicMode: true, siteId });
 
   // Load T&C content + jurisdiction
   useEffect(() => {

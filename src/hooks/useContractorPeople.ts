@@ -25,6 +25,8 @@ export async function findContractorPerson(params: {
   surname?: string;
   mobile?: string;
   qr?: string;
+  /** Kiosk context: recognition is limited to this site. */
+  siteId?: string | null;
 }): Promise<ContractorPerson | null> {
   const mobile = digits(params.mobile || "");
   const first = (params.firstName || "").trim();
@@ -40,6 +42,7 @@ export async function findContractorPerson(params: {
       p_qr: qr || null,
       p_first: first || null,
       p_last: last || null,
+      p_branch_id: params.siteId ?? null,
     });
     const row = (data as any[])?.[0];
     if (!row) return null;
