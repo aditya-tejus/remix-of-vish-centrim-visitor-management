@@ -79,6 +79,7 @@ export const CLEANUP_ORDER = [
   "visit_parties",
   "visits",
   "resident_details",
+  "people",
   "visitors",
   "contractor_people",
   "suppliers_min",
