@@ -616,13 +616,18 @@ export default function KioskCheckIn() {
             })}
 
 
+            {flow.missingFieldsHint && (
+              <p className="text-base text-warning" role="status">{flow.missingFieldsHint}</p>
+            )}
+
             <div className="flex gap-3 pt-2">
               <Button variant="secondary" onClick={goBack} className="flex-1 h-14 text-base gap-2 border border-border">
                 <ArrowLeft className="h-5 w-5" /> Back
               </Button>
-              <Button onClick={goNext} disabled={!flow.formValues.firstName?.trim() || !flow.formValues.surname?.trim()} className="flex-1 h-14 text-base gap-2">
+              <Button onClick={goNext} disabled={!flow.detailsValid} className="flex-1 h-14 text-base gap-2">
                 Next <ArrowRight className="h-5 w-5" />
               </Button>
+
             </div>
           </motion.div>
         )}
