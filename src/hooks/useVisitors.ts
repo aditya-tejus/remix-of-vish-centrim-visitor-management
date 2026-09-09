@@ -128,8 +128,10 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     } else if (data) {
       setError(null);
       setVisitors((data as unknown as DbVisitor[]).map(dbToVisitor));
+      setLastUpdated(new Date());
     }
     setLoading(false);
+
   }, [publicMode, currentSiteId, isLegacySite]);
 
 
