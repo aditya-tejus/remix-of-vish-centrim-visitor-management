@@ -201,6 +201,224 @@ export type Database = {
           },
         ]
       }
+      contractor_document_requirements: {
+        Row: {
+          block_on_fail: boolean
+          branch_id: string | null
+          contractor_category: string | null
+          created_at: string
+          credential_type_id: string
+          grace_days: number
+          id: string
+          is_mandatory: boolean
+          jurisdiction: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          block_on_fail?: boolean
+          branch_id?: string | null
+          contractor_category?: string | null
+          created_at?: string
+          credential_type_id: string
+          grace_days?: number
+          id?: string
+          is_mandatory?: boolean
+          jurisdiction?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          block_on_fail?: boolean
+          branch_id?: string | null
+          contractor_category?: string | null
+          created_at?: string
+          credential_type_id?: string
+          grace_days?: number
+          id?: string
+          is_mandatory?: boolean
+          jurisdiction?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_document_requirements_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_document_requirements_credential_type_id_fkey"
+            columns: ["credential_type_id"]
+            isOneToOne: false
+            referencedRelation: "credential_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contractor_document_reviews: {
+        Row: {
+          confirmed_expiry: string | null
+          created_at: string
+          decision: string
+          document_id: string
+          id: string
+          next_action: string | null
+          notes: string | null
+          reason_code: string | null
+          reviewer_label: string
+          reviewer_user_id: string | null
+        }
+        Insert: {
+          confirmed_expiry?: string | null
+          created_at?: string
+          decision: string
+          document_id: string
+          id?: string
+          next_action?: string | null
+          notes?: string | null
+          reason_code?: string | null
+          reviewer_label: string
+          reviewer_user_id?: string | null
+        }
+        Update: {
+          confirmed_expiry?: string | null
+          created_at?: string
+          decision?: string
+          document_id?: string
+          id?: string
+          next_action?: string | null
+          notes?: string | null
+          reason_code?: string | null
+          reviewer_label?: string
+          reviewer_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_document_reviews_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contractor_documents: {
+        Row: {
+          branch_id: string
+          created_at: string
+          credential_type_id: string
+          document_number: string | null
+          expiry_date: string | null
+          file_name: string | null
+          file_size: number | null
+          holder_scope: string
+          id: string
+          is_current: boolean
+          issue_date: string | null
+          mime_type: string | null
+          person_id: string | null
+          source: string
+          status: string
+          storage_path: string | null
+          submitted_at: string
+          submitted_by: string
+          submitted_by_user_id: string | null
+          supersedes_document_id: string | null
+          supplier_id: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          credential_type_id: string
+          document_number?: string | null
+          expiry_date?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          holder_scope: string
+          id?: string
+          is_current?: boolean
+          issue_date?: string | null
+          mime_type?: string | null
+          person_id?: string | null
+          source?: string
+          status?: string
+          storage_path?: string | null
+          submitted_at?: string
+          submitted_by: string
+          submitted_by_user_id?: string | null
+          supersedes_document_id?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          credential_type_id?: string
+          document_number?: string | null
+          expiry_date?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          holder_scope?: string
+          id?: string
+          is_current?: boolean
+          issue_date?: string | null
+          mime_type?: string | null
+          person_id?: string | null
+          source?: string
+          status?: string
+          storage_path?: string | null
+          submitted_at?: string
+          submitted_by?: string
+          submitted_by_user_id?: string | null
+          supersedes_document_id?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contractor_documents_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_documents_credential_type_id_fkey"
+            columns: ["credential_type_id"]
+            isOneToOne: false
+            referencedRelation: "credential_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_documents_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_documents_supersedes_document_id_fkey"
+            columns: ["supersedes_document_id"]
+            isOneToOne: false
+            referencedRelation: "contractor_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contractor_documents_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers_min"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contractor_people: {
         Row: {
           branch_id: string | null
@@ -378,6 +596,7 @@ export type Database = {
       }
       credential_types: {
         Row: {
+          contractor_category: string[] | null
           created_at: string
           holder_scope: string
           id: string
@@ -392,6 +611,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          contractor_category?: string[] | null
           created_at?: string
           holder_scope?: string
           id?: string
@@ -406,6 +626,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          contractor_category?: string[] | null
           created_at?: string
           holder_scope?: string
           id?: string
@@ -3176,6 +3397,96 @@ export type Database = {
         Args: { p_party_ids: string[]; p_reason?: string; p_time?: string }
         Returns: number
       }
+      contractor_compliance_internal: {
+        Args: {
+          p_branch_id: string
+          p_category: string
+          p_person_id: string
+          p_supplier_id: string
+        }
+        Returns: {
+          block_on_fail: boolean
+          blocking: boolean
+          credential_key: string
+          credential_type_id: string
+          document_id: string
+          expiry_date: string
+          grace_days: number
+          grace_ends: string
+          holder_scope: string
+          label: string
+          mandatory: boolean
+          reviewed_at: string
+          short_label: string
+          status: string
+          submitted_at: string
+          version: number
+        }[]
+      }
+      contractor_compliance_status: {
+        Args: {
+          p_branch_id: string
+          p_category?: string
+          p_person_id: string
+          p_supplier_id: string
+        }
+        Returns: {
+          block_on_fail: boolean
+          blocking: boolean
+          credential_key: string
+          credential_type_id: string
+          document_id: string
+          expiry_date: string
+          grace_days: number
+          grace_ends: string
+          holder_scope: string
+          label: string
+          mandatory: boolean
+          reviewed_at: string
+          short_label: string
+          status: string
+          submitted_at: string
+          version: number
+        }[]
+      }
+      contractor_docs_can_manage: {
+        Args: { _branch: string }
+        Returns: boolean
+      }
+      contractor_docs_can_view: { Args: { _branch: string }; Returns: boolean }
+      contractor_document_path: {
+        Args: { p_document_id: string }
+        Returns: string
+      }
+      contractor_document_review: {
+        Args: {
+          p_confirmed_expiry?: string
+          p_decision: string
+          p_document_id: string
+          p_next_action?: string
+          p_notes?: string
+          p_reason_code?: string
+        }
+        Returns: undefined
+      }
+      contractor_document_submit: {
+        Args: {
+          p_branch_id: string
+          p_credential_type_id: string
+          p_document_number?: string
+          p_expiry_date?: string
+          p_file_name?: string
+          p_file_size?: number
+          p_holder_scope: string
+          p_issue_date?: string
+          p_mime_type?: string
+          p_person_id?: string
+          p_source?: string
+          p_storage_path?: string
+          p_supplier_id?: string
+        }
+        Returns: string
+      }
       current_user_site_ids: { Args: never; Returns: string[] }
       default_site_id: { Args: never; Returns: string }
       duplicate_party_details: {
@@ -3476,6 +3787,21 @@ export type Database = {
       kioskd_check_out: {
         Args: { p_time: string; p_token: string; p_visitor_id: string }
         Returns: boolean
+      }
+      kioskd_contractor_compliance: {
+        Args: {
+          p_category?: string
+          p_person_id: string
+          p_supplier_id?: string
+          p_token: string
+        }
+        Returns: {
+          blocking: boolean
+          grace_ends: string
+          label: string
+          mandatory: boolean
+          status: string
+        }[]
       }
       kioskd_contractor_lookup: {
         Args: {
