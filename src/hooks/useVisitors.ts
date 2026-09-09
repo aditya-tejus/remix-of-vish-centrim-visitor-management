@@ -162,8 +162,15 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
 
   }, [fetchVisitors]);
 
-  const addVisitor = (visitor: Omit<Visitor, "id">): Visitor => {
+  /**
+   * Saves a check-in. Returns the optimistic record plus a promise that settles
+   * when the server has confirmed it, so a form can stay open until it is safe
+   * to close and can offer a retry with the entered details still on screen.
+   */
+  const submitVisitor = (visitor: Omit<Visitor, "id">): { visitor: Visitor; saved: Promise<Visitor> } => {
     const tempId = crypto.randomUUID();
+    const newVisitor: Visitor = { ...visitor, id: tempId };
+
     const newVisitor: Visitor = { ...visitor, id: tempId };
     // Optimistic update
     setVisitors((prev) => [newVisitor, ...prev]);
