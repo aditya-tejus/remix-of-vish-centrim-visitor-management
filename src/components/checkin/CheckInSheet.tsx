@@ -22,7 +22,9 @@ import { Label } from "@/components/ui/label";
 interface CheckInSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd: (visitor: Omit<Visitor, "id">) => Visitor;
+  /** Resolves only once the check-in is safely stored. */
+  onAdd: (visitor: Omit<Visitor, "id">) => Promise<Visitor>;
+
 }
 
 const stepConfig: Record<string, { label: string; icon: string }> = {
