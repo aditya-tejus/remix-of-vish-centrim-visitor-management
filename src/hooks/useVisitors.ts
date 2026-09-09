@@ -88,6 +88,8 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
   const [visitors, setVisitors] = useState<Visitor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
 
   const fetchVisitors = useCallback(async () => {
     // Kiosk (unauthenticated) reads go through a narrow server function that returns
