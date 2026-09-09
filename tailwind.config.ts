@@ -63,6 +63,12 @@ export default {
           DEFAULT: 'hsl(var(--info))',
           foreground: 'hsl(var(--info-foreground))'
         },
+        emergency: {
+          DEFAULT: 'hsl(var(--emergency))',
+          foreground: 'hsl(var(--emergency-foreground))',
+          muted: 'hsl(var(--emergency-muted))'
+        },
+
         sidebar: {
           DEFAULT: 'hsl(var(--sidebar-background))',
           foreground: 'hsl(var(--sidebar-foreground))',

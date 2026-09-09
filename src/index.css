@@ -154,6 +154,39 @@
   }
 }
 
+/* Phase 7F — additive design tokens. Existing brand tokens above are unchanged. */
+@layer base {
+  :root {
+    /* Emergency: reserved for live emergency mode only. Deeper and warmer than
+       destructive so a live event never reads as an ordinary error. */
+    --emergency: 0 72% 42%;
+    --emergency-foreground: 0 0% 100%;
+    --emergency-muted: 0 72% 96%;
+
+    /* Focus visibility: one ring for the whole product. */
+    --focus-ring: var(--ring);
+    --focus-ring-width: 2px;
+    --focus-ring-offset: 2px;
+
+    /* Radii roles (values derived from the existing --radius, nothing renamed). */
+    --radius-control: var(--radius);
+    --radius-card: calc(var(--radius) * 1.5);
+    --radius-pill: 9999px;
+
+    /* Density: row heights used by lists, tables and registers. */
+    --row-height-compact: 2.5rem;
+    --row-height-comfortable: 3.25rem;
+    --touch-target-min: 2.75rem;
+    --touch-target-kiosk: 3.5rem;
+  }
+
+  .dark {
+    --emergency: 0 70% 52%;
+    --emergency-foreground: 0 0% 100%;
+    --emergency-muted: 0 45% 16%;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -165,7 +198,29 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Focus is always visible and never removed. Keyboard users must be able to
+     see where they are on every screen, including the kiosk. */
+  :focus-visible {
+    outline: var(--focus-ring-width) solid hsl(var(--focus-ring));
+    outline-offset: var(--focus-ring-offset);
+    border-radius: var(--radius-control);
+  }
+
+  /* Respect the operating system reduced-motion setting everywhere, including
+     Tailwind utility transitions and component animation. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
+
 
 @layer utilities {
   .shadow-soft {
