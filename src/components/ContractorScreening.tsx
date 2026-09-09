@@ -86,6 +86,15 @@ export function ContractorScreening({
     return () => { cancelled = true; };
   }, [siteId]);
 
+  // Authoritative document verdict from the server — the same one check-in and
+  // the kiosk enforce, so the screen can never be more generous than the rule.
+  const verdict = useContractorVerdict({
+    personId: person?.id ?? null,
+    supplierId: selectedSupplier?.id ?? null,
+    branchId: siteId,
+    kiosk,
+  });
+
 
   const nameKey = `${workerFirstName.trim().toLowerCase()}|${workerSurname.trim().toLowerCase()}|${workerMobile.replace(/\D/g, "")}`;
 
