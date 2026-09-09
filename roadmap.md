@@ -193,3 +193,8 @@ Tasks:
 - [ ] Check-out failure retry
 - [ ] Privacy-safe destination display
 - [ ] Docs update (roadmap, SECURITY_REVIEW)
+
+### Phase 7A follow-up (this pass)
+- Removed all emoji from check-in and public check-in type tiles, confirmation badge and Check-In page; replaced with lucide icons (User, Wrench, HeartHandshake, Briefcase, UserPlus).
+- Typecheck clean after change.
+- Not fully exercised: end-to-end front-desk check-in via automated browser (form step gating blocked the script); flow verified visually to step 3.
