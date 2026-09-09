@@ -78,10 +78,10 @@ export const CLEANUP_ORDER = [
   "contractor_documents",
   "visit_parties",
   "visits",
-  "contractor_people",
-  "suppliers_min",
   "resident_details",
   "visitors",
+  "contractor_people",
+  "suppliers_min",
   "wings",
 ] as const;
 

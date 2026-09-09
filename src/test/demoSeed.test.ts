@@ -33,6 +33,8 @@ describe("demo cleanup safety", () => {
     expect(at("key_issues")).toBeLessThan(at("property_keys"));
     expect(at("contractor_documents")).toBeLessThan(at("contractor_people"));
     expect(at("contractor_people")).toBeLessThan(at("suppliers_min"));
+    expect(at("visitors")).toBeLessThan(at("contractor_people"));
+    expect(at("visitors")).toBeLessThan(at("suppliers_min"));
     expect(at("resident_details")).toBeLessThan(at("visitors"));
     expect(at("visitors")).toBeLessThan(at("wings"));
     expect(at("feedback_responses")).toBeLessThan(at("feedback_questions"));
