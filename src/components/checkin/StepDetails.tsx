@@ -10,6 +10,7 @@ import { CompanionDetail, VisitorType } from "@/types/visitor";
 import { CheckInFormData, VisitorProfile } from "./useCheckInFlow";
 import { useRef, useState, useCallback } from "react";
 import type { CompanionFieldSpec } from "@/lib/companionFields";
+import type { CheckInFieldSpec } from "@/lib/checkInFields";
 
 interface StepDetailsProps {
   formData: CheckInFormData;
@@ -22,6 +23,8 @@ interface StepDetailsProps {
   companions: CompanionDetail[];
   setCompanions: React.Dispatch<React.SetStateAction<CompanionDetail[]>>;
   activeCompanionFields: CompanionFieldSpec[];
+  /** Exactly the fields this site asks for this person type. */
+  activeFields: CheckInFieldSpec[];
   photo: string | null;
   setPhoto: (photo: string | null) => void;
   onChangeProfile: () => void;
