@@ -150,7 +150,8 @@ export interface QueueRow {
   holder_name: string;
   company_name: string | null;
   type_label: string;
-  status: DocumentStatus | "superseded";
+  /** Lifecycle of the evidence itself, as stored: an approved one reads "verified". */
+  status: DocumentStatus | "superseded" | "verified";
   version: number;
   submitted_by: string;
   submitted_at: string;
