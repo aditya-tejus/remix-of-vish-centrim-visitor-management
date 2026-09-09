@@ -102,6 +102,19 @@ export function ReturningVisitorTab({ personType }: Props) {
         </div>
       ))}
 
+      <div className="flex items-center justify-between gap-4 border-t border-border pt-4">
+        <div>
+          <p className="text-sm font-medium text-foreground">Show the card scan tile on the kiosk</p>
+          <p className="text-xs text-muted-foreground">
+            Only turn this on where this site issues visitor cards or codes. When off, the kiosk hides the tile
+            instead of offering a dead end. Scanning a card fills in details only — questions and terms are
+            always still asked.
+          </p>
+        </div>
+        <Switch checked={fastLane} onCheckedChange={setFastLane} />
+      </div>
+
+
       <Button size="sm" onClick={save} disabled={saving}>
         {saving ? "Saving…" : "Save"}
       </Button>
