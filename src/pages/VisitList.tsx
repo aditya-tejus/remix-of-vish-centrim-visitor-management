@@ -280,7 +280,7 @@ export default function VisitList() {
             </div>
           </div>
 
-          <main className="px-4 sm:px-6 pb-16 pt-1 min-w-0">
+          <div className="px-4 sm:px-6 pb-16 pt-1 min-w-0">
             {!canView ? (
               <PermissionDeniedState description="You do not have permission to see who is on site. Ask an administrator if you need this." />
             ) : !online ? (
@@ -310,11 +310,10 @@ export default function VisitList() {
                 showDestination={showDestination}
               />
             )}
-          </main>
+          </div>
 
           <KeyboardShortcutBar />
-        </SidebarInset>
-      </div>
+
 
       <CheckInSheet open={addDialogOpen} onOpenChange={setAddDialogOpen} onAdd={addVisitorAsync} />
       <CheckOutSheet
