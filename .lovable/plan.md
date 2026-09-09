@@ -1,107 +1,102 @@
-# Phase 8B-2 — Configurable screening outcomes and settings enforcement
+# Phase 8B-3 — Canonical visitor presentation and profile foundation
 
-Goal: the check-in questions, vaccination capture and privacy acknowledgement each appear only where the site has switched them on, and each screening answer produces a clear, configured outcome that reception can act on without guesswork. Every configuration change is recorded by the database itself.
+Goal: every accountable person on site appears once, sourced from the canonical attendance records, and each person's profile tells the whole operational story at a glance. No schema rewrites, no historical repair, no redesign.
 
-## What we found in the current build
+## 1. Canonical read model
 
-- The kiosk already honours per-person-type switches (`screeningApplies`, `privacyApplies` from `usePersonTypes`). Reception check-in does not: `useCheckInFlow` always adds the screening step and always requires the privacy tick, and it falls back to three hard-coded questions (fever, cough, consent) when a site has configured none. So the two entry points can disagree today.
-- Vaccination capture has no on/off switch at all; it is shown whenever vaccination fields exist.
-- Screening outcomes are hard-coded: any "yes" answer plus a temperature threshold sets a generic flag, and blocking only happens in outbreak mode (kiosk) or via an unstructured staff override reason (desk). There is no per-question expected answer, severity or message.
-- Configuration writes for check-in fields are audit-logged from the browser (`useFormFields.logFieldChange` inserts into `audit_log` directly). Health questions, vaccination fields, person-type switches and privacy settings have no audit entry at all. Client-side logging can be bypassed.
-- Existing patterns to reuse: `has_permission` / security-definer RPCs, `settings_scoped` for per-site values, `useSettingsAccess` for the settings gate, `audit_log` with `change_reason`.
+Add one shared reader (`src/hooks/useAccountablePeople.ts`, built on the existing `useAttendance`) that returns one row per accountable person:
 
-## Part 1 — One rule for screening, vaccination and privacy
+- `partyId`, `visitId`, `personId`, `legacyVisitorId`, `branchId`
+- `displayName`, `nameStatus` (named / unresolved), `isPrimary`, `companionIndex`
+- `withPrimaryName` for companions, so the list can show "With Sarah Nolan"
+- `personType`, `destinationLabel`, `checkInTime`, `checkOutTime`, derived `status`
+- `legacyVisitor` reference for fields not yet canonical (screening outcome, contact, contractor data)
 
-Add three per-person-type switches resolved through the existing scoped settings (`{key}_{person_type}`, site value falling back to account value):
+Rules:
+- Canonical first: if a visit exists for the arrival, the party rows are authoritative.
+- Safe fallback: legacy `visitors` rows are shown only when no canonical visit exists for them (matched via `visits.legacy_visitor_id`), never both.
+- No collapsing by name, email, mobile or person code for current attendance. Blank-contact and unresolved-name people each keep their own row.
+- Every query filters by the active site, using the existing legacy-site `or(branch_id.eq…, branch_id.is.null)` pattern.
+- Read-only. Nothing in this stage writes, merges or deletes records.
 
-- `screening_enabled_{type}` (default: current `screeningApplies` value)
-- `vaccination_enabled_{type}` (default: on where vaccination fields exist, otherwise off)
-- `privacy_required_{type}` (default: current `privacyApplies` value)
+## 2. Consumers to move onto the canonical reader
 
-A shared resolver `src/lib/screeningPolicy.ts` returns the three answers for a site and person type. Reception (`useCheckInFlow`) and kiosk (`useKioskCheckInFlow`) both consume it, so they cannot diverge. When a feature is off: its step is removed from the pipeline, its validation is skipped, and its values are not written to the arrival record.
+| Surface | Change |
+| --- | --- |
+| Visit List / Today / Presence | Rows come from the canonical reader; grouping only applies to the visual group/companion indent, never to row count |
+| Visitor Profile history (`useVisitorHistory`) | Query `visit_parties` joined to `visits` by `person_id` (fall back to `legacy_visitor_id`, then today's name+mobile match), site-scoped |
+| Badge issue (`badgeIssue.ts`, `printBadge.ts`) | Badge per party row; companion badges print "With <primary>" instead of the legacy companion JSON fallback |
+| CSV exports (`exportVisitors.ts`) | One line per accountable person, with columns: Party role (Primary/With <primary>), Person type, Site, Check-in, Check-out, Destination, Screening outcome. Legacy fallback rows are marked "Legacy record" |
 
-The hard-coded fever/cough/consent fallback in `useCheckInFlow` is removed. If a site has screening on but no questions configured, the step is skipped rather than inventing questions.
+Old legacy paths stay in the code behind the fallback branch so nothing disappears if canonical data is absent.
 
-Backward compatibility: values already stored on old arrivals stay on the record and stay visible on the profile. Nothing historical is rewritten or re-evaluated.
+## 3. Directory UX
 
-## Part 2 — Configurable screening outcome rules
+- Current attendance: never collapsed. Companions render as an indented row directly beneath their primary, with a small "With <name>" label and their own status and sign-out control.
+- Repeat history: grouped visually only in the profile and history views (grouped by day, then by visit), not in the live list.
+- An unresolved companion shows "Name not recorded" with an inline "Add name" action for permitted staff (writes through the existing party RPC path only).
 
-Simplest safe model: extend `health_questions` rather than add a rules table, because a rule always belongs to exactly one question.
+## 4. Visitor profile information architecture
 
-New nullable columns on `public.health_questions`:
+Progressive disclosure on `VisitorProfilePage`, with the quick panel (`VisitorProfile.tsx`) unchanged in purpose:
 
-- `expected_answer text` — the answer that means "no concern"
-- `warning_answers jsonb` — one or more answers that raise a concern (default `[]`)
-- `severity text` — `info` | `warning` | `critical` (default `info`)
-- `staff_message text` — what reception is told when a warning answer is given
-- `outcome_action text` — `none` | `flag` | `block` (default `none`)
+1. Identity header — name, person type, on-site state and duration, site.
+2. Now — current visit: destination/resident, who they are with, expected checkout, keys held.
+3. Safety and screening — screening outcome, flags with severity, watchlist alerts, food register entries.
+4. Contact and details — only fields currently enabled by configuration; previously captured values for now-disabled fields appear in a collapsed "Historic details (no longer collected)" block, permission-gated.
+5. History — visit timeline.
+6. Record activity — audit events.
 
-A question with no rules keeps today's behaviour exactly (yes/no questions still raise the existing generic symptom flag). Numeric temperature keeps its existing threshold behaviour, expressed as a rule on the temperature question where one exists.
+Lucide icons only, each with a visible label or `aria-label`. No emoji or decorative symbols.
 
-Settings UI: `HealthQuestionsManager` gains a collapsed "What happens if the answer is a concern" section per question (progressive disclosure) — expected answer, warning answers, severity, staff message, action. Lucide icons with visible labels, no emojis.
+## 5. Contractor profile foundation
 
-## Part 3 — Evaluating and recording the outcome
+For contractor person types, the profile adds a Company panel: supplier name (referenced from existing supplier records, never duplicated), role/trade, contact, current status, screening outcome, and a read-only credential/document status list from `contractor_credentials` (valid / expiring / expired / missing). A "Verification" link is a placeholder pointing to the future queue — the review workflow itself is not built here.
 
-A pure function `evaluateScreening(questions, answers)` returns per-question results and an overall outcome: `clear`, `flagged` or `blocked` (highest severity wins). Both entry points use it.
+## 6. Operational flags and warnings
 
-Persistence, keeping sensitive detail to a minimum: store the overall outcome and the list of concerning question keys with their severity on the arrival record (new nullable `screening_outcome text` and `screening_flags jsonb` on `visitors`). Free-text health detail is not duplicated; the existing `health_answers` remains the single copy.
+One shared flag builder returning `{ severity: info | warning | critical, label, detail, action }`:
 
-Reception sees a single concise banner: severity colour plus an icon plus text (never colour alone), the configured staff message, and an unambiguous statement of what happens next — "This person can be signed in" / "Sign-in is blocked until a supervisor approves it".
+- critical: hard watchlist alert, blocked screening outcome, expired mandatory credential
+- warning: flagged screening, overdue key, overdue checkout, soft watchlist
+- info: food register entry, destination note, companion count
 
-## Part 4 — Blocked outcomes and supervisor override
+Rendered in one consistent strip at the top of the profile and as compact indicators in the list, using the Increment 1 status presentation primitives so severity is readable without colour alone.
 
-Recommendation: a permissioned override, not an absolute block. Evidence: the desk already relies on a staff override with a typed reason for flagged screening, real sites need a documented exception path (a resident's family member arriving for end-of-life care), and an absolute block pushes staff into working around the system unrecorded.
+## 7. Audit and history display
 
-Design: a blocked outcome stops Continue for everyone. A user with `screening.view` plus `settings.administer` (recommended default; no new permission introduced) sees an "Approve with reason" control requiring a typed reason of at least 10 characters. Approval calls a security-definer RPC `override_screening_block(p_reason, p_context)` which re-checks the permission server-side and writes an `audit_log` entry (`screening.block_overridden`) with actor, site, timestamp and the reason. The kiosk never offers the override — an unattended kiosk sends the person to reception.
+Visit timeline (arrival, companion changes, screening outcome, keys, checkout) plus record/configuration events from `audit_log` filtered to this person and site. Visible only to users holding the existing audit/settings permissions; hidden entirely otherwise, no partial leakage.
 
-## Part 5 — Audit logging that cannot be bypassed
+## 8. Data, API, RLS, performance
 
-Move configuration audit into the database with `AFTER INSERT/UPDATE/DELETE` triggers on `health_questions`, `vaccination_fields`, `form_fields`, and the scoped settings rows for screening/privacy/person-type switches. Each trigger writes to `audit_log`: action, actor (`auth.uid()` and email), site where the row carries one, timestamp, and a before/after summary of only the changed columns. An optional reason supplied by the UI is passed through a `SET LOCAL` app setting and stored in `change_reason` when present.
+- No schema change is expected. If a query needs a join the current RLS cannot serve, add a read-only security-definer RPC that re-checks permission and site access, rather than loosening a policy.
+- History paginates at 50 rows with "Load more"; live list keeps its existing 1000-row ceiling with a warning when exceeded.
+- Rollback: each consumer reads through the shared hook, so reverting the hook's canonical branch restores legacy behaviour with no data impact.
 
-The existing client-side `logFieldChange` call is removed once the trigger covers it, so a change can never be recorded twice or skipped.
+## 9. Acceptance and verification
 
-## Technical detail
+- Two blank-contact arrivals on the same day appear as two rows, not one.
+- Primary plus two companions: three rows, companions labelled with the primary's name.
+- Companion-only checkout closes just that row; the primary stays open.
+- Switching site changes the list, profile history, badges and exports; no cross-site record ever appears.
+- Profile history for a person with canonical visits shows those visits; a person with only legacy records still shows them, marked as legacy.
+- Badge and export row counts equal the accountable-person count.
+- Suppliers, residents and staff on profiles resolve to existing master records, with no new duplicates created.
+- Typecheck, build, focused tests for the reader and flag builder, and a live browser pass over list, profile, badge and export.
 
-- Migrations (all additive, no data rewrite): new nullable columns on `health_questions` and `visitors`; audit trigger function `public.log_config_change()` plus triggers; grants unchanged because no new table is created.
-- RPCs (security definer, `search_path = public`, permission-checked): `override_screening_block`.
-- RLS: unchanged. Reads of `health_questions` stay as today; writes stay administrator-gated.
-- Files expected to change: `src/lib/screeningPolicy.ts` (new), `src/lib/screeningOutcome.ts` (new), `src/components/checkin/useCheckInFlow.ts`, `src/components/checkin/StepScreening.tsx`, `src/components/checkin/CheckInSheet.tsx`, `src/hooks/useKioskCheckInFlow.ts`, `src/pages/kiosk/KioskCheckIn.tsx`, `src/hooks/useHealthQuestions.ts`, `src/components/settings/HealthQuestionsManager.tsx`, `src/components/settings/VaccinationFieldsManager.tsx`, `src/components/settings/PersonTypeSettings.tsx`, `src/hooks/useFormFields.ts`, tests.
+## 10. Out of scope
 
-## Acceptance criteria
+Weekly emailed report, kiosk device binding, contractor document verification queue implementation, seed data, broad visual redesign, applying historical reconciliation, and any new navigation hierarchy.
 
-1. Screening off for a person type: no screening step, no validation, no screening values written — at the desk and at the kiosk.
-2. Vaccination off: no vaccination capture anywhere, even where vaccination fields exist.
-3. Privacy off: no acknowledgement tick and no acknowledgement written.
-4. A question with no rules behaves exactly as it does today.
-5. A `warning` rule shows the configured message and allows sign-in; the arrival records `flagged`.
-6. A `block` rule stops Continue; only a permitted user can approve, only with a reason; the audit trail shows actor, site, time and reason.
-7. Editing a question, vaccination field, check-in field, or any of the three switches produces exactly one audit entry with before/after, written by the database.
-8. Historical visits are unchanged and old saved answers still display.
+## Defaults chosen (no further clarification needed)
 
-## Tests
+- Canonical wins whenever a canonical visit exists; legacy is fallback only.
+- Companions are indented child rows, not separate top-level entries.
+- Legacy values for disabled fields are shown, collapsed and permission-gated, never deleted.
+- Contractor document status is read-only in this stage.
+- History pagination: 50 per page.
+- Audit panel requires existing settings/audit permission.
 
-- Unit: policy resolver (each switch on/off, site override beating account value), outcome evaluator (no rules, warning, critical, block, multiple concerns, missing answer).
-- Regression: existing 8B-1 field tests keep passing; kiosk pipeline order unchanged where everything is on.
-- Live checks on the running app: visitor with screening off, contractor with a blocking rule, override by a permitted user, denied override by an unpermitted user, and the audit entries produced. Any records created during testing are removed afterwards.
+## Prototype limitations to keep stating
 
-## Risks, rollout and rollback
-
-- Risk: a site with screening on but no questions now skips the step. Mitigated by a note in the settings screen and by defaults derived from today's behaviour.
-- Risk: triggers double-logging alongside the old client call. Mitigated by removing the client call in the same change.
-- Rollback: the new columns are nullable and ignored by older code; dropping the triggers and the RPC restores prior behaviour without touching any stored answer.
-
-## Out of scope
-
-Canonical profile cutover, weekly emailed report, kiosk device binding, seed data, contractor document verification queue, broad visual redesign.
-
-## Open decisions, with the default the build will use unless told otherwise
-
-1. Override permission — default: `settings.administer` (no new permission).
-2. Rules live on the question rather than a separate table — default: on the question.
-3. Concerning answers stored as question keys plus severity, not the answer text — default: keys and severity only.
-4. Kiosk offers no override — default: no override at the kiosk.
-5. Temperature threshold stays a setting rather than becoming a rule — default: keep the existing setting.
-
-## Prototype honesty
-
-Screening rules, override records and audit entries are prototype-grade evidence of intent. They are not a certified clinical or regulatory control and must not be presented as demonstrating compliance with the Aged Care Act or UK care-home requirements.
+Historical records without canonical visits remain legacy-sourced until a reviewed reconciliation is applied. Badge printing stays browser-print. Credential status display is prototype evidence, not compliance certification.
