@@ -1,8 +1,8 @@
 import { isOverstayedSync } from "@/hooks/useOverstayPolicy";
 import centrimLogo from "@/assets/centrim-life-logo.png";
 import {
-  Users, Settings, BarChart3, ChevronDown, Layers, Home, ClipboardList,
-  KeyRound, UtensilsCrossed, IdCard, ListChecks, Siren, DoorOpen,
+  Settings, BarChart3, ChevronDown, Home, KeyRound, UtensilsCrossed, IdCard,
+  ListChecks, Siren, MonitorSmartphone, LayoutDashboard, Users,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -49,30 +49,13 @@ export function AppSidebar() {
   ).length;
 
   const navGroups: NavGroup[] = [
-    {
-      label: "Visitor operations",
-      icon: Users,
-      items: [
-        { title: "Overdue", path: "/visit-list", icon: Layers, badge: todayOverstayed || null, badgeVariant: "red" },
-        { title: "Presence log", path: "/reports/presence", icon: ClipboardList },
-        { title: "Visitor profiles", path: "/visitors", icon: IdCard },
-      ],
-    },
-    {
-      label: "People and movements",
-      icon: DoorOpen,
-      items: [
-        { title: terms.residentPlural, path: "/residents", icon: Home, badge: residentsAwayCount || null, badgeVariant: "amber" },
-        { title: "Planner", path: "/calendar", icon: ClipboardList },
-      ],
-    },
     ...(modules.keysRegister || modules.foodRegister
       ? [{
           label: "Registers",
           icon: KeyRound,
           items: [
-            ...(modules.keysRegister ? [{ title: "Keys and fobs", path: "/keys", icon: KeyRound }] : []),
-            ...(modules.foodRegister ? [{ title: "Food register", path: "/food-register", icon: UtensilsCrossed }] : []),
+            ...(modules.foodRegister ? [{ title: "Food Register", path: "/food-register", icon: UtensilsCrossed }] : []),
+            ...(modules.keysRegister ? [{ title: "Keys & Fob Register", path: "/keys", icon: KeyRound }] : []),
           ],
         }]
       : []),
@@ -80,19 +63,12 @@ export function AppSidebar() {
       label: "Reports",
       icon: BarChart3,
       items: [
-        { title: "Visitor reports", path: "/reports" },
-        { title: "Feedback responses", path: "/reports/feedback-responses" },
-        { title: "Feedback reports", path: "/reports/feedback-reports" },
-        { title: "Safety and compliance", path: "/gdpr" },
-        { title: "Contractor documents", path: "/contractor-documents" },
-      ],
-    },
-    {
-      label: "Administration",
-      icon: Settings,
-      items: [
-        { title: "Settings", path: "/settings" },
-        { title: "Audit trail", path: "/audit-log" },
+        { title: "Visitor Report", path: "/reports/visitor-report" },
+        { title: "Feedback Responses", path: "/reports/feedback-responses" },
+        { title: "Feedback Reports", path: "/reports/feedback-reports" },
+        { title: "Safety & Compliance", path: "/gdpr" },
+        { title: "Presence Log", path: "/reports/presence" },
+        { title: "Audit Log", path: "/audit-log" },
       ],
     },
   ];
@@ -107,10 +83,15 @@ export function AppSidebar() {
   const isGroupActive = (group: NavGroup) =>
     group.items.some((item) => location.pathname === item.path);
 
-  const primaryItems = [
-    { title: "Visit list", path: "/", icon: ListChecks, match: ["/", "/visit-list"], badge: activeVisitorCount || null },
-    { title: "Today", path: "/today", icon: Home, match: ["/today"], badge: null as number | null },
+  const primaryItems: (NavItem & { match: string[] })[] = [
+    { title: "Today", path: "/today", icon: LayoutDashboard, match: ["/today", "/"], badge: null },
+    { title: "Visitor List", path: "/visit-list", icon: ListChecks, match: ["/visit-list"], badge: activeVisitorCount || null, badgeVariant: "blue" },
+    { title: terms.residentPlural, path: "/residents", icon: Home, match: ["/residents"], badge: residentsAwayCount || null, badgeVariant: "amber" },
+    { title: "Visitor Profiles", path: "/visitors", icon: IdCard, match: ["/visitors"], badge: null },
   ];
+  void todayOverstayed;
+  void Users;
+
 
   return (
     <Sidebar className="border-r-0">
