@@ -244,9 +244,6 @@ export default function CalendarPage() {
                 </div>
               )}
             </div>
-          </main>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+    </AppShell>
   );
 }
