@@ -308,11 +308,42 @@ export function useCheckInFlow(open: boolean) {
     setRequestId(crypto.randomUUID());
   };
 
-  // Health screening gate (attended desk: staff may override with a recorded reason)
-  const hasSymptomFlag = Object.values(healthAnswers).some((v) => v === true);
-  const hasHighTemperature = !!formData.bodyTemperature && parseFloat(formData.bodyTemperature) > 37.8;
-  const screeningFlagged = hasSymptomFlag || hasHighTemperature;
-  const overrideValid = overrideReason.trim().length >= 3;
+  // Configured question outcomes. Questions with no rules keep their previous
+  // behaviour, so nothing changes for sites that have not set rules up.
+  const bodyTemperature = formData.bodyTemperature ? parseFloat(formData.bodyTemperature) : null;
+  const evaluation = useMemo(
+    () =>
+      evaluateScreening(
+        healthQuestions as unknown as ScreeningRuleQuestion[],
+        healthAnswers,
+        { bodyTemperature: Number.isNaN(bodyTemperature as number) ? null : bodyTemperature }
+      ),
+    [healthQuestions, healthAnswers, bodyTemperature]
+  );
+  const hasSymptomFlag = evaluation.flags.some((f) => f.questionId !== "body_temperature");
+  const hasHighTemperature = evaluation.flags.some((f) => f.questionId === "body_temperature");
+  const screeningFlagged = evaluation.flagged;
+  const screeningBlocked = evaluation.blocked;
+  // A blocked sign-in needs a supervisor approval with a written reason.
+  const overrideValid = overrideReason.trim().length >= 10;
+  const [overrideApprovedBy, setOverrideApprovedBy] = useState<string | null>(null);
+
+  /** Records the supervisor approval server-side; returns an error message on refusal. */
+  const approveBlockedScreening = useCallback(async (): Promise<string | null> => {
+    if (!overrideValid) return "Enter a reason of at least 10 characters.";
+    const { error } = await supabase.rpc("override_screening_block" as any, {
+      p_reason: overrideReason.trim(),
+      p_context: {
+        person_type: selectedType,
+        outcome: evaluation.outcome,
+        flags: evaluation.flags.map((f) => ({ question_id: f.questionId, severity: f.severity })),
+      } as any,
+    });
+    if (error) return error.message || "You do not have permission to approve this check-in.";
+    const { data } = await supabase.auth.getUser();
+    setOverrideApprovedBy(data.user?.email || "Supervisor");
+    return null;
+  }, [overrideValid, overrideReason, selectedType, evaluation]);
 
   // The screening step owns credential evaluation and reports the gate up
   const contractorBlocked = selectedType === "contractor" && contractorGate.blocked;
@@ -336,11 +367,17 @@ export function useCheckInFlow(open: boolean) {
         // Contractors are blocked when the highest-risk credential is missing/expired
         return !contractorBlocked;
       case "confirm":
-        return privacyAcknowledged && !contractorBlocked && (!screeningFlagged || overrideValid);
+        return (
+          (!policy.privacyRequired || privacyAcknowledged) &&
+          !contractorBlocked &&
+          (!screeningBlocked || !!overrideApprovedBy) &&
+          (!screeningFlagged || overrideValid || !!overrideApprovedBy)
+        );
       default:
         return true;
     }
-  }, [step, missingFields, privacyAcknowledged, screeningFlagged, overrideValid, contractorBlocked, bringingFood, foodForm, companionsComplete]);
+  }, [step, missingFields, privacyAcknowledged, policy.privacyRequired, screeningFlagged, screeningBlocked, overrideApprovedBy, overrideValid, contractorBlocked, bringingFood, foodForm, companionsComplete]);
+
 
 
   const buildVisitor = (): Omit<Visitor, "id"> => {
