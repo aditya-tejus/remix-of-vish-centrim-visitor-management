@@ -37,28 +37,46 @@ function formatVisitorForExport(visitor: Visitor) {
 
 /**
  * Companions are exported as their own line, tagged with the person they
- * arrived with, so an export matches who was actually on site.
+ * arrived with, so an export matches who was actually on site. Attendance
+ * records are used where they exist; older arrivals fall back to the saved
+ * companion names and are marked as an older record.
  */
-function companionRows(visitor: Visitor) {
+function companionRows(visitor: Visitor, parties: PartyLike[]) {
   const base = formatVisitorForExport(visitor);
-  return (visitor.companionDetails || []).map((c: any, i: number) => ({
-    ...base,
-    "First Name": (c?.name || c?.companion_name || `Companion ${i + 1}`) as string,
-    "Surname": "",
-    "Email": c?.email || "",
-    "Mobile": c?.phone || c?.mobile || "",
-    "Address": "",
-    "Additional Visitors": "0",
-    "With": `${visitor.firstName} ${visitor.surname}`,
-  }));
+  const saved = visitor.companionDetails || [];
+  return companionRowsForVisitor(visitor, parties).map((row, i) => {
+    const c: any = row.source === "legacy" ? saved[i] || {} : {};
+    return {
+      ...base,
+      "First Name": row.name,
+      "Surname": "",
+      "Email": c?.email || "",
+      "Mobile": c?.phone || c?.mobile || "",
+      "Address": "",
+      "Check-In": format(row.checkInTime, "dd/MM/yyyy HH:mm"),
+      "Check-Out": row.checkOutTime ? format(row.checkOutTime, "dd/MM/yyyy HH:mm") : "",
+      "Status": row.status === "checked-in" ? "Checked In" : "Checked Out",
+      "Additional Visitors": "0",
+      "With": row.withPrimaryName || "",
+      "Record": row.source === "canonical" ? "Attendance record" : "Older record",
+    };
+  });
 }
 
-export function exportVisitorsToCSV(visitors: Visitor[], filename?: string) {
-  const rows = visitors.flatMap((v) => [
-    { ...formatVisitorForExport(v), With: "" },
-    ...companionRows(v),
-  ]);
+export function exportVisitorsToCSV(visitors: Visitor[], filename?: string, parties: PartyLike[] = []) {
+  const rows = visitors.flatMap((v) => {
+    const primary = primaryRowForVisitor(v, parties);
+    return [
+      {
+        ...formatVisitorForExport(v),
+        With: "",
+        Record: primary.source === "canonical" ? "Attendance record" : "Older record",
+      },
+      ...companionRows(v, parties),
+    ];
+  });
   if (rows.length === 0) return;
+
 
   const headers = Object.keys(rows[0]);
   const csvContent = [
