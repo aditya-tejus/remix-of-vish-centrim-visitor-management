@@ -444,8 +444,9 @@ export function useCheckInFlow(open: boolean) {
     formData, updateField, setFormData,
 
     // Health / screening
+    policy,
     healthQuestions, healthAnswers, setHealthAnswers,
-    dbVaccFields, contractorScreeningAnswers, setContractorScreeningAnswers,
+    dbVaccFields: vaccinationFields, contractorScreeningAnswers, setContractorScreeningAnswers,
     selectedSupplier, setSelectedSupplier, jurisdiction,
     contractorBlocked, contractorBlockReason: selectedType === "contractor" ? contractorGate.reason : null,
     setContractorGate,
@@ -478,7 +479,10 @@ export function useCheckInFlow(open: boolean) {
     // Badge printing
     badgePrintingEnabled,
 
-    // Health screening override
-    screeningFlagged, hasSymptomFlag, hasHighTemperature, overrideReason, setOverrideReason,
+    // Screening outcome and supervisor approval
+    screeningFlagged, screeningBlocked, screeningEvaluation: evaluation,
+    hasSymptomFlag, hasHighTemperature,
+    overrideReason, setOverrideReason, overrideValid,
+    overrideApprovedBy, approveBlockedScreening,
   };
 }
