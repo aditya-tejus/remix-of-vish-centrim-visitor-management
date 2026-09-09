@@ -131,10 +131,11 @@ export function AppSidebar() {
                     <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
                     <span className="flex-1 text-left">{item.title}</span>
                     {item.badge != null && item.badge > 0 && (
-                      <span className={`${badgeClasses.blue} flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold`}>
+                      <span className={`${badgeClasses[item.badgeVariant || "blue"]} flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold`}>
                         {item.badge}
                       </span>
                     )}
+
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
