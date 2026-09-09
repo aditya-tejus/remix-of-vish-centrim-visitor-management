@@ -189,91 +189,94 @@ export default function VisitorProfilePage() {
   const heldKeys = openIssues.filter((i) => i.visitorId && visitIds.has(i.visitorId));
   const flag = checkVisitor(visitor.firstName, visitor.surname);
 
-  return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm">
-            <div className="flex items-center gap-4 px-6 py-4">
-              <SidebarTrigger />
-              <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="h-8 w-8">
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <div className="flex-1">
-                <h1 className="text-lg font-semibold text-foreground">Visitor Profile</h1>
-                <p className="text-xs text-muted-foreground">{visitor.firstName} {visitor.surname}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                {isCheckedIn ? (
-                  <Button size="sm" onClick={() => setCheckOutOpen(true)} className="gap-1.5">
-                    <LogOut className="h-3.5 w-3.5" /> Check out
-                  </Button>
-                ) : (
-                  <Button size="sm" onClick={() => setQuickCheckInOpen(true)} className="gap-1.5">
-                    <LogIn className="h-3.5 w-3.5" /> Check in again
-                  </Button>
-                )}
-                <VisitorBadge
-                  visitor={visitor}
-                  variant="print"
-                  onPrint={() => {
-                    const res = residentForVisit(visitor);
-                    issueBadge({
-                      name: `${visitor.firstName} ${visitor.surname}`.trim(),
-                      type: visitor.type,
-                      visiting: res?.name || visitor.whomToVisit || undefined,
-                      mobile: visitor.mobile || undefined,
-                      room: [res?.room, res?.wing].filter(Boolean).join(" · ") || undefined,
-                      qrValue: visitor.personQr || visitor.qrCode || visitor.id,
-                      date: visitor.checkInTime,
-                    }, { visitorId: visitor.id, siteId: currentSiteId, siteName: currentSite?.name });
-                  }}
-                />
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                      <MoreHorizontal className="h-4 w-4" />
+  const headerActions = (
+    <>
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label="Go back"
+        onClick={() => navigate(-1)}
+        className="h-8 w-8"
+      >
+        <ArrowLeft className="h-4 w-4" />
+      </Button>
+      <div className="flex items-center gap-2">
+                  {isCheckedIn ? (
+                    <Button size="sm" onClick={() => setCheckOutOpen(true)} className="gap-1.5">
+                      <LogOut className="h-3.5 w-3.5" /> Check out
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-52">
-                    <DropdownMenuItem onClick={() => setFeedbackOpen(true)}>
-                      <MessageSquare className="h-3.5 w-3.5 mr-2" /> Record feedback
-                    </DropdownMenuItem>
-                    {isAdmin && (
-                      <DropdownMenuItem onClick={() => setEditOpen(true)}>
-                        <Pencil className="h-3.5 w-3.5 mr-2" /> Edit details
+                  ) : (
+                    <Button size="sm" onClick={() => setQuickCheckInOpen(true)} className="gap-1.5">
+                      <LogIn className="h-3.5 w-3.5" /> Check in again
+                    </Button>
+                  )}
+                  <VisitorBadge
+                    visitor={visitor}
+                    variant="print"
+                    onPrint={() => {
+                      const res = residentForVisit(visitor);
+                      issueBadge({
+                        name: `${visitor.firstName} ${visitor.surname}`.trim(),
+                        type: visitor.type,
+                        visiting: res?.name || visitor.whomToVisit || undefined,
+                        mobile: visitor.mobile || undefined,
+                        room: [res?.room, res?.wing].filter(Boolean).join(" · ") || undefined,
+                        qrValue: visitor.personQr || visitor.qrCode || visitor.id,
+                        date: visitor.checkInTime,
+                      }, { visitorId: visitor.id, siteId: currentSiteId, siteName: currentSite?.name });
+                    }}
+                  />
+  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-52">
+                      <DropdownMenuItem onClick={() => setFeedbackOpen(true)}>
+                        <MessageSquare className="h-3.5 w-3.5 mr-2" /> Record feedback
                       </DropdownMenuItem>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => {
-                      const name = `${visitor.firstName}_${visitor.surname}`.replace(/\s+/g, "_");
-                      exportVisitorsToCSV([visitor], `${name}_${format(new Date(), "yyyy-MM-dd")}.csv`);
-                    }}>
-                      <FileSpreadsheet className="h-3.5 w-3.5 mr-2" /> Export CSV
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => exportVisitorToPDF(visitor)}>
-                      <FileText className="h-3.5 w-3.5 mr-2" /> Export PDF
-                    </DropdownMenuItem>
-                    {isAdmin && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => setConfirmDeleteAll(true)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete profile
+                      {isAdmin && (
+                        <DropdownMenuItem onClick={() => setEditOpen(true)}>
+                          <Pencil className="h-3.5 w-3.5 mr-2" /> Edit details
                         </DropdownMenuItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          </header>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => {
+                        const name = `${visitor.firstName}_${visitor.surname}`.replace(/\s+/g, "_");
+                        exportVisitorsToCSV([visitor], `${name}_${format(new Date(), "yyyy-MM-dd")}.csv`);
+                      }}>
+                        <FileSpreadsheet className="h-3.5 w-3.5 mr-2" /> Export CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => exportVisitorToPDF(visitor)}>
+                        <FileText className="h-3.5 w-3.5 mr-2" /> Export PDF
+                      </DropdownMenuItem>
+                      {isAdmin && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => setConfirmDeleteAll(true)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete profile
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+    </>
+  );
 
-          <main className="p-6">
+  return (
+    <AppShell
+      title="Visitor Profile"
+      subtitle={`${visitor.firstName} ${visitor.surname}`}
+      actions={headerActions}
+      mainClassName="p-6"
+    >
+
             <div className="space-y-6">
               {/* ===== PROFILE HEADER ===== */}
               <div className="flex items-center gap-5">
@@ -732,9 +735,6 @@ export default function VisitorProfilePage() {
                 </div>
               </div>
             </div>
-          </main>
-        </SidebarInset>
-      </div>
 
       {/* Quick Check-In — opens full wizard to re-ask health & compliance questions */}
       <AddVisitDialog
@@ -825,6 +825,6 @@ export default function VisitorProfilePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </SidebarProvider>
+    </AppShell>
   );
 }
