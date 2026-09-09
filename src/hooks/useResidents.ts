@@ -29,10 +29,12 @@ export interface Resident {
 interface UseResidentsOptions {
   /** Kiosk / unauthenticated context: never request contact details. */
   publicMode?: boolean;
+  /** Kiosk context: the site this device belongs to. Results never cross sites. */
+  siteId?: string | null;
 }
 
 export function useResidents(options: UseResidentsOptions = {}) {
-  const { publicMode = false } = options;
+  const { publicMode = false, siteId = null } = options;
   const { currentSiteId, isLegacySite } = useSite();
   const [residents, setResidents] = useState<Resident[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,7 +42,10 @@ export function useResidents(options: UseResidentsOptions = {}) {
   const fetchResidents = useCallback(async () => {
     // Kiosk: name, room and area only — no contact, care, clinical or risk information.
     if (publicMode) {
-      const { data, error } = await supabase.rpc("kiosk_resident_directory" as any, { p_search: null });
+      const { data, error } = await supabase.rpc("kiosk_resident_directory" as any, {
+        p_search: null,
+        p_branch_id: siteId ?? currentSiteId ?? null,
+      });
       if (!error && data) {
         setResidents(
           (data as any[]).map((r) => ({
@@ -130,7 +135,7 @@ export function useResidents(options: UseResidentsOptions = {}) {
       setResidents(mapped);
     }
     setLoading(false);
-  }, [publicMode, currentSiteId, isLegacySite]);
+  }, [publicMode, siteId, currentSiteId, isLegacySite]);
 
   useEffect(() => {
     fetchResidents();

@@ -83,8 +83,11 @@ export const LocalPrototypeResidentDirectory: ResidentDirectoryService = {
       };
     });
   },
-  async searchResidentsPublic(search) {
-    const { data } = await supabase.rpc("kiosk_resident_directory" as any, { p_search: search || null });
+  async searchResidentsPublic(search, siteId) {
+    const { data } = await supabase.rpc("kiosk_resident_directory" as any, {
+      p_search: search || null,
+      p_branch_id: siteId ?? null,
+    });
     return ((data as any[]) || []).map(
       (r): ResidentRef => ({
         id: r.visitor_id,
@@ -135,8 +138,11 @@ export const LocalPrototypeStaffDirectory: StaffDirectoryService = {
       })
     );
   },
-  async searchStaffPublic(search) {
-    const { data } = await supabase.rpc("kiosk_staff_directory" as any, { p_search: search || null });
+  async searchStaffPublic(search, siteId) {
+    const { data } = await supabase.rpc("kiosk_staff_directory" as any, {
+      p_search: search || null,
+      p_branch_id: siteId ?? null,
+    });
     return ((data as any[]) || []).map(
       (s): StaffRef => ({
         id: s.id,
@@ -159,8 +165,10 @@ export const LocalPrototypeSupplierDirectory: SupplierDirectoryService = {
       (s): SupplierRef => ({ id: s.id, name: s.name, siteId: s.branch_id ?? null })
     );
   },
-  async listSuppliersPublic() {
-    const { data } = await supabase.rpc("kiosk_supplier_directory" as any);
+  async listSuppliersPublic(siteId) {
+    const { data } = await supabase.rpc("kiosk_supplier_directory" as any, {
+      p_branch_id: siteId ?? null,
+    });
     return ((data as any[]) || []).map((s): SupplierRef => ({ id: s.id, name: s.name, siteId: null }));
   },
   async findWorker(params) {
@@ -169,6 +177,7 @@ export const LocalPrototypeSupplierDirectory: SupplierDirectoryService = {
       p_qr: params.qr || null,
       p_first: params.firstName || null,
       p_last: params.surname || null,
+      p_branch_id: params.siteId ?? null,
     });
     const row = (data as any[])?.[0];
     if (!row) return null;

@@ -16,15 +16,20 @@ export interface StaffMember {
 interface UseStaffMembersOptions {
   /** Kiosk / unauthenticated context: name and department only. */
   publicMode?: boolean;
+  /** Kiosk context: the site this device belongs to. Results never cross sites. */
+  siteId?: string | null;
 }
 
-export function useStaffMembers({ publicMode = false }: UseStaffMembersOptions = {}) {
+export function useStaffMembers({ publicMode = false, siteId = null }: UseStaffMembersOptions = {}) {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchStaff = useCallback(async () => {
     if (publicMode) {
-      const { data, error } = await supabase.rpc("kiosk_staff_directory" as any, { p_search: null });
+      const { data, error } = await supabase.rpc("kiosk_staff_directory" as any, {
+        p_search: null,
+        p_branch_id: siteId ?? null,
+      });
       if (!error && data) {
         setStaff(
           (data as any[]).map((s) => ({
@@ -65,7 +70,7 @@ export function useStaffMembers({ publicMode = false }: UseStaffMembersOptions =
       );
     }
     setLoading(false);
-  }, [publicMode]);
+  }, [publicMode, siteId]);
 
   useEffect(() => {
     fetchStaff();

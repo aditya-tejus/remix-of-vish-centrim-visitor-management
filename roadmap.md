@@ -241,5 +241,27 @@ Done:
 Not done / limitations:
 - Site is still chosen by `?site=` and remembered on the device. This is a pilot arrangement, not secure
   device binding; production needs an administrator-provisioned, cryptographically bound kiosk credential.
-- Resident and staff directory helpers used at the kiosk are not yet site-parameterised.
 - No external notification delivery, printer hardware, pre-registration or invitations (out of scope).
+
+## Phase 7B hardening — site-scoped kiosk directory helpers (complete)
+- [x] Resident, staff, supplier, contractor and watchlist kiosk helpers now take a site and filter to it
+- [x] Kiosk hooks, local adapters and contracts pass the kiosk site through
+- [x] Records with no site are shown only at the original legacy site, never mixed into newer sites
+- [x] Room numbers are hidden when a visitor browses the resident list; shown only after a deliberate search
+- [x] The dead card-lane route on the person-type screen now points at the supported kiosk code screen
+- [x] Pilot-grade site-binding wording aligned in roadmap and security review
+
+Verified: anonymous calls at Riverstone return no Willowbrook people (and the reverse) for all five
+helpers; legacy no-site records appear only at the legacy site; both kiosks show only their own
+residents; resident leave, reception visit list and reports unchanged; kiosk network trace shows no
+direct reads of visitor, resident, staff, supplier, contractor or alert tables; typecheck and build
+pass; security linter unchanged at 47 documented warnings (1 extension in public, 17 anonymous
+SECURITY DEFINER kiosk functions, 29 signed-in SECURITY DEFINER functions). All temporary test
+records purged and verified at zero.
+
+Known limitations:
+- Site selection is still `?site=` plus device memory. This is pilot-grade only; production requires an
+  administrator-provisioned, cryptographically bound kiosk device credential.
+- With no-site records now excluded from newer sites, kiosks at a new site show nothing until that
+  site's residents, staff and suppliers are assigned to it. Reception (signed-in) behaviour is unchanged.
+- Contractor credential verification is still a manual staff action; no external notification delivery.
