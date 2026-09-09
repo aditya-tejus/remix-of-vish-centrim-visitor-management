@@ -7,7 +7,7 @@ import { useVisitors } from "@/hooks/useVisitors";
 import { Visitor } from "@/types/visitor";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, UserPlus } from "lucide-react";
 
 export default function CheckIn() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -39,7 +39,7 @@ export default function CheckIn() {
           </header>
           <main className="p-6 flex items-center justify-center min-h-[60vh]">
             <div className="text-center space-y-4">
-              <div className="text-5xl">👋</div>
+              <UserPlus className="h-12 w-12 mx-auto text-primary" aria-hidden />
               <h2 className="text-xl font-semibold text-foreground">Ready to Check In</h2>
               <p className="text-sm text-muted-foreground max-w-md">
                 Register a new visitor, contractor, or staff member. You can also scan a returning visitor's QR code for instant check-in.

@@ -32,11 +32,11 @@ interface AddVisitDialogProps {
   onAdd: (visitor: Omit<Visitor, "id">) => Visitor;
 }
 
-const visitorTypes: { type: VisitorType; label: string; icon: typeof User; emoji: string }[] = [
-  { type: "visitor", label: "Visitor", icon: User, emoji: "👋" },
-  { type: "contractor", label: "Contractor", icon: Truck, emoji: "🔧" },
-  { type: "volunteer", label: "Volunteer", icon: Heart, emoji: "🤝" },
-  { type: "staff", label: "Staff", icon: UserCog, emoji: "💼" },
+const visitorTypes: { type: VisitorType; label: string; icon: typeof User }[] = [
+  { type: "visitor", label: "Visitor", icon: User },
+  { type: "contractor", label: "Contractor", icon: Truck },
+  { type: "volunteer", label: "Volunteer", icon: Heart },
+  { type: "staff", label: "Staff", icon: UserCog },
 ];
 
 interface VisitorProfile {
@@ -828,12 +828,12 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType, prefill
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Type</p>
                 <div className="flex gap-2">
-                  {visitorTypes.map(({ type, label, emoji }) => (
+                  {visitorTypes.map(({ type, label, icon: TypeIcon }) => (
                     <button key={type} onClick={() => { setSelectedType(type); setSelectedResident(null); setSelectedProfile(null); }}
                       className={`flex-1 flex flex-col items-center gap-1 py-3 px-2 rounded-xl border-2 text-center transition-all ${
                         selectedType === type ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/30"
                       }`}>
-                      <span className="text-lg">{emoji}</span>
+                      <TypeIcon className="h-4 w-4 text-primary" aria-hidden />
                       <span className={`text-[11px] font-bold ${selectedType === type ? "text-primary" : "text-foreground"}`}>{label}</span>
                     </button>
                   ))}
@@ -1091,12 +1091,12 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType, prefill
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Type</p>
                 <div className="flex gap-2">
-                  {visitorTypes.map(({ type, label, emoji }) => (
+                  {visitorTypes.map(({ type, label, icon: TypeIcon }) => (
                     <button key={type} onClick={() => { setSelectedType(type); setSelectedResident(null); setSelectedProfile(null); }}
                       className={`flex-1 flex flex-col items-center gap-1 py-3 px-2 rounded-xl border-2 text-center transition-all ${
                         selectedType === type ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/30"
                       }`}>
-                      <span className="text-lg">{emoji}</span>
+                      <TypeIcon className="h-4 w-4 text-primary" aria-hidden />
                       <span className={`text-[11px] font-bold ${selectedType === type ? "text-primary" : "text-foreground"}`}>{label}</span>
                     </button>
                   ))}

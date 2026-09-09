@@ -13,10 +13,10 @@ import { Check, User, Truck, UserCog, Users, Thermometer, Shield, Heart } from "
 import { PrivacyNotice } from "@/components/PrivacyNotice";
 import { VisitorType } from "@/types/visitor";
 
-const visitorTypes: { type: VisitorType; label: string; emoji: string }[] = [
-  { type: "visitor", label: "Visitor", emoji: "👋" },
-  { type: "contractor", label: "Contractor", emoji: "🔧" },
-  { type: "volunteer", label: "Volunteer", emoji: "🤝" },
+const visitorTypes: { type: VisitorType; label: string; Icon: React.ElementType }[] = [
+  { type: "visitor", label: "Visitor", Icon: User },
+  { type: "contractor", label: "Contractor", Icon: Truck },
+  { type: "volunteer", label: "Volunteer", Icon: Heart },
 ];
 
 const healthQuestions = [
@@ -110,7 +110,7 @@ export default function PublicCheckIn() {
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">Please select the option that best describes you.</p>
             <div className="grid grid-cols-2 gap-3">
-              {visitorTypes.map(({ type, label, emoji }) => (
+              {visitorTypes.map(({ type, label, Icon }) => (
                 <button
                   key={type}
                   onClick={() => setSelectedType(type)}
@@ -120,7 +120,7 @@ export default function PublicCheckIn() {
                       : "border-border hover:border-primary/30"
                   }`}
                 >
-                  <span className="text-2xl">{emoji}</span>
+                  <Icon className="h-6 w-6 text-primary" aria-hidden />
                   <span className={`text-sm font-semibold ${selectedType === type ? "text-primary" : "text-foreground"}`}>{label}</span>
                 </button>
               ))}

@@ -19,11 +19,11 @@ interface StepConfirmProps {
   setCheckInTimeOverride: (val: string | null) => void;
 }
 
-const TYPE_BADGES: Record<string, { label: string; emoji: string; className: string }> = {
-  visitor: { label: "Visitor", emoji: "👋", className: "bg-primary/10 text-primary border-primary/20" },
-  contractor: { label: "Contractor", emoji: "🔧", className: "bg-warning/10 text-warning border-warning/20" },
-  volunteer: { label: "Volunteer", emoji: "🤝", className: "bg-success/10 text-success border-success/20" },
-  staff: { label: "Staff", emoji: "💼", className: "bg-muted text-muted-foreground border-border" },
+const TYPE_BADGES: Record<string, { label: string; className: string }> = {
+  visitor: { label: "Visitor", className: "bg-primary/10 text-primary border-primary/20" },
+  contractor: { label: "Contractor", className: "bg-warning/10 text-warning border-warning/20" },
+  volunteer: { label: "Volunteer", className: "bg-success/10 text-success border-success/20" },
+  staff: { label: "Staff", className: "bg-muted text-muted-foreground border-border" },
 };
 
 export function StepConfirm({
@@ -62,7 +62,7 @@ export function StepConfirm({
             <p className="text-[18px] font-bold text-foreground">{formData.firstName} {formData.surname}</p>
             <div className="flex items-center gap-2 mt-1">
               <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border ${typeBadge.className}`}>
-                {typeBadge.emoji} {typeBadge.label}
+                {typeBadge.label}
               </span>
               {formData.selectPerson && (
                 <span className="text-[12px] text-muted-foreground flex items-center gap-1">

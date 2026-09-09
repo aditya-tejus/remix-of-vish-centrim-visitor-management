@@ -88,6 +88,8 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
   const [visitors, setVisitors] = useState<Visitor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
 
   const fetchVisitors = useCallback(async () => {
     // Kiosk (unauthenticated) reads go through a narrow server function that returns
@@ -126,8 +128,10 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     } else if (data) {
       setError(null);
       setVisitors((data as unknown as DbVisitor[]).map(dbToVisitor));
+      setLastUpdated(new Date());
     }
     setLoading(false);
+
   }, [publicMode, currentSiteId, isLegacySite]);
 
 
@@ -162,11 +166,17 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
 
   }, [fetchVisitors]);
 
-  const addVisitor = (visitor: Omit<Visitor, "id">): Visitor => {
+  /**
+   * Saves a check-in. Returns the optimistic record plus a promise that settles
+   * when the server has confirmed it, so a form can stay open until it is safe
+   * to close and can offer a retry with the entered details still on screen.
+   */
+  const submitVisitor = (visitor: Omit<Visitor, "id">): { visitor: Visitor; saved: Promise<Visitor> } => {
     const tempId = crypto.randomUUID();
     const newVisitor: Visitor = { ...visitor, id: tempId };
     // Optimistic update
     setVisitors((prev) => [newVisitor, ...prev]);
+
 
     const payload: Record<string, unknown> = {
       first_name: visitor.firstName,
@@ -217,41 +227,53 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       });
       console.error("Failed to save visitor record", error);
       onSaveError?.();
+      return new Error("check-in-not-saved");
+    };
+
+    const settle = (realId: string) => {
+      setVisitors((prev) => prev.map((v) => (v.id === tempId ? { ...v, id: realId } : v)));
+      return { ...newVisitor, id: realId };
     };
 
     if (publicMode) {
       // Kiosk: purpose-specific server function. The kiosk has no table access.
-      supabase
+      const saved = Promise.resolve(supabase
         .rpc("kiosk_check_in" as any, { p_payload: payload as any })
         .then(({ data, error }) => {
           const row = Array.isArray(data) ? (data[0] as any) : (data as any);
-          if (error || !row?.visitor_id) return failed(error);
-          setVisitors((prev) =>
-            prev.map((v) => (v.id === tempId ? { ...v, id: row.visitor_id } : v))
-          );
-        });
-      return newVisitor;
+          if (error || !row?.visitor_id) throw failed(error);
+          return settle(row.visitor_id as string);
+        }));
+      return { visitor: newVisitor, saved };
     }
 
     // Staff: direct insert, guarded by site-scoped policies
-    supabase
+    const saved = Promise.resolve(supabase
       .from("visitors")
       .insert(payload as any)
       .select("id, qr_code")
       .single()
       .then(({ data, error }) => {
-        if (error || !data) return failed(error);
-        // Replace temp ID with real one
-        setVisitors((prev) =>
-          prev.map((v) => (v.id === tempId ? { ...v, id: (data as any).id } : v))
-        );
-      });
+        if (error || !data) throw failed(error);
+        return settle((data as any).id as string);
+      }));
 
-
-
-
-    return newVisitor;
+    return { visitor: newVisitor, saved };
   };
+
+  /** Fire-and-forget check-in, kept for callers that do not await the save. */
+  const addVisitor = (visitor: Omit<Visitor, "id">): Visitor => {
+    const { visitor: optimistic, saved } = submitVisitor(visitor);
+    saved.catch(() => undefined);
+    return optimistic;
+  };
+
+  /** Check-in that resolves only once the record is safely stored. */
+  const addVisitorAsync = async (visitor: Omit<Visitor, "id">): Promise<Visitor> => {
+    const { saved } = submitVisitor(visitor);
+    return saved;
+  };
+
 
   const markResidentAway = async (visitorId: string, details: {
     expectedReturnDate?: Date;
@@ -333,6 +355,8 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
   ) => {
     const checkOutTime = timeOverride ? (() => { const now = new Date(); const [h, m] = timeOverride.split(":").map(Number); now.setHours(h, m, 0, 0); return now; })() : new Date();
     const stillOpen = companionOutcome ? !companionOutcome.everyoneLeft : false;
+    // Kept so the row can be put back exactly as it was if the save fails.
+    const previous = visitors.find((v) => v.id === id) ?? null;
 
     setVisitors((prev) =>
       prev.map((v) =>
@@ -361,19 +385,29 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       }
       updateData.additional_visitors = companionOutcome.remainingCompanions;
     }
+
+    const rollBack = (error: unknown) => {
+      if (previous) setVisitors((prev) => prev.map((v) => (v.id === id ? previous : v)));
+      console.error("Failed to record this departure", error);
+      throw new Error("check-out-not-saved");
+    };
+
     if (publicMode) {
       if (!stillOpen) {
-        await supabase.rpc("kiosk_check_out" as any, {
+        const { error } = await supabase.rpc("kiosk_check_out" as any, {
           p_visitor_id: id,
           p_time: checkOutTime.toISOString(),
         });
+        if (error) rollBack(error);
       }
     } else {
-      await supabase
+      const { error } = await supabase
         .from("visitors")
         .update(updateData)
         .eq("id", id);
+      if (error) rollBack(error);
     }
+
 
   };
 
@@ -467,6 +501,10 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     error,
     refresh: fetchVisitors,
     addVisitor,
+    addVisitorAsync,
+    /** Last successful read of the list, so the desk can see how fresh it is. */
+    lastUpdated,
+
     markResidentAway,
     checkOutVisitor,
     checkInReturn,

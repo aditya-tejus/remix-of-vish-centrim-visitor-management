@@ -77,6 +77,9 @@ export function CheckOutSheet({
   const [successDuration, setSuccessDuration] = useState("");
   const [bulkTimeOverride, setBulkTimeOverride] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  /** Plain message shown when a departure did not save, so nothing looks done that isn't. */
+  const [checkOutFailed, setCheckOutFailed] = useState<string | null>(null);
+
   const [leavingCompanions, setLeavingCompanions] = useState<number[]>([]);
 
   const checkedInVisitors = useMemo(
@@ -128,14 +131,28 @@ export function CheckOutSheet({
 
   const handleBulkCheckOut = async () => {
     setBulkBusy(true);
+    setCheckOutFailed(null);
+    const failures: string[] = [];
     for (const v of bulkVisitors) {
-      await onCheckOut(v.id, "Checked out by reception", bulkTimeOverride || undefined);
+      try {
+        await onCheckOut(v.id, "Checked out by reception", bulkTimeOverride || undefined);
+      } catch {
+        failures.push(`${v.firstName} ${v.surname}`);
+      }
     }
     setBulkBusy(false);
+    if (failures.length > 0) {
+      // Keep the sheet open so nobody is told someone left when they did not.
+      setCheckOutFailed(
+        `Not saved for ${failures.join(", ")}. Check the connection and try again.`
+      );
+      return;
+    }
     setBulkTimeOverride(null);
     onPreSelectedClear?.();
     onOpenChange(false);
   };
+
 
   const keysFor = (visitorId: string) => openIssues.filter((i) => i.visitorId === visitorId);
 
@@ -152,8 +169,9 @@ export function CheckOutSheet({
   };
 
   const handleConfirmCheckOut = async () => {
-    if (!selectedVisitor) return;
+    if (!selectedVisitor || checkingOut) return;
     setCheckingOut(selectedVisitor.id);
+    setCheckOutFailed(null);
     const name = `${selectedVisitor.firstName} ${selectedVisitor.surname}`;
     const dur = getDuration(selectedVisitor.checkInTime);
     const held = keysFor(selectedVisitor.id);
@@ -171,13 +189,20 @@ export function CheckOutSheet({
       ? planCompanionCheckout(selectedVisitor, leavingCompanions, true, at)
       : undefined;
     const companionNote = outcome && outcome.remainingCompanions > 0 ? ` · ${outcome.note}` : "";
-    await onCheckOut(
-      selectedVisitor.id,
-      `${checkoutReason}${keyNote}${companionNote}`.trim() || undefined,
-      timeOverride || undefined,
-      outcome
-    );
+    try {
+      await onCheckOut(
+        selectedVisitor.id,
+        `${checkoutReason}${keyNote}${companionNote}`.trim() || undefined,
+        timeOverride || undefined,
+        outcome
+      );
+    } catch {
+      setCheckingOut(null);
+      setCheckOutFailed("This departure was not saved. Check the connection and try again.");
+      return;
+    }
     setCheckingOut(null);
+
     setSuccessName(name);
     setSuccessDuration(dur);
     setShowSuccess(true);
@@ -297,7 +322,14 @@ export function CheckOutSheet({
 
                 <TimeOverride value={bulkTimeOverride} onChange={setBulkTimeOverride} label="Time they left" />
 
+                {checkOutFailed && (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-[13px] text-destructive">
+                    {checkOutFailed}
+                  </div>
+                )}
+
                 <div className="flex gap-2">
+
                   <Button variant="outline" className="flex-1" onClick={() => { onPreSelectedClear?.(); onOpenChange(false); }}>
                     Cancel
                   </Button>
@@ -619,12 +651,18 @@ export function CheckOutSheet({
 
           {/* Footer — only show when confirming */}
           {selectedVisitor && !showSuccess && (
-            <div className="shrink-0 border-t border-border p-5">
+            <div className="shrink-0 border-t border-border p-5 space-y-3">
+              {checkOutFailed && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-[13px] text-destructive">
+                  {checkOutFailed}
+                </div>
+              )}
               <Button
                 className="w-full h-12 text-[15px] font-semibold gap-2 rounded-xl bg-checkout hover:bg-checkout/90 text-checkout-foreground shadow-sm"
                 disabled={checkingOut === selectedVisitor.id}
                 onClick={handleConfirmCheckOut}
               >
+
                 {checkingOut === selectedVisitor.id ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
