@@ -7,8 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import { usePersonTypes, PersonTypeConfigRow, PersonTypeExtras, PERSON_TYPE_DEFAULTS } from "@/hooks/usePersonTypes";
 import { useSettingsAccess } from "@/hooks/useSettingsAccess";
 import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
+import { usePersonTypesDraft } from "@/components/settings/preview/personTypesDraft";
 import { RotateCcw, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
 import { useOperatingContext, siteScopedKey } from "@/contexts/OperatingContext";
 import { SettingExplainer } from "@/components/settings/SettingExplainer";
 
@@ -25,18 +25,24 @@ const FLAGS: { key: keyof PersonTypeConfigRow; label: string; help: string }[] =
 
 export function PersonTypesTab() {
   const { personTypes, extras, loading, reload } = usePersonTypes();
-  const { role } = useAuth();
   const { siteId, siteName, pack } = useOperatingContext();
   const [rows, setRows] = useState<PersonTypeConfigRow[]>([]);
   const [extraRows, setExtraRows] = useState<PersonTypeExtras>(extras);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
   const access = useSettingsAccess("person-types");
-  const canEdit = access.canEdit || role === "admin";
+  const canEdit = access.canEdit;
   const [dirty, setDirty] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   useUnsavedGuard(dirty && canEdit);
+
+  // The preview panel shows these rows, so it changes as you edit.
+  const { setDraft } = usePersonTypesDraft();
+  useEffect(() => {
+    if (rows.length) setDraft({ rows, extras: extraRows, dirty });
+  }, [rows, extraRows, dirty, setDraft]);
+  useEffect(() => () => setDraft(null), [setDraft]);
 
   useEffect(() => { if (!loading) { setRows(personTypes); setExtraRows(extras); setDirty(false); } }, [loading, personTypes, extras]);
 

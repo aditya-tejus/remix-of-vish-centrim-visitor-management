@@ -133,9 +133,11 @@ function getSections(type: string): SectionConfig[] {
 
 interface Props {
   type: string;
+  /** When read only the panels open by default, because their headers are disabled. */
+  readOnly?: boolean;
 }
 
-export function PersonTypeSettings({ type }: Props) {
+export function PersonTypeSettings({ type, readOnly = false }: Props) {
   const config = personTypeConfigs[type];
   if (!config) return null;
 
@@ -156,7 +158,7 @@ export function PersonTypeSettings({ type }: Props) {
       </div>
 
       {/* Accordion sections */}
-      <Accordion type="multiple" defaultValue={[sections[0]?.id]} className="space-y-2">
+      <Accordion type="multiple" defaultValue={readOnly ? sections.map((s) => s.id) : [sections[0]?.id]} className="space-y-2">
         {sections.map((section) => {
           const SIcon = section.icon;
           return (
