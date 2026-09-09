@@ -88,17 +88,25 @@ export function PersonTypesTab() {
       { key: k("group_attendee_phone"), value: extraRows.groupAttendeePhoneEnabled ? "true" : "false" },
       { key: k("group_organiser_declared_terms"), value: extraRows.organiserDeclaredTermsEnabled ? "true" : "false" },
     );
-    await supabase.from("settings").upsert(payload, { onConflict: "key" });
-    await supabase.from("audit_log").insert({
-      action: "settings_update",
-      performed_by: "Staff",
-      records_affected: payload.length,
-      details: { setting: "person_types", site: siteName ?? "account default", value: rows.map((r) => ({ type: r.type, kiosk: r.kioskEnabled, desk: r.deskEnabled, label: r.kioskLabel })) } as any,
-      change_reason: "Person type availability and workflow rules updated",
-    });
-    await reload();
-    setSaving(false);
-    toast({ title: "Visitor types saved" });
+    try {
+      const { error } = await supabase.from("settings").upsert(payload, { onConflict: "key" });
+      if (error) throw error;
+      await supabase.from("audit_log").insert({
+        action: "settings_update",
+        performed_by: "Staff",
+        records_affected: payload.length,
+        details: { setting: "person_types", site: siteName ?? "account default", value: rows.map((r) => ({ type: r.type, kiosk: r.kioskEnabled, desk: r.deskEnabled, label: r.kioskLabel })) } as any,
+        change_reason: "Person type availability and workflow rules updated",
+      });
+      await reload();
+      setDirty(false);
+      setSavedAt(new Date());
+      toast({ title: "Visitor types saved" });
+    } catch {
+      setSaveError("Your changes were not saved. Nothing has been changed yet — check your connection and try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
