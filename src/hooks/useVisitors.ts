@@ -351,6 +351,8 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
   ) => {
     const checkOutTime = timeOverride ? (() => { const now = new Date(); const [h, m] = timeOverride.split(":").map(Number); now.setHours(h, m, 0, 0); return now; })() : new Date();
     const stillOpen = companionOutcome ? !companionOutcome.everyoneLeft : false;
+    // Kept so the row can be put back exactly as it was if the save fails.
+    const previous = visitors.find((v) => v.id === id) ?? null;
 
     setVisitors((prev) =>
       prev.map((v) =>
@@ -379,19 +381,29 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       }
       updateData.additional_visitors = companionOutcome.remainingCompanions;
     }
+
+    const rollBack = (error: unknown) => {
+      if (previous) setVisitors((prev) => prev.map((v) => (v.id === id ? previous : v)));
+      console.error("Failed to record this departure", error);
+      throw new Error("check-out-not-saved");
+    };
+
     if (publicMode) {
       if (!stillOpen) {
-        await supabase.rpc("kiosk_check_out" as any, {
+        const { error } = await supabase.rpc("kiosk_check_out" as any, {
           p_visitor_id: id,
           p_time: checkOutTime.toISOString(),
         });
+        if (error) rollBack(error);
       }
     } else {
-      await supabase
+      const { error } = await supabase
         .from("visitors")
         .update(updateData)
         .eq("id", id);
+      if (error) rollBack(error);
     }
+
 
   };
 
