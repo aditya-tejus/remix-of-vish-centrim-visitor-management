@@ -805,6 +805,6 @@ export default function KeysRegister() {
           })()}
         </SheetContent>
       </Sheet>
-    </SidebarProvider>
+    </AppShell>
   );
 }
