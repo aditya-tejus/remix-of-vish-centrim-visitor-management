@@ -21,7 +21,7 @@ import { Visitor } from "@/types/visitor";
 import { useResidents } from "@/hooks/useResidents";
 import { VisitListQRDialog } from "@/components/VisitListQRDialog";
 import { HandoverPrintDialog } from "@/components/HandoverPrintDialog";
-import { LoadingState, ErrorState, OfflineState, PermissionState } from "@/components/states";
+import { LoadingState, ErrorState, OfflineState, PermissionDeniedState } from "@/components/states";
 import { useVisitViews, VisitViewKey } from "@/hooks/useVisitViews";
 import { VisitViewSwitch } from "@/components/visitlist/VisitViewSwitch";
 import { usePersonTypes } from "@/hooks/usePersonTypes";
@@ -55,7 +55,7 @@ export default function VisitList() {
   const { deskTypes } = usePersonTypes();
   const { can, loading: permsLoading } = usePermissions();
   const { role } = useAuth();
-  const { currentSiteName } = useSite();
+  const { currentSite } = useSite();
 
   useEffect(() => {
     const up = () => setOnline(true);
@@ -178,7 +178,7 @@ export default function VisitList() {
               <div className="flex items-center gap-3 shrink-0 min-w-0">
                 <div className="flex flex-col min-w-0">
                   <span className="text-[13px] font-medium text-foreground truncate">
-                    {currentSiteName || "This site"}
+                    {currentSite?.name || "This site"}
                   </span>
                   <span className="text-[11px] text-muted-foreground">
                     {format(selectedDate, "EEE, dd MMM yyyy")}
@@ -286,7 +286,7 @@ export default function VisitList() {
 
           <main className="px-4 sm:px-6 pb-16 pt-1 min-w-0">
             {!canView ? (
-              <PermissionState description="You do not have permission to see who is on site. Ask an administrator if you need this." />
+              <PermissionDeniedState description="You do not have permission to see who is on site. Ask an administrator if you need this." />
             ) : !online ? (
               <OfflineState description="You are offline. The list below may be out of date — check-ins will save once the connection returns." />
             ) : loading && visitors.length === 0 ? (
