@@ -1,8 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { AppShell } from "@/components/AppShell";
 import { useVisitors } from "@/hooks/useVisitors";
 import { Visitor, VisitorType } from "@/types/visitor";
 import { Badge } from "@/components/ui/badge";
@@ -60,32 +58,22 @@ export default function CalendarPage() {
   const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm">
-            <div className="flex items-center gap-4 px-6 py-4">
-              <SidebarTrigger />
-              <div>
-                <h1 className="text-lg font-semibold text-foreground">Visit Calendar</h1>
-                <p className="text-xs text-muted-foreground">Daily visit overview — click a date to see details</p>
-              </div>
-            </div>
-          </header>
-
-          <main className="p-6 flex flex-col lg:flex-row gap-6">
+    <AppShell
+      title="Visit Calendar"
+      subtitle="Daily visit overview — select a date to see details"
+      mainClassName="p-6 flex flex-col lg:flex-row gap-6"
+    >
             {/* Calendar Grid */}
             <div className="flex-1 min-w-0">
               {/* Month Navigation */}
               <div className="flex items-center justify-between mb-4">
-                <Button variant="ghost" size="icon" onClick={() => setCurrentMonth((m) => subMonths(m, 1))}>
+                <Button variant="ghost" size="icon" aria-label="Previous month" onClick={() => setCurrentMonth((m) => subMonths(m, 1))}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <h2 className="text-lg font-bold text-foreground">
                   {format(currentMonth, "MMMM yyyy")}
                 </h2>
-                <Button variant="ghost" size="icon" onClick={() => setCurrentMonth((m) => addMonths(m, 1))}>
+                <Button variant="ghost" size="icon" aria-label="Next month" onClick={() => setCurrentMonth((m) => addMonths(m, 1))}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -160,7 +148,7 @@ export default function CalendarPage() {
                         {selectedVisitors.length} visit{selectedVisitors.length !== 1 ? "s" : ""}
                       </p>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedDate(null)}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Close day details" onClick={() => setSelectedDate(null)}>
                       <X className="h-3.5 w-3.5" />
                     </Button>
                   </div>
@@ -246,9 +234,6 @@ export default function CalendarPage() {
                 </div>
               )}
             </div>
-          </main>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+    </AppShell>
   );
 }
