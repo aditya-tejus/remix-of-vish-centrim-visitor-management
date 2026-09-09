@@ -159,7 +159,7 @@ export function useKioskCheckInFlow() {
         lastVisit: prev.last_visit || null,
       };
     },
-    []
+    [siteId]
   );
 
   // Legacy name-only prefill used on the details step
