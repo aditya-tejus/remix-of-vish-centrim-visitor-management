@@ -10,6 +10,7 @@ import { CompanionDetail, VisitorType } from "@/types/visitor";
 import { CheckInFormData, VisitorProfile } from "./useCheckInFlow";
 import { useRef, useState, useCallback } from "react";
 import type { CompanionFieldSpec } from "@/lib/companionFields";
+import type { CheckInFieldSpec } from "@/lib/checkInFields";
 
 interface StepDetailsProps {
   formData: CheckInFormData;
@@ -22,6 +23,8 @@ interface StepDetailsProps {
   companions: CompanionDetail[];
   setCompanions: React.Dispatch<React.SetStateAction<CompanionDetail[]>>;
   activeCompanionFields: CompanionFieldSpec[];
+  /** Exactly the fields this site asks for this person type. */
+  activeFields: CheckInFieldSpec[];
   photo: string | null;
   setPhoto: (photo: string | null) => void;
   onChangeProfile: () => void;
@@ -38,6 +41,7 @@ export function StepDetails({
   companions,
   setCompanions,
   activeCompanionFields,
+  activeFields,
   photo,
   setPhoto,
   onChangeProfile,
@@ -113,82 +117,93 @@ export function StepDetails({
             </div>
           </div>
         </div>
-      ) : (
-        <>
-          {/* Two-column layout: Photo + Personal Details side by side */}
-          <div className="grid grid-cols-[auto_1fr] gap-5">
-            {/* Photo capture — compact left column */}
-            <div className="w-[140px]">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
-                <Camera className="h-3 w-3" /> Photo
-              </p>
-              {photo ? (
-                <div className="space-y-2">
-                  <img src={photo} alt="" className="h-[120px] w-[120px] rounded-2xl object-cover border-2 border-success/30 shadow-sm" />
-                  <div className="flex gap-1.5">
-                    <Button variant="outline" size="sm" className="h-7 text-[10px] rounded-lg gap-1 flex-1" onClick={() => { setPhoto(null); startCamera(); }}>
-                      <Camera className="h-3 w-3" /> Retake
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => setPhoto(null)}>
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              ) : showCamera ? (
-                <div className="space-y-2">
-                  <div className="relative rounded-2xl overflow-hidden bg-muted border border-border h-[120px] w-[120px]">
-                    <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-                  </div>
-                  <div className="flex gap-1.5">
-                    <Button variant="ghost" size="sm" className="h-7 text-[10px] flex-1" onClick={stopCamera}>Cancel</Button>
-                    <button onClick={capturePhoto} className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md hover:scale-105 transition-transform">
-                      <Camera className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button onClick={startCamera} className="w-[120px] h-[120px] flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border hover:border-primary/40 hover:bg-primary/5 transition-all group">
-                  <Camera className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
-                  <span className="text-[11px] font-medium text-muted-foreground group-hover:text-primary transition-colors">Take Photo</span>
-                </button>
-              )}
-              <canvas ref={canvasRef} className="hidden" />
-              <input ref={fileInputRef} type="file" accept="image/*" capture="user" className="hidden" onChange={handleFileUpload} />
-            </div>
+      ) : null}
 
-            {/* Personal details — right column */}
-            <div className="space-y-3">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <UserCircle className="h-3 w-3" /> Personal Details
-              </p>
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="space-y-1">
-                  <Label className="text-[12px] font-medium">First Name <span className="text-destructive">*</span></Label>
-                  <Input value={formData.firstName} onChange={(e) => updateField("firstName", e.target.value)} placeholder="First name" className="rounded-xl h-10 text-[14px]" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[12px] font-medium">Surname <span className="text-destructive">*</span></Label>
-                  <Input value={formData.surname} onChange={(e) => updateField("surname", e.target.value)} placeholder="Surname" className="rounded-xl h-10 text-[14px]" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2.5">
-                <div className="space-y-1">
-                  <Label className="text-[12px] font-medium">Email</Label>
-                  <Input type="email" value={formData.email} onChange={(e) => updateField("email", e.target.value)} placeholder="email@example.com" className="rounded-xl h-10 text-[14px]" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[12px] font-medium">Phone</Label>
-                  <Input value={formData.mobile} onChange={(e) => updateField("mobile", e.target.value)} placeholder="07700..." className="rounded-xl h-10 text-[14px]" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-[12px] font-medium">Address</Label>
-                <Input value={formData.address} onChange={(e) => updateField("address", e.target.value)} placeholder="Street, City (optional)" className="rounded-xl h-10 text-[14px]" />
+      {/* Personal details — exactly what this site asks for this person type */}
+      <div className="grid grid-cols-[auto_1fr] gap-5">
+        {/* Photo capture — compact left column */}
+        <div className="w-[140px]">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+            <Camera className="h-3 w-3" aria-hidden /> Photo
+          </p>
+          {photo ? (
+            <div className="space-y-2">
+              <img src={photo} alt="" className="h-[120px] w-[120px] rounded-2xl object-cover border-2 border-success/30 shadow-sm" />
+              <div className="flex gap-1.5">
+                <Button variant="outline" size="sm" className="h-7 text-[10px] rounded-lg gap-1 flex-1" onClick={() => { setPhoto(null); startCamera(); }}>
+                  <Camera className="h-3 w-3" aria-hidden /> Retake
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => setPhoto(null)} aria-label="Remove photo">
+                  <X className="h-3 w-3" aria-hidden />
+                </Button>
               </div>
             </div>
+          ) : showCamera ? (
+            <div className="space-y-2">
+              <div className="relative rounded-2xl overflow-hidden bg-muted border border-border h-[120px] w-[120px]">
+                <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+              </div>
+              <div className="flex gap-1.5">
+                <Button variant="ghost" size="sm" className="h-7 text-[10px] flex-1" onClick={stopCamera}>Cancel</Button>
+                <Button size="sm" onClick={capturePhoto} className="h-8 w-8 p-0 rounded-full" aria-label="Take photo">
+                  <Camera className="h-3.5 w-3.5" aria-hidden />
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={startCamera} className="w-[120px] h-[120px] flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border hover:border-primary/40 hover:bg-primary/5 transition-all group">
+              <Camera className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" aria-hidden />
+              <span className="text-[11px] font-medium text-muted-foreground group-hover:text-primary transition-colors">Take Photo</span>
+            </button>
+          )}
+          <canvas ref={canvasRef} className="hidden" />
+          <input ref={fileInputRef} type="file" accept="image/*" capture="user" className="hidden" onChange={handleFileUpload} />
+        </div>
+
+        {/* Configured fields — right column */}
+        <div className="space-y-3">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <UserCircle className="h-3 w-3" aria-hidden /> Personal Details
+          </p>
+          <div className="grid grid-cols-2 gap-2.5">
+            {activeFields.map((f) => {
+              const value = String((formData as unknown as Record<string, unknown>)[f.valueKey] ?? "");
+              const missing = f.required && !value.trim();
+              const inputType = f.type === "date" ? "date" : f.type === "email" ? "email" : f.type === "tel" ? "tel" : "text";
+              const wide = f.type === "textarea" || f.valueKey === "address";
+              return (
+                <div key={f.id} className={`space-y-1 ${wide ? "col-span-2" : ""}`}>
+                  <Label className="text-[12px] font-medium">
+                    {f.label}
+                    {f.required && <span className="text-destructive ml-0.5">*</span>}
+                  </Label>
+                  {f.type === "select" || f.type === "yesno" ? (
+                    <Select value={value} onValueChange={(v) => updateField(f.valueKey, v)} disabled={!f.editable}>
+                      <SelectTrigger className="rounded-xl h-10 text-[14px]" aria-label={f.label}>
+                        <SelectValue placeholder={f.label} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(f.type === "yesno" ? ["Yes", "No"] : f.choices || []).map((opt) => (
+                          <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : f.type === "textarea" ? (
+                    <Textarea value={value} onChange={(e) => updateField(f.valueKey, e.target.value)} readOnly={!f.editable}
+                      placeholder={f.label} aria-label={f.label} className="rounded-xl text-[14px] min-h-[60px] resize-none" />
+                  ) : (
+                    <Input type={inputType} value={value} onChange={(e) => updateField(f.valueKey, e.target.value)} readOnly={!f.editable}
+                      placeholder={f.label} aria-label={f.label} className="rounded-xl h-10 text-[14px]" />
+                  )}
+                  {f.help && <p className="text-[11px] text-muted-foreground">{f.help}</p>}
+                  {missing && <p className="text-[11px] text-destructive">{f.label} is needed before signing in</p>}
+                </div>
+              );
+            })}
           </div>
-        </>
-      )}
+        </div>
+      </div>
+
 
       {/* Visit details */}
       <div className="rounded-xl border border-border bg-card p-5 space-y-4">

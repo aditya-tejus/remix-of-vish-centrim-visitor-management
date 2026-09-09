@@ -227,13 +227,13 @@ export default function KioskCheckIn() {
     addVisitor({
       firstName: flow.formValues.firstName || "",
       surname: flow.formValues.surname || "",
-      email: flow.formValues.email || "",
-      mobile: flow.formValues.mobile || "",
+      email: flow.isFieldOn("email") ? flow.formValues.email || "" : "",
+      mobile: flow.isFieldOn("mobile") ? flow.formValues.mobile || "" : "",
       type: flow.selectedType,
       checkInTime: new Date(),
       checkOutTime: null,
       whomToVisit: flow.formValues.whomToVisit || "",
-      address: flow.formValues.address || "",
+      address: flow.isFieldOn("address") ? flow.formValues.address || "" : "",
       status: "checked-in",
       healthDeclaration: allHealthClear,
       healthAnswers: { ...flow.healthAnswers, ...flow.contractorAnswers },
@@ -567,58 +567,67 @@ export default function KioskCheckIn() {
             </div>
 
 
-            {flow.activeFormFields.map((field) => {
-              if (field.field_key === "firstName" || field.field_key === "surname") return null;
+            {flow.activeFields.map((field) => {
+              if (field.valueKey === "firstName" || field.valueKey === "surname") return null;
+              const value = flow.formValues[field.valueKey] || "";
               return (
-                <div key={field.id}>
-                  {field.field_type === "textarea" ? (
+                <div key={field.id} className="space-y-1">
+                  {field.type === "textarea" ? (
                     <Textarea
                       placeholder={`${field.label}${field.required ? " *" : ""}`}
-                      value={flow.formValues[field.field_key] || ""}
-                      onChange={(e) => flow.updateField(field.field_key, e.target.value)}
+                      aria-label={field.label}
+                      value={value}
+                      readOnly={!field.editable}
+                      onChange={(e) => flow.updateField(field.valueKey, e.target.value)}
                       className="min-h-[80px] text-base rounded-xl resize-none"
                     />
-                  ) : field.field_type === "select" ? (
+                  ) : field.type === "select" || field.type === "yesno" ? (
                     <Select
-                      value={flow.formValues[field.field_key] || ""}
-                      onValueChange={(val) => flow.updateField(field.field_key, val)}
+                      value={value}
+                      onValueChange={(val) => flow.updateField(field.valueKey, val)}
+                      disabled={!field.editable}
                     >
-                      <SelectTrigger className="h-14 text-base">
+                      <SelectTrigger className="h-14 text-base" aria-label={field.label}>
                         <SelectValue placeholder={`${field.label}${field.required ? " *" : ""}`} />
                       </SelectTrigger>
                       <SelectContent>
-                        {/* Dynamic options would come from field config; fallback to text input */}
-                        <SelectItem value="__none" disabled>No options configured</SelectItem>
+                        {(field.type === "yesno" ? ["Yes", "No"] : field.choices || []).map((opt) => (
+                          <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                        ))}
+                        {field.type === "select" && (field.choices || []).length === 0 && (
+                          <SelectItem value="__none" disabled>No options configured</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                   ) : (
                     <KioskInput
                       label={field.label}
                       required={field.required}
-                      value={flow.formValues[field.field_key] || ""}
-                      onChange={(e) => flow.updateField(field.field_key, e.target.value)}
-                      type={field.field_type === "email" ? "email" : field.field_type === "tel" ? "tel" : "text"}
-                      inputMode={field.field_type === "email" ? "email" : field.field_type === "tel" ? "tel" : undefined}
+                      value={value}
+                      readOnly={!field.editable}
+                      onChange={(e) => flow.updateField(field.valueKey, e.target.value)}
+                      type={field.type === "email" ? "email" : field.type === "tel" ? "tel" : field.type === "date" ? "date" : "text"}
+                      inputMode={field.type === "email" ? "email" : field.type === "tel" ? "tel" : undefined}
                     />
                   )}
+                  {field.help && <p className="text-sm text-muted-foreground">{field.help}</p>}
                 </div>
               );
             })}
 
-            {flow.activeFormFields.length === 0 && (
-              <>
-                <KioskInput label="Email" value={flow.formValues.email || ""} onChange={(e) => flow.updateField("email", e.target.value)} inputMode="email" type="email" />
-                <KioskInput label="Mobile" value={flow.formValues.mobile || ""} onChange={(e) => flow.updateField("mobile", e.target.value)} inputMode="tel" type="tel" />
-              </>
+
+            {flow.missingFieldsHint && (
+              <p className="text-base text-warning" role="status">{flow.missingFieldsHint}</p>
             )}
 
             <div className="flex gap-3 pt-2">
               <Button variant="secondary" onClick={goBack} className="flex-1 h-14 text-base gap-2 border border-border">
                 <ArrowLeft className="h-5 w-5" /> Back
               </Button>
-              <Button onClick={goNext} disabled={!flow.formValues.firstName?.trim() || !flow.formValues.surname?.trim()} className="flex-1 h-14 text-base gap-2">
+              <Button onClick={goNext} disabled={!flow.detailsValid} className="flex-1 h-14 text-base gap-2">
                 Next <ArrowRight className="h-5 w-5" />
               </Button>
+
             </div>
           </motion.div>
         )}

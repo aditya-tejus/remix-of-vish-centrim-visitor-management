@@ -3,6 +3,12 @@ import { VisitorType, Visitor, CompanionDetail } from "@/types/visitor";
 import { useActiveHealthQuestions, useActiveVaccinationFields } from "@/hooks/useHealthQuestions";
 import { useCompanionFields, useFormFields } from "@/hooks/useFormFields";
 import { mergeCompanionFields, missingCompanionFields, normaliseCompanion } from "@/lib/companionFields";
+import {
+  resolveCheckInFields,
+  missingCheckInFields,
+  missingFieldsMessage,
+  pickEnabledValues,
+} from "@/lib/checkInFields";
 import { useResidents } from "@/hooks/useResidents";
 import { useStaffMembers } from "@/hooks/useStaffMembers";
 import { supabase } from "@/integrations/supabase/client";
@@ -94,6 +100,14 @@ export function useCheckInFlow(open: boolean) {
     () => mergeCompanionFields(companionFieldsConfig, mainVisitorFields),
     [companionFieldsConfig, mainVisitorFields]
   );
+  // Exactly what this site asks the person at the desk, in order. Nothing is
+  // shown, validated or written unless it is configured for this person type.
+  const activeFields = useMemo(() => resolveCheckInFields(mainVisitorFields), [mainVisitorFields]);
+  const missingFields = useMemo(
+    () => missingCheckInFields(formData as unknown as Record<string, unknown>, activeFields),
+    [formData, activeFields]
+  );
+  const missingFieldsHint = missingFieldsMessage(missingFields);
 
   const fallbackHealthQuestions = [
     { id: "fever", question: "Do you have a fever or feel unusually warm?", type: "yesno" as const, required: true },
@@ -300,7 +314,7 @@ export function useCheckInFlow(open: boolean) {
       case "identify":
         return true; // Can always proceed (new or returning)
       case "details":
-        return !!(formData.firstName && formData.surname) && companionsComplete;
+        return missingFields.length === 0 && companionsComplete;
       case "food":
         return bringingFood === false || (bringingFood === true && isFoodFormValid(foodForm));
       case "screening":
@@ -311,12 +325,18 @@ export function useCheckInFlow(open: boolean) {
       default:
         return true;
     }
-  }, [step, formData, privacyAcknowledged, screeningFlagged, overrideValid, contractorBlocked, bringingFood, foodForm, companionsComplete]);
+  }, [step, missingFields, privacyAcknowledged, screeningFlagged, overrideValid, contractorBlocked, bringingFood, foodForm, companionsComplete]);
 
 
   const buildVisitor = (): Omit<Visitor, "id"> => {
     const allHealthClear = Object.values(healthAnswers).every((v) => v === false);
     const visitQr = crypto.randomUUID().slice(0, 12).toUpperCase();
+    // Details the site has switched off are never written to the arrival.
+    const enabled = pickEnabledValues(
+      formData as unknown as Record<string, unknown>,
+      activeFields,
+      ["email", "mobile", "address"]
+    );
     return {
       qrCode: visitQr,
       clientRequestId: requestId,
@@ -325,13 +345,13 @@ export function useCheckInFlow(open: boolean) {
 
       firstName: formData.firstName,
       surname: formData.surname,
-      email: formData.email,
-      mobile: formData.mobile,
+      email: enabled.email,
+      mobile: enabled.mobile,
       type: selectedType,
       checkInTime: checkInTimeOverride ? (() => { const now = new Date(); const [h, m] = checkInTimeOverride.split(":").map(Number); now.setHours(h, m, 0, 0); return now; })() : new Date(),
       checkOutTime: null,
       whomToVisit: formData.selectPerson,
-      address: formData.address,
+      address: enabled.address,
       status: "checked-in",
       healthDeclaration: allHealthClear && formData.healthDeclaration,
       additionalVisitors: companions.length,
@@ -372,6 +392,9 @@ export function useCheckInFlow(open: boolean) {
 
     // Companions
     companions, setCompanions, activeCompanionFields, companionsComplete,
+
+    // Configured fields for the main person
+    activeFields, missingFields, missingFieldsHint,
 
     // Photo
     photo, setPhoto,

@@ -408,3 +408,11 @@ Known limits after Phase 7E:
 - Historical reconciliation has NOT been run. The legacy "Unassigned" site still holds older arrivals with companions that are only counted. An administrator must rehearse and apply per site.
 - Security linter: 54 warnings (was 51). The 3 new ones are the new administrator-only routines, which check `settings.administer` internally before doing anything.
 - Prototype limits: badge printing is browser print only; the profile history view still reads the older visitor record (kept in step by the attendance mirror); none of this constitutes production compliance evidence.
+
+## Phase 8B-1 — Configuration-aware main visitor form (complete)
+- `src/lib/checkInFields.ts` is the single resolver for "what does this site ask?" — label, help text, input type, requiredness, editability, ordering. First name and surname are always asked and always required.
+- Reception check-in (`StepDetails` / `useCheckInFlow`) and the kiosk (`KioskCheckIn` / `useKioskCheckInFlow`) both build the details step and its validation from that one resolver, so they cannot drift apart. The kiosk's old hard-coded Email/Mobile fallback is gone.
+- Switched-off details are not shown, not validated and not written to the arrival record (email, mobile, address are cleared at save). Values captured before a field was switched off remain on the stored record and stay visible on the profile.
+- Required configured fields block Continue with a field-specific message.
+- Companion fields keep their existing path; screening rules, companion identity and profile changes are out of this slice.
+- Tests: `src/test/checkInFields.test.ts` (8 passing) covers email disabled, address disabled, required mobile, type-specific fields, and no optional fields. Typecheck and build pass; live check confirms a visitor is asked only for name, mobile and comments.

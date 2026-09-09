@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchKeyPolicy, DEFAULT_KEY_POLICY, type KeyPolicy } from "@/hooks/useKeyPolicy";
 import { useFormFields, FormField } from "@/hooks/useFormFields";
+import { resolveCheckInFields, missingCheckInFields, missingFieldsMessage, isFieldEnabled } from "@/lib/checkInFields";
 import { useActiveHealthQuestions, useActiveVaccinationFields } from "@/hooks/useHealthQuestions";
 import { useResidents } from "@/hooks/useResidents";
 import { useStaffMembers } from "@/hooks/useStaffMembers";
@@ -79,6 +80,8 @@ export function useKioskCheckInFlow() {
     () => formFields.filter((f) => f.is_active && !f.field_key.startsWith("companion_")).sort((a, b) => a.sort_order - b.sort_order),
     [formFields]
   );
+  // Same resolver as the staff desk, so kiosk and reception can never diverge.
+  const activeFields = useMemo(() => resolveCheckInFields(formFields), [formFields]);
 
   // Health questions
   const { data: healthQuestions = [] } = useActiveHealthQuestions(selectedType as any);
@@ -230,16 +233,14 @@ export function useKioskCheckInFlow() {
   };
 
 
-  // Check if details step has required fields filled
-  const detailsValid = useMemo(() => {
-    // Always require firstName + surname
-    if (!formValues.firstName?.trim() || !formValues.surname?.trim()) return false;
-    // Check dynamic required fields
-    for (const field of activeFormFields) {
-      if (field.required && !formValues[field.field_key]?.trim()) return false;
-    }
-    return true;
-  }, [formValues, activeFormFields]);
+  // Same validation contract as the staff desk: names always, plus whatever
+  // this site has configured for this person type.
+  const missingFields = useMemo(
+    () => missingCheckInFields(formValues, activeFields),
+    [formValues, activeFields]
+  );
+  const missingFieldsHint = missingFieldsMessage(missingFields);
+  const detailsValid = missingFields.length === 0;
 
   const hasYesFlags = healthQuestions.some((q) => q.type === "yesno" && healthAnswers[q.id] === true);
 
@@ -309,6 +310,10 @@ export function useKioskCheckInFlow() {
     setPersonQr,
     steps,
     activeFormFields,
+    activeFields,
+    missingFields,
+    missingFieldsHint,
+    isFieldOn: (key: string) => isFieldEnabled(activeFields, key),
 
     healthQuestions,
     vaccinationFields,

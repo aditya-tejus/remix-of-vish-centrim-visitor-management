@@ -249,6 +249,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
                   companions={flow.companions}
                   setCompanions={flow.setCompanions}
                   activeCompanionFields={flow.activeCompanionFields}
+                  activeFields={flow.activeFields}
                   photo={flow.photo}
                   setPhoto={flow.setPhoto}
                   onChangeProfile={() => flow.setStep("identify")}
