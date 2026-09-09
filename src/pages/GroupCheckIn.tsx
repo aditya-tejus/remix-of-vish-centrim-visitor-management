@@ -312,9 +312,6 @@ export default function GroupCheckIn() {
                 Some people are not signed in yet. Fix their details and press the button again — nobody is signed in twice.
               </p>
             )}
-          </main>
-        </SidebarInset>
-      </div>
 
       {watchlistEntry && (
       <WatchlistAlertDialog
