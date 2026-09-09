@@ -11,7 +11,7 @@ import {
   SidebarHeader, SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { useVisitors } from "@/hooks/useVisitors";
 import { useSite } from "@/contexts/SiteContext";
 import { useOperatingContext } from "@/contexts/OperatingContext";
@@ -31,7 +31,6 @@ interface NavGroup {
 }
 
 export function AppSidebar() {
-  const navigate = useNavigate();
   const location = useLocation();
   const { visitors } = useVisitors();
   const { currentSite } = useSite();
