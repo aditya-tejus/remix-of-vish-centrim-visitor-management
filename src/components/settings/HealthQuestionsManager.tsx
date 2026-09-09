@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useHealthQuestions, useHealthQuestionMutations, HealthQuestion, VisitorType } from "@/hooks/useHealthQuestions";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, GripVertical, X, Save, Shield, Eye, EyeOff } from "lucide-react";
+import { Plus, Pencil, Trash2, GripVertical, X, Save, Shield, Eye, EyeOff, ShieldAlert } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const questionTypes = [
   { value: "yesno", label: "Yes / No" },
@@ -25,9 +26,17 @@ interface EditState {
   placeholder: string;
   options: string[];
   optionInput: string;
+  expectedAnswer: string;
+  warningAnswers: string;
+  severity: "info" | "warning" | "critical";
+  staffMessage: string;
+  outcomeAction: "none" | "flag" | "block";
 }
 
-const emptyEdit: EditState = { question: "", type: "yesno", required: false, placeholder: "", options: [], optionInput: "" };
+const emptyEdit: EditState = {
+  question: "", type: "yesno", required: false, placeholder: "", options: [], optionInput: "",
+  expectedAnswer: "", warningAnswers: "", severity: "info", staffMessage: "", outcomeAction: "none",
+};
 
 interface Props {
   visitorType: VisitorType;
@@ -44,7 +53,15 @@ export function HealthQuestionsManager({ visitorType }: Props) {
   const startEdit = (q: HealthQuestion) => {
     setEditingId(q.id);
     setAdding(false);
-    setEdit({ question: q.question, type: q.type, required: q.required, placeholder: q.placeholder || "", options: q.options || [], optionInput: "" });
+    setEdit({
+      question: q.question, type: q.type, required: q.required, placeholder: q.placeholder || "",
+      options: q.options || [], optionInput: "",
+      expectedAnswer: q.expected_answer || "",
+      warningAnswers: (q.warning_answers || []).join(", "),
+      severity: q.severity || "info",
+      staffMessage: q.staff_message || "",
+      outcomeAction: q.outcome_action || "none",
+    });
   };
 
   const startAdd = () => {
@@ -55,15 +72,24 @@ export function HealthQuestionsManager({ visitorType }: Props) {
 
   const cancel = () => { setEditingId(null); setAdding(false); setEdit(emptyEdit); };
 
+  /** Outcome rules are optional: leaving them alone keeps the question's current behaviour. */
+  const rulePayload = () => ({
+    expected_answer: edit.expectedAnswer.trim() || null,
+    warning_answers: edit.warningAnswers.split(",").map((v) => v.trim()).filter(Boolean),
+    severity: edit.severity,
+    staff_message: edit.staffMessage.trim() || null,
+    outcome_action: edit.outcomeAction,
+  });
+
   const handleSave = async () => {
     if (!edit.question.trim()) return;
     try {
       if (adding) {
         const maxOrder = questions.reduce((m, q) => Math.max(m, q.sort_order), 0);
-        await add.mutateAsync({ question: edit.question, type: edit.type, required: edit.required, placeholder: edit.placeholder || null, options: edit.options, sort_order: maxOrder + 1, visitor_type: visitorType });
+        await add.mutateAsync({ question: edit.question, type: edit.type, required: edit.required, placeholder: edit.placeholder || null, options: edit.options, sort_order: maxOrder + 1, visitor_type: visitorType, ...rulePayload() });
         toast({ title: "Question added" });
       } else if (editingId) {
-        await update.mutateAsync({ id: editingId, question: edit.question, type: edit.type, required: edit.required, placeholder: edit.placeholder || null, options: edit.options });
+        await update.mutateAsync({ id: editingId, question: edit.question, type: edit.type, required: edit.required, placeholder: edit.placeholder || null, options: edit.options, ...rulePayload() });
         toast({ title: "Question updated" });
       }
       cancel();
@@ -143,6 +169,55 @@ export function HealthQuestionsManager({ visitorType }: Props) {
           )}
         </div>
       )}
+      <Collapsible>
+        <CollapsibleTrigger asChild>
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs h-8">
+            <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
+            What happens with a concerning answer
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-3 space-y-3">
+          <p className="text-[11px] text-muted-foreground">
+            Leave these empty to keep this question's current behaviour.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs" htmlFor="expected-answer">Expected answer</Label>
+              <Input id="expected-answer" value={edit.expectedAnswer} onChange={(e) => setEdit((p) => ({ ...p, expectedAnswer: e.target.value }))} placeholder="e.g. No" className="rounded-lg h-9 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs" htmlFor="warning-answers">Answers that raise a concern</Label>
+              <Input id="warning-answers" value={edit.warningAnswers} onChange={(e) => setEdit((p) => ({ ...p, warningAnswers: e.target.value }))} placeholder="Separate with commas" className="rounded-lg h-9 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">How serious</Label>
+              <Select value={edit.severity} onValueChange={(v) => setEdit((p) => ({ ...p, severity: v as any }))}>
+                <SelectTrigger className="rounded-lg h-9 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="info">For information</SelectItem>
+                  <SelectItem value="warning">Warning</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">What staff must do</Label>
+              <Select value={edit.outcomeAction} onValueChange={(v) => setEdit((p) => ({ ...p, outcomeAction: v as any }))}>
+                <SelectTrigger className="rounded-lg h-9 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nothing — record only</SelectItem>
+                  <SelectItem value="flag">Show a warning to staff</SelectItem>
+                  <SelectItem value="block">Block the sign-in</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs" htmlFor="staff-message">Message shown to staff</Label>
+            <Input id="staff-message" value={edit.staffMessage} onChange={(e) => setEdit((p) => ({ ...p, staffMessage: e.target.value }))} placeholder="e.g. Offer a mask and tell the nurse in charge" className="rounded-lg h-9 text-sm" />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
       <div className="flex gap-2 pt-1">
         <Button size="sm" className="gap-1 text-xs" onClick={handleSave} disabled={!edit.question.trim()}>
           <Save className="h-3 w-3" /> Save
