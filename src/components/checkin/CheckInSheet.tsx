@@ -41,15 +41,26 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
   const [successName, setSuccessName] = useState("");
   const [successBadge, setSuccessBadge] = useState<BadgeData | null>(null);
   const [createdVisitorId, setCreatedVisitorId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
+  // A ref, not state, so a fast second tap cannot slip through before a re-render.
+  const submittingRef = useRef(false);
   const { currentSite, currentSiteId } = useSite();
 
   const handleClose = () => {
+    if (submittingRef.current) return;
     flow.resetForm();
     setShowSuccess(false);
+    setSaveFailed(false);
     onOpenChange(false);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSaving(true);
+    setSaveFailed(false);
+
     const visitor = flow.buildVisitor();
     const created = onAdd(visitor);
     setCreatedVisitorId(created?.id ?? null);
