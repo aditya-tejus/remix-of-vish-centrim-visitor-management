@@ -223,6 +223,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       group_id: visitor.groupId ?? null,
       visited_resident_ids: visitor.visitedResidentIds?.length ? visitor.visitedResidentIds : null,
       branch_id: (publicMode ? kioskSiteId : currentSiteId) ?? null,
+      client_request_id: visitor.clientRequestId ?? tempId,
 
     };
 
@@ -277,15 +278,15 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
       return { visitor: newVisitor, saved };
     }
 
-    // Staff: direct insert, guarded by site-scoped policies
+    // Staff: one server transaction records the arrival and every person on it.
+    // Sending the same request key twice returns the original arrival instead of
+    // creating a second one, so a retry after a timeout is always safe.
     const saved = Promise.resolve(supabase
-      .from("visitors")
-      .insert(payload as any)
-      .select("id, qr_code")
-      .single()
+      .rpc("check_in_party" as any, { p_payload: payload as any })
       .then(({ data, error }) => {
-        if (error || !data) throw failed(error);
-        return settle((data as any).id as string);
+        const row = Array.isArray(data) ? (data[0] as any) : (data as any);
+        if (error || !row?.visitor_id) throw failed(error);
+        return settle(row.visitor_id as string);
       }));
 
     return { visitor: newVisitor, saved };

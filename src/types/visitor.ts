@@ -52,6 +52,9 @@ export interface Visitor {
   supplierId?: string;
   qrCode?: string;
   personQr?: string;
+  /** Stable per attempt, so a retry after a timeout cannot create a second arrival. */
+  clientRequestId?: string;
+
   groupId?: string;
   /** Group arrivals: the shared group name, carried on every attendee's own record. */
   groupLabel?: string;
