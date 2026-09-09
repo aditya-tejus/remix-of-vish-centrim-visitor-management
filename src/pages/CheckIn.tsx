@@ -7,7 +7,7 @@ import { useVisitors } from "@/hooks/useVisitors";
 import { Visitor } from "@/types/visitor";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, UserPlus } from "lucide-react";
 
 export default function CheckIn() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);

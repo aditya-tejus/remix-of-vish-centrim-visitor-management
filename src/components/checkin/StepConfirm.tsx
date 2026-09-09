@@ -19,7 +19,7 @@ interface StepConfirmProps {
   setCheckInTimeOverride: (val: string | null) => void;
 }
 
-const TYPE_BADGES: Record<string, { label: string; emoji: string; className: string }> = {
+const TYPE_BADGES: Record<string, { label: string; className: string }> = {
   visitor: { label: "Visitor", className: "bg-primary/10 text-primary border-primary/20" },
   contractor: { label: "Contractor", className: "bg-warning/10 text-warning border-warning/20" },
   volunteer: { label: "Volunteer", className: "bg-success/10 text-success border-success/20" },

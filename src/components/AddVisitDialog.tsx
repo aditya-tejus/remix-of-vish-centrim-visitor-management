@@ -32,7 +32,7 @@ interface AddVisitDialogProps {
   onAdd: (visitor: Omit<Visitor, "id">) => Visitor;
 }
 
-const visitorTypes: { type: VisitorType; label: string; icon: typeof User; emoji: string }[] = [
+const visitorTypes: { type: VisitorType; label: string; icon: typeof User }[] = [
   { type: "visitor", label: "Visitor", icon: User },
   { type: "contractor", label: "Contractor", icon: Truck },
   { type: "volunteer", label: "Volunteer", icon: Heart },
