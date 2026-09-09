@@ -20,7 +20,7 @@ const SECTION_PERMISSION: Record<SettingsSection, Permission> = {
   feedback: "settings.administer",
   compliance: "privacy.manage",
   governance: "settings.administer",
-  audit: "settings.administer",
+  audit: "data.export",
   integration: "settings.administer",
 };
 
@@ -39,7 +39,7 @@ const SECTION_AUDIENCE: Record<SettingsSection, string> = {
   feedback: "Administrators only.",
   compliance: "The person responsible for privacy at your organisation.",
   governance: "Administrators only.",
-  audit: "Administrators only.",
+  audit: "Administrators, and staff allowed to export data.",
   integration: "Administrators only.",
 };
 

@@ -56,7 +56,7 @@ export function BadgePreview({ personType }: { personType: string }) {
           className="h-[420px] w-full border-0 bg-white"
         />
       </div>
-      <p className="text-[12px] text-muted-foreground">Sample details. Nothing is printed or saved.</p>
+      <p className="text-[12px] text-muted-foreground">Sample details. Nothing is printed or saved. This shows your saved badge settings — save a change before it appears here.</p>
     </div>
   );
 }

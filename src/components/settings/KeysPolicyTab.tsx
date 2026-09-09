@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { KeyRound } from "lucide-react";
+import { KeyRound, AlertTriangle } from "lucide-react";
 import { DEFAULT_KEY_POLICY, fetchKeyPolicy, KeyPolicy } from "@/hooks/useKeyPolicy";
 
 const LOAN_OPTIONS = [
@@ -27,6 +27,7 @@ export function KeysPolicyTab() {
   const { toast } = useToast();
   const [policy, setPolicy] = useState<KeyPolicy>(DEFAULT_KEY_POLICY);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchKeyPolicy().then(setPolicy);
@@ -51,11 +52,13 @@ export function KeysPolicyTab() {
       });
     }
     setSaving(false);
-    toast(
-      error
-        ? { title: "Could not save", description: error.message, variant: "destructive" }
-        : { title: "Key & fob policy saved" }
-    );
+    if (error) {
+      setSaveError("The key and fob rules were not saved. Your choices are still on screen — try again.");
+      toast({ title: "Could not save", description: error.message, variant: "destructive" });
+      return;
+    }
+    setSaveError(null);
+    toast({ title: "Key and fob policy saved" });
   };
 
   return (
@@ -136,6 +139,12 @@ export function KeysPolicyTab() {
         />
       </div>
 
+      {saveError && (
+        <p className="flex items-start gap-2 rounded-xl border border-destructive bg-destructive/5 p-3 text-[13px] text-destructive">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
+          {saveError}
+        </p>
+      )}
       <Button size="sm" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
     </div>
   );

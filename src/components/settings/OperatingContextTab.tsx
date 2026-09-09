@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useSectionAccess } from "@/components/settings/SettingsAccessContext";
 import { useSite } from "@/contexts/SiteContext";
 import { useOperatingContext } from "@/contexts/OperatingContext";
 import { SEGMENT_PACK_LIST, SegmentPackId, packById } from "@/lib/segmentPacks";
@@ -20,14 +20,14 @@ const HIERARCHY = [
 ];
 
 export function OperatingContextTab() {
-  const { role } = useAuth();
+  const { canEdit } = useSectionAccess();
   const { currentSite } = useSite();
   const { pack, siteName, source, refresh, loading } = useOperatingContext();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [choice, setChoice] = useState<SegmentPackId | null>(null);
 
-  const isAdmin = role === "admin";
+  const isAdmin = canEdit;
   const selected = packById(choice ?? pack.id);
 
   const save = async () => {

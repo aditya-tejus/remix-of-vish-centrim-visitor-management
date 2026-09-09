@@ -313,3 +313,17 @@ Unreachable screens
   Site documents. Each is marked in the file as not in use. Their controls are covered by the per-visitor-type screens,
   except leave approval, whose overlap with the resident leave screen was not conclusively verified — it is therefore
   preserved rather than removed.
+
+## Phase 7E hardening — settings access boundary
+- The database remains the real boundary: RLS on `settings` accepts insert/update/delete only
+  from the administrator role; signed-in staff may read settings.
+- The app-level permission checks (`settings.administer`, `keys.manage`, `privacy.manage`,
+  `data.export`) are a presentation gate that prevents confusing failed writes. No new
+  permission, migration or RLS change was introduced in this pass.
+- A shared read-only fence disables all controls in a section for users without its permission.
+  Values stay visible. Panels open by default when read-only so nothing is hidden.
+- Audit gap unchanged: only some settings sections write an `audit_log` entry on save
+  (keys and fobs, operating context, kiosk staff code). Presence, printing, governance and
+  integration saves are not yet audited.
+- Save handling no longer reports success after a partial failure in Presence, Printing,
+  Keys and fobs, Users and access, and Integrations.

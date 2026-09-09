@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Link2, Zap, FileCheck, Bell, Save, Loader2 } from "lucide-react";
+import { Link2, Zap, FileCheck, Bell, Save, Loader2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -15,6 +15,7 @@ export function IntegrationTab() {
   const [approvalMode, setApprovalMode] = useState<"auto" | "draft" | "notify">("draft");
   const [notifyMethod, setNotifyMethod] = useState<"email" | "inapp" | "both">("both");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,12 +43,23 @@ export function IntegrationTab() {
       { key: "integration_notify_method", value: notifyMethod },
     ];
     
+    const failed: string[] = [];
     for (const s of settings) {
-      await supabase.from("settings").upsert({ key: s.key, value: s.value, updated_at: new Date().toISOString() }, { onConflict: "key" });
+      const { error } = await supabase
+        .from("settings")
+        .upsert({ key: s.key, value: s.value, updated_at: new Date().toISOString() }, { onConflict: "key" });
+      if (error) failed.push(s.key);
     }
-    
-    toast.success("Integration settings saved");
     setSaving(false);
+    if (failed.length) {
+      setSaveError(
+        `${failed.length} of ${settings.length} settings could not be saved. Your choices are still on screen — try again.`
+      );
+      toast.error("Integration settings were not saved");
+      return;
+    }
+    setSaveError(null);
+    toast.success("Integration settings saved");
   };
 
   if (loading) return <div className="text-sm text-muted-foreground p-4">Loading...</div>;
@@ -154,6 +166,12 @@ export function IntegrationTab() {
 
             {/* Save */}
             <div className="flex justify-end pt-4">
+              {saveError && (
+                <p className="mb-3 flex items-start gap-2 rounded-xl border border-destructive bg-destructive/5 p-3 text-[13px] text-destructive">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
+                  {saveError}
+                </p>
+              )}
               <Button onClick={handleSave} disabled={saving} className="gap-1.5">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 Save Integration Settings

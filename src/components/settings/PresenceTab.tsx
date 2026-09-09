@@ -6,9 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Globe, Save, Check, Users, ShieldAlert } from "lucide-react";
+import { Globe, Save, Check, Users, ShieldAlert, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+
+const LABELS: Record<string, string> = {
+  max_visitors_on_site: "maximum visitors on site",
+  outbreak_mode: "outbreak mode",
+  site_structure: "kind of site",
+};
 
 export function PresenceTab() {
   const [jurisdiction, setJurisdiction] = useState<"AU" | "UK">("AU");
@@ -18,6 +24,8 @@ export function PresenceTab() {
   const [savingOps, setSavingOps] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [opsError, setOpsError] = useState<string | null>(null);
+  const [jurisdictionError, setJurisdictionError] = useState<string | null>(null);
 
   useEffect(() => {
     supabase
@@ -46,9 +54,11 @@ export function PresenceTab() {
       .upsert({ key: "jurisdiction", value: jurisdiction }, { onConflict: "key" });
     setSaving(false);
     if (error) {
-      toast({ title: "Error", description: "Failed to save jurisdiction setting.", variant: "destructive" });
+      setJurisdictionError("The country setting was not saved. Your choice is still on screen — try again.");
+      toast({ title: "Country setting was not saved", variant: "destructive" });
     } else {
-      toast({ title: "Saved", description: `Jurisdiction set to ${jurisdiction === "AU" ? "Australia" : "United Kingdom"}.` });
+      setJurisdictionError(null);
+      toast({ title: "Saved", description: `Country set to ${jurisdiction === "AU" ? "Australia" : "United Kingdom"}.` });
     }
   };
 
@@ -59,17 +69,21 @@ export function PresenceTab() {
       { key: "outbreak_mode", value: outbreakMode ? "true" : "false" },
       { key: "site_structure", value: siteStructure },
     ];
-    let failed = false;
+    const failed: string[] = [];
     for (const row of rows) {
       const { error } = await supabase.from("settings").upsert(row, { onConflict: "key" });
-      if (error) failed = true;
+      if (error) failed.push(LABELS[row.key] || row.key);
     }
     setSavingOps(false);
-    toast(
-      failed
-        ? { title: "Error", description: "Could not save occupancy settings.", variant: "destructive" }
-        : { title: "Saved", description: "Occupancy and outbreak settings updated." }
-    );
+    if (failed.length) {
+      setOpsError(
+        `Could not save: ${failed.join(", ")}. Your choices are still on screen — try again.`
+      );
+      toast({ title: "Occupancy settings were not saved", variant: "destructive" });
+      return;
+    }
+    setOpsError(null);
+    toast({ title: "Saved", description: "Occupancy and outbreak settings updated." });
   };
 
   if (!loaded) return null;
@@ -95,10 +109,10 @@ export function PresenceTab() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="AU">
-                  <span className="flex items-center gap-2">🇦🇺 Australia (WHS / SWMS)</span>
+                  <span>Australia (WHS / SWMS)</span>
                 </SelectItem>
                 <SelectItem value="UK">
-                  <span className="flex items-center gap-2">🇬🇧 United Kingdom (H&S / RAMS)</span>
+                  <span>United Kingdom (H&amp;S / RAMS)</span>
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -126,6 +140,12 @@ export function PresenceTab() {
             </div>
           </div>
 
+          {jurisdictionError && (
+            <p className="flex items-start gap-2 rounded-xl border border-destructive bg-destructive/5 p-3 text-[13px] text-destructive">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
+              {jurisdictionError}
+            </p>
+          )}
           <Button onClick={handleSave} disabled={saving} className="gap-1.5">
             {saving ? <Save className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
             Save Jurisdiction
@@ -189,6 +209,12 @@ export function PresenceTab() {
             <Switch checked={outbreakMode} onCheckedChange={setOutbreakMode} />
           </div>
 
+          {opsError && (
+            <p className="flex items-start gap-2 rounded-xl border border-destructive bg-destructive/5 p-3 text-[13px] text-destructive">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
+              {opsError}
+            </p>
+          )}
           <Button onClick={saveOps} disabled={savingOps} className="gap-1.5">
             {savingOps ? <Save className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
             Save Controls

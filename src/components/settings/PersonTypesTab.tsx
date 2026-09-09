@@ -7,8 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import { usePersonTypes, PersonTypeConfigRow, PersonTypeExtras, PERSON_TYPE_DEFAULTS } from "@/hooks/usePersonTypes";
 import { useSettingsAccess } from "@/hooks/useSettingsAccess";
 import { useUnsavedGuard } from "@/hooks/useUnsavedGuard";
+import { usePersonTypesDraft } from "@/components/settings/preview/personTypesDraft";
 import { RotateCcw, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
 import { useOperatingContext, siteScopedKey } from "@/contexts/OperatingContext";
 import { SettingExplainer } from "@/components/settings/SettingExplainer";
 
@@ -25,18 +25,24 @@ const FLAGS: { key: keyof PersonTypeConfigRow; label: string; help: string }[] =
 
 export function PersonTypesTab() {
   const { personTypes, extras, loading, reload } = usePersonTypes();
-  const { role } = useAuth();
   const { siteId, siteName, pack } = useOperatingContext();
   const [rows, setRows] = useState<PersonTypeConfigRow[]>([]);
   const [extraRows, setExtraRows] = useState<PersonTypeExtras>(extras);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
   const access = useSettingsAccess("person-types");
-  const canEdit = access.canEdit || role === "admin";
+  const canEdit = access.canEdit;
   const [dirty, setDirty] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   useUnsavedGuard(dirty && canEdit);
+
+  // The preview panel shows these rows, so it changes as you edit.
+  const { setDraft } = usePersonTypesDraft();
+  useEffect(() => {
+    if (rows.length) setDraft({ rows, extras: extraRows, dirty });
+  }, [rows, extraRows, dirty, setDraft]);
+  useEffect(() => () => setDraft(null), [setDraft]);
 
   useEffect(() => { if (!loading) { setRows(personTypes); setExtraRows(extras); setDirty(false); } }, [loading, personTypes, extras]);
 
@@ -118,9 +124,10 @@ export function PersonTypesTab() {
       <SettingExplainer
         title="Visitor types"
         controls="Which types of people can sign in, what the kiosk calls them, and which parts of the sign-in apply to each."
-        appliesTo={siteName ? `${siteName} only` : "This account"}
+        appliesTo={siteName ? `${siteName}. Sites with no value of their own use the account-wide value.` : "This account"}
         changeableBy="Administrators and senior staff."
-        inherited={`${pack.label} defaults, with your changes on top`}
+        inherited={`Starting point: ${pack.label} built-in values, used until you save your own`}
+
         kioskEffect="Turning a type off removes its tile from the kiosk straight away."
         deskEffect="Turning a type off removes it from new sign-ins at the desk. Lists and reports keep the standard name."
         existingRecords="People already signed in stay on the list and in every report."
