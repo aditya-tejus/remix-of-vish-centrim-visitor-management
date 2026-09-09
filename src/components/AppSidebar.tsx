@@ -115,6 +115,7 @@ export function AppSidebar() {
         <SidebarMenu className="space-y-0.5 px-1 pb-2">
           {primaryItems.map((item) => {
             const active = item.match.includes(location.pathname);
+            const Icon = item.icon ?? Home;
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
@@ -128,7 +129,8 @@ export function AppSidebar() {
                   }`}
                 >
                   <NavLink to={item.path} aria-current={active ? "page" : undefined}>
-                    <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+
                     <span className="flex-1 text-left">{item.title}</span>
                     {item.badge != null && item.badge > 0 && (
                       <span className={`${badgeClasses[item.badgeVariant || "blue"]} flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold`}>
