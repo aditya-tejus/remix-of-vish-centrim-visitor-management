@@ -6,6 +6,8 @@ import { format } from "date-fns";
 import centrimLogo from "@/assets/centrim-life-logo.png";
 import kioskBg from "@/assets/kiosk-bg.jpg";
 import { usePersonTypes } from "@/hooks/usePersonTypes";
+import { useOperatingContext } from "@/contexts/OperatingContext";
+import { useKioskFastLane } from "@/hooks/useKioskFastLane";
 
 const KIOSK_TILES = [
   {
