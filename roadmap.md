@@ -374,3 +374,12 @@ Known limits after Phase 7E:
 - Print templates and export logic untouched; emergency roll-call print verified working.
 - Still tracked, untouched: Residents overflow (768/1024) and Settings preview overflow (~1024).
 - Known: the GDPR export confirmation is opened from state, so focus is not restored to the trigger on close (pre-existing).
+
+## Phase 7F — Increment 2D (check-in entry points and registers) — done
+- Converted /person-type, /group-checkin, /food-register and /keys to the shared AppShell.
+- Removed the duplicate main landmark on all four routes (SidebarInset main + page main).
+- Group arrival now has one h1 on both the permission-denied and normal branches, with the UsersRound cue as an aria-hidden title icon.
+- Workflows, permissions, filters, exports, dialogs, sheets and data hooks unchanged; ordinary visitor check-in untouched; leave_types symbols untouched; kiosk routes untouched.
+- Verified: one main / one h1 / one labelled main nav / one skip link per route; skip link moves focus to main-content; Add Food dialog, person-type check-in dialog and group attendee rows all work; no overflow at 768/1280/1440.
+- Shared-component findings deferred to a later increment (not introduced here, present on earlier converted routes too): header action buttons push ~25-85px of horizontal overflow at 1024px on routes with header actions (same on /reports/on-site), and one unlabelled icon-only control in AppHeader.
+- Still tracked, untouched: Residents overflow (768/1024) and Settings preview overflow (~1024).
