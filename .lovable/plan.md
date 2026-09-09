@@ -1,123 +1,102 @@
-# Phase 7E — Settings consolidation and configuration previews
+# Phase 7E Hardening — honest settings gating, storage labels and save results
 
-Baseline confirmed: latest commit `e78488e72c599e8670487ec6df3d10d1de86c849` ("Implemented Phase 7D"). No database, permission or settings-value changes in this phase.
+Review of the delivered Phase 7E work against the build request. Three gaps are confirmed by reading the code and the database, and this plan closes them without new permissions, schema, policy or value migration.
 
-## What we found (verified in the current code)
+## What the review confirmed
 
-- Settings live on one page (`/settings`) with a grouped left nav of 15 sections. That structure is sound and stays.
-- Ten settings screens exist in the project but are not reachable from anywhere: Alerts, Automation, Health screening, Auto checkout, Feedback settings, Profiles & badges, Terms & conditions, Notifications, Leave approval, Site documents. Each duplicates a per-visitor-type screen that *is* reachable. This is the main source of "duplicate settings".
-- Scope inheritance helpers (`src/lib/settingsScope.ts`, the scoped settings table and the resolve function) are written but no screen or hook uses them. Every visible setting is written flat, most with a site suffix in the key. So the scope badges shown today ("This site", "Organisation") are labels only — they do not describe where the saved value actually lives.
-- Only two cards check permissions (permission matrix, privacy & retention). Every other settings screen lets any signed-in staff member save.
-- Only a few screens write an audit entry (keys policy, kiosk PIN, privacy). Most saves leave no trace.
-- Terminology already comes from operating-context packs, and icons are professional Lucide icons throughout — no emojis found.
-- There are no previews anywhere: an administrator cannot see what the kiosk, a badge or the check-in questions will look like before saving.
+1. **Only one screen actually enforces permission.** The page header explains who may change a section, but of the live screens only Visitor types (and the existing privacy and permissions cards) check anything. Operating context still gates on `role === "admin"` directly; Presence, Badges and printing, Keys and fobs, Integrations, Governance, Kiosk code and every per-visitor-type screen render fully editable controls for anyone who can open Settings. The header therefore says "read-only" while the controls underneath still work.
+2. **Saves can report success after a failure.** Badges and printing, Governance and Integrations save each value in a loop and throw the result away, then always show "saved". Presence saves the occupancy values in a loop and reports one combined error without saying which value failed or keeping the screen in a retry state.
+3. **Some storage labels are wrong.** Presence and Keys and fobs are labelled "Saved for this site", but both write plain keys shared by every site. The per-visitor-type sections are labelled "some per site, others account-wide"; in fact almost all of those values are account-wide, set separately per visitor type. Only Visitor types (site-suffixed with an account-wide fallback) and Operating context (on the site record) match their current labels.
+4. **Previews read saved values only.** The preview panel calls the same data hooks as the rest of the app, so it shows what is saved, not what is typed. Nothing pretends otherwise today, but the panel does not say so either.
 
-## Goal
+Also confirmed, and important to state honestly: the database allows settings writes only to the **administrator role**. The granular permission checks in the app are a clarity and safety gate on top of that; they are not what stops a write. The plan will not claim the app-level gate is the security boundary.
 
-A site manager can open Settings, understand what each decision does, who may change it, where it applies, and see the result before saving — without a second settings system being introduced.
+## What will change
 
-## 1. Information architecture and de-duplication
+### A. One shared read-only fence
 
-Keep the existing nav groups. Changes:
+Add a small settings access context. The Settings page resolves the permission for the open section once and provides it. A `ReadOnlyFence` wrapper renders the section inside a disabled native fieldset when the person may not edit, so every nested control — switches, inputs, selects, save buttons, dialog triggers — is disabled at once, with a single clear explanation at the top. Values stay visible.
 
-- Delete the ten unreachable screens listed above, after confirming each has a live equivalent. Where an orphan holds a control the live screen lacks (site documents, leave approval), fold that control into the live screen rather than deleting it.
-- One home per decision. A short "Where else this appears" line links related screens instead of repeating the control.
-- Each section gets a one-line purpose statement in plain language at the top.
+Screens that own a save button also read the context directly, so their save button is disabled with a reason rather than only visually inert.
 
-## 2. Scope, inheritance and honesty about it
+### B. Truthful saves
 
-- Reuse the existing `SettingsScopeBadge`, but only show a scope badge where the value is genuinely stored at that level.
-- Add a small shared `SettingRow` wrapper that shows, per setting: current value, where it came from (Inherited from organisation / Set for this site), and a "Reset to inherited" action when an override exists.
-- Where a setting is stored flat today (no real inheritance), the badge reads "This site" and no inherited value is claimed. No migration of stored values in this phase.
+For Presence, Badges and printing, Governance and Integrations: collect the result of every write, and if any fails keep the typed values, show which part failed in plain language, and offer "Try again". Show "Saved" only when every value was written. This mirrors what Visitor types already does. No change to what is saved.
 
-## 3. Who can change what
+### C. Accurate storage labels
 
-- Introduce a single read-only/edit gate across settings using the existing `usePermissions` hook and existing permissions — no new permissions.
-- Without permission: controls disabled, values still visible, one clear line explaining who can change it and how to request it. No hidden pages.
-- Each section header states the role that may change it.
+Correct the storage note for Presence, Keys and fobs, the five per-visitor-type sections, Compliance and Audit so each says what actually happens ("Shared across all sites", "Set separately for each visitor type and shared across all sites", "A record, not a setting"). Remove wording that implies inheritance where none exists. No stored value changes.
 
-## 4. Effects, and 5. historical data
+### D. Preview honesty (deliberately small)
 
-- Extend the existing `SettingExplainer` (already used on two screens) to every section: Controls / Applies to / Changed by / Current / Kiosk / Staff screens / Past records.
-- Every explainer states plainly that records already saved do not change. Where a change does affect existing behaviour (retention windows, overdue thresholds recalculating), say so specifically instead of the generic line.
+Full draft preview for every screen would mean lifting the state of twenty separate editors and is out of proportion for a hardening pass. Instead:
 
-## 6. Terminology
+- Visitor types already refreshes the preview after saving; extend that to a live draft for **that screen only**, since it already holds all its rows in one place.
+- Every other preview gains a plain line: "Shows your saved settings. Save to see changes here."
 
-All labels read from the operating-context pack: wing/room (AU residential aged care), stage/villa/property (AU retirement village), unit/room (UK care home). No hardcoded "resident room" or "wing" strings in settings copy.
+The limitation is documented rather than hidden.
 
-## 7. Policy wording
+## Files to change
 
-Privacy, retention, screening and credential screens describe what the software does — "records are removed after this many days", "the kiosk will refuse check-in when a document is missing". No statement that a configuration makes the site compliant with any Act, standard or regulation. A standing note: settings support your process, they do not certify it.
+| File | Change |
+| --- | --- |
+| `src/hooks/useSettingsAccess.ts` | Add a provider/consumer pair so children read the same result; permission map unchanged except the corrections below |
+| `src/components/settings/ReadOnlyFence.tsx` | New: disabled-fieldset wrapper with the explanation |
+| `src/pages/Settings.tsx` | Wrap each section in the fence; correct `STORAGE_NOTE`; pass the draft into the preview for Visitor types |
+| `src/components/settings/OperatingContextTab.tsx` | Replace the direct `role === "admin"` check with the section permission |
+| `src/components/settings/PresenceTab.tsx` | Permission-gated save; per-value error, retry, kept values |
+| `src/components/settings/PrintingTab.tsx` | Same |
+| `src/components/settings/LockGovernanceTab.tsx` | Same |
+| `src/components/settings/IntegrationTab.tsx` | Same |
+| `src/components/settings/KeysPolicyTab.tsx` | Permission-gated save (error handling already correct) |
+| `src/components/settings/KioskStaffPinCard.tsx` | Permission-gated save |
+| `src/components/settings/PersonTypesTab.tsx` | Drop the `role === "admin"` bypass; publish its draft rows to the preview |
+| `src/components/settings/preview/*.tsx` | Accept optional draft rows; add the "shows saved settings" line where no draft exists |
+| `src/components/settings/SettingsNav.tsx` | Scope badges corrected to match the storage notes |
+| `roadmap.md`, `docs/SECURITY_REVIEW.md` | Record the gate, its real boundary, the preview limitation and the remaining audit gap |
 
-## 8. Configuration previews
+Not touched: the ten unused files, database, policies, permissions, stored values, Phase 7A–7D screens.
 
-Four read-only previews, each rendered from the same data the live surfaces use:
+## Permission by live section (all existing, none added)
 
-- **Kiosk preview** — a scaled, non-interactive rendering of the kiosk welcome and check-in steps for the selected person type, showing exactly the questions, terms and fields configured.
-- **Badge preview** — the existing badge markup rendered with sample data, respecting the badge/privacy toggles.
-- **Person types preview** — the tile row a visitor sees, with the configured labels and hidden types omitted.
-- **Screening preview** — the question list in kiosk order, showing which answers block entry and which only warn.
+| Section | Permission | Note |
+| --- | --- | --- |
+| Operating context, Visitor types, Visitors, Contractors, Volunteers, Staff, Resident movements, Presence and emergency, Badges and printing, Feedback surveys, Governance, Integrations | `settings.administer` | Database still requires the administrator role |
+| Keys and fobs | `keys.manage` | Narrower permission kept |
+| Privacy and retention | `privacy.manage` | Existing card check kept |
+| Users and access | `settings.administer` | Existing card check kept |
+| Audit and exports | read-only screen; export stays behind `data.export` | Nothing is saved here |
 
-Previews use clearly marked sample data, never real people, and update as toggles change before saving.
+## Controls that cannot be fully gated in this pass
 
-## 9. Safe defaults and reset
+- Anything a screen opens in a pop-up **after** the trigger is disabled is unreachable, so the fence covers it; but a screen that opens a dialog from code rather than a button would not be covered. None found in Settings today; this is stated as a known boundary.
+- Drag-to-reorder in the question and field managers is not a form control. The fence disables the surrounding controls; reordering will be blocked explicitly in those three managers rather than relying on the fieldset.
+- The kiosk code card writes through a database function; the app gate is presentational only, as with everything else here.
 
-- Every setting shows its default. "Reset to default" per setting and per section, always with a confirmation naming what will change.
-- No destructive reset across all sections.
+## Acceptance tests
 
-## 10. States
-
-Permission denied, unsaved changes (with a leave-page guard), inline validation before save, save failure with retry, and a saved confirmation. Loading skeletons for sections that read the database.
-
-## 11–13. Dead settings, integrations, accessibility
-
-- Remove or wire up any control that writes a key nothing reads; list any left in place with the reason.
-- Integrations screen stays a described boundary only: what would connect, what is not connected. No external calls, credentials or notification delivery added.
-- Keyboard reachable, labelled controls, visible focus, AA contrast, labelled Lucide icons, no emojis.
-
-## 14. Files expected to change
-
-- `src/pages/Settings.tsx` — permission gate, unsaved-changes guard, preview panel slot.
-- `src/components/settings/SettingsNav.tsx` — group/section trim after de-duplication.
-- New: `SettingRow.tsx`, `SettingsSectionHeader.tsx`, `preview/KioskPreview.tsx`, `preview/BadgePreview.tsx`, `preview/PersonTypesPreview.tsx`, `preview/ScreeningPreview.tsx`.
-- `SettingExplainer.tsx` — extended and applied across sections.
-- Deletions: the ten unreachable settings components (with any unique control folded in first).
-- New hook `useSettingsAccess` wrapping the existing permission check; optional `useSettingScope` read-only helper over the existing `resolveSetting`.
-- Docs: `roadmap.md`, `docs/SECURITY_REVIEW.md`.
-
-## 15. Data, RLS and audit
-
-- No migration, no schema change, no policy change, no permission change, no settings-value change.
-- Settings reads and writes stay site-scoped exactly as they are today.
-- Audit gap is documented, not silently widened: this phase makes the missing audit entries visible in the security notes and adds audit writes only where an existing helper already exists. Broadening audit coverage is proposed as Phase 7F work.
-
-## 16. Acceptance tests
-
-1. Every nav section opens; no route or component is unreachable; no control appears twice.
-2. A user without settings permission sees values, disabled controls and a clear explanation.
-3. Changing a person type's questions updates the screening and kiosk previews before saving.
-4. Badge preview matches an actual printed badge for the same settings.
-5. Reset to default restores the documented default and asks for confirmation.
-6. Navigating away with unsaved changes warns.
-7. Save failure shows an error and keeps the entered values.
-8. Terminology switches correctly between the AU aged-care, AU retirement-village and UK care-home sites.
-9. Reception, kiosk, badges, emergency, food and contractor behaviour unchanged (Phase 7A–7D regression).
-10. Typecheck, build, and security linter unchanged at the documented 47 warnings.
-
-Rollback: all work is presentation-layer; reverting the commit restores current settings exactly, since no stored value or schema changes.
-
-## Non-goals
-
-No second settings system, no new settings keys, no migration of flat values into the scoped table, no external integrations or notification delivery, no new permissions, no printer hardware, no Phase 7F.
+1. Every live section opens; an administrator can still change and save each one exactly as before.
+2. **Restricted-account test:** with your approval, sign in as a second, non-administrator account and walk the sections. Expected: values visible, every control disabled, one clear explanation, no save possible by clicking. If you would rather not use a second account, the fallback is a temporary staff-role session created only for the test and ended immediately, and the result will be reported as such.
+3. Forced failure on each rewritten save: error shown, typed values kept, "Try again" works, no false "Saved".
+4. Partial failure (one value rejected): message names what failed; no success message.
+5. Storage labels match reality: change a value at one site and confirm the other site does or does not see it, exactly as the label claims.
+6. Visitor types draft preview updates as you type and is clearly marked as unsaved.
+7. Other previews show the "saved settings" line and no stale claim.
+8. Regression: reception, kiosk, badge printing, emergency roll call, food register, contractors unchanged; tablet width has no sideways scroll; typecheck, build, and the linter still at 47 documented warnings.
+9. No test data or changed settings left behind; verified by query.
 
 ## Risks
 
-- Deleting the ten orphan screens could remove a control someone expects; mitigated by folding unique controls into the live screen first and listing every deletion.
-- Kiosk preview can drift from the real kiosk if it re-implements layout; it must reuse the kiosk components in a disabled state.
-- Scope badges will remain partly aspirational until stored values move to the scoped table — stated openly rather than implied.
+- The disabled-fieldset approach touches every settings screen at once; a mistake shows up as controls disabled for administrators. Test 1 is the guard.
+- Correcting labels will make some settings visibly account-wide that people may have assumed were per-site. That is the honest position; migrating them to per-site storage is a separate, larger decision.
+- Dropping the `role === "admin"` bypass on Visitor types means an administrator without `settings.administer` in the permission table would lose edit access in the app. Worth confirming the administrator role holds that permission before the change lands; the plan's first step is that check.
 
 ## Open questions
 
-1. The ten unreachable screens — delete them, or is any of them a deliberately parked feature you want kept?
-2. Should the settings edit gate use the existing `settings.administer` permission for everything, or keep privacy and permissions on their own narrower permissions as today?
-3. Do you want the flat settings values actually migrated into the scoped inheritance table in a later phase, or is site-level storage sufficient for the pilot?
+1. Are you comfortable with a temporary non-administrator session for the read-only test, or should that test be reported as code-verified only?
+2. Should per-visitor-type settings eventually become per-site, or is account-wide the intended behaviour? Not changed in this pass either way.
+3. Should the remaining unaudited settings screens start writing history entries now, or is that a separate piece of work?
+
+## Non-goals
+
+No new permissions, tables, policies or settings keys. No value migration. No deletion of the unused files. No external integrations, notification delivery or printer hardware. No Phase 7F work.
