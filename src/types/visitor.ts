@@ -7,8 +7,13 @@ export interface CompanionDetail {
   relation?: string;
   /** ISO time this companion left, when they leave separately from the main visitor. */
   checkedOutAt?: string;
+  /** Chosen deliberately by reception from people already known at this site. */
+  person_id?: string;
+  /** "true" when reception asked for this companion to be remembered as a new person. */
+  create_person?: string;
   [key: string]: string | undefined;
 }
+
 
 
 export interface Visitor {
