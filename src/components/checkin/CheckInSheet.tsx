@@ -337,26 +337,70 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
               )}
 
               {flow.step === "confirm" && flow.screeningFlagged && (
-                <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-2">
+                <div
+                  className={`mt-4 rounded-xl border p-4 space-y-3 ${
+                    flow.screeningBlocked ? "border-destructive/40 bg-destructive/5" : "border-warning/40 bg-warning/5"
+                  }`}
+                >
                   <div className="flex items-start gap-2">
-                    <ShieldAlert className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
-                    <div className="space-y-0.5">
-                      <p className="text-[13px] font-semibold text-destructive">Health screening flagged</p>
+                    <ShieldAlert
+                      className={`h-4 w-4 mt-0.5 shrink-0 ${flow.screeningBlocked ? "text-destructive" : "text-warning"}`}
+                      aria-hidden="true"
+                    />
+                    <div className="space-y-1">
+                      <p className={`text-[13px] font-semibold ${flow.screeningBlocked ? "text-destructive" : "text-warning-foreground"}`}>
+                        {flow.screeningBlocked ? "Sign-in blocked by check-in questions" : "Check-in questions need staff attention"}
+                      </p>
+                      <ul className="text-[12px] text-muted-foreground space-y-0.5">
+                        {flow.screeningEvaluation.flags.map((f) => (
+                          <li key={`${f.questionId}-${f.severity}`}>
+                            {f.message}
+                            {f.action === "block" ? " — blocks sign-in" : ""}
+                          </li>
+                        ))}
+                      </ul>
                       <p className="text-[12px] text-muted-foreground">
-                        {flow.hasHighTemperature ? `Temperature ${flow.formData.bodyTemperature}°C is above 37.8°C. ` : ""}
-                        {flow.hasSymptomFlag ? "A symptom was reported. " : ""}
-                        A staff override is required to continue, and it will be recorded in the audit trail.
+                        {flow.overrideApprovedBy
+                          ? `Approved by ${flow.overrideApprovedBy} and recorded in the audit trail.`
+                          : flow.screeningBlocked
+                            ? "A supervisor with the right permission must approve this, with a reason of at least 10 characters."
+                            : "A staff reason of at least 10 characters is required to continue, and it is recorded in the audit trail."}
                       </p>
                     </div>
                   </div>
-                  <Textarea
-                    value={flow.overrideReason}
-                    onChange={(e) => flow.setOverrideReason(e.target.value)}
-                    placeholder="Reason for allowing this check-in (required)"
-                    className="min-h-[64px] text-[13px] rounded-lg"
-                  />
+                  {!flow.overrideApprovedBy && (
+                    <>
+                      <Textarea
+                        value={flow.overrideReason}
+                        onChange={(e) => flow.setOverrideReason(e.target.value)}
+                        placeholder="Reason for allowing this check-in (at least 10 characters)"
+                        aria-label="Reason for allowing this check-in"
+                        className="min-h-[64px] text-[13px] rounded-lg"
+                      />
+                      {overrideError && (
+                        <p className="text-[12px] text-destructive" role="alert">{overrideError}</p>
+                      )}
+                      {flow.screeningBlocked && (
+                        <Button
+                          variant="outline"
+                          className="gap-2 rounded-xl text-[13px] h-10"
+                          disabled={!flow.overrideValid || approving}
+                          onClick={async () => {
+                            setApproving(true);
+                            const err = await flow.approveBlockedScreening();
+                            setApproving(false);
+                            setOverrideError(err);
+                          }}
+                        >
+                          <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                          {approving ? "Recording approval…" : "Supervisor approve"}
+                        </Button>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
+
             </div>
           )}
         </div>
