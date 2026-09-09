@@ -3,7 +3,7 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, UserPlus, ShieldAlert, UtensilsCrossed, Printer } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CheckCircle2, UserPlus, ShieldAlert, ShieldCheck, UtensilsCrossed, Printer } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { Visitor } from "@/types/visitor";
@@ -43,6 +43,8 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
   const [createdVisitorId, setCreatedVisitorId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
+  const [approving, setApproving] = useState(false);
+  const [overrideError, setOverrideError] = useState<string | null>(null);
   // A ref, not state, so a fast second tap cannot slip through before a re-render.
   const submittingRef = useRef(false);
   const { currentSite, currentSiteId } = useSite();
@@ -102,25 +104,23 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
       });
     }
 
-    if (flow.screeningFlagged && flow.overrideReason.trim()) {
+    // Flagged (not blocked) sign-ins are recorded server-side, so the entry
+    // cannot be skipped from the browser.
+    if (flow.screeningFlagged && !flow.screeningBlocked && flow.overrideReason.trim()) {
       const name = `${flow.formData.firstName} ${flow.formData.surname}`.trim();
-      supabase.auth.getUser().then(({ data }) => {
-        supabase.from("audit_log").insert({
-          action: "health_screening_override",
-          performed_by: data.user?.email || "Staff",
-          user_id: data.user?.id ?? null,
-          records_affected: 1,
-          change_reason: flow.overrideReason.trim(),
-          details: {
-            visitor_name: name,
-            visitor_type: flow.selectedType,
-            symptom_flag: flow.hasSymptomFlag,
-            body_temperature: flow.formData.bodyTemperature || null,
-            overridden_at: new Date().toISOString(),
-          } as any,
-        }).then(() => undefined);
-      });
+      supabase.rpc("log_audit", {
+        _action: "screening.flag_accepted",
+        _details: {
+          visitor_name: name,
+          visitor_type: flow.selectedType,
+          outcome: flow.screeningEvaluation.outcome,
+          flags: flow.screeningEvaluation.flags.map((f) => ({ question_id: f.questionId, severity: f.severity })),
+        } as any,
+        _records: 1,
+        _reason: flow.overrideReason.trim(),
+      }).then(() => undefined);
     }
+
     setSuccessName(fullName);
     setSuccessBadge({
       name: fullName,
