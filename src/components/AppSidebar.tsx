@@ -85,12 +85,15 @@ export function AppSidebar() {
 
   const primaryItems: (NavItem & { match: string[] })[] = [
     { title: "Today", path: "/today", icon: LayoutDashboard, match: ["/today", "/"], badge: null },
-    { title: "Visitor List", path: "/visit-list", icon: ListChecks, match: ["/visit-list"], badge: activeVisitorCount || null, badgeVariant: "blue" },
+    {
+      title: "Visitor List", path: "/visit-list", icon: ListChecks, match: ["/visit-list"],
+      badge: todayOverstayed || activeVisitorCount || null,
+      badgeVariant: todayOverstayed > 0 ? "red" : "blue",
+    },
     { title: terms.residentPlural, path: "/residents", icon: Home, match: ["/residents"], badge: residentsAwayCount || null, badgeVariant: "amber" },
     { title: "Visitor Profiles", path: "/visitors", icon: IdCard, match: ["/visitors"], badge: null },
   ];
-  void todayOverstayed;
-  void Users;
+
 
 
   return (
