@@ -163,6 +163,23 @@
     --emergency-foreground: 0 0% 100%;
     --emergency-muted: 0 72% 96%;
 
+    /* Status text that meets 4.5:1 on the page background. Use these for small
+       status words; the base tokens stay for fills, borders and large text. */
+    --success-strong: 142 76% 28%;
+    --warning-strong: 38 92% 31%;
+    --destructive-strong: 0 84% 47%;
+    --emergency-strong: 0 72% 42%;
+    --info-strong: 199 89% 35%;
+    --checkout-strong: 25 95% 37%;
+
+    /* Solid status chips: dark enough for white text in either theme. */
+    --success-solid: 142 76% 28%;
+    --warning-solid: 38 92% 31%;
+    --destructive-solid: 0 84% 47%;
+    --emergency-solid: 0 72% 42%;
+    --info-solid: 199 89% 35%;
+    --checkout-solid: 25 95% 37%;
+
     /* Focus visibility: one ring for the whole product. */
     --focus-ring: var(--ring);
     --focus-ring-width: 2px;
@@ -184,7 +201,15 @@
     --emergency: 0 70% 52%;
     --emergency-foreground: 0 0% 100%;
     --emergency-muted: 0 45% 16%;
+
+    --success-strong: 142 76% 45%;
+    --warning-strong: 38 92% 45%;
+    --destructive-strong: 0 84% 57%;
+    --emergency-strong: 0 72% 58%;
+    --info-strong: 199 89% 45%;
+    --checkout-strong: 25 95% 45%;
   }
+
 }
 
 @layer base {
