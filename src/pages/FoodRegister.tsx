@@ -219,6 +219,6 @@ export default function FoodRegisterPage() {
           )}
         </DialogContent>
       </Dialog>
-    </SidebarProvider>
+    </AppShell>
   );
 }
