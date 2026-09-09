@@ -613,7 +613,12 @@ export function VisitorTable({
 
           {/* Stacked cards on phones and narrow tablets */}
           <div className="md:hidden divide-y divide-border">
-            {visitors.map((visitor) => renderCard(visitor))}
+            {visitors.map((visitor) => (
+              <div key={visitor.id} className="divide-y divide-border">
+                {renderCard(visitor)}
+                {renderCompanionCards(visitor)}
+              </div>
+            ))}
           </div>
         </>
       )}
