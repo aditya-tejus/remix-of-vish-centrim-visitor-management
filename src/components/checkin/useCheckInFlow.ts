@@ -3,6 +3,12 @@ import { VisitorType, Visitor, CompanionDetail } from "@/types/visitor";
 import { useActiveHealthQuestions, useActiveVaccinationFields } from "@/hooks/useHealthQuestions";
 import { useCompanionFields, useFormFields } from "@/hooks/useFormFields";
 import { mergeCompanionFields, missingCompanionFields, normaliseCompanion } from "@/lib/companionFields";
+import {
+  resolveCheckInFields,
+  missingCheckInFields,
+  missingFieldsMessage,
+  pickEnabledValues,
+} from "@/lib/checkInFields";
 import { useResidents } from "@/hooks/useResidents";
 import { useStaffMembers } from "@/hooks/useStaffMembers";
 import { supabase } from "@/integrations/supabase/client";
