@@ -1,130 +1,140 @@
-# Phase 8B-3b — Visitor and contractor profile foundation
+# Phase 8C — Weekly visitor activity report and site email delivery
 
-Read-only composition stage. One person's record becomes a clear, layered page for reception:
-who they are, what is happening now, what needs attention, then the detail underneath.
+Two parts: a **Visitor Report** screen at `Reports > Visitor Report`, and an optional
+**weekly email** of that same report to named recipients per site.
 
-## Scope
+## Part 1 — Visitor Report screen (no email required)
 
-### 1. Visitor profile — progressive disclosure
+New route `/reports/visitor-report`, added as a card on the existing Reports page.
+Nothing else in navigation moves.
 
-Rebuild the existing profile page (`src/pages/VisitorProfilePage.tsx`, currently ~830 lines with
-mixed concerns) as an ordered set of sections. Same route, same navigation, same actions.
+**Week control:** current week by default (Mon–Sun in the site's timezone), with
+Previous / Next week buttons and a "Custom range" option limited to 31 days.
 
-Order top to bottom:
+**Site control:** users with more than one site get a site picker defaulting to the
+current site; single-site users see the current site only, no picker.
 
-1. **Identity header** — name, person type, site, on-site state and time on site, primary or
-   "With <primary name>" relationship, check-out action (canonical party check-out where a
-   canonical row exists).
-2. **Needs attention strip** — only rendered when something is true: watchlist flag, screening
-   warning or block, keys or fobs still out, contractor credential gaps. Each item is an icon
-   plus a text label plus a plain sentence — never colour alone.
-3. **Current visit** — arrival time, destination/resident, purpose, who they arrived with and
-   each companion's own state.
-4. **Details** — contact and person fields, limited to fields currently active in configuration.
-5. **Visit history** — canonical attendance first, legacy fallback marked "older record", paged.
-6. **Activity and audit** — permission-gated, site-scoped, collapsed by default.
+**Table:** one row per accountable person per visit — a companion is its own row.
+Columns:
 
-Sections 4-6 collapse; 1-3 are always open.
+1. Name
+2. Person type
+3. Role — "Main visitor" or "With <primary name>"
+4. Arrived — date and time
+5. Destination — resident visited, or work location / area for contractors
+6. Left — time, or "Still on site", or "No sign-out recorded"
+7. Record — blank for canonical, "Older record" for legacy fallback
+8. Screening — only for users with `screening.view`: Clear / Needs attention / Blocked.
+   Never the answers, never a health value.
 
-### 2. Contractor profile foundation
+Search by name, filter by person type and by "no sign-out recorded". Totals above the
+table: people, visits, still on site, missing sign-outs.
 
-For contractor-type people, the identity and current-visit sections additionally show: supplier
-or company reference, role/trade and work location where recorded on the visit, current status,
-screening result, and a **read-only** credential status list. Credential status is composed from
-the existing tables only (`credential_types`, `contractor_credentials`, `supplier_credentials`)
-via the existing helpers in `src/lib/contractorCredentials.ts` and the existing compliance panel.
-Missing or expired items are stated in words ("Insurance — expired 12 Aug"). No upload, no
-verification action, no review queue, no new contractor or supplier records created from a profile.
+**Export:** CSV via the existing export path, and a print-friendly layout (browser
+print to PDF) with site name, week, timezone and generated-at stamp. Both are gated on
+`data.export`; the screen itself on `presence.view`.
 
-### 3. Privacy-safe display
+Dates render in the site's regional format (AU/UK both `dd MMM yyyy`, 12-hour time per
+the existing convention) using the site's `timezone` column, falling back to the
+browser timezone with a visible note when it is not set.
 
-- A field that is inactive in configuration is not shown as a current field.
-- Where a historic value exists for a now-inactive field, it appears only inside a collapsed
-  "Historic information no longer collected" block, gated on the same permission as audit
-  (`settings.administer` or `data.export` — see Defaults).
-- Screening detail continues to respect `screening.view`; assistance detail respects
-  `assistance.view`; credentials respect `contractor.credentials.view`.
+## Part 2 — Weekly email delivery
 
-### 4. Flags and icons
+**Prerequisite that blocks this part:** this project has no sender domain configured, so
+no email can be sent today. Part 2 ships only after the customer sets up a domain they
+own. Part 1 is built first and is fully useful without it. No screen will ever show a
+send as successful unless the provider accepted it.
 
-Each flag = Lucide icon + visible text label + accessible name. No emoji, no decorative Unicode,
-no colour-only meaning. Reuse `StatusBadge` and `src/lib/statusPresentation.ts` from Increment 1.
+Once a domain exists:
 
-## Data approach
+- **Settings per site:** enable/disable, recipient list (add/remove, each address
+  confirmed as an operational recipient), send day (default Monday), send time (default
+  08:00 site time), timezone shown read-only from the site.
+- **Send now** button sends the previous full week to the configured recipients and is
+  recorded exactly like a scheduled send.
+- **Email body:** site name, week, totals, and the same table minus the screening
+  column by default. A per-site switch can include a screening *status* column only;
+  answers, temperatures and vaccination detail are never included. A line states the
+  email contains personal information and is for named staff only.
+- **Delivery record:** every attempt writes site, week, recipients, status
+  (sent / failed / skipped-duplicate), provider message id and error text.
 
-Read-only composition. **No schema change, no migration, no new RPC, no RLS change** is planned.
+## Technical section
 
-- Attendance: existing `useAccountablePeople` / `buildAccountableRows`.
-- History: existing `useVisitorHistory` (already canonical-first, site-scoped), plus client-side
-  paging at 20 entries with "Show more".
-- Screening: existing visitor `screeningOutcome` / `screeningFlags` fields; question labels via
-  `useQuestionLabels`. Flags render as question label + severity, never raw answers.
-- Keys: `useOpenKeyIssues`.
-- Food register: `useFoodRegister`.
-- Watchlist: `useWatchlist`.
-- Credentials: `contractorCredentials` helpers + `useContractorPeople`.
-- Caching: existing hooks and React Query defaults. No new cache layer.
+**Data.** Canonical `visit_parties` joined to `visits` is authoritative; legacy
+`visitors` rows are used only where no canonical visit exists and are flagged as older
+records. Reuse `buildAccountableRows` composition and add a pure
+`src/lib/weeklyReport.ts` that turns a week window plus rows into report rows —
+so screen, CSV and email render from one function.
 
-### Sources to verify before implementation
+**Reads.** One security-definer RPC `weekly_visit_report(site_id, from, to)` returning
+already-site-scoped rows, so the email job and the screen use identical data. The
+screen may also read through existing hooks; the RPC exists because the scheduled job
+runs without a user session.
 
-These must be confirmed by a read at build time; the plan does not assert their current state:
+**New tables (additive, public schema, GRANTs + RLS on each):**
 
-1. **`useOpenKeyIssues`** — it selects open key issues with no visible site filter in the fetch.
-   Confirm whether `key_issues` rows reaching the profile are already site-scoped by RLS. If not,
-   filter by `branch_id` in the profile consumer before display.
-2. **`useFoodRegister`** — confirm site scoping and that a per-person read exists; if it only
-   supports the register page, show food context only when it maps cleanly, otherwise omit.
-3. **`audit_log`** — confirm it can be filtered to one person and one site with existing columns
-   and policies. If it cannot be scoped safely, the audit section ships as activity derived from
-   attendance and screening events only, and the audit_log view is deferred.
-4. **`form_fields`** — confirm the active/inactive flags used by `checkInFields` are the correct
-   authority for "currently collected", per person type.
-5. **Resident-visitor lookup** on the profile currently queries `visitors` with a name `ilike`
-   fallback; confirm the canonical `visited_resident_ids` path covers current records before
-   relying on it.
+- `report_subscriptions` — one row per site: enabled, send_dow, send_time,
+  include_screening_status, created/updated by.
+- `report_recipients` — subscription id, email, added by, active.
+- `report_sends` — subscription id, site id, week_start, week_end, status,
+  recipient_count, provider_message_id, error, sent_at.
+  Unique on `(site_id, week_start)` for scheduled sends — this is the duplicate guard.
+  Manual test sends are marked `is_manual` and excluded from that constraint.
 
-## Recommended defaults
+Read access to all three requires `settings.administer`; sends are written only by the
+service role inside the job.
 
-- Historic/legacy value block gated on `settings.administer`.
-- Audit/activity section gated on `data.export`, site-scoped, newest 25 entries.
-- History page size 20.
-- Legacy rows labelled "older record" and read-only, matching the visit list wording.
-- Contractor credential states reuse existing valid / expiring / expired / missing / pending
-  vocabulary — no new states.
-- Companion rows on a profile link to their own accountable row context, not to a new master record.
+**Job.** An edge function `send-weekly-visit-report` runs hourly and sends for any site
+whose local day/time has just passed and which has no scheduled send row for that week.
+It inserts the `report_sends` row first (unique index makes a concurrent second run a
+no-op), then sends, then updates status. A failed send is retried on the next hourly
+run up to 3 times, then left as failed and visible in settings. Email goes through
+Lovable's own email infrastructure (queue + templates), not a third-party account, and
+not through Outlook — the Outlook connector would send from one person's mailbox, which
+is wrong for a site notification.
+
+**Audit.** Enabling/disabling, recipient changes, schedule changes, manual sends and
+send outcomes each write an `audit_log` entry with the acting user and site.
+
+**Retention.** `report_sends` keeps status metadata only — never the report body, never
+recipient personal data beyond the email addresses in `report_recipients`. Rows older
+than 12 months are purged by the existing cleanup function.
+
+**Rollback.** Part 1 is a new route only. Part 2 disables by turning subscriptions off;
+dropping the three tables and the function removes it with no effect on visits.
+
+## Defaults chosen
+
+Week Mon–Sun, current week default; custom range max 31 days; screen needs
+`presence.view`, export needs `data.export`, email settings need `settings.administer`;
+send Monday 08:00 site time; screening status excluded from email by default; retries 3;
+Lovable email infrastructure as the provider; page size 100 with "Show more".
 
 ## Acceptance criteria
 
-- A visitor profile shows identity, current state, attention items, details, history and audit in
-  that order; nothing below section 3 is expanded by default.
-- A companion's profile shows "With <primary name>" and their own arrival/departure times, and
-  checking the companion out does not close the primary.
-- A contractor profile shows supplier/company, trade, destination, status, screening result and
-  credential status read-only; a missing credential is stated in words with an icon and label.
-- A person with no email and no mobile renders without blank rows and is never merged with another
-  blank-contact person.
-- A legacy-only record renders with the "older record" marker and no canonical-only actions.
-- Switching site never shows another site's visits, keys, food entries or audit lines.
-- A blocked screening outcome is visible in the attention strip with an explicit "Blocked" label.
-- A field inactive in configuration does not appear in Details; a historic value for it appears
-  only inside the gated collapsed block.
-- No profile action creates a `people`, `visitors`, `contractor_people` or `suppliers_min` record.
+- Companions appear as their own rows with "With <primary name>" and their own times.
+- A person still on site shows "Still on site"; a past visit with no sign-out shows
+  "No sign-out recorded" — the two are never conflated.
+- Switching site never shows another site's people; the RPC rejects a site the user
+  cannot access.
+- An empty week renders a plain "No visits recorded for this week" state, and the email
+  for an empty week still sends with a zero summary.
+- Legacy rows are marked "Older record".
+- Running the job twice for the same site and week sends once.
+- A user without export permission sees the table but no CSV or print action.
+- A user without `screening.view` never sees the screening column, on screen or in CSV.
+- No screen or log claims a send succeeded unless the provider accepted it.
 
 ## Tests
 
-Unit tests over pure composition helpers (new `src/lib/profileSections.ts`):
-
-- visitor, companion, contractor, blank-contact and legacy-only profile shapes
-- site isolation of history, keys, food and audit inputs
-- screening warning vs block presentation
-- inactive-field suppression and historic-value gating
-- contractor with missing/expired/absent credentials
-- no duplicate-master-record side effects (composition functions are pure reads)
-
-Plus typecheck, build, full Vitest run, and one authenticated live check of a real visitor,
-companion and contractor profile.
+Unit tests over `weeklyReport.ts`: week boundaries across a timezone, companion rows,
+missing vs still-on-site, legacy marking, site isolation, empty week, screening
+gating, CSV shape. Plus a duplicate-send test against the unique constraint, an
+unauthorised-site RPC test, and an email preview render test. Then typecheck, build,
+full test run and an authenticated live check of the report screen.
 
 ## Out of scope
 
-Weekly emailed report; kiosk device binding; seed data; contractor document verification workflow;
-historical reconciliation apply; navigation restructure; broad UI redesign.
+Kiosk device binding; contractor document verification; seed data; navigation or broad
+UI redesign; historical reconciliation apply; any change to the profile pages.
