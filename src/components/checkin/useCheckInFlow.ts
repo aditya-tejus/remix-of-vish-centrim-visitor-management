@@ -40,6 +40,7 @@ export interface CheckInFormData {
 
 export function useCheckInFlow(open: boolean) {
   const { pack, siteId } = useOperatingContext();
+  const { currentSiteId, isLegacySite } = useSite();
   const { residents: dbResidents } = useResidents();
   const { staff: dbStaff } = useStaffMembers();
 
