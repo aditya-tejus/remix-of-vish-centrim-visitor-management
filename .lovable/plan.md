@@ -1,147 +1,146 @@
-# Phase 7B Plan — Dedicated Kiosk Experience and QR Fast Lane
+# Phase 7B Hardening — Directory Site Scope and Linter Delta (review only)
 
-Baseline: Phase 7A closure commit 2d0589f263c6cfbb02585da4768acb26275a7260. Plan only; no code changed.
+Reviewed at the current working tree (Phase 7B implementation). No code, schema, permission or policy
+was changed. Findings below are each backed by a read of the function definitions in the database, the
+migration files and the calling code.
 
-## What exists today (verified by inspection)
+## Findings
 
-- Kiosk routes: `/kiosk` (attract), `/kiosk/home`, `/kiosk/checkin`, `/kiosk/checkout`, `/kiosk/resident-leave`, `/kiosk/qr-scan`, `/kiosk/evacuation`, all under `KioskLayout`, plus a separate `/public-checkin` page.
-- Kiosk check-in already has a full staged flow (type, details, who you are visiting, food, companions, screening, contractor questions, terms, confirm), settings-driven returning-visitor lookup, watchlist check, outbreak handling, and shared kiosk states (skeleton, error, success, idle warning, PIN pad, progress stepper).
-- The kiosk knows which site it is by `?site=` in the address, remembered on the device.
-- Idle handling: warning at 60 seconds, reset at 90 seconds, with the roll-call screen deliberately exempt.
-- A rotating five-minute code already exists for "check in from your phone".
+### 1. Kiosk resident directory returns residents from every site — High. Blocks closure.
+`kiosk_resident_directory(p_search text)` has no site parameter and no site filter. It is executable by
+`anon` and returns resident first name, surname, **room number**, **area/wing name** and status for up to
+300 residents across all sites. A kiosk at Riverstone (or anyone calling the public API unauthenticated)
+can retrieve Willowbrook residents and their room numbers.
+Call sites: `src/hooks/useResidents.ts` (public mode), `src/services/adapters/local/index.ts`
+(`searchResidentsPublic`). Neither supplies a site because the function accepts none. Used by
+`useKioskCheckInFlow` and `KioskResidentLeave`.
 
-Four real problems were confirmed, and this phase exists mainly to fix them:
+### 2. Kiosk staff directory returns staff from every site — Medium. Blocks closure.
+`kiosk_staff_directory(p_search text)` is `anon`-executable, has no site parameter, and returns name and
+department for up to 300 active staff across all sites. Call sites: `useStaffMembers` (public mode),
+`LocalPrototypeStaffDirectory.searchStaffPublic`, consumed by `useKioskCheckInFlow`.
 
-1. **The Scan QR screen skips screening and terms.** It matches a code against the on-site list in the browser and immediately creates a new check-in with the health declaration set to false and no terms acceptance. This breaks the rule that a code must never bypass screening or site policy.
-2. **The kiosk is not site-isolated for lookups.** The two public helpers the kiosk relies on — the on-site list and the returning-person lookup — take no site and return records from every site. A kiosk at one home can surface people from another.
-3. **An orphaned staff "QR Fast Lane" page still exists** (`src/pages/QRFastLane.tsx`), unrouted, with the same bypass behaviour and the staff sidebar. It is a second, unsafe check-in path.
-4. **The welcome screen has a hard-coded site name** ("Sydney Care Centre") instead of the configured site.
+### 3. Supplier and contractor helpers are also unscoped — Medium (contractor), Low (supplier).
+`kiosk_supplier_directory()` lists every active supplier name across sites.
+`kiosk_contractor_lookup(mobile, qr, first, last)` matches contractor people across all sites and returns
+identity, supplier and outstanding credential labels. A contractor known at one site is recognised at
+another site's kiosk, and the code can be used unauthenticated as a mobile-number/name recognition oracle.
+Call sites: `useSuppliers`, `useContractorPeople.findWorker`, `LocalPrototypeSupplierDirectory`.
 
-## 1. Kiosk information architecture
+### 4. Watchlist decision helper is unscoped — Low.
+`kiosk_watchlist_check(first, last)` is `anon`-executable and returns a match decision across all sites.
+It exposes only a boolean plus alert type — no reason, instructions or register — so the disclosure is
+minimal, but it is a cross-site name-guessing oracle. Recommend scoping in the same pass, not separately.
 
-```text
-Attract screen  ->  Welcome (site name, date/time)
-                      |
-   +------------------+---------------------+-------------------+
-   | Check In         | Check Out           | Resident leave    | Scan my code
-   | (hero)           |                     | (only if enabled) | (Fast Lane)
-```
+### 5. Information beyond minimum kiosk need — Medium, part of finding 1.
+Room number and area name are the only fields returned by any kiosk directory that are not needed to
+*choose* a person. They are needed for the staff-side destination display, not for the resident-leave and
+"who are you visiting" pickers, where a name (and room only when the site's lookup mode requires
+disambiguation) is enough. No contact, clinical, risk, DoLS or emergency-contact data is exposed by any
+kiosk helper — that was checked field by field.
 
-Screen-by-screen: Attract -> Welcome -> chosen task -> steps -> confirmation -> automatic return to Attract. One task per screen, one primary action per screen, Start Over always available, help always available, staff access stays hidden behind the existing press-and-hold.
+### 6. Security-linter delta 45 to 47 — Informational. Does not block closure.
+Current: 1 extension in public, 17 anonymous-callable SECURITY DEFINER functions, 29 signed-in-callable
+SECURITY DEFINER functions. The full `pg_proc` inventory shows all 17 anonymous entries are `kiosk_*`
+functions. `kiosk_presence_list` and `kiosk_returning_lookup` were *replaced* with site-aware versions, so
+they carry their existing single count each. The only function added in Phase 7B is `kiosk_log_event`,
+which is counted once in the anonymous lint and once in the signed-in lint. That is the entire +2:
+45 = 1 + 16 + 28, 47 = 1 + 17 + 29. No new class of warning, no newly exposed table.
 
-## 2. New visitor flow
+### 7. Orphaned navigation after deleting `QRFastLane.tsx` — Low. Does not block closure, but is a dead end.
+The component was removed and `/qr-fast-lane` redirects to `/` in `src/App.tsx`, so nothing is broken at
+build time. However `src/pages/PersonTypeSelector.tsx:28` still navigates to `/qr-fast-lane`, which now
+silently lands the user on the visit list, and `src/pages/CoverageChecklist.tsx` still lists that path
+twice as a live feature. No permission or grant changed as a result of the deletion.
 
-Unchanged in structure, tightened in presentation: who you are -> your details -> who you are visiting -> optional food question -> anyone with you -> screening -> terms and privacy -> confirm -> welcome message and badge step. Only steps that apply to the chosen person type and the site's enabled modules are shown; the step counter reflects the real number of steps.
+### 8. Kiosk logging change — no orphaned calls, no permission regression. Informational.
+`kiosk_log_event` is called only from `src/pages/kiosk/KioskCheckIn.tsx`. Execute is revoked from PUBLIC
+and granted to `anon, authenticated, service_role`, matching the existing kiosk pattern. It writes to
+`kiosk_access_log` only, which stays admin-read with no anonymous select. The kiosk's former direct
+`audit_log` insert is gone with no remaining references.
 
-## 3. Returning visitor flow
+### 9. Site binding documentation — Low. Wording should be tightened.
+`roadmap.md` describes the `?site=` plus device-memory arrangement as "a pilot arrangement, not secure
+device binding". `docs/SECURITY_REVIEW.md` says "Not production-grade" but does not use the word pilot in
+the Phase 7B section. The claim is present and honest; it should be made explicit and identical in both.
 
-Kept on the existing settings-driven lookup (phone, personal code, or name, per site and person type), which calls a restricted server helper rather than reading visitor records. Changes: the lookup becomes site-scoped, the match is shown as name only for confirmation, saved details are pre-filled, and screening and terms are still asked every visit.
+## Remediation plan (smallest correct change)
 
-## 4. QR Fast Lane
+**A. Add an optional site parameter to the five unscoped kiosk helpers.** One migration, following the
+pattern already used for `kiosk_presence_list` and `kiosk_returning_lookup`: `p_branch_id uuid DEFAULT NULL`,
+filter `(p_branch_id IS NULL OR <table>.branch_id = p_branch_id)`, keep `SECURITY DEFINER`,
+`SET search_path = public`, `REVOKE ALL ... FROM PUBLIC`, re-grant to `anon, authenticated, service_role`.
+Null keeps existing behaviour for legacy/all-site callers, so nothing regresses.
 
-Fast Lane means "fewer taps", never "fewer checks".
+- `kiosk_resident_directory(p_search, p_branch_id)` — filter on `visitors.branch_id`, tolerating legacy
+  null-site residents exactly as the Phase 7A desktop hook does.
+- `kiosk_staff_directory(p_search, p_branch_id)` — filter on `staff_members.branch_id`.
+- `kiosk_supplier_directory(p_branch_id)` — filter on `suppliers_min.branch_id`.
+- `kiosk_contractor_lookup(p_mobile, p_qr, p_first, p_last, p_branch_id)` — filter on
+  `contractor_people.branch_id`.
+- `kiosk_watchlist_check(p_first, p_last, p_branch_id)` — filter on `visitor_watchlist.branch_id`,
+  keeping entries with a null site visible to every site (a group-wide alert must not be silently dropped).
 
-- Entry: a scanned personal code or the Scan tile.
-- The code is resolved by a restricted server helper, scoped to this site, returning only what the kiosk needs to greet and prefill.
-- The kiosk then skips only identity and detail entry. Screening, terms, destination (if required for that type) and any site policy step are still presented, pre-answered where allowed by settings but always confirmed.
-- Fast Lane ends in the same confirmation and badge behaviour as a normal check-in.
-- The current client-side matching in `KioskQRScan` is removed.
+Old signatures are dropped in the same migration so no unscoped overload stays callable.
 
-## 5. Manual fallback
+**B. Pass the kiosk's site at every public call site.** No new site plumbing is invented; the site already
+resolved by `useOperatingContext()` / `useSite()` is threaded through the existing `publicMode` options.
 
-Camera unavailable, denied or failing: the screen falls back to a large keypad-friendly code entry with clear wording, then to the ordinary check-in path ("I don't have a code"). No dead ends, and camera failure never blocks a visit.
+- `useResidents({ publicMode, siteId })`, `useStaffMembers({ publicMode, siteId })`,
+  `useSuppliers({ publicMode, siteId })` gain an optional `siteId` and forward it.
+- `useKioskCheckInFlow` passes its existing `siteId` to residents, staff and the watchlist check.
+- `KioskResidentLeave` passes its site to `useResidents`.
+- `useContractorPeople.findWorker` and the local adapter's public directory methods accept and forward a
+  site.
+- `useWatchlist({ publicMode })` gains a site for `checkVisitorRemote`.
 
-## 6. Contractor and volunteer routing
+**C. Trim room and area to what the picker needs.** Keep room in the returned row (the resident-leave
+confirmation and search-first disambiguation rely on it), but confirm no kiosk screen renders area/room for
+residents the person has not searched for. If the "show all" resident lookup mode lists rooms for every
+resident, suppress the room column in that mode and keep it in search-first results only.
 
-Both remain person types inside the same kiosk check-in, not separate screens. Contractors continue through supplier recognition and the configured compliance questions with warn/block per site; volunteers follow the ordinary path with their own configured questions. No staff administration, supplier records, credential documents or compliance history are visible on the kiosk — the visitor sees only pass, "please see reception", or the question being asked.
+**D. Clear the dead Fast Lane path.** Point `PersonTypeSelector` at `/kiosk/qr-scan` (or remove the branch)
+and mark the two `CoverageChecklist` rows as superseded by the kiosk scan screen.
 
-## 7. Duplicate scan and existing active visit
+**E. Align documentation.** State in both `roadmap.md` and `docs/SECURITY_REVIEW.md`, in the same words,
+that site selection by URL plus device memory is pilot-grade only and that production requires an
+administrator-provisioned, cryptographically bound kiosk device credential.
 
-If a scanned or matched person already has an open visit at this site:
-- offer "Check out" as the primary action and "This isn't me / start again" as the secondary;
-- never silently create a second visit;
-- a repeat scan within a short window shows the same confirmation instead of acting twice.
+## Expected files, migrations, RLS and RPC changes
 
-## 8. Timeout, inactivity and reset
+- One migration: recreate the five helpers with `p_branch_id`, drop the old signatures, re-apply
+  revoke/grant. No table, RLS policy or grant on any table changes. No destructive statements.
+- `src/hooks/useResidents.ts`, `useStaffMembers.ts`, `useSuppliers.ts`, `useWatchlist.ts`,
+  `useContractorPeople.ts`, `useKioskCheckInFlow.ts`.
+- `src/services/adapters/local/index.ts` and the matching service contract signatures.
+- `src/pages/kiosk/KioskResidentLeave.tsx`, `src/pages/PersonTypeSelector.tsx`,
+  `src/pages/CoverageChecklist.tsx`.
+- `roadmap.md`, `docs/SECURITY_REVIEW.md`.
+- Expected linter outcome: unchanged at 47. Rewriting existing anonymous kiosk functions does not add
+  warnings; no function is added or removed.
 
-Keep 60s warning / 90s reset with the roll-call exemption. Additions: a longer allowance while a visitor is typing into a field or reading terms, full state clear on reset (including any scanned code), and no personal detail left on screen after reset.
+## Tests required
 
-## 9. Failed save and network recovery
+1. Direct anonymous calls to each of the five helpers with Riverstone's site: no Willowbrook person,
+   staff member, supplier, contractor or watchlist match is returned, and vice versa.
+2. Anonymous call with no site: legacy behaviour unchanged (no error, results returned).
+3. Riverstone kiosk resident picker, staff picker, contractor recognition and supplier list show only
+   Riverstone entries; repeat at Willowbrook.
+4. Watchlist: a Riverstone entry does not trigger at the Willowbrook kiosk; a group-wide (null-site)
+   entry triggers at both.
+5. Resident-leave flow still finds and marks a resident away and back.
+6. Search-first and show-all resident lookup modes both behave, with room shown only where intended.
+7. Signed-in reception behaviour from Phase 7A is unchanged: visit list, check-in destination picker,
+   staff and supplier lists.
+8. `/qr-fast-lane` no longer reachable from the person-type screen; the kiosk scan screen still works.
+9. Typecheck, build and security linter; confirm 47 with the same three categories.
+10. All temporary test records purged and verified at zero.
 
-Match Phase 7A behaviour: on failure the kiosk stays on the confirm step, keeps everything entered, shows a plain "not saved, try again" message, prevents double submission, and creates exactly one record on retry. Offline is stated honestly; no silent queueing is promised.
+## Closure assessment
 
-## 10. Privacy-safe destination display
-
-Resident search stays search-first where configured; results show name and, where the site allows it, area only — no room numbers, no clinical or contact detail. The confirmation shows "Visiting <name>", never a room. Staff destinations follow the existing lookup mode setting.
-
-## 11. Badge completion
-
-Ends on the existing badge behaviour: if badge issuing is on for the site and person type, offer the badge, otherwise go straight to the welcome confirmation. No printer hardware work.
-
-## 12. Site binding and isolation
-
-Device binding stays as it is (site in the address, remembered on the device). The welcome screen shows the real configured site name. Every kiosk lookup, list and write is bound to that site.
-
-## 13. Anonymous access review
-
-- Add an optional site parameter to the on-site list and returning-lookup helpers so anonymous kiosk calls are limited to one site.
-- Remove the kiosk's direct write to the audit table in `KioskCheckIn.tsx`; route it through the existing restricted logging path.
-- Confirm no kiosk screen reads visitor, resident, supplier, key or food tables directly.
-- Re-run the security linter and record the classified warning count.
-
-## 14. Responsive behaviour
-
-Verified at 1280 (kiosk), 768 (tablet) and 375 (phone, for the "check in from your phone" path): single column below 768, minimum 48px touch targets, 16px+ body text, no horizontal overflow, keyboard-safe field positioning.
-
-## 15. Icons
-
-lucide-react only, always with a text label. No emojis anywhere.
-
-## 16. Files expected to change
-
-- `src/pages/kiosk/KioskQRScan.tsx` — rewritten as Fast Lane with camera, manual fallback and no bypass.
-- `src/pages/kiosk/KioskHome.tsx` — real site name, tile set driven by enabled modules.
-- `src/pages/kiosk/KioskCheckIn.tsx` — accept an incoming scanned identity; remove the direct audit write.
-- `src/hooks/useKioskCheckInFlow.ts` — Fast Lane entry state, site-scoped lookup.
-- `src/hooks/useVisitors.ts` — pass the kiosk site to the public list call.
-- `src/pages/kiosk/KioskCheckOut.tsx`, `KioskLayout.tsx` — duplicate-visit handling, timeout refinements.
-- `src/pages/QRFastLane.tsx` — removed (dead, unsafe duplicate path).
-- `src/components/kiosk/*` — small shared additions only where reuse is genuine.
-
-## 17. Data, permission and migration impact
-
-- No new visitor, person or code model. Existing personal codes and visit codes are reused.
-- One non-destructive migration: optional site parameter on the two kiosk lookup helpers, with existing behaviour preserved when no site is supplied.
-- No new tables, no new permissions, no widening of anonymous access.
-
-## 18. Acceptance tests
-
-1. New visitor completes kiosk check-in; one record, correct site.
-2. Returning visitor is recognised, details pre-filled, screening and terms still asked.
-3. Fast Lane scan cannot complete without screening and terms.
-4. Fast Lane at site B does not recognise a person known only at site A.
-5. Camera blocked: manual entry works; unknown code offers ordinary check-in.
-6. Scan of someone already on site offers check-out, creates no second visit.
-7. Double tap on confirm creates one record.
-8. Forced save failure keeps entries and allows exactly one successful retry.
-9. Idle warning then reset clears all personal detail.
-10. No room numbers or contact details appear on any kiosk screen.
-11. Contractor block/warn behaves per site setting with no staff data shown.
-12. Kiosk network trace shows restricted helpers only, no sensitive table reads.
-13. Staff reception routes and Phase 7A behaviour unchanged.
-
-## 19. Non-goals
-
-No printer hardware, no email/SMS/push, no biometrics or facial recognition, no pre-registration or invitations, no group check-in redesign, no emergency redesign, no settings consolidation, no new reports, no Phase 7C-7F work.
-
-## Risks
-
-- Rewriting the scan screen changes behaviour some testers may have relied on; the old behaviour was unsafe and is intentionally removed.
-- Adding a site parameter to shared kiosk helpers touches paths reception also uses indirectly; defaults must preserve current behaviour.
-- Camera behaviour varies by device and cannot be fully proven in an automated browser test; manual fallback is therefore mandatory.
-
-## Open questions
-
-1. Should a personal code be reusable indefinitely, or expire after a set period per site?
-2. When a returning visitor's screening answers are still within their validity window, may they be pre-answered for confirmation, or must every answer be re-tapped?
-3. Should the Fast Lane tile be hideable per site for sites that do not issue codes?
+- Findings 1 and 2 (and the contractor part of 3) block Phase 7B closure: a kiosk in one care home can
+  currently retrieve residents, room numbers and staff from another, which is exactly the cross-site
+  isolation guarantee this phase claims.
+- Findings 4, 7, 9 do not block closure but should be fixed in the same pass because they are one-line
+  changes in files already being touched.
+- Findings 6 and 8 are informational; the linter delta is fully accounted for and needs no work.
