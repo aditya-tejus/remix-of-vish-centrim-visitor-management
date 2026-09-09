@@ -132,6 +132,36 @@ export function defaultCompanionSeeds(jurisdiction: Jurisdiction): CompanionFiel
   ];
 }
 
+/**
+ * Keeps the saved record readable by everything that already exists: whatever
+ * the desk was asked for, the companion still carries a single `name`, `phone`,
+ * `email` and `relation` so roll call, exports and history stay correct.
+ */
+export function normaliseCompanion<T extends Record<string, any>>(companion: T): T {
+  const pick = (...keys: string[]) => {
+    for (const k of keys) {
+      const v = companion[k];
+      if (typeof v === "string" && v.trim()) return v.trim();
+    }
+    return "";
+  };
+  const full = pick("name", "full_name");
+  const first = pick("first_name", "firstname", "given_name");
+  const last = pick("surname", "last_name", "family_name");
+  const name = full || [first, last].filter(Boolean).join(" ").trim();
+  const phone = pick("phone", "mobile", "mobile_number", "contact_number");
+  const email = pick("email", "email_address");
+  const relation = pick("relation", "relationship", "relationship_to_main_visitor");
+
+  return {
+    ...companion,
+    ...(name ? { name } : {}),
+    ...(phone ? { phone } : {}),
+    ...(email ? { email } : {}),
+    ...(relation ? { relation } : {}),
+  };
+}
+
 export const FIELD_TYPE_OPTIONS = [
   { value: "text", label: "Text" },
   { value: "tel", label: "Phone number" },
