@@ -162,6 +162,13 @@ export function usePersonTypes() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Settings screens announce a save so previews and kiosk tiles pick the change up.
+  useEffect(() => {
+    const onChanged = () => { load(); };
+    window.addEventListener("centrim:settings-saved", onChanged);
+    return () => window.removeEventListener("centrim:settings-saved", onChanged);
+  }, [load]);
+
   const deskTypes = rows.filter((r) => r.type !== "resident" && r.deskEnabled);
 
   return {

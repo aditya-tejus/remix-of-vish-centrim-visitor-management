@@ -104,6 +104,7 @@ export function PersonTypesTab() {
       await reload();
       setDirty(false);
       setSavedAt(new Date());
+      window.dispatchEvent(new Event("centrim:settings-saved"));
       toast({ title: "Visitor types saved" });
     } catch {
       setSaveError("Your changes were not saved. Nothing has been changed yet — check your connection and try again.");
