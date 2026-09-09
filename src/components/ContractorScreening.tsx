@@ -215,8 +215,14 @@ export function ContractorScreening({
       ? `${blockingNo.map((q) => q.label.replace(/\?$/, "")).join("; ")} — please see a staff member.`
       : null;
 
-  const blocked = gate.blocked || questionReason !== null;
-  const reason = gate.blocked ? gate.reason : questionReason ?? gate.reason;
+  // The server decides whether documents are good enough. The client checklist
+  // only ever adds caution on top — it can never clear a server block.
+  const blocked = verdict.blocked || gate.blocked || questionReason !== null;
+  const reason = verdict.blocked
+    ? verdict.reason
+    : gate.blocked
+    ? gate.reason
+    : questionReason ?? gate.reason;
 
   // Report the gate upward only when it actually changes — the callback is
   // usually an inline arrow, so it must stay out of the dependency list.
