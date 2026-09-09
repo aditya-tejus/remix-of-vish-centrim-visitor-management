@@ -497,6 +497,10 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     error,
     refresh: fetchVisitors,
     addVisitor,
+    addVisitorAsync,
+    /** Last successful read of the list, so the desk can see how fresh it is. */
+    lastUpdated,
+
     markResidentAway,
     checkOutVisitor,
     checkInReturn,
