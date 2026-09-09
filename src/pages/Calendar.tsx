@@ -58,21 +58,11 @@ export default function CalendarPage() {
   const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm">
-            <div className="flex items-center gap-4 px-6 py-4">
-              <SidebarTrigger />
-              <div>
-                <h1 className="text-lg font-semibold text-foreground">Visit Calendar</h1>
-                <p className="text-xs text-muted-foreground">Daily visit overview — click a date to see details</p>
-              </div>
-            </div>
-          </header>
-
-          <main className="p-6 flex flex-col lg:flex-row gap-6">
+    <AppShell
+      title="Visit Calendar"
+      subtitle="Daily visit overview — select a date to see details"
+      mainClassName="p-6 flex flex-col lg:flex-row gap-6"
+    >
             {/* Calendar Grid */}
             <div className="flex-1 min-w-0">
               {/* Month Navigation */}
