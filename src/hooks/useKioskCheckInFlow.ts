@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchKeyPolicy, DEFAULT_KEY_POLICY, type KeyPolicy } from "@/hooks/useKeyPolicy";
 import { useFormFields, FormField } from "@/hooks/useFormFields";
+import { resolveCheckInFields, missingCheckInFields, missingFieldsMessage, isFieldEnabled } from "@/lib/checkInFields";
 import { useActiveHealthQuestions, useActiveVaccinationFields } from "@/hooks/useHealthQuestions";
 import { useResidents } from "@/hooks/useResidents";
 import { useStaffMembers } from "@/hooks/useStaffMembers";
@@ -79,6 +80,8 @@ export function useKioskCheckInFlow() {
     () => formFields.filter((f) => f.is_active && !f.field_key.startsWith("companion_")).sort((a, b) => a.sort_order - b.sort_order),
     [formFields]
   );
+  // Same resolver as the staff desk, so kiosk and reception can never diverge.
+  const activeFields = useMemo(() => resolveCheckInFields(formFields), [formFields]);
 
   // Health questions
   const { data: healthQuestions = [] } = useActiveHealthQuestions(selectedType as any);
