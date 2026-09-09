@@ -1,124 +1,86 @@
-# Phase 7F — Increment 2: Shell, landmarks and navigation accessibility
+# Phase 7F — Increment 2B: shell conversion for Visitors, Visitor Profile, Calendar and Settings
 
-Baseline: Increment 1 verified at `e303f4e9606d0be383d016959c39d657e8530e09`. This increment touches shell and page scaffolding only — no visual redesign of Visit List, check-in, kiosk content, emergency, settings, registers or reports. No database, RLS, permission, settings-key, RPC, workflow or business-rule change.
+Baseline: Increment 2A verified on `191e15bf19cba6c979b50d6e90bc15cb0913c2d6`. `AppShell` + `SkipToContent` + `AppHeader` + `AppSidebar` is live on Visit List, Today and Residents.
 
-## What is wrong today (found by inspection)
+This increment converts four more staff routes to the same frame. Presentation only.
 
-- **Missing `main` landmark** on 9 routes: `Residents`, `NotFound`, and all seven kiosk screens rely on the kiosk layout (which does supply `main`, so kiosk is covered for the outlet, but `KioskAttract` returns bare `Outlet` with no landmark at all).
-- **`AppHeader` used on only 6 of 30+ staff pages** (`VisitList`, `HomeWorkbench`, `Residents`, `FoodRegister`, `KeysRegister`, `OperationsReport`). Every other staff page hand-rolls a sticky header with its own `h1`, its own `SidebarTrigger`, and no site switcher, clock, occupancy or notification bell. Result: inconsistent focus order and inconsistent heading level per route.
-- **Heading gaps**: `Residents` renders `AppHeader` but the page has no `h1` at all when no title is passed; `KioskAttract`, `KioskCheckIn`, `KioskCheckOut`, `KioskQRScan`, `KioskResidentLeave`, `KioskEvacuation` have no `h1`. `PublicCheckIn` has two `h1` elements across two branches (mutually exclusive — acceptable, confirm at build time). The `h1` strings inside `Evacuation.tsx:527` and `EvacuationReport.tsx:180` are inside print HTML templates — leave untouched.
-- **`PageHeader` primitive from Increment 1 is unused.**
-- **Icon-only shell actions**: `SidebarTrigger` (no accessible name beyond the shadcn default), the header outbreak toggle uses `title` only, the kiosk staff-access button has `aria-label` but is a 1.2s press-and-hold with no keyboard equivalent (intentionally obscure — keep, but document).
-- **Sidebar**: groups use `CollapsibleTrigger` wrapping a `SidebarGroupLabel` `div`, so no `aria-expanded` is exposed on a real button in some paths; the chevron rotation keys off `group-data-[state=open]` on a parent that does not carry the `group` class, so the indicator never rotates. Nav items are `button` + `navigate()` rather than links — no middle-click/open-in-new-tab, and no `aria-current`. "Open kiosk" uses `window.open` from a button (acceptable, needs an explicit label saying it opens a new tab).
-- **`RequireAuth` loading state** is a bare spinner with no text, no landmark, no live region; no denied state exists (unauthenticated users are redirected).
-- **`NotFound`** has no `main`, no site shell, and only a raw anchor back to `/`.
-- **`min-h-screen`** used across shell wrappers instead of `min-h-dvh` (kiosk/tablet address-bar issue).
+## What inspection found (current state)
 
-## Route-by-route landmark map
+All four routes hand-roll their own frame: `SidebarProvider` > `AppSidebar` > `SidebarInset` > a private sticky `<header>` with its own `SidebarTrigger`, its own `<h1>` and its own `<main>`.
 
-Every staff route resolves to exactly one `header` (shell), one `nav` (sidebar), one `main`, one `h1`. The `h1` lives in the header region via `AppHeader`/`PageHeader`; page bodies start at `h2`.
+- `src/pages/Visitors.tsx` — private header, `h1` "Visitor Profiles", `main.p-4 sm:p-6 space-y-4`, `min-h-screen`. Search box, tabs (by person type + watchlist), quick check-in buttons, "Add to watchlist" dialog, `VisitorProfile` slide-over. The slide-over and watchlist dialog sit **outside** `SidebarInset` but **inside** `SidebarProvider`.
+- `src/pages/VisitorProfilePage.tsx` — two returns. The "Visitor not found" branch renders a sidebar shell with **no `main` and no heading at all**. The main branch has `h1` "Visitor Profile", a back button, check-in/check-out buttons, print badge, and a "more" dropdown (feedback, edit, CSV, PDF, delete) with admin-gated items. Several dialogs after `SidebarInset`.
+- `src/pages/Calendar.tsx` — `h1` "Visit Calendar", `main` is the two-column flex container itself (`p-6 flex flex-col lg:flex-row gap-6`); month `h2` and day `h3` inside. Type filter, month navigation, day detail panel.
+- `src/pages/Settings.tsx` — `h1` "Settings" plus a **second** heading treatment inside: `SettingsPageHeading` renders `h2` for the active section (correct level, keep). The route header also renders its own `SiteSwitcher compact`, which `AppHeader` already provides — converting removes the duplicate. Wrapped in `SettingsAccessProvider` and `PersonTypesDraftProvider`, which must stay outermost.
 
-| Route | Shell | h1 source | main |
-|---|---|---|---|
-| `/`, `/visit-list` | staff | AppHeader "Visitor list" | exists |
-| `/today` | staff | AppHeader | exists |
-| `/visitors`, `/visitors/:id` | staff | convert inline header to AppHeader | exists |
-| `/residents` | staff | AppHeader (add title) | **add** |
-| `/food-register`, `/keys` | staff | AppHeader | exists |
-| `/calendar`, `/gdpr`, `/audit-log` | staff | convert | exists |
-| `/reports*` (7 routes) | staff | convert | exists |
-| `/evacuation` | staff | convert (print template untouched) | exists |
-| `/settings` | staff | convert | exists |
-| `/person-type`, `/group-checkin` | staff | convert | exists |
-| `/coverage` | staff | convert | exists |
-| `/auth` | standalone | existing | verify one `main` |
-| `/public-checkin` | standalone | existing (branch-exclusive) | exists |
-| `/kiosk` (attract) | kiosk | visually-hidden `h1` "Welcome" | **add** |
-| `/kiosk/*` (6 screens) | kiosk layout `main` | per-screen `h1` (visually hidden where the design has no title) | layout |
-| `*` (NotFound) | minimal | "Page not found" | **add** |
+Existing defects to fix as part of the conversion:
+- No skip link and no labelled navigation landmark on any of the four routes (the sidebar `nav` labelling added in 2A comes from `AppSidebar`, so conversion fixes this automatically).
+- Visitor Profile "not found" state has no landmark, no heading — a keyboard user lands nowhere.
+- Visitor Profile back button and the "more" dropdown trigger are icon-only with no accessible name.
+- `min-h-screen` on all four (should be `min-h-dvh`, already handled by `AppShell`).
+- Settings renders two site switchers once converted, unless the page-level one is removed.
 
-Redirect-only routes (`/dashboard`, `/workbench`, `/check-in`, `/qr-fast-lane`, `/resident-leave`, `/leave-requests`, `/checkout-requests`, `/feedback`, `/visitor-analytics`) render nothing and are unchanged.
+## Route-by-route landmark map after conversion
 
-## Changes
+| Route | Shell title (the one h1) | Subtitle | main | Header actions |
+|---|---|---|---|---|
+| `/visitors` | Visitor Profiles | All contacts by type and watchlist | `p-4 sm:p-6 space-y-4` | Add to watchlist |
+| `/visitors/:id` | Visitor Profile | `{first} {surname}` | `p-6` | Back, Check in again / Check out, Print badge, More menu |
+| `/visitors/:id` (not found) | Visitor Profile | — | `p-6` | Back |
+| `/calendar` | Visit Calendar | Daily visit overview — select a date to see details | `p-6 flex flex-col lg:flex-row gap-6` | Type filter (stays in body if it reads better) |
+| `/settings` | Settings | Decisions administrators make for this site. | `p-4 sm:p-6` | none (site switcher comes from AppHeader) |
 
-### 1. Shell scaffolding
-- New `src/components/AppShell.tsx`: wraps `SidebarProvider` + `AppSidebar` + `SidebarInset` + `AppHeader` + `<main id="main-content">`, taking `title`, `subtitle`, `actions` and notification counts. Pages pass content as children. This removes ~25 copies of the same wrapper without changing any page's data or behaviour.
-- Add a "Skip to content" link as the first focusable element in `AppShell`, visible on focus only, targeting `#main-content`.
-- `AppHeader` always renders exactly one `h1`; when a page needs richer heading content it uses `PageHeader` (Increment 1) inside `main` at `h2` level, never a second `h1`.
-- Replace `min-h-screen` with `min-h-dvh` in shell wrappers only (page-level instances are later increments).
+Each route ends with: one `main#main-content`, one `h1` (from `AppHeader`), one labelled `nav` (from `AppSidebar`), one skip link. Section headings inside pages stay at `h2`/`h3` — `SettingsPageHeading`'s `h2` is left exactly as is.
 
-### 2. Conversion order (small, reviewable batches)
-1. `AppShell` + `VisitList`, `HomeWorkbench`, `Residents` (reception-critical; Visit List stays the default `/` route).
-2. `Visitors`, `VisitorProfilePage`, `Calendar`, `Settings`.
-3. Reports family, `GDPR`, `AuditLog`, `Evacuation`, `EvacuationReport`, `CoverageChecklist`.
-4. `PersonTypeSelector`, `GroupCheckIn`, `FoodRegister`, `KeysRegister`.
-Each batch is behaviour-neutral: same components, same hooks, same order of page-specific actions.
+## Files to change
 
-### 3. AppSidebar
-- `nav` with `aria-label="Main"`; groups become real `button` triggers exposing `aria-expanded` and a correctly rotating chevron (`aria-hidden`).
-- Nav items become `NavLink`-backed `SidebarMenuButton asChild` so they carry `href`, `aria-current="page"` and support open-in-new-tab. Active detection stays exactly as today (`/` and `/visit-list` both mark Visit list active).
-- Group containing the active route stays open on load (existing `isGroupActive` logic preserved).
-- "Open kiosk" keeps `window.open` but is labelled "Open kiosk (new tab)".
-- Collapsed state keeps the icon rail; the header `SidebarTrigger` always stays visible and gets `aria-label="Toggle navigation"`. Sub-items currently have no icon — in collapsed rail mode they show the group icon plus tooltip so nothing becomes an unlabelled blank.
-- Terminology stays configuration-driven (`terms.residentPlural`, module flags for Registers) — no hardcoded AU/UK labels introduced.
+- `src/pages/Visitors.tsx` — replace wrapper with `AppShell`; keep dialogs as siblings after the shell content.
+- `src/pages/VisitorProfilePage.tsx` — replace both wrappers with `AppShell`; move the header button cluster into `actions`; give the back button and the more-menu trigger `aria-label`.
+- `src/pages/Calendar.tsx` — replace wrapper with `AppShell` using `mainClassName` for the two-column layout.
+- `src/pages/Settings.tsx` — replace wrapper with `AppShell` inside the two existing providers; drop the page-level `SiteSwitcher`.
+- `roadmap.md` — record increment 2B.
 
-### 4. Header, site switcher, focus order
-Focus order becomes: skip link → sidebar trigger → h1 (not focusable) → nav → clock/occupancy (non-interactive, `aria-hidden` decorative icons) → outbreak toggle → site switcher → notifications → page actions → main.
-- Outbreak toggle gains a visible text label already present plus `aria-pressed` and an accessible description; `title` is no longer the only affordance.
-- Occupancy chip gets `role="status"`/`aria-label` describing count and limit in words, not colour alone.
-- `SiteSwitcher` already has an `aria-label`; add `aria-haspopup="menu"` behaviour verification and focus return to the trigger on close (Radix default — verify, do not re-implement).
+No other files. No new components: `AppShell`, `AppHeader`, `PageHeader` and the Increment 1 tokens already cover this. `PageHeader` is **not** added to these routes, because `AppHeader` already renders the single `h1` — adding it would duplicate the heading.
 
-### 5. Kiosk separation
-- `KioskLayout` stays the only kiosk shell; assert no `AppSidebar`, `AppHeader`, `SiteSwitcher`, `NotificationBell` or settings link is reachable from any `/kiosk/*` screen (grep-enforced acceptance test).
-- `KioskAttract` gains its own `main` and a visually hidden `h1`.
-- Each kiosk screen gains an `h1` (visible where a title already exists, visually hidden otherwise).
-- Press-and-hold staff access is unchanged in behaviour; documented as prototype-grade obscurity, not a security control.
+## Explicitly preserved
 
-### 6. NotFound and RequireAuth
-- `NotFound`: `main` + `h1` "Page not found", plain-language sentence, and two labelled Lucide actions — "Back to visit list" and "Go back". Keeps the existing console log.
-- `RequireAuth` loading: `main` + `role="status"` + visible "Checking your sign-in…" text, spinner `aria-hidden`, respects reduced motion.
-- Add a shared read-only/denied panel usage note: route-level denial still redirects to `/auth`; in-page permission denial keeps the existing `PermissionDeniedState`.
+Data hooks, react-query calls, permissions (`isAdmin` gating on edit/delete), settings values and storage keys, `SettingsAccessProvider` / `PersonTypesDraftProvider` order, tabs and tab state, search, filters, month navigation, quick check-in, watchlist add/remove, badge printing, CSV/PDF exports, feedback and edit dialogs, delete confirmation, `VisitorProfile` slide-over, preview panel, and the `/` Visit List default route. No route table edits at all.
 
-## Responsive behaviour
+## Out of scope
 
-| Width | Sidebar | Header | Main |
-|---|---|---|---|
-| 768 | offcanvas sheet, trigger always visible, focus trapped in sheet and returned to trigger on close | clock/occupancy hidden, site switcher moves into the sidebar footer (already present) | full width, `px-4` |
-| 1024 | icon rail collapsible, tooltips on | occupancy visible | `px-6` |
-| 1280 / 1440 | expanded by default | all chips visible incl. outbreak control | max content width unchanged |
+Kiosk, public check-in, auth, emergency, registers, reports, Residents (its known ~27px/142px horizontal overflow stays tracked and untouched), `leave_types` symbol data, schema, RLS, RPCs, notification delivery.
 
-No layout shift: sidebar width is reserved by `SidebarProvider`; header height fixed via `min-h-14`; skip link is absolutely positioned.
+## Risks
 
-## Files
-
-New: `src/components/AppShell.tsx`, `src/components/SkipToContent.tsx`.
-Edited: `src/components/AppHeader.tsx`, `src/components/AppSidebar.tsx`, `src/components/SiteSwitcher.tsx`, `src/components/RequireAuth.tsx`, `src/pages/NotFound.tsx`, `src/pages/kiosk/KioskLayout.tsx` and the six kiosk screens (heading/landmark only), plus the staff pages listed in the conversion batches. `docs/DESIGN_SYSTEM.md` gains a shell/landmark section. `roadmap.md` records the increment.
-Not touched: `src/App.tsx` routes (order and redirects unchanged), all hooks, all data access, print templates, `leave_types` symbol data.
+- **Provider nesting (Settings).** `AppShell` owns `SidebarProvider`; the settings providers must wrap it, not the reverse, or context breaks. Low risk, easy to verify by loading each section.
+- **Dialog placement.** Dialogs currently sit inside `SidebarProvider`. Moved as siblings of `AppShell` they lose that context; none of them use sidebar context, but each dialog must be opened once during verification.
+- **Calendar layout.** `main` doubles as the flex container; passing the classes through `mainClassName` preserves it exactly, but the two-column break at 1024 must be re-checked.
+- **Sticky offsets.** Settings uses `lg:top-20` sticky columns tuned to the old 56px header; `AppHeader` height is similar but must be visually confirmed.
+- **Header crowding at 768.** Visitor Profile has five header controls; they may need to collapse into the more-menu at small widths, or wrap.
 
 ## Acceptance tests
 
-1. Every staff route: exactly one `main`, one `h1`, one `nav[aria-label="Main"]` (scripted DOM count via Playwright over the route list).
-2. `/` still renders the Visit List for a signed-in user; `/today`, `/settings`, `/evacuation`, `/kiosk` unchanged in destination.
-3. Keyboard: Tab from page load reaches skip link first; Enter moves focus into `main`; sidebar fully operable by keyboard; sheet at 768 traps focus and restores it to the trigger on Escape.
-4. `aria-current="page"` present on exactly one nav item per route.
-5. No `AppSidebar`/`AppHeader`/settings affordance in any `/kiosk/*` DOM.
-6. NotFound and RequireAuth loading expose landmark + status text.
-7. No horizontal overflow at 768/1024/1280/1440 on converted routes (`/residents` pre-existing ~27px overflow is tracked separately and must not worsen).
-8. Regression: check-in, checkout, emergency start/resolve, settings save, keys/food registers, reports export all behave as before.
-9. `tsgo --noEmit`, production build clean, Supabase linter unchanged at the documented 47-warning baseline.
+1. Each of the four routes: exactly one `main`, one `h1`, one `nav[aria-label]`; skip link is the first tab stop and moves focus into `main`.
+2. Sidebar shows the correct active item with `aria-current="page"` on each route; focus is restored after collapsing/expanding a group.
+3. Visitors: search filters, every tab renders, quick check-in works, watchlist dialog opens and adds, profile slide-over opens and closes returning focus.
+4. Visitor Profile: loads a real visitor; back, check in / check out, print badge, feedback, edit (admin), CSV, PDF and delete (admin) all still reachable and named; the not-found branch shows a heading, a `main` and a working Back action.
+5. Calendar: month navigation, type filter and day selection all work; two-column layout intact at 1280.
+6. Settings: every section in the nav loads, read-only fences and denied reasons unchanged, preview panel appears for its sections, exactly one site switcher on screen, no settings value written by the conversion.
+7. `/` still renders Visit List; `/today`, kiosk, emergency and reports untouched.
+8. 768 / 1024 / 1280 / 1440: no new horizontal overflow beyond the tracked Residents issue.
+9. AU residential, AU retirement village and UK care home terminology still comes from configuration.
+10. Typecheck and build pass; security linter stays at exactly 47 warnings.
 
-## Risks and rollback
+## Rollback
 
-- **Risk:** mass conversion to `AppShell` accidentally drops a page-specific header action or count. Mitigation: convert in four batches, diff each page's action props, no logic edits in the same commit.
-- **Risk:** switching nav buttons to links changes navigation semantics (full reload if `href` used without `NavLink`). Mitigation: `NavLink` only.
-- **Risk:** moving headings changes visual weight. Mitigation: keep existing classes; only the element/level and labels change.
-- **Rollback:** each batch is an isolated commit; reverting `AppShell` adoption per page restores the prior wrapper with no data implications.
+Four self-contained page files plus `roadmap.md`. Reverting any single page restores its previous shell independently; no shared component or route changes to unwind.
 
-## Non-goals
+## Blocked / not claimed
 
-Visit List/check-in/kiosk/emergency/settings/registers/reports visual refinement, the icon and text-size sweep, emoji/symbol replacement, `leave_types` data, new permissions or routes, dashboard-style additions, notification delivery. Accessibility here is a design target verified by inspection and scripted checks — not a certified WCAG or regulatory compliance claim.
+- No production compliance claim. This is accessibility and consistency work, not certification.
+- Residents overflow is not fixed here; it remains a tracked prior issue for a later increment.
+- Restricted-role settings paths still cannot be exercised end to end without a restricted test account; permission code is preserved unchanged rather than re-verified.
 
-## Open questions
+## Open question
 
-1. Should the standalone `/auth` and `/public-checkin` pages also gain the skip link, or stay minimal? (Assumption: skip link staff shell only.)
-2. `Residents` currently shows no page title in its header — confirm "Residents" (AU/UK term-driven) is the right `h1`.
+Calendar's type filter: keep it in the page body (safest, zero layout risk) or lift it into the header actions area for consistency with other routes? Default assumption unless told otherwise: keep it in the body.
