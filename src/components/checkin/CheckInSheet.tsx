@@ -307,6 +307,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
                   bodyTemperature={flow.formData.bodyTemperature}
                   onTemperatureChange={(val) => flow.updateField("bodyTemperature", val)}
                   dbVaccFields={flow.dbVaccFields}
+                  evaluation={flow.screeningEvaluation}
                   jurisdiction={flow.jurisdiction}
                   contractorScreeningAnswers={flow.contractorScreeningAnswers}
                   setContractorScreeningAnswers={flow.setContractorScreeningAnswers}

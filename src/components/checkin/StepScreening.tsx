@@ -3,7 +3,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shield, Thermometer, Syringe, Upload, FileText, X, AlertTriangle } from "lucide-react";
+import { Shield, Thermometer, Syringe, Upload, FileText, X, AlertTriangle, ShieldAlert, ShieldCheck, Ban } from "lucide-react";
+import type { ScreeningEvaluation } from "@/lib/screeningOutcome";
 import { VisitorType } from "@/types/visitor";
 import { ContractorScreening } from "@/components/ContractorScreening";
 import { Supplier } from "@/hooks/useSuppliers";
@@ -34,6 +35,8 @@ interface StepScreeningProps {
   workerFirstName?: string;
   workerSurname?: string;
   workerMobile?: string;
+  /** Outcome of the configured question rules, shared with the kiosk. */
+  evaluation?: ScreeningEvaluation;
 }
 
 export function StepScreening({
@@ -53,6 +56,7 @@ export function StepScreening({
   workerFirstName = "",
   workerSurname = "",
   workerMobile = "",
+  evaluation,
 }: StepScreeningProps) {
   const isContractor = selectedType === "contractor";
 
@@ -190,13 +194,27 @@ export function StepScreening({
         })}
       </div>
 
-      {/* Global flag warning */}
-      {hasYesFlags && (
-        <div className="rounded-xl bg-destructive/10 border-2 border-destructive/20 p-4 flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+      {/* Outcome of the configured question rules */}
+      {evaluation && evaluation.flagged && (
+        <div
+          className={`rounded-xl border-2 p-4 flex items-start gap-3 ${
+            evaluation.blocked ? "bg-destructive/10 border-destructive/25" : "bg-warning/10 border-warning/25"
+          }`}
+        >
+          {evaluation.blocked ? (
+            <Ban className="h-5 w-5 text-destructive shrink-0 mt-0.5" aria-hidden="true" />
+          ) : (
+            <ShieldAlert className="h-5 w-5 text-warning shrink-0 mt-0.5" aria-hidden="true" />
+          )}
           <div>
-            <p className="text-[14px] font-bold text-destructive">Health Concern Flagged</p>
-            <p className="text-[12px] text-muted-foreground mt-0.5">Staff review required before entry is permitted.</p>
+            <p className={`text-[14px] font-bold ${evaluation.blocked ? "text-destructive" : "text-warning-foreground"}`}>
+              {evaluation.blocked ? "Sign-in blocked" : "Staff attention needed"}
+            </p>
+            <ul className="text-[12px] text-muted-foreground mt-0.5 space-y-0.5">
+              {evaluation.flags.map((f) => (
+                <li key={`${f.questionId}-${f.severity}`}>{f.message}</li>
+              ))}
+            </ul>
           </div>
         </div>
       )}
@@ -217,12 +235,14 @@ export function StepScreening({
             onChange={(e) => onTemperatureChange(e.target.value)} className="h-10 rounded-xl text-[14px] w-32" />
           <span className="text-[14px] text-muted-foreground font-semibold">°C</span>
           {bodyTemperature && parseFloat(bodyTemperature) <= 37.8 && (
-            <span className="text-[12px] text-success font-semibold">✓ Normal</span>
+            <span className="text-[12px] text-success font-semibold inline-flex items-center gap-1">
+              <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" /> Normal
+            </span>
           )}
         </div>
         {bodyTemperature && parseFloat(bodyTemperature) > 37.8 && (
           <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-3 flex items-center gap-2.5">
-            <span className="text-sm">🌡️</span>
+            <Thermometer className="h-4 w-4 text-destructive shrink-0" aria-hidden="true" />
             <p className="text-[12px] text-destructive font-semibold">High temperature ({bodyTemperature}°C) — staff review required.</p>
           </div>
         )}
