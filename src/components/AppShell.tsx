@@ -6,6 +6,7 @@
  * Presentation only — no data access, no workflow, no permission logic.
  */
 import { ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AppHeader } from "@/components/AppHeader";
@@ -16,6 +17,9 @@ interface AppShellProps {
   /** The page heading. Rendered once, as the route's only h1. */
   title: string;
   subtitle?: string;
+  /** Optional decorative icon beside the title (aria-hidden). */
+  titleIcon?: LucideIcon;
+  titleIconClassName?: string;
   /** Page-specific header actions. */
   actions?: ReactNode;
   overstayedCount?: number;
@@ -32,6 +36,8 @@ interface AppShellProps {
 export function AppShell({
   title,
   subtitle,
+  titleIcon,
+  titleIconClassName,
   actions,
   overstayedCount,
   overdueCount,
@@ -51,6 +57,8 @@ export function AppShell({
           <AppHeader
             title={title}
             subtitle={subtitle}
+            titleIcon={titleIcon}
+            titleIconClassName={titleIconClassName}
             actions={actions}
             overstayedCount={overstayedCount}
             overdueCount={overdueCount}

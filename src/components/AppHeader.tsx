@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import centrimLogo from "@/assets/centrim-life-logo.png";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { NotificationBell } from "@/components/NotificationBell";
-import { Clock, Users, ShieldAlert } from "lucide-react";
+import { Clock, Users, ShieldAlert, type LucideIcon } from "lucide-react";
 import { SiteSwitcher } from "@/components/SiteSwitcher";
 import { format } from "date-fns";
 import { useHealthAlerts } from "@/hooks/useHealthAlerts";
@@ -18,6 +18,10 @@ interface AppHeaderProps {
   title?: string;
   /** Optional subtitle below the title */
   subtitle?: string;
+  /** Optional decorative Lucide icon shown before the title. Presentational only. */
+  titleIcon?: LucideIcon;
+  /** Tailwind classes for the title icon, e.g. an emergency tone. */
+  titleIconClassName?: string;
   /** Right-side action buttons (page-specific) */
   actions?: React.ReactNode;
   /** Notification counts */
@@ -30,6 +34,8 @@ interface AppHeaderProps {
 export function AppHeader({
   title,
   subtitle,
+  titleIcon: TitleIcon,
+  titleIconClassName,
   actions,
   overstayedCount = 0,
   overdueCount = 0,
@@ -73,7 +79,10 @@ export function AppHeader({
           <SidebarTrigger aria-label="Toggle navigation" className="text-muted-foreground hover:text-foreground shrink-0" />
           {title && (
             <div className="min-w-0">
-              <h1 className="text-lg sm:text-xl font-bold text-foreground leading-tight truncate">{title}</h1>
+              <h1 className="text-lg sm:text-xl font-bold text-foreground leading-tight truncate flex items-center gap-2">
+                {TitleIcon && <TitleIcon className={titleIconClassName ?? "h-5 w-5 shrink-0"} aria-hidden="true" />}
+                <span className="truncate">{title}</span>
+              </h1>
               {subtitle && (
                 <p className="text-[13px] text-muted-foreground line-clamp-2">{subtitle}</p>
               )}

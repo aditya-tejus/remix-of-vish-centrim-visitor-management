@@ -4,9 +4,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { AppShell } from "@/components/AppShell";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Shield, FileText, Trash2, Download, Clock } from "lucide-react";
 import { DataRetentionTab } from "@/components/settings/DataRetentionTab";
@@ -35,20 +33,11 @@ export default function GDPRPage() {
   };
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm">
-            <div className="flex items-center gap-4 px-6 py-4">
-              <SidebarTrigger />
-              <div>
-                <h1 className="text-lg font-semibold text-foreground">{isUK ? "GDPR & Privacy" : "Privacy & Compliance"}</h1>
-                <p className="text-xs text-muted-foreground">Data protection compliance tools</p>
-              </div>
-            </div>
-          </header>
-          <main className="p-6">
+    <AppShell
+      title={isUK ? "GDPR & Privacy" : "Privacy & Compliance"}
+      subtitle="Data protection compliance tools"
+      mainClassName="p-6"
+    >
             <Tabs defaultValue="tools" className="space-y-6">
               <TabsList className="bg-muted/50 p-1 rounded-xl h-auto flex-wrap">
                 <TabsTrigger value="tools" className="gap-1.5 rounded-lg text-xs data-[state=active]:shadow-sm">
@@ -213,9 +202,7 @@ export default function GDPRPage() {
                 </div>
               </TabsContent>
             </Tabs>
-          </main>
-        </SidebarInset>
-      </div>
+
 
       <SARDialog open={sarOpen} onOpenChange={setSarOpen} visitors={visitors} loading={loading} />
       <ErasureDialog open={erasureOpen} onOpenChange={setErasureOpen} visitors={visitors} loading={loading} />
@@ -239,6 +226,6 @@ export default function GDPRPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </SidebarProvider>
+    </AppShell>
   );
 }

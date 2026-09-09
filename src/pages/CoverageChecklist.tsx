@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Circle, AlertTriangle, ArrowRight } from "lucide-react";
 
@@ -68,21 +67,11 @@ export default function CoverageChecklist() {
   };
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <header className="sticky top-0 z-10 bg-card border-b border-border">
-            <div className="flex items-center gap-4 px-6 h-14">
-              <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-              <div>
-                <h1 className="text-xl font-bold text-foreground">Coverage Checklist</h1>
-                <p className="text-[13px] text-muted-foreground">All 36 screens — implementation status</p>
-              </div>
-            </div>
-          </header>
-
-          <main className="p-6 space-y-6">
+    <AppShell
+      title="Coverage Checklist"
+      subtitle="All 36 screens — implementation status"
+      mainClassName="p-6 space-y-6"
+    >
             {/* Summary */}
             <div className="grid grid-cols-3 gap-4 max-w-lg">
               <div className="rounded-xl border border-success/30 bg-success/5 p-4 text-center">
@@ -117,9 +106,6 @@ export default function CoverageChecklist() {
                 </button>
               ))}
             </div>
-          </main>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+    </AppShell>
   );
 }
