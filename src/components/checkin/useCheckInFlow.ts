@@ -335,7 +335,7 @@ export function useCheckInFlow(open: boolean) {
       status: "checked-in",
       healthDeclaration: allHealthClear && formData.healthDeclaration,
       additionalVisitors: companions.length,
-      companionDetails: companions.length > 0 ? companions : undefined,
+      companionDetails: companions.length > 0 ? companions.map(normaliseCompanion) : undefined,
       comments: formData.comments,
       bodyTemperature: formData.bodyTemperature ? parseFloat(formData.bodyTemperature) : undefined,
       influenzaVaccineDate: formData.influenzaVaccineDate || undefined,
