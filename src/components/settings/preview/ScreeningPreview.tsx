@@ -68,7 +68,8 @@ export function ScreeningPreview({ personType }: { personType: string }) {
       </section>
 
       <p className="text-[12px] text-muted-foreground">
-        These settings decide what is asked. They do not, on their own, meet any legal or accreditation requirement.
+        This shows your saved questions and fields — save a change before it appears here. These settings decide what is
+        asked. They do not, on their own, meet any legal or accreditation requirement.
       </p>
     </div>
   );
