@@ -415,42 +415,43 @@ export function VisitorTable({
   };
 
   /** A companion gets their own badge, showing their own name. */
-  const printCompanionBadge = (party: AttendanceParty, visitor: Visitor) => {
-    const name = party.nameStatus === "named" ? party.displayName : `Companion ${party.companionIndex}`;
+  const printCompanionBadge = (row: AccountableRow, visitor: Visitor) => {
     issueBadge(
-      { name, type: visitor.type, visiting: visitor.whomToVisit || undefined, date: party.checkInTime },
-      { siteId: currentSiteId, siteName: currentSite?.name ?? null }
+      {
+        name: row.name,
+        type: visitor.type,
+        visiting: visitor.whomToVisit || undefined,
+        date: row.checkInTime,
+        companionOf: row.withPrimaryName || undefined,
+      },
+      { siteId: currentSiteId, siteName: currentSite?.name ?? null, visitorId: visitor.id }
     );
   };
 
   /** Each companion is shown as their own accountable person on the visit. */
-  const renderCompanionRows = (visitor: Visitor) => {
-    const companions = companionParties.filter(
-      (p) => p.legacyVisitorId === visitor.id && !p.isPrimary
-    );
-    return companions.map((party) => (
-      <TableRow key={party.id} className="bg-muted/20">
+  const renderCompanionRows = (visitor: Visitor) =>
+    companionRowsForVisitor(visitor, companionParties).map((row) => (
+      <TableRow key={row.key} className="bg-muted/20">
         <TableCell className="py-2 w-9" />
         <TableCell className="py-2">
           <div className="flex items-center gap-2 pl-4">
             <UsersRound className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
             <div className="flex flex-col">
-              <span className="text-[13px] text-foreground">
-                {party.nameStatus === "named" ? party.displayName : `Companion ${party.companionIndex} (name not recorded)`}
-              </span>
+              <span className="text-[13px] text-foreground">{row.name}</span>
               <span className="text-[11px] text-muted-foreground">
-                With {visitor.firstName} {visitor.surname}
-                {party.relationship ? ` · ${party.relationship}` : ""}
+                With {row.withPrimaryName}
+                {row.relationship ? ` · ${row.relationship}` : ""}
+                {row.source === "legacy" ? " · older record" : ""}
               </span>
             </div>
           </div>
         </TableCell>
         <TableCell className="py-2">
-          <span className="text-[13px] font-mono text-foreground">{format(party.checkInTime, "hh:mm a")}</span>
+          <span className="text-[13px] font-mono text-foreground">{format(row.checkInTime, "hh:mm a")}</span>
         </TableCell>
         <TableCell className="py-2">
-          {party.checkOutTime ? (
-            <span className="text-[13px] font-mono text-foreground">{format(party.checkOutTime, "hh:mm a")}</span>
+          {row.checkOutTime ? (
+            <span className="text-[13px] font-mono text-foreground">{format(row.checkOutTime, "hh:mm a")}</span>
           ) : (
             <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-success">
               <span className="h-1.5 w-1.5 rounded-full bg-success" />
@@ -461,12 +462,12 @@ export function VisitorTable({
         <TableCell className="py-2" />
         {columns.some((c) => c.key === "companions") && <TableCell className="py-2" />}
         <TableCell className="py-2" onClick={(e) => e.stopPropagation()}>
-          {!party.checkOutTime && canCheckOut && onCheckOutParty && (
+          {!row.checkOutTime && canCheckOut && onCheckOutParty && row.partyId && (
             <Button
               variant="outline"
               size="sm"
               className="h-8 text-[12px] gap-1.5"
-              onClick={() => onCheckOutParty(party.id)}
+              onClick={() => onCheckOutParty(row.partyId!)}
             >
               <LogOut className="h-3.5 w-3.5" aria-hidden />
               Sign out
@@ -478,7 +479,7 @@ export function VisitorTable({
             variant="ghost"
             size="sm"
             className="h-8 text-[12px] gap-1.5"
-            onClick={() => printCompanionBadge(party, visitor)}
+            onClick={() => printCompanionBadge(row, visitor)}
           >
             <Printer className="h-3.5 w-3.5" aria-hidden />
             Print badge
@@ -486,7 +487,7 @@ export function VisitorTable({
         </TableCell>
       </TableRow>
     ));
-  };
+
 
   /** Narrow screens get the same information as a stacked card. */
   const renderCard = (visitor: Visitor) => {
