@@ -165,13 +165,9 @@ export default function VisitList() {
   const searchEmpty = searchQuery.trim().length > 0 && rows.length === 0;
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <AppHeader title="Visitor List" overstayedCount={overstayedCount} />
-
+    <AppShell title="Visitor list" overstayedCount={overstayedCount}>
           {/* Page command bar */}
+
           <div className="sticky top-12 z-[9] border-b border-border bg-card/95 backdrop-blur-sm">
             <div className="flex flex-wrap items-center justify-between px-4 sm:px-6 py-2.5 gap-y-2 gap-x-4">
               {/* Left: which site and which day */}
