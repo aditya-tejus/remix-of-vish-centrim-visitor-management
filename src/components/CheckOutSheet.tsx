@@ -322,7 +322,14 @@ export function CheckOutSheet({
 
                 <TimeOverride value={bulkTimeOverride} onChange={setBulkTimeOverride} label="Time they left" />
 
+                {checkOutFailed && (
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-[13px] text-destructive">
+                    {checkOutFailed}
+                  </div>
+                )}
+
                 <div className="flex gap-2">
+
                   <Button variant="outline" className="flex-1" onClick={() => { onPreSelectedClear?.(); onOpenChange(false); }}>
                     Cancel
                   </Button>
