@@ -206,3 +206,17 @@ Tasks:
 - Layout: no horizontal overflow at 768px.
 - Temporary test visitor and derived visit rows purged.
 - Still outstanding for Phase 7A closure: returning-visitor lookup, companion individual departure, duplicate-submit and forced save/checkout failure retry are code-reviewed but not yet click-tested; security linter unchanged from the documented 45-warning baseline.
+
+### Phase 7A closure verification (2026-09-09)
+All five remaining checks run against the live preview with temporary records, then purged (zero test rows remain in visitors, people, visits, visit parties).
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Returning-visitor lookup | Pass (after fix) | Past visitor found by name, shown with name only, requires explicit selection, then details are carried forward and the visit records against the current site. |
+| Returning lookup site isolation | Pass (fix applied) | The lookup previously searched every site. Now scoped to the current site; the same person returned "No matches found" at the second site. |
+| Companion staying behind | Pass | Untick a companion: warning shown, main person recorded as left, visit stays open, companion count preserved. Success message now states how many are still on site. |
+| Forced check-in save failure and retry | Pass | Visitor insert blocked at browser level; sheet stayed open, entered details preserved, clear failure message, no record created; retry after unblocking created exactly one record. |
+| Forced checkout failure and retry | Pass | Visitor update blocked; person stayed on the on-site list with a clear message; retry recorded a single departure. |
+| Double submit (check-in and checkout) | Pass | Second rapid click rejected while saving; one insert and one update observed. |
+
+Failures were simulated with test-only browser request blocking. No production code, permissions, policies or server functions were weakened for testing; the exact blocked request was recorded in each run.
