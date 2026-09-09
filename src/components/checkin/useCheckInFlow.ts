@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { VisitorType, Visitor, CompanionDetail } from "@/types/visitor";
 import { useActiveHealthQuestions, useActiveVaccinationFields } from "@/hooks/useHealthQuestions";
-import { useCompanionFields } from "@/hooks/useFormFields";
+import { useCompanionFields, useFormFields } from "@/hooks/useFormFields";
+import { mergeCompanionFields, missingCompanionFields, normaliseCompanion } from "@/lib/companionFields";
 import { useResidents } from "@/hooks/useResidents";
 import { useStaffMembers } from "@/hooks/useStaffMembers";
 import { supabase } from "@/integrations/supabase/client";
@@ -86,7 +87,13 @@ export function useCheckInFlow(open: boolean) {
   const { data: dbQuestions = [] } = useActiveHealthQuestions(selectedType as any);
   const { data: dbVaccFields = [] } = useActiveVaccinationFields(selectedType as any);
   const { data: companionFieldsConfig = [] } = useCompanionFields(selectedType as any);
-  const activeCompanionFields = companionFieldsConfig.filter((f) => f.is_active).sort((a, b) => a.sort_order - b.sort_order);
+  const { data: mainVisitorFields = [] } = useFormFields(selectedType as any, "");
+  // Companion-only fields, plus the main visitor's own fields where they still
+  // make sense for a second person on the same arrival.
+  const activeCompanionFields = useMemo(
+    () => mergeCompanionFields(companionFieldsConfig, mainVisitorFields),
+    [companionFieldsConfig, mainVisitorFields]
+  );
 
   const fallbackHealthQuestions = [
     { id: "fever", question: "Do you have a fever or feel unusually warm?", type: "yesno" as const, required: true },
@@ -284,12 +291,7 @@ export function useCheckInFlow(open: boolean) {
   // Every companion must satisfy the fields configured for this person type
   // before anyone can be signed in.
   const companionsComplete = useMemo(
-    () =>
-      companions.every((c) =>
-        activeCompanionFields
-          .filter((f) => f.required)
-          .every((f) => String(c[f.field_key.replace("companion_", "")] || "").trim().length > 0)
-      ),
+    () => companions.every((c) => missingCompanionFields(c as any, activeCompanionFields).length === 0),
     [companions, activeCompanionFields]
   );
 
@@ -333,7 +335,7 @@ export function useCheckInFlow(open: boolean) {
       status: "checked-in",
       healthDeclaration: allHealthClear && formData.healthDeclaration,
       additionalVisitors: companions.length,
-      companionDetails: companions.length > 0 ? companions : undefined,
+      companionDetails: companions.length > 0 ? companions.map(normaliseCompanion) : undefined,
       comments: formData.comments,
       bodyTemperature: formData.bodyTemperature ? parseFloat(formData.bodyTemperature) : undefined,
       influenzaVaccineDate: formData.influenzaVaccineDate || undefined,

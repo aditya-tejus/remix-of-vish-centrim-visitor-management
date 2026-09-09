@@ -11,6 +11,12 @@ export interface FormField {
   sort_order: number;
   is_active: boolean;
   visitor_type: string;
+  /** Short guidance shown under the field at the desk. */
+  help_text?: string | null;
+  /** Read-only fields show a saved value but cannot be typed into. */
+  is_editable?: boolean;
+  /** Choices for a choice list. */
+  options?: unknown;
 }
 
 export function useFormFields(visitorType?: VisitorType, prefix?: string) {

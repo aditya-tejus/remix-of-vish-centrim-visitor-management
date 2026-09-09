@@ -500,6 +500,53 @@ export function VisitorTable({
     );
   };
 
+  /** On phones each companion gets their own card, tagged to who they arrived with. */
+  const renderCompanionCards = (visitor: Visitor) =>
+    companionParties
+      .filter((p) => p.legacyVisitorId === visitor.id && !p.isPrimary)
+      .map((party) => (
+        <div key={party.id} className="p-4 pl-8 space-y-2 bg-muted/20">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start gap-2">
+              <UsersRound className="h-4 w-4 text-muted-foreground mt-0.5" aria-hidden />
+              <div>
+                <p className="text-[14px] font-medium text-foreground">
+                  {party.nameStatus === "named"
+                    ? party.displayName
+                    : `Companion ${party.companionIndex} (name not recorded)`}
+                </p>
+                <p className="text-[12px] text-muted-foreground">
+                  With {visitor.firstName} {visitor.surname}
+                  {party.relationship ? ` · ${party.relationship}` : ""}
+                </p>
+              </div>
+            </div>
+            {party.checkOutTime ? (
+              <span className="text-[12px] text-muted-foreground">
+                Out {format(party.checkOutTime, "hh:mm a")}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-success">
+                <span className="h-1.5 w-1.5 rounded-full bg-success" /> On site
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-[12px] text-muted-foreground">In {format(party.checkInTime, "hh:mm a")}</span>
+            {!party.checkOutTime && canCheckOut && onCheckOutParty && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 text-[12px] gap-1.5"
+                onClick={() => onCheckOutParty(party.id)}
+              >
+                <LogOut className="h-3.5 w-3.5" aria-hidden /> Sign out
+              </Button>
+            )}
+          </div>
+        </div>
+      ));
+
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
       {visibleSelected.length > 0 && (
@@ -566,7 +613,12 @@ export function VisitorTable({
 
           {/* Stacked cards on phones and narrow tablets */}
           <div className="md:hidden divide-y divide-border">
-            {visitors.map((visitor) => renderCard(visitor))}
+            {visitors.map((visitor) => (
+              <div key={visitor.id} className="divide-y divide-border">
+                {renderCard(visitor)}
+                {renderCompanionCards(visitor)}
+              </div>
+            ))}
           </div>
         </>
       )}

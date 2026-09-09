@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CompanionDetail, VisitorType } from "@/types/visitor";
 import { CheckInFormData, VisitorProfile } from "./useCheckInFlow";
 import { useRef, useState, useCallback } from "react";
+import type { CompanionFieldSpec } from "@/lib/companionFields";
 
 interface StepDetailsProps {
   formData: CheckInFormData;
@@ -20,7 +21,7 @@ interface StepDetailsProps {
   staffItems: { id: string; name: string; role: string; department: string }[];
   companions: CompanionDetail[];
   setCompanions: React.Dispatch<React.SetStateAction<CompanionDetail[]>>;
-  activeCompanionFields: { id: string; field_key: string; label: string; required: boolean }[];
+  activeCompanionFields: CompanionFieldSpec[];
   photo: string | null;
   setPhoto: (photo: string | null) => void;
   onChangeProfile: () => void;
@@ -81,7 +82,7 @@ export function StepDetails({
 
   const addCompanion = () => {
     const empty: CompanionDetail = {};
-    activeCompanionFields.forEach((f) => { empty[f.field_key.replace("companion_", "")] = ""; });
+    activeCompanionFields.forEach((f) => { empty[f.key] = ""; });
     setCompanions((prev) => [...prev, empty]);
   };
 
@@ -287,13 +288,34 @@ export function StepDetails({
               </div>
               <div className="grid grid-cols-2 gap-2.5">
                 {activeCompanionFields.map((f) => {
-                  const key = f.field_key.replace("companion_", "");
-                  const missing = f.required && !String(companion[key] || "").trim();
+                  const key = f.key;
+                  const value = companion[key] || "";
+                  const missing = f.required && !String(value).trim();
+                  const setValue = (v: string) =>
+                    setCompanions((prev) => prev.map((c, i) => (i === cIdx ? { ...c, [key]: v } : c)));
+                  const inputType = f.type === "date" ? "date" : f.type === "email" ? "email" : f.type === "tel" ? "tel" : "text";
                   return (
-                    <div key={f.id} className="space-y-1">
+                    <div key={`${f.source}-${f.id}`} className="space-y-1">
                       <Label className="text-[11px] font-medium">{f.label}{f.required && <span className="text-destructive ml-0.5">*</span>}</Label>
-                      <Input value={companion[key] || ""} onChange={(e) => setCompanions((prev) => prev.map((c, i) => i === cIdx ? { ...c, [key]: e.target.value } : c))}
-                        placeholder={f.label} className="rounded-lg h-9 text-[13px]" />
+                      {f.type === "select" || f.type === "yesno" ? (
+                        <Select value={String(value)} onValueChange={setValue} disabled={!f.editable}>
+                          <SelectTrigger className="rounded-lg h-9 text-[13px]" aria-label={f.label}>
+                            <SelectValue placeholder={f.label} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(f.type === "yesno" ? ["Yes", "No"] : f.choices || []).map((opt) => (
+                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : f.type === "textarea" ? (
+                        <Textarea value={String(value)} onChange={(e) => setValue(e.target.value)} readOnly={!f.editable}
+                          placeholder={f.label} className="rounded-lg text-[13px] min-h-[60px] resize-none" />
+                      ) : (
+                        <Input type={inputType} value={String(value)} onChange={(e) => setValue(e.target.value)} readOnly={!f.editable}
+                          placeholder={f.label} className="rounded-lg h-9 text-[13px]" />
+                      )}
+                      {f.help && <p className="text-[11px] text-muted-foreground">{f.help}</p>}
                       {missing && <p className="text-[11px] text-destructive">{f.label} is needed before signing in</p>}
                     </div>
                   );

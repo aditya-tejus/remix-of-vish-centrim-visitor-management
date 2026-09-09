@@ -995,9 +995,12 @@ export type Database = {
           created_at: string
           field_key: string
           field_type: string
+          help_text: string | null
           id: string
           is_active: boolean
+          is_editable: boolean
           label: string
+          options: Json | null
           required: boolean
           sort_order: number
           updated_at: string
@@ -1007,9 +1010,12 @@ export type Database = {
           created_at?: string
           field_key: string
           field_type?: string
+          help_text?: string | null
           id?: string
           is_active?: boolean
+          is_editable?: boolean
           label: string
+          options?: Json | null
           required?: boolean
           sort_order?: number
           updated_at?: string
@@ -1019,9 +1025,12 @@ export type Database = {
           created_at?: string
           field_key?: string
           field_type?: string
+          help_text?: string | null
           id?: string
           is_active?: boolean
+          is_editable?: boolean
           label?: string
+          options?: Json | null
           required?: boolean
           sort_order?: number
           updated_at?: string
