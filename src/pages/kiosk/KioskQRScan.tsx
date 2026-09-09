@@ -14,6 +14,17 @@ import { Html5Qrcode } from "html5-qrcode";
  * checks anyone in on its own — screening questions, terms and acknowledgements
  * always stay explicit steps in the normal check-in flow.
  */
+/** Stopping a scanner that never started throws synchronously — never let that crash the screen. */
+function safeStop(scanner: Html5Qrcode | null) {
+  if (!scanner) return;
+  try {
+    const result = scanner.stop();
+    if (result && typeof (result as any).catch === "function") (result as any).catch(() => {});
+  } catch {
+    /* scanner was not running */
+  }
+}
+
 type Prefill = {
   firstName: string;
   surname: string;
@@ -109,7 +120,7 @@ export default function KioskQRScan() {
           { fps: 10, qrbox: { width: 250, height: 250 } },
           (decodedText) => {
             void lookupCode(decodedText);
-            scanner?.stop().catch(() => {});
+            safeStop(scanner);
           },
           () => {}
         );
@@ -125,7 +136,7 @@ export default function KioskQRScan() {
     startScanner();
 
     return () => {
-      scanner?.stop().catch(() => {});
+      safeStop(scanner);
       scannerRef.current = null;
       setCameraActive(false);
     };
@@ -266,7 +277,7 @@ export default function KioskQRScan() {
           <Camera className="h-5 w-5" /> Camera
         </button>
         <button
-          onClick={() => { setInputMode("manual"); scannerRef.current?.stop().catch(() => {}); }}
+          onClick={() => { setInputMode("manual"); safeStop(scannerRef.current); }}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-[48px] ${
             inputMode === "manual" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground border border-border active:bg-accent"
           }`}
