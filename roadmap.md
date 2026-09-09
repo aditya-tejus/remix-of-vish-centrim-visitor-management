@@ -318,3 +318,21 @@ Known limits after Phase 7E:
 - The unsaved-changes warning and the full save/retry pattern are implemented on the visitor types screen; other screens keep
   their existing save behaviour unchanged.
 - The ten unreachable screens are preserved on disk, not deleted.
+
+## Phase 7E hardening (settings permissions, truthful saves, draft preview)
+- Every live settings section is wrapped in a shared read-only fence. Someone without the
+  section's existing permission sees all values but cannot change or save anything.
+  Audit and exports is excluded from the fence because it saves nothing; its export keeps
+  its own narrower `data.export` permission.
+- Visitor types no longer bypasses the permission check for the administrator role, and
+  Operating context and the kiosk staff code card now use the same shared check.
+- Presence, Printing, Keys and fobs, Users and access, and Integrations now collect every
+  write result. A failed or partly failed save keeps the values on screen, names what failed
+  and offers a retry. Success is only shown when every write succeeded.
+- Scope wording now matches actual storage: operating context is stored on the site record;
+  visitor type availability is stored per site with an account-wide fallback; everything else
+  (presence, printing, keys, governance, integrations, per-type settings) is account-wide.
+- Visitor types passes its unsaved rows into the preview, labelled as unsaved. All other
+  previews state that they show saved settings.
+- Limitation: only Visitor types has a live draft preview. Other sections need a save first.
+- Limitation: read-only behaviour is code-verified only; no restricted account exists to test with.
