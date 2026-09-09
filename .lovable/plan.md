@@ -1,191 +1,114 @@
-# Phase 7C — Person types, volunteers and group arrivals
+# Phase 7D — Emergency Mode and Evacuation Report
 
-Goal: support the way people actually arrive (one visitor, a volunteer shift, a bus of ten
-family members or a school choir) without making ordinary visitor check-in any longer and
-without inventing a second people or group system.
+Baseline confirmed: latest commit `d56625f` ("Implemented Phase 7C features"). One emergency event is currently open in the database, and all existing event and roll-call rows carry a site.
 
-## What exists today (verified)
+## What is true today (verified)
 
-- Five person types are already configurable per site (Visitor, Contractor, Volunteer, Staff,
-  Resident), each with switches for kiosk/desk visibility, name shown on the kiosk, questions,
-  privacy, badge and roll-call inclusion.
-- Volunteer is already a full type: it gets questions, privacy, a badge and roll-call inclusion,
-  and can be recorded as visiting a resident. It has no volunteer-specific details.
-- The check-in record already has a group field, and the kiosk already uses it when someone
-  brings companions. Companions are also written as individual people on the visit.
-- The old Group Check-In screen is unreachable (its address redirects to the visit list). It
-  records the group only as free text in the comments, does not use the real group field, does
-  not ask the check-in questions, does not ask for privacy consent, does not issue badges, is
-  not tied to a site and does not wait for each save to succeed. It cannot be reused as is.
-- The New Check-In chooser always shows every enabled type plus a code-scan card, even when a
-  site only allows one type.
-- The emergency roll call is built from everyone currently on site, including companions, so any
-  attendee saved as their own record is automatically counted.
-- Badges already have a lifecycle (issued, reprinted, voided) with an audit entry for each print.
+- Routes: `/evacuation` (staff roll call), `/reports/evacuation` (history), `/kiosk/evacuation` (PIN-gated staff roll call on the kiosk).
+- Event model already supports drill vs real, the states draft / active / paused / resolved / reviewed, a point-in-time snapshot time, review notes and reviewer.
+- Six outcomes already exist: safe, safe elsewhere, not located, assistance required, evacuated off-site, not accounted for. Only safe, safe elsewhere and off-site count as accounted for.
+- Closed events are protected in the database: any change to a roll-call line of a resolved or reviewed event is rejected. Every status change writes an immutable action record with actor, previous status, new status and source.
+- Group arrivals from Phase 7C already appear as individual people, with the organiser shown as context.
+- Reading events and roll-call lines is restricted to the sites a user can access.
 
-## The plan
+Three real gaps found:
 
-### 1. Person Type Selector
+1. **New events and roll-call lines are never stamped with the site.** The site column was only backfilled once; nothing writes it now. Unstamped rows are readable by every signed-in user, so the next new event would be visible across sites. This is the highest-priority fix.
+2. **Event and history lists are not filtered by the current site in the app.** The roll call picks up "the first open event" regardless of site, and the report page lists all events it can read.
+3. **No fast, obvious way into Emergency Mode**, no live "last updated" indicator, and no offline or partial-failure handling on the roll call.
 
-- Skipped entirely when only one type is enabled for that place (front desk or kiosk): the person
-  goes straight into that check-in. No dead-end screen.
-- Skipped when a returning person is recognised by their code and their type is already known;
-  staff can still change it before saving.
-- Never skipped when two or more types are enabled.
-- At most five cards are visible: Visitor, Contractor, Volunteer, Staff, Other. Fixed order,
-  Visitor always first. Each card is an icon plus a written label — no icon-only cards, no emojis.
-- "Other" is hidden unless a site explicitly turns it on. When on, it behaves as a Visitor with a
-  short mandatory "reason for visit" line, and reports it under its own name so it can be reviewed.
-- The code-scan card keeps its current behaviour and stays hidden where codes are not issued.
+## Plan
 
-### 2. Volunteers
+### 1. Site correctness first (blocking)
+- Stamp the site on every new event and every roll-call line, taken from the current site context.
+- Add a database safeguard that fills the site on a roll-call line from its parent event if the app omits it, so a line can never be created unstamped.
+- Filter the open-event lookup, the history list and the roll-call seed to the current site only.
 
-- Volunteer stays the existing type; no new person system.
-- Adds, only for volunteers and only when the site turns each on: role or programme, supervising
-  staff member, and expected finish time. All three are optional by default.
-- Volunteer questions and terms come from the existing per-type question and privacy settings.
-  Nothing is silently pre-answered.
-- Regular volunteers are recognised by the same returning-person lookup that visitors use, and
-  the same badge rules apply.
+### 2. Entering Emergency Mode
+- Persistent "Emergency" action in the staff header, visible on every page to users with the activate permission, plus the existing sidebar entry.
+- Two-step start: choose **Live emergency** or **Drill**, confirm once. A drill is clearly labelled everywhere (banner, list, print, export) so it can never be mistaken for a live event.
+- If an event is already open for this site, the action joins it rather than creating a second one.
+- Emergency Mode is a focused full-width screen: banner with event type, elapsed time, site, and the three big numbers.
 
-### 3. Group arrivals
+### 3. Working the roll call under pressure
+- Priority ordering by default: not accounted for and assistance required at the top, then not located, then accounted people collapsed.
+- Large totals: on site, accounted for, still to find; plus assistance-required and off-site counts.
+- One-tap outcome per person and per group heading; "jump to next outstanding".
+- Search by name, room, area, host or phone; filters for type, area and status. All retained during the event.
+- "Last updated" timestamp on the header, driven by the existing live subscription, with a stale warning if updates stop.
+- Group attendees stay individually accountable: marking the organiser never marks the party.
 
-One organiser, many attendees, one shared arrival:
+### 4. Corrections and closure
+- Changing an already-recorded outcome always requires a reason, stored on the action record (existing behaviour, kept).
+- Pause / resume; resolve requires a reason when anyone is still unaccounted for; review adds notes and a reviewer.
+- Closed events are read-only, enforced in the database. No change to that protection.
 
-- An organiser starts the group arrival, gives the group a short name (for example "Rosewood
-  Primary Choir"), says who or where they are visiting, and adds attendees by name.
-- Every attendee is saved as their own check-in record, tied to the shared group. There is no
-  second group table beyond the existing group field on each record; the group name is carried
-  on each attendee's record so lists and reports can show it.
-- Questions and terms: the organiser answers the shared terms once on the group's behalf and this
-  is recorded as an organiser-declared answer with the organiser's name against every attendee.
-  Where the site marks a question as "each person must answer", the kiosk or desk asks it per
-  attendee. No question is quietly auto-answered without being labelled as organiser-declared.
-- Anyone on the alert list is flagged at the moment their name is entered, before the group is
-  saved, using the existing site-scoped alert check.
+### 5. Snapshot vs live
+- Event header states clearly: "Snapshot taken at hh:mm" and lists anyone who arrived after that time as a late addition, separated from the original snapshot.
+- The history report renders the point-in-time record only, never live data.
 
-### 4. Partial completion and failures
+### 6. Privacy by role
+- Emergency contact numbers and clinical assistance notes shown only to users with the assistance/screening permissions; everyone else sees name, location, assistance flag and status.
+- Kiosk roll call keeps its current minimum fields (name, type, location, phone, assistance flag, status). No widening.
+- Export requires the export permission and is audited (existing behaviour, kept).
 
-- Attendees are saved one at a time. If some save and others fail, the group is shown as partly
-  arrived: the saved attendees are on site and accountable, and the failed ones stay on screen
-  with a Retry button. Nothing is silently dropped, and no one is double-saved on retry.
-- A group can be added to later in the day (late arrivals join the same group).
-- Leaving the screen with unsaved attendees warns first.
+### 7. Print and paper fallback
+- Rewritten print sheet: A4 portrait, high contrast, checkbox column, area headings, assistance flag, tick boxes for outcomes and a signature/time line per area — usable with a pen if screens fail.
+- "Print paper roll call" available before and during an event.
 
-### 5. Checkout
+### 8. Offline / partial failure
+- Offline banner; outcomes queue locally and re-send when the connection returns, with a visible pending count.
+- A failed write shows a retry on the affected person only; no silent loss, no duplicate rows.
 
-- Individual checkout always works: any attendee can leave on their own, and the group stays open
-  for the rest.
-- Group checkout is a convenience on top: "Check out this group" lists everyone still on site with
-  tick boxes, all ticked by default, and departs only those ticked.
-- The visit list shows a group as a single line that expands to the individuals, with a count of
-  who is still on site. Overdue tracking stays per person, using the existing rules.
-
-### 6. Badges
-
-- Badges follow the existing per-type rule. When badges apply, each attendee gets their own badge
-  with their own code; printing is per person or "print all for this group".
-- Reprinting uses the existing reprint path and is written to the audit trail as before.
-
-### 7. Emergency roll call
-
-- Every attendee already counts individually because they are individual records; the roll call
-  additionally shows the group name and organiser next to each attendee so staff can sweep a
-  group together and still mark people one by one.
-- Marking safe stays per person. There is no "mark whole group safe" shortcut.
-
-### 8. Privacy, site isolation, permissions, audit
-
-- All group and volunteer reads and writes are stamped with the current site and never cross sites.
-- The kiosk never displays contact details, rooms in browse mode, or other attendees' details
-  beyond first name and surname on the confirmation screen.
-- Creating a group arrival requires the existing "check someone in" permission; group checkout
-  requires the existing checkout permission; editing an attendee's details requires the existing
-  person-edit permission.
-- New audit entries: group created, attendee added, attendee save failed, group checkout, and
-  organiser-declared terms (recording the organiser's name and how many attendees it covered).
-  Badge and check-in audit entries stay as they are.
-
-### 9. States
-
-Every new screen gets the shared loading, empty, error, permission-denied and offline states
-already used elsewhere. Offline: the group screen refuses new saves with a clear message rather
-than pretending to save.
-
-### 10. Tablet and kiosk
-
-- Group arrival is primarily a front-desk/tablet task: a single scrolling list of attendee rows,
-  large touch targets, no horizontal scrolling at tablet width.
-- On the kiosk, a group tile appears only if the site enables it; it collects the organiser and
-  attendee names with the same large-target keyboard, and never shows resident or staff details.
+### 9. Terminology
+- Labels follow the site's operating context: AU aged care (wing / room), AU retirement village (stage / villa), UK care home (unit / room), with "Fire drill" / "Emergency" wording matched to jurisdiction.
 
 ## Technical detail
 
 Files expected to change:
+- `src/pages/Evacuation.tsx` (Emergency Mode screen, ordering, offline, snapshot vs late arrivals, print)
+- `src/pages/EvacuationReport.tsx` (site filter, snapshot-only rendering)
+- `src/hooks/useEvacuation.ts` (site stamping, site-filtered queries, queued retry)
+- `src/lib/evacuation.ts` (priority sort, group context)
+- `src/components/AppHeader` / shell (Emergency action)
+- New: `src/components/emergency/*` (banner, totals, person row, start dialog, print sheet)
+- `roadmap.md`, `docs/SECURITY_REVIEW.md`
 
-- `src/hooks/usePersonTypes.ts` — add the "Other" type (off by default), volunteer field switches,
-  and a helper for "how many types are enabled here".
-- `src/pages/PersonTypeSelector.tsx` — skip logic, fixed order, "Other" card, labelled icons.
-- `src/components/checkin/StepIdentify.tsx`, `useCheckInFlow.ts`, `src/hooks/useKioskCheckInFlow.ts` —
-  volunteer fields and "Other" reason; ordinary visitor flow unchanged in length.
-- `src/pages/GroupCheckIn.tsx` — rewritten on the current check-in pipeline; route restored.
-- New: `src/hooks/useGroupVisits.ts`, `src/components/groups/GroupAttendeeRows.tsx`,
-  `src/components/groups/GroupCheckOutSheet.tsx`.
-- `src/pages/VisitList.tsx`, `src/components/VisitorTable.tsx` — collapsible group rows.
-- `src/components/CheckOutSheet.tsx` — group-aware individual checkout wording.
-- `src/hooks/useEvacuation.ts`, `src/pages/Evacuation.tsx`, `src/pages/EvacuationReport.tsx` —
-  show group name and organiser per attendee.
-- `src/lib/badgeIssue.ts` — print-all-for-group helper reusing the existing badge lifecycle.
-- `src/components/settings/PersonTypesTab.tsx` — the new switches, with plain-English explanations.
-- `src/App.tsx` — restore the group route.
-- `roadmap.md`, `docs/SECURITY_REVIEW.md`.
+Migration (additive only):
+- Trigger to inherit the site on roll-call lines from the parent event.
+- Index on open events by site.
+- No new tables, no second emergency or attendance model, no RLS relaxation.
 
-Database: one migration, additive only — `group_label` and `group_organiser` text columns on the
-check-in table (the existing group field stays the key), plus `volunteer_role`,
-`volunteer_supervisor` and `volunteer_expected_end`. No new tables, no new group or people model,
-no policy widening; existing site-scoped policies already cover these columns. The kiosk group
-path reuses the existing narrow kiosk check-in function with the extra fields passed through, so
-no new anonymous database access is added.
+## Acceptance tests (isolated temporary drill data only)
 
-## Acceptance tests
+Run against a temporary drill event at a temporary/known test site; no live emergency is started, and all temporary rows are removed afterwards.
 
-1. One enabled type: chooser is skipped; two or more: chooser shown in fixed order.
-2. "Other" hidden by default; visible only when enabled, and requires a reason.
-3. Ordinary visitor check-in has the same number of steps as today.
-4. Volunteer check-in with and without the optional fields; questions and terms explicit.
-5. Group of five saved: five individual records, one shared group, correct site.
-6. Forced failure on attendee three: two on site, one retryable, no duplicate on retry.
-7. Late attendee joins the same group.
-8. One attendee leaves alone; group stays open; then group checkout departs the rest.
-9. Roll call lists all five individually with group name; marking safe is per person.
-10. Badges: per person and print-all; reprint audited.
-11. Site A group invisible at site B, kiosk and desk.
-12. Permission-denied and offline states behave.
-13. Tablet width: no horizontal scrolling.
-14. Phase 7A visit list and 7B kiosk behaviour unchanged.
-15. All temporary test records purged and verified at zero; typecheck, build and security linter
-    run, with the linter compared against the current 47 documented warnings.
+1. Start a drill; verify it is stamped with the current site and invisible from the other site.
+2. Roll-call lines created during the drill are stamped and site-isolated.
+3. Priority ordering, search, filters, group-heading marking and jump-to-next.
+4. Group of five: marking one attendee leaves the other four outstanding.
+5. Correction without a reason is rejected; with a reason it is recorded with actor and previous status.
+6. Resolve with outstanding people requires a reason; after closing, any further change is rejected by the database.
+7. Late arrival after the snapshot appears as a late addition, not inside the snapshot.
+8. Forced network failure: outcome queues, retries, no duplicates.
+9. Print sheet legible on A4 with checkbox column.
+10. Permission checks: activate, mark safe, export each denied to a user lacking them.
+11. Kiosk roll call still works and still exposes only minimum fields.
+12. Phase 7A/7B/7C regression: visit list, kiosk check-in/Fast Lane, group check-in unchanged.
+
+## Risks and safety controls
+
+- **Risk: testing touches real operations.** Control: drill-class events only, at a temporary site, purged afterwards; the currently open event is left untouched.
+- **Risk: site stamping change breaks visibility of historic events.** Control: additive only; existing rows already stamped, no backfill rewrite.
+- **Risk: offline queue causes duplicate outcomes.** Control: queue keyed per person per event; retry updates the same line.
+- **Risk: closed-event immutability weakened by new writes.** Control: no trigger changes; new UI paths tested against a closed event.
 
 ## Non-goals
 
-Pre-registration or invitations, external notifications, printer hardware, biometrics or facial
-recognition, contractor credential expansion, emergency redesign, settings consolidation,
-recurring group bookings, per-attendee photos, and anything in Phase 7D–7F.
-
-## Risks
-
-- Group screens are where a "quick" flow tends to grow; the guard is that ordinary visitor
-  check-in code paths are not touched except for the volunteer/Other fields.
-- Organiser-declared terms are an operational convenience with real regulatory weight; they must be
-  clearly labelled as declared by the organiser, never presented as each attendee's own answer.
-- Partial saves are the most likely source of an inaccurate on-site list; retry behaviour must be
-  tested with forced failures, not assumed.
+No second emergency or attendance model, no generic dashboard, no kiosk-initiated emergency activation, no external notifications or SMS cascade, no hardware alarm or panel integration, no biometrics, no printer hardware, no Phase 7E/7F work, no regulatory or production-readiness claim.
 
 ## Open questions
 
-1. Should organiser-declared terms be allowed at all at your sites, or must every adult attendee
-   answer for themselves (with the organiser answering only for children)?
-2. Do you want "Other" at all, or should sites simply rename Visitor?
-3. For a group, is a name-only attendee record enough, or do you need a phone number for at least
-   the organiser plus anyone under a duty-of-care arrangement?
-4. Should group checkout be allowed from the kiosk, or front desk only?
+1. Should the header Emergency action be visible to all staff (read-only until permitted) or hidden entirely without the activate permission?
+2. For a live event, should resolving require a second person to confirm, or is a reason sufficient for the pilot?
+3. Should off-site residents be listed on the roll call by default, or kept in a separate collapsed section as today?
