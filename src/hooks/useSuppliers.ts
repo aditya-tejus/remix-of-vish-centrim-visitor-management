@@ -22,15 +22,19 @@ export interface Supplier {
 interface UseSuppliersOptions {
   /** Kiosk / unauthenticated context: supplier name only, no credential data. */
   publicMode?: boolean;
+  /** Kiosk context: the site this device belongs to. Results never cross sites. */
+  siteId?: string | null;
 }
 
-export function useSuppliers({ publicMode = false }: UseSuppliersOptions = {}) {
+export function useSuppliers({ publicMode = false, siteId = null }: UseSuppliersOptions = {}) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchSuppliers = useCallback(async () => {
     if (publicMode) {
-      const { data } = await supabase.rpc("kiosk_supplier_directory" as any);
+      const { data } = await supabase.rpc("kiosk_supplier_directory" as any, {
+        p_branch_id: siteId ?? null,
+      });
       if (data) {
         setSuppliers(
           (data as any[]).map((s) => ({
