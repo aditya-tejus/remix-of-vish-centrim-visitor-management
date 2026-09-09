@@ -251,3 +251,21 @@ functions. Unchanged from the Phase 7B baseline.
 
 Residual: kiosk device/site binding is pilot-grade; contractor credential verification is manual;
 browser exports are not tamper-evident.
+
+
+## Phase 7C — person types, volunteers and group arrivals
+
+- Schema change was additive only: optional group, organiser, terms-confirmation, volunteer and
+  "other reason" fields on the existing check-in record, plus an inactive "Other" person type.
+  No new people, resident, staff or group model was introduced.
+- The new fields are written only by signed-in staff. The kiosk path is unchanged and still writes
+  through the restricted check-in function, so anonymous access was not widened.
+- Group arrival is behind the existing check-in permission and the existing site scoping. Every
+  attendee is stored as their own accountable record; the shared group reference is a label only.
+- Each adult attendee confirms the terms themselves. An organiser may confirm on behalf of an
+  assisted or child attendee only when a site switches that on, and it is recorded and labelled as
+  organiser-declared rather than as the person's own confirmation.
+- Group sign-in now waits for the site to be known before saving, so records cannot be stored
+  without a site.
+- Security linter after this phase: 47 warnings, unchanged in category and count from Phase 7B
+  (1 extension in public, 17 anonymous-callable and 29 signed-in-callable definer functions).
