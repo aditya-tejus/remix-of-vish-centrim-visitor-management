@@ -183,3 +183,19 @@ No horizontal overflow at 768, 1024, 1280 or 1440 on any route.
   stored data is migrated.
 - WCAG 2.2 AA is the design target. No assistive-technology user testing has been
   carried out, and nothing here should be presented as certified compliance.
+
+## 12. Accessible status colour variants
+
+Base status colours (`--success`, `--warning`, `--destructive`, `--emergency`,
+`--info`, `--checkout`) are tuned for fills, borders and large text. For small
+status words two additional token families were added:
+
+- `--{role}-strong` — status text on the page background, at least 4.5:1 in both
+  light and dark themes (`text-warning-strong`, `text-emergency-strong`, …).
+- `--{role}-solid` — chip background paired with white text, at least 4.5:1 in
+  both themes (`bg-emergency-solid text-emergency-foreground`).
+
+`STATUS_TONE_CLASSES` in `src/lib/statusPresentation.ts` already uses these, so
+`StatusBadge` is accessible by default. Measured contrast (page background):
+success 4.82 / 8.70, warning 4.77 / 7.20, error 4.69 / 4.67, emergency 4.71 /
+4.68, info 4.66 / 5.88, sign-out 4.69 / 5.28 (light / dark).
