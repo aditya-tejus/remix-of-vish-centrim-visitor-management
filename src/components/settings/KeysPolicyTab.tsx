@@ -27,6 +27,7 @@ export function KeysPolicyTab() {
   const { toast } = useToast();
   const [policy, setPolicy] = useState<KeyPolicy>(DEFAULT_KEY_POLICY);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchKeyPolicy().then(setPolicy);
@@ -51,11 +52,13 @@ export function KeysPolicyTab() {
       });
     }
     setSaving(false);
-    toast(
-      error
-        ? { title: "Could not save", description: error.message, variant: "destructive" }
-        : { title: "Key & fob policy saved" }
-    );
+    if (error) {
+      setSaveError("The key and fob rules were not saved. Your choices are still on screen — try again.");
+      toast({ title: "Could not save", description: error.message, variant: "destructive" });
+      return;
+    }
+    setSaveError(null);
+    toast({ title: "Key and fob policy saved" });
   };
 
   return (
