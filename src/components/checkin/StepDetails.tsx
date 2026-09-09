@@ -206,6 +206,11 @@ export function StepDetails({
             <Select value={formData.selectPerson} onValueChange={(val) => updateField("selectPerson", val)}>
               <SelectTrigger className="rounded-xl h-10 text-[14px]"><SelectValue placeholder="Search or select resident..." /></SelectTrigger>
               <SelectContent>
+                {residentItems.length === 0 && (
+                  <div className="px-3 py-4 text-[12px] text-muted-foreground text-center">
+                    No residents recorded for this site yet
+                  </div>
+                )}
                 {residentItems.map((r) => (
                   <SelectItem key={r.id} value={r.name}>
                     <div className="flex items-center gap-2">

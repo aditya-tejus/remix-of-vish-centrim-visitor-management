@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSite } from "@/contexts/SiteContext";
 
 export interface Resident {
   id: string;
@@ -32,6 +33,7 @@ interface UseResidentsOptions {
 
 export function useResidents(options: UseResidentsOptions = {}) {
   const { publicMode = false } = options;
+  const { currentSiteId, isLegacySite } = useSite();
   const [residents, setResidents] = useState<Resident[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -72,7 +74,7 @@ export function useResidents(options: UseResidentsOptions = {}) {
 
     const contactCols = "email, mobile,";
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("visitors")
       .select(`
         id, first_name, surname, ${contactCols}
@@ -84,8 +86,18 @@ export function useResidents(options: UseResidentsOptions = {}) {
           wing:wings ( id, name )
         )
       `)
-      .eq("type", "resident")
-      .order("first_name");
+      .eq("type", "resident");
+
+    // Site isolation: residents belong to one site. Records with no site are only
+    // visible on the original/legacy site so they are never mixed into newer sites.
+    if (currentSiteId) {
+      query = isLegacySite
+        ? query.or(`branch_id.eq.${currentSiteId},branch_id.is.null`)
+        : query.eq("branch_id", currentSiteId);
+    }
+
+    const { data, error } = await query.order("first_name");
+
 
     if (!error && data) {
       const mapped: Resident[] = data.map((v: any) => {
@@ -118,7 +130,7 @@ export function useResidents(options: UseResidentsOptions = {}) {
       setResidents(mapped);
     }
     setLoading(false);
-  }, [publicMode]);
+  }, [publicMode, currentSiteId, isLegacySite]);
 
   useEffect(() => {
     fetchResidents();
