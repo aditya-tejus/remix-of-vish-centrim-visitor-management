@@ -25,6 +25,7 @@ import { CheckInReturnDialog } from "@/components/CheckInReturnDialog";
 import { useResidents } from "@/hooks/useResidents";
 import { useSiteStructure } from "@/hooks/useSiteStructure";
 import type { AttendanceParty } from "@/hooks/useAttendance";
+import { companionRowsForVisitor, type AccountableRow } from "@/lib/accountablePeople";
 import { issueBadge } from "@/lib/badgeIssue";
 import { useSite } from "@/contexts/SiteContext";
 
@@ -143,7 +144,7 @@ export function VisitorTable({
   const isWatchlisted = (v: Visitor) => !!checkVisitor(v.firstName, v.surname);
 
   const handleSingleCSV = (visitor: Visitor) => {
-    exportVisitorsToCSV([visitor], `visitor-${visitor.firstName}-${visitor.surname}.csv`);
+    exportVisitorsToCSV([visitor], `visitor-${visitor.firstName}-${visitor.surname}.csv`, companionParties);
     toast({ title: "CSV Exported", description: `Record for ${visitor.firstName} ${visitor.surname} exported.` });
   };
 
