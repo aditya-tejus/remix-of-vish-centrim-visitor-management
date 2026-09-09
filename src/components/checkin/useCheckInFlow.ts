@@ -63,6 +63,8 @@ export function useCheckInFlow(open: boolean) {
   const [overrideReason, setOverrideReason] = useState("");
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [companions, setCompanions] = useState<CompanionDetail[]>([]);
+  // Held for the whole attempt, including retries, so one arrival is saved once.
+  const [requestId, setRequestId] = useState<string>(() => crypto.randomUUID());
   const [photo, setPhoto] = useState<string | null>(null);
   const [checkInTimeOverride, setCheckInTimeOverride] = useState<string | null>(null);
   const [contractorScreeningAnswers, setContractorScreeningAnswers] = useState<Record<string, any>>({});
@@ -267,6 +269,7 @@ export function useCheckInFlow(open: boolean) {
     setSelectedSupplier(null);
     setBringingFood(null);
     setFoodForm(emptyFoodForm);
+    setRequestId(crypto.randomUUID());
   };
 
   // Health screening gate (attended desk: staff may override with a recorded reason)
@@ -278,12 +281,24 @@ export function useCheckInFlow(open: boolean) {
   // The screening step owns credential evaluation and reports the gate up
   const contractorBlocked = selectedType === "contractor" && contractorGate.blocked;
 
+  // Every companion must satisfy the fields configured for this person type
+  // before anyone can be signed in.
+  const companionsComplete = useMemo(
+    () =>
+      companions.every((c) =>
+        activeCompanionFields
+          .filter((f) => f.required)
+          .every((f) => String(c[f.field_key.replace("companion_", "")] || "").trim().length > 0)
+      ),
+    [companions, activeCompanionFields]
+  );
+
   const canProceed = useMemo(() => {
     switch (step) {
       case "identify":
         return true; // Can always proceed (new or returning)
       case "details":
-        return !!(formData.firstName && formData.surname);
+        return !!(formData.firstName && formData.surname) && companionsComplete;
       case "food":
         return bringingFood === false || (bringingFood === true && isFoodFormValid(foodForm));
       case "screening":
@@ -294,7 +309,7 @@ export function useCheckInFlow(open: boolean) {
       default:
         return true;
     }
-  }, [step, formData, privacyAcknowledged, screeningFlagged, overrideValid, contractorBlocked, bringingFood, foodForm]);
+  }, [step, formData, privacyAcknowledged, screeningFlagged, overrideValid, contractorBlocked, bringingFood, foodForm, companionsComplete]);
 
 
   const buildVisitor = (): Omit<Visitor, "id"> => {
@@ -302,6 +317,7 @@ export function useCheckInFlow(open: boolean) {
     const visitQr = crypto.randomUUID().slice(0, 12).toUpperCase();
     return {
       qrCode: visitQr,
+      clientRequestId: requestId,
       // Stable personal card code — reused when a returning visitor is recognised
       personQr: (selectedProfile as any)?.personQr || visitQr,
 
@@ -353,7 +369,7 @@ export function useCheckInFlow(open: boolean) {
     setContractorGate,
 
     // Companions
-    companions, setCompanions, activeCompanionFields,
+    companions, setCompanions, activeCompanionFields, companionsComplete,
 
     // Photo
     photo, setPhoto,
