@@ -310,6 +310,7 @@ export type Database = {
           branch_id: string
           created_at: string
           credential_type_id: string
+          demo_seed_run_id: string | null
           document_number: string | null
           expiry_date: string | null
           file_name: string | null
@@ -335,6 +336,7 @@ export type Database = {
           branch_id: string
           created_at?: string
           credential_type_id: string
+          demo_seed_run_id?: string | null
           document_number?: string | null
           expiry_date?: string | null
           file_name?: string | null
@@ -360,6 +362,7 @@ export type Database = {
           branch_id?: string
           created_at?: string
           credential_type_id?: string
+          demo_seed_run_id?: string | null
           document_number?: string | null
           expiry_date?: string | null
           file_name?: string | null
@@ -423,6 +426,7 @@ export type Database = {
         Row: {
           branch_id: string | null
           created_at: string
+          demo_seed_run_id: string | null
           email: string | null
           first_name: string
           id: string
@@ -437,6 +441,7 @@ export type Database = {
         Insert: {
           branch_id?: string | null
           created_at?: string
+          demo_seed_run_id?: string | null
           email?: string | null
           first_name: string
           id?: string
@@ -451,6 +456,7 @@ export type Database = {
         Update: {
           branch_id?: string | null
           created_at?: string
+          demo_seed_run_id?: string | null
           email?: string | null
           first_name?: string
           id?: string
@@ -641,6 +647,56 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      demo_seed_runs: {
+        Row: {
+          branch_id: string
+          counts: Json
+          created_at: string
+          created_by: string | null
+          created_by_label: string | null
+          id: string
+          removed_at: string | null
+          seed_key: string
+          skipped: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          counts?: Json
+          created_at?: string
+          created_by?: string | null
+          created_by_label?: string | null
+          id?: string
+          removed_at?: string | null
+          seed_key: string
+          skipped?: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          counts?: Json
+          created_at?: string
+          created_by?: string | null
+          created_by_label?: string | null
+          id?: string
+          removed_at?: string | null
+          seed_key?: string
+          skipped?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demo_seed_runs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       emergency_actions: {
         Row: {
@@ -968,6 +1024,7 @@ export type Database = {
         Row: {
           category: string
           created_at: string
+          demo_seed_run_id: string | null
           id: string
           is_active: boolean
           question: string
@@ -979,6 +1036,7 @@ export type Database = {
         Insert: {
           category?: string
           created_at?: string
+          demo_seed_run_id?: string | null
           id?: string
           is_active?: boolean
           question: string
@@ -990,6 +1048,7 @@ export type Database = {
         Update: {
           category?: string
           created_at?: string
+          demo_seed_run_id?: string | null
           id?: string
           is_active?: boolean
           question?: string
@@ -1012,6 +1071,7 @@ export type Database = {
         Row: {
           comment: string | null
           created_at: string
+          demo_seed_run_id: string | null
           id: string
           question_id: string
           rating: number
@@ -1023,6 +1083,7 @@ export type Database = {
         Insert: {
           comment?: string | null
           created_at?: string
+          demo_seed_run_id?: string | null
           id?: string
           question_id: string
           rating: number
@@ -1034,6 +1095,7 @@ export type Database = {
         Update: {
           comment?: string | null
           created_at?: string
+          demo_seed_run_id?: string | null
           id?: string
           question_id?: string
           rating?: number
@@ -1077,6 +1139,7 @@ export type Database = {
         Row: {
           assigned_types: string[]
           created_at: string
+          demo_seed_run_id: string | null
           description: string | null
           external_url: string | null
           id: string
@@ -1090,6 +1153,7 @@ export type Database = {
         Insert: {
           assigned_types?: string[]
           created_at?: string
+          demo_seed_run_id?: string | null
           description?: string | null
           external_url?: string | null
           id?: string
@@ -1103,6 +1167,7 @@ export type Database = {
         Update: {
           assigned_types?: string[]
           created_at?: string
+          demo_seed_run_id?: string | null
           description?: string | null
           external_url?: string | null
           id?: string
@@ -1121,6 +1186,7 @@ export type Database = {
           brought_by_name: string
           created_at: string
           created_by: string | null
+          demo_seed_run_id: string | null
           food_description: string
           food_type: string
           id: string
@@ -1140,6 +1206,7 @@ export type Database = {
           brought_by_name: string
           created_at?: string
           created_by?: string | null
+          demo_seed_run_id?: string | null
           food_description: string
           food_type?: string
           id?: string
@@ -1159,6 +1226,7 @@ export type Database = {
           brought_by_name?: string
           created_at?: string
           created_by?: string | null
+          demo_seed_run_id?: string | null
           food_description?: string
           food_type?: string
           id?: string
@@ -1339,6 +1407,7 @@ export type Database = {
           branch_id: string | null
           condition_notes: string | null
           created_at: string
+          demo_seed_run_id: string | null
           expected_return: string | null
           id: string
           is_permanent: boolean
@@ -1359,6 +1428,7 @@ export type Database = {
           branch_id?: string | null
           condition_notes?: string | null
           created_at?: string
+          demo_seed_run_id?: string | null
           expected_return?: string | null
           id?: string
           is_permanent?: boolean
@@ -1379,6 +1449,7 @@ export type Database = {
           branch_id?: string | null
           condition_notes?: string | null
           created_at?: string
+          demo_seed_run_id?: string | null
           expected_return?: string | null
           id?: string
           is_permanent?: boolean
@@ -2098,6 +2169,7 @@ export type Database = {
           created_at: string
           damaged_at: string | null
           damaged_notes: string | null
+          demo_seed_run_id: string | null
           id: string
           is_active: boolean
           key_label: string
@@ -2122,6 +2194,7 @@ export type Database = {
           created_at?: string
           damaged_at?: string | null
           damaged_notes?: string | null
+          demo_seed_run_id?: string | null
           id?: string
           is_active?: boolean
           key_label: string
@@ -2146,6 +2219,7 @@ export type Database = {
           created_at?: string
           damaged_at?: string | null
           damaged_notes?: string | null
+          demo_seed_run_id?: string | null
           id?: string
           is_active?: boolean
           key_label?: string
@@ -2214,6 +2288,7 @@ export type Database = {
           branch_id: string | null
           care_level: string | null
           created_at: string | null
+          demo_seed_run_id: string | null
           destination_categories: string[] | null
           dols_lps_flag: boolean | null
           emergency_contact_name: string | null
@@ -2235,6 +2310,7 @@ export type Database = {
           branch_id?: string | null
           care_level?: string | null
           created_at?: string | null
+          demo_seed_run_id?: string | null
           destination_categories?: string[] | null
           dols_lps_flag?: boolean | null
           emergency_contact_name?: string | null
@@ -2256,6 +2332,7 @@ export type Database = {
           branch_id?: string | null
           care_level?: string | null
           created_at?: string | null
+          demo_seed_run_id?: string | null
           destination_categories?: string[] | null
           dols_lps_flag?: boolean | null
           emergency_contact_name?: string | null
@@ -2692,6 +2769,7 @@ export type Database = {
           created_at: string
           dbs_expiry_date: string | null
           dbs_reference: string | null
+          demo_seed_run_id: string | null
           id: string
           insurance_expiry_date: string | null
           insurance_reference: string | null
@@ -2711,6 +2789,7 @@ export type Database = {
           created_at?: string
           dbs_expiry_date?: string | null
           dbs_reference?: string | null
+          demo_seed_run_id?: string | null
           id?: string
           insurance_expiry_date?: string | null
           insurance_reference?: string | null
@@ -2730,6 +2809,7 @@ export type Database = {
           created_at?: string
           dbs_expiry_date?: string | null
           dbs_reference?: string | null
+          demo_seed_run_id?: string | null
           id?: string
           insurance_expiry_date?: string | null
           insurance_reference?: string | null
@@ -2845,6 +2925,7 @@ export type Database = {
           check_out_time: string | null
           companion_index: number
           created_at: string
+          demo_seed_run_id: string | null
           display_name: string
           id: string
           is_primary: boolean
@@ -2860,6 +2941,7 @@ export type Database = {
           check_out_time?: string | null
           companion_index?: number
           created_at?: string
+          demo_seed_run_id?: string | null
           display_name: string
           id?: string
           is_primary?: boolean
@@ -2875,6 +2957,7 @@ export type Database = {
           check_out_time?: string | null
           companion_index?: number
           created_at?: string
+          demo_seed_run_id?: string | null
           display_name?: string
           id?: string
           is_primary?: boolean
@@ -3014,6 +3097,7 @@ export type Database = {
           contractor_person_id: string | null
           contractor_screening: Json | null
           created_at: string
+          demo_seed_run_id: string | null
           email: string
           expected_return_date: string | null
           first_name: string
@@ -3069,6 +3153,7 @@ export type Database = {
           contractor_person_id?: string | null
           contractor_screening?: Json | null
           created_at?: string
+          demo_seed_run_id?: string | null
           email: string
           expected_return_date?: string | null
           first_name: string
@@ -3124,6 +3209,7 @@ export type Database = {
           contractor_person_id?: string | null
           contractor_screening?: Json | null
           created_at?: string
+          demo_seed_run_id?: string | null
           email?: string
           expected_return_date?: string | null
           first_name?: string
@@ -3193,6 +3279,7 @@ export type Database = {
           check_out_time: string | null
           client_request_id: string | null
           created_at: string
+          demo_seed_run_id: string | null
           destination_label: string | null
           destination_resident_person_id: string | null
           destination_wing_id: string | null
@@ -3211,6 +3298,7 @@ export type Database = {
           check_out_time?: string | null
           client_request_id?: string | null
           created_at?: string
+          demo_seed_run_id?: string | null
           destination_label?: string | null
           destination_resident_person_id?: string | null
           destination_wing_id?: string | null
@@ -3229,6 +3317,7 @@ export type Database = {
           check_out_time?: string | null
           client_request_id?: string | null
           created_at?: string
+          demo_seed_run_id?: string | null
           destination_label?: string | null
           destination_resident_person_id?: string | null
           destination_wing_id?: string | null
@@ -3319,6 +3408,7 @@ export type Database = {
           branch_id: string | null
           color: string | null
           created_at: string | null
+          demo_seed_run_id: string | null
           floor: string | null
           id: string
           is_active: boolean | null
@@ -3330,6 +3420,7 @@ export type Database = {
           branch_id?: string | null
           color?: string | null
           created_at?: string | null
+          demo_seed_run_id?: string | null
           floor?: string | null
           id?: string
           is_active?: boolean | null
@@ -3341,6 +3432,7 @@ export type Database = {
           branch_id?: string | null
           color?: string | null
           created_at?: string | null
+          demo_seed_run_id?: string | null
           floor?: string | null
           id?: string
           is_active?: boolean | null
@@ -3397,6 +3489,7 @@ export type Database = {
         Args: { p_party_ids: string[]; p_reason?: string; p_time?: string }
         Returns: number
       }
+      clear_demo_data: { Args: { p_run_id: string }; Returns: Json }
       contractor_compliance_internal: {
         Args: {
           p_branch_id: string
@@ -4022,6 +4115,7 @@ export type Database = {
           skipped: number
         }[]
       }
+      seed_demo_data: { Args: { p_branch_id: string }; Returns: Json }
       set_kiosk_pin: { Args: { p_pin: string }; Returns: undefined }
       user_can_access_site: { Args: { _branch_id: string }; Returns: boolean }
       verify_kiosk_pin: { Args: { p_pin: string }; Returns: boolean }
