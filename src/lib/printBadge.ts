@@ -95,7 +95,7 @@ function badgeMarkup(data: BadgeData, color: string, date: Date, qr?: string) {
 }
 
 
-function standardHtml(data: BadgeData, color: string, date: Date, qr?: string) {
+function standardHtml(data: BadgeData, color: string, date: Date, qr?: string, autoPrint = true) {
   return `<!DOCTYPE html><html><head><title>Badge — ${data.name}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -116,12 +116,12 @@ function standardHtml(data: BadgeData, color: string, date: Date, qr?: string) {
     @media print { body { background:#fff; } .badge { border:1px solid #cbd5e1; } }
   </style></head><body>
     ${badgeMarkup(data, color, date, qr)}
-    <script>window.onload = function(){ window.print(); }<\/script>
+    ${autoPrint ? `<script>window.onload = function(){ window.print(); }<\/script>` : ""}
   </body></html>`;
 }
 
 
-function labelHtml(data: BadgeData, color: string, date: Date, size: string, qr?: string) {
+function labelHtml(data: BadgeData, color: string, date: Date, size: string, qr?: string, autoPrint = true) {
   const dim = LABEL_DIMENSIONS[size] || LABEL_DIMENSIONS["62mm"];
   const compact = dim.h <= 40; // 62 x 29mm roll — name + type only
   const nameSize = compact ? 13 : 19;
@@ -147,7 +147,7 @@ function labelHtml(data: BadgeData, color: string, date: Date, size: string, qr?
     .foot { text-align:center; font-size:6.5pt; color:#94a3b8; padding:${compact ? "0.5mm" : "1.5mm"} 0 1.5mm; letter-spacing:.08em; text-transform:uppercase; }
   </style></head><body>
     ${badgeMarkup(data, color, date, qr)}
-    <script>window.onload = function(){ window.print(); }<\/script>
+    ${autoPrint ? `<script>window.onload = function(){ window.print(); }<\/script>` : ""}
   </body></html>`;
 }
 
@@ -186,4 +186,24 @@ export async function printBadge(data: BadgeData, config?: Partial<BadgeConfig>)
 export async function printBadgeAuto(data: BadgeData) {
   const config = await getBadgeConfig();
   printBadge(data, config);
+}
+
+
+/**
+ * Exactly the badge that would be printed, as HTML, but without the automatic
+ * print call. Used by the settings preview so what an administrator sees is
+ * produced by the same code that prints the real badge.
+ */
+export async function badgePreviewHtml(
+  data: BadgeData,
+  config?: Partial<BadgeConfig>
+): Promise<string> {
+  const color = TYPE_COLORS[data.type?.toLowerCase()] || TYPE_COLORS.visitor;
+  const date = data.date || new Date();
+  const mode = config?.mode || "standard";
+  const size = config?.labelSize || "62mm";
+  const qr = await qrDataUrl(data.qrValue);
+  return mode === "label"
+    ? labelHtml(data, color, date, size, qr, false)
+    : standardHtml(data, color, date, qr, false);
 }
