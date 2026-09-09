@@ -114,6 +114,19 @@ function typeLabelOf(type: string) {
 interface BuildArgs {
   visitors: Visitor[];
   residents: Resident[];
+  /**
+   * Canonical attendance rows (one per person on a visit). When present these
+   * decide who is still on site; the older visit record is only a fallback for
+   * arrivals recorded before attendance rows existed.
+   */
+  parties?: {
+    legacyVisitorId: string | null;
+    isPrimary: boolean;
+    companionIndex: number;
+    displayName: string;
+    nameStatus: string;
+    checkOutTime: Date | null;
+  }[];
   /** "Room" in a care home, "Villa" in a retirement village. */
   roomLabel?: string;
 }
@@ -133,7 +146,15 @@ function roomDisplay(room: string, label: string) {
   return unit ? `${label} ${unit}` : "";
 }
 
-export function buildRollCall({ visitors, residents, roomLabel = "Room" }: BuildArgs): RollCall {
+export function buildRollCall({ visitors, residents, roomLabel = "Room", parties = [] }: BuildArgs): RollCall {
+  // Companions grouped by the arrival they belong to, newest state wins.
+  const partiesByVisitor = new Map<string, NonNullable<BuildArgs["parties"]>>();
+  parties.forEach((p) => {
+    if (!p.legacyVisitorId) return;
+    const list = partiesByVisitor.get(p.legacyVisitorId) || [];
+    list.push(p);
+    partiesByVisitor.set(p.legacyVisitorId, list);
+  });
   const residentMap = new Map(residents.map((r) => [r.visitorId, r]));
   const residentByName = new Map(
     residents.map((r) => [r.name.toLowerCase().trim(), r])
@@ -237,7 +258,22 @@ export function buildRollCall({ visitors, residents, roomLabel = "Room" }: Build
       associatedWith: [`With ${base.name}`, ...base.associatedWith],
     });
 
-    if (companions.length > 0) {
+    const canonical = partiesByVisitor.get(v.id);
+    if (canonical && canonical.length > 0) {
+      canonical
+        .filter((p) => !p.isPrimary && !p.checkOutTime)
+        .forEach((p) => {
+          const i = Math.max(p.companionIndex - 1, 0);
+          const named = p.nameStatus === "named" && p.displayName.trim();
+          const name = named ? p.displayName.trim() : `Companion ${i + 1} of ${base.name}`;
+          onSite.push(companionLine(i, name, companions[i]?.phone || ""));
+          if (hostResident) {
+            const list = companionsWith.get(hostResident.visitorId) || [];
+            list.push(name);
+            companionsWith.set(hostResident.visitorId, list);
+          }
+        });
+    } else if (companions.length > 0) {
       companions.forEach((c, i) => {
         if (c.checkedOutAt) return;
         const name = c.name?.trim() || `Companion ${i + 1} of ${base.name}`;
