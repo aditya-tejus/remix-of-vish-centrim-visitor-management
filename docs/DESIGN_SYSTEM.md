@@ -111,7 +111,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 
 ## 7. Iconography rules
 
-- Lucide only. No emoji and no decorative Unicode symbols (no ✓, ✗, ⚠, →, ⌨️).
+- Lucide only. No emoji and no decorative Unicode symbols (no tick, cross, warning triangle, arrow or keyboard glyphs).
   Use `Check`, `X`, `AlertTriangle`, `ArrowRight` components instead.
 - Decorative icons: `aria-hidden="true"`.
 - Icon-only controls: an `aria-label` describing the action ("Refresh list").
