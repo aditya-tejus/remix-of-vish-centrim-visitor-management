@@ -565,9 +565,6 @@ export default function KeysRegister() {
             )}
             </>
             )}
-          </main>
-        </SidebarInset>
-      </div>
 
       <AddKeyDialog open={addOpen} onOpenChange={setAddOpen} residents={residents} onAdd={addKey} />
 
