@@ -6,7 +6,7 @@
  * Presentation only — no data access, no workflow, no permission logic.
  */
 import { ReactNode } from "react";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { AppHeader } from "@/components/AppHeader";
 import { SkipToContent } from "@/components/SkipToContent";
@@ -46,7 +46,8 @@ export function AppShell({
       <div className="flex min-h-dvh w-full">
         <SkipToContent />
         <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
+        {/* Content column. A plain div, not SidebarInset, so the route has exactly one <main>. */}
+        <div className="relative flex min-h-svh flex-1 min-w-0 flex-col bg-background">
           <AppHeader
             title={title}
             subtitle={subtitle}
@@ -60,7 +61,7 @@ export function AppShell({
           <main id="main-content" tabIndex={-1} className={cn("min-w-0 focus:outline-none", mainClassName)}>
             {children}
           </main>
-        </SidebarInset>
+        </div>
       </div>
     </SidebarProvider>
   );
