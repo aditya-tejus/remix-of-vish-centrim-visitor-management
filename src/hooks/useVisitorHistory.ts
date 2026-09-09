@@ -18,7 +18,12 @@ export interface VisitHistoryEntry {
   bodyTemperature: number | null;
   checkoutReason: string | null;
   leaveType: string | null;
+  /** Where this line came from: an attendance record, or an older saved record. */
+  source: "canonical" | "legacy";
+  /** How this person was on that visit. */
+  role: "primary" | "companion" | "unknown";
 }
+
 
 /**
  * A person's full visit history, not just today's records.
