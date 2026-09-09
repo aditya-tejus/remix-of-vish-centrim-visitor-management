@@ -14,6 +14,7 @@ import { IntegrationTab } from "@/components/settings/IntegrationTab";
 import { AuditTrailTab } from "@/components/settings/AuditTrailTab";
 import { LockGovernanceTab } from "@/components/settings/LockGovernanceTab";
 import { KioskStaffPinCard } from "@/components/settings/KioskStaffPinCard";
+import { KioskDevicesCard } from "@/components/settings/KioskDevicesCard";
 
 import { SurveyBuilder } from "@/components/feedback/SurveyBuilder";
 import { AttendanceIntegrityCard } from "@/components/settings/AttendanceIntegrityCard";
@@ -115,6 +116,7 @@ export default function SettingsPage() {
                     <div className="space-y-6">
                       <LockGovernanceTab />
                       <KioskStaffPinCard />
+                      <KioskDevicesCard />
                     </div>
                   )}
                 </SectionBody>
