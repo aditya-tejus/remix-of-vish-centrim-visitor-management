@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppShell } from "@/components/AppShell";
 import {
   Clock, Shield, UserCheck, LogIn, Trash2, Edit, Download,
   Search, Filter, RefreshCw, FileText, AlertTriangle, ChevronDown,
@@ -81,24 +80,16 @@ export default function AuditLogPage() {
   const uniqueActions = [...new Set(logs.map((l) => l.action))];
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm">
-            <div className="flex items-center gap-4 px-6 py-4">
-              <SidebarTrigger />
-              <div className="flex-1">
-                <h1 className="text-lg font-semibold text-foreground">Audit Log</h1>
-                <p className="text-xs text-muted-foreground">GDPR Article 30 — Processing activity records</p>
-              </div>
-              <Badge variant="secondary" className="font-mono text-xs">
-                {filtered.length} entries
-              </Badge>
-            </div>
-          </header>
-
-          <main className="p-6 space-y-4">
+    <AppShell
+      title="Audit Log"
+      subtitle="GDPR Article 30 — Processing activity records"
+      mainClassName="p-6 space-y-4"
+      actions={
+        <Badge variant="secondary" className="font-mono text-xs">
+          {filtered.length} entries
+        </Badge>
+      }
+    >
             {/* Filters */}
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
@@ -122,7 +113,7 @@ export default function AuditLogPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="icon" onClick={fetchLogs} title="Refresh">
+              <Button variant="outline" size="icon" onClick={fetchLogs} title="Refresh" aria-label="Refresh audit log">
                 <RefreshCw className="h-4 w-4" />
               </Button>
             </div>
@@ -214,9 +205,6 @@ export default function AuditLogPage() {
                 )}
               </CardContent>
             </Card>
-          </main>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+    </AppShell>
   );
 }

@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -676,70 +675,62 @@ export default function Evacuation() {
     );
   };
 
-  return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <header className="sticky top-0 z-20 border-b border-border bg-card/90 backdrop-blur-sm">
-            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-6">
-              <div className="flex items-center gap-3">
-                <SidebarTrigger />
-                <div>
-                  <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-destructive" />
-                    Emergency Roll Call
-                  </h1>
-                  <p className="text-xs text-muted-foreground">Every person on the property, and who needs help to get out</p>
+  const headerActions = (
+  <div className="flex flex-wrap items-center gap-2">
+                  {!activeDrill && canActivate && (
+                    <Select value={eventClass} onValueChange={(v) => setEventClass(v as "drill" | "real")}>
+                      <SelectTrigger className="h-9 w-[150px] text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="real">Real emergency</SelectItem>
+                        <SelectItem value="drill">Practice drill</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {!activeDrill && canActivate && (
+                    <Button size="sm" disabled={busy} onClick={() => setStartPrompt(true)} className="h-9 gap-1.5 bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      <Siren className="h-3.5 w-3.5" /> Start {eventClass === "drill" ? "drill" : "emergency"}
+                    </Button>
+                  )}
+                  {activeDrill && canActivate && (
+                    <Button variant="outline" size="sm" disabled={busy} onClick={togglePause} className="h-9 text-xs">
+                      {activeDrill.state === "paused" ? "Resume" : "Pause"}
+                    </Button>
+                  )}
+                  {points.length > 0 && (
+                    <Select value={assemblyPoint || "none"} onValueChange={(v) => setAssemblyPoint(v === "none" ? "" : v)}>
+                      <SelectTrigger className="h-9 w-[190px] text-xs">
+                        <SelectValue placeholder="Assembly point" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No assembly point</SelectItem>
+                        {points.map((pt) => <SelectItem key={pt.id} value={pt.id}>{pt.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {canExport && <Button variant="outline" size="sm" onClick={exportCSV} className="h-9 gap-1.5"><Download className="h-3.5 w-3.5" /> CSV</Button>}
+                  {canExport && <Button variant="outline" size="sm" onClick={printList} className="h-9 gap-1.5"><Printer className="h-3.5 w-3.5" /> Print sheet</Button>}
+                  {canMark && unaccountedCount > 0 && onSite.length > 0 && (
+                    <Button size="sm" disabled={busy} onClick={markAllSafe} className="h-9 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-emerald-50">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> All safe
+                    </Button>
+                  )}
+                  {canMark && safeCount > 0 && <Button variant="ghost" size="sm" disabled={busy} onClick={resetAll} className="h-9 text-xs">Reset</Button>}
+                  {activeDrill && canActivate && (
+                    <Button variant="outline" size="sm" disabled={busy} onClick={() => setClosing(true)} className="h-9 gap-1.5 text-xs"><ClipboardCheck className="h-3.5 w-3.5" /> End roll call</Button>
+                  )}
                 </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {!activeDrill && canActivate && (
-                  <Select value={eventClass} onValueChange={(v) => setEventClass(v as "drill" | "real")}>
-                    <SelectTrigger className="h-9 w-[150px] text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="real">Real emergency</SelectItem>
-                      <SelectItem value="drill">Practice drill</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-                {!activeDrill && canActivate && (
-                  <Button size="sm" disabled={busy} onClick={() => setStartPrompt(true)} className="h-9 gap-1.5 bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    <Siren className="h-3.5 w-3.5" /> Start {eventClass === "drill" ? "drill" : "emergency"}
-                  </Button>
-                )}
-                {activeDrill && canActivate && (
-                  <Button variant="outline" size="sm" disabled={busy} onClick={togglePause} className="h-9 text-xs">
-                    {activeDrill.state === "paused" ? "Resume" : "Pause"}
-                  </Button>
-                )}
-                {points.length > 0 && (
-                  <Select value={assemblyPoint || "none"} onValueChange={(v) => setAssemblyPoint(v === "none" ? "" : v)}>
-                    <SelectTrigger className="h-9 w-[190px] text-xs">
-                      <SelectValue placeholder="Assembly point" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No assembly point</SelectItem>
-                      {points.map((pt) => <SelectItem key={pt.id} value={pt.id}>{pt.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                )}
-                {canExport && <Button variant="outline" size="sm" onClick={exportCSV} className="h-9 gap-1.5"><Download className="h-3.5 w-3.5" /> CSV</Button>}
-                {canExport && <Button variant="outline" size="sm" onClick={printList} className="h-9 gap-1.5"><Printer className="h-3.5 w-3.5" /> Print sheet</Button>}
-                {canMark && unaccountedCount > 0 && onSite.length > 0 && (
-                  <Button size="sm" disabled={busy} onClick={markAllSafe} className="h-9 gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-emerald-50">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> All safe
-                  </Button>
-                )}
-                {canMark && safeCount > 0 && <Button variant="ghost" size="sm" disabled={busy} onClick={resetAll} className="h-9 text-xs">Reset</Button>}
-                {activeDrill && canActivate && (
-                  <Button variant="outline" size="sm" disabled={busy} onClick={() => setClosing(true)} className="h-9 gap-1.5 text-xs"><ClipboardCheck className="h-3.5 w-3.5" /> End roll call</Button>
-                )}
-              </div>
-            </div>
-          </header>
+  );
 
-          <main className="p-4 sm:p-6 space-y-5 pb-28 lg:pb-6">
+  return (
+    <AppShell
+      title="Emergency Roll Call"
+      subtitle="Every person on the property, and who needs help to get out"
+      titleIcon={Shield}
+      titleIconClassName="h-5 w-5 shrink-0 text-destructive"
+      actions={headerActions}
+      mainClassName="p-4 sm:p-6 space-y-5 pb-28 lg:pb-6"
+    >
+
             {!canMark && (
               <div className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-2.5 text-sm text-foreground flex items-start gap-2">
                 <Lock className="h-4 w-4 mt-0.5 shrink-0" />
@@ -946,7 +937,6 @@ export default function Evacuation() {
               </section>
             )}
 
-          </main>
 
           {/* Mobile action bar */}
           {onSite.length > 0 && (
@@ -1069,8 +1059,6 @@ export default function Evacuation() {
             </DialogContent>
           </Dialog>
 
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+    </AppShell>
   );
 }

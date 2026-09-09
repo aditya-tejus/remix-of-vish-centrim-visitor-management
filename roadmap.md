@@ -365,3 +365,12 @@ Known limits after Phase 7E:
 - One main, one h1, one labelled main nav and one skip link per route; Settings keeps a single site switcher (header only).
 - Named the icon-only back, more-actions and calendar month/close controls.
 - Tracked, pre-existing: Residents horizontal overflow; Settings preview column overflow at 1024px (body layout, deferred to the Settings visual increment).
+
+## Phase 7F — Increment 2C (reports, privacy, audit, emergency, coverage) — done
+- Converted /reports, /reports/analytics, /reports/on-site, /reports/evacuation, /gdpr, /audit-log, /evacuation and /coverage to the shared AppShell.
+- Removed the duplicate main landmark each of these routes had (SidebarInset main + page main).
+- Added optional presentational titleIcon/titleIconClassName to AppShell/AppHeader (aria-hidden) to keep the emergency shield cue.
+- Named the Audit Log refresh control; no other icon-only controls found on these routes.
+- Print templates and export logic untouched; emergency roll-call print verified working.
+- Still tracked, untouched: Residents overflow (768/1024) and Settings preview overflow (~1024).
+- Known: the GDPR export confirmation is opened from state, so focus is not restored to the trigger on close (pre-existing).

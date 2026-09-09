@@ -1,6 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppShell } from "@/components/AppShell";
 import { Shield, ClipboardList, TrendingUp, BarChart3, ArrowRight, MessageSquare, Users } from "lucide-react";
 
 const REPORT_CARDS = [
@@ -59,21 +58,11 @@ export default function ReportsHome() {
   const navigate = useNavigate();
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <header className="sticky top-0 z-10 bg-card border-b border-border">
-            <div className="flex items-center gap-4 px-6 h-14">
-              <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-              <div>
-                <h1 className="text-xl font-bold text-foreground">Reports</h1>
-                <p className="text-[13px] text-muted-foreground">View evacuation reports, presence logs, and visit trends</p>
-              </div>
-            </div>
-          </header>
-
-          <main className="p-6">
+    <AppShell
+      title="Reports"
+      subtitle="View evacuation reports, presence logs, and visit trends"
+      mainClassName="p-6"
+    >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl">
               {REPORT_CARDS.map((card) => (
                 <button
@@ -92,9 +81,6 @@ export default function ReportsHome() {
                 </button>
               ))}
             </div>
-          </main>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+    </AppShell>
   );
 }

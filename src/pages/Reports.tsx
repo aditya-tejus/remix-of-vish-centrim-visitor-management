@@ -1,8 +1,6 @@
 import { isOverstayedSync } from "@/hooks/useOverstayPolicy";
 import { useMemo, useState } from "react";
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { AppShell } from "@/components/AppShell";
 import { useVisitors } from "@/hooks/useVisitors";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -171,21 +169,11 @@ export default function ReportsPage() {
   };
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm">
-            <div className="flex items-center gap-4 px-6 py-4">
-              <SidebarTrigger />
-              <div>
-                <h1 className="text-lg font-semibold text-foreground">Reports & Analytics</h1>
-                <p className="text-xs text-muted-foreground">Visitor insights and compliance metrics</p>
-              </div>
-            </div>
-          </header>
-
-          <main className="p-6 space-y-6">
+    <AppShell
+      title="Reports & Analytics"
+      subtitle="Visitor insights and compliance metrics"
+      mainClassName="p-6 space-y-6"
+    >
             {/* Summary Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
@@ -553,9 +541,6 @@ export default function ReportsPage() {
                 </div>
               </TabsContent>
             </Tabs>
-          </main>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+    </AppShell>
   );
 }

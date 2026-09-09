@@ -1,7 +1,5 @@
 import { useMemo, useState } from "react";
-import { AppSidebar } from "@/components/AppSidebar";
-import { AppHeader } from "@/components/AppHeader";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { AppShell } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -222,18 +220,13 @@ function SummaryCard({ icon: Icon, label, value, tone }: { icon: any; label: str
 
 function Shell({ children, actions }: { children: React.ReactNode; actions?: React.ReactNode }) {
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <AppHeader
-            title="Who is on site"
-            subtitle="Live presence, people over their expected time, and visit history for this site."
-            actions={actions}
-          />
-          <main className="p-4 sm:p-6 space-y-4">{children}</main>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+    <AppShell
+      title="Who is on site"
+      subtitle="Live presence, people over their expected time, and visit history for this site."
+      actions={actions}
+      mainClassName="p-4 sm:p-6 space-y-4"
+    >
+      {children}
+    </AppShell>
   );
 }

@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -208,23 +207,13 @@ export default function EvacuationReport() {
   };
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <header className="sticky top-0 z-10 bg-card border-b border-border">
-            <div className="flex items-center gap-4 px-6 h-14">
-              <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-              <div>
-                <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-destructive" /> Evacuation Report
-                </h1>
-                <p className="text-[13px] text-muted-foreground">Drills and real evacuations, with who was accounted for and when</p>
-              </div>
-            </div>
-          </header>
-
-          <main className="p-6 space-y-4">
+    <AppShell
+      title="Evacuation Report"
+      subtitle="Drills and real evacuations, with who was accounted for and when"
+      titleIcon={Shield}
+      titleIconClassName="h-5 w-5 shrink-0 text-destructive"
+      mainClassName="p-6 space-y-4"
+    >
             <div className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-[13px] text-muted-foreground">
               {complianceNote}
             </div>
@@ -335,9 +324,6 @@ export default function EvacuationReport() {
                 );
               })
             )}
-          </main>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+    </AppShell>
   );
 }
