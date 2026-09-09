@@ -5,9 +5,7 @@ import { useVisitorHistory } from "@/hooks/useVisitorHistory";
 import { useResidents } from "@/hooks/useResidents";
 import { ContractorCompliancePanel } from "@/components/contractor/ContractorCompliancePanel";
 import { ScreeningAnswers } from "@/components/ScreeningAnswers";
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { AppShell } from "@/components/AppShell";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -102,19 +100,24 @@ export default function VisitorProfilePage() {
 
   if (!visitor) {
     return (
-      <SidebarProvider>
-        <div className="flex min-h-screen w-full">
-          <AppSidebar />
-          <SidebarInset className="flex-1 flex items-center justify-center">
-            <div className="text-center space-y-3">
-              <p className="text-lg font-semibold text-foreground">Visitor not found</p>
-              <Button variant="outline" onClick={() => navigate(-1)}>
-                <ArrowLeft className="h-4 w-4 mr-2" /> Go Back
-              </Button>
-            </div>
-          </SidebarInset>
+      <AppShell
+        title="Visitor Profile"
+        subtitle="This record could not be found"
+        mainClassName="p-6"
+      >
+        <div className="mx-auto max-w-md space-y-3 py-16 text-center">
+          <h2 className="text-lg font-semibold text-foreground">Visitor not found</h2>
+          <p className="text-sm text-muted-foreground">
+            This visitor record no longer exists, or it belongs to another site.
+          </p>
+          <div className="flex flex-wrap justify-center gap-2 pt-2">
+            <Button variant="outline" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-4 w-4 mr-2" /> Go back
+            </Button>
+            <Button onClick={() => navigate("/visitors")}>All visitor profiles</Button>
+          </div>
         </div>
-      </SidebarProvider>
+      </AppShell>
     );
   }
 
