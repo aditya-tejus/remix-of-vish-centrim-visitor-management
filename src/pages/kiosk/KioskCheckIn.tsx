@@ -770,7 +770,7 @@ export default function KioskCheckIn() {
                                     // someone specific; a browsable list never displays them.
                                     flow.residentLookupMode === "search_first"
                                     ? `${person.room || "—"} ${person.wing ? `• ${person.wing}` : ""}`
-                                    : person.wing || ""ravel
+                                    : person.wing || ""
                                   : `${person.role} ${person.department ? `• ${person.department}` : ""}`
                               }
                               accentColor="primary"
