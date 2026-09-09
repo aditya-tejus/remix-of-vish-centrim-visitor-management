@@ -34,13 +34,16 @@ const OPTIONS = [
 
 export function ReturningVisitorTab({ personType }: Props) {
   const [values, setValues] = useState<Record<string, boolean>>({});
+  const [fastLane, setFastLane] = useState(false);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  const { siteId } = useOperatingContext();
 
   const keyFor = (suffix: string) => `${suffix}_${personType}`;
+  const fastLaneKey = siteId ? siteScopedKey(FAST_LANE_KEY, siteId) : FAST_LANE_KEY;
 
   useEffect(() => {
-    const keys = OPTIONS.map((o) => keyFor(o.suffix));
+    const keys = [...OPTIONS.map((o) => keyFor(o.suffix)), fastLaneKey, FAST_LANE_KEY];
     supabase
       .from("settings")
       .select("key, value")
@@ -51,14 +54,21 @@ export function ReturningVisitorTab({ personType }: Props) {
           next[o.suffix] = data?.find((d) => d.key === keyFor(o.suffix))?.value === "true";
         }
         setValues(next);
+        const raw =
+          data?.find((d) => d.key === fastLaneKey)?.value ??
+          data?.find((d) => d.key === FAST_LANE_KEY)?.value;
+        setFastLane(raw === "true");
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [personType]);
+  }, [personType, fastLaneKey]);
 
   const save = async () => {
     setSaving(true);
     await supabase.from("settings").upsert(
-      OPTIONS.map((o) => ({ key: keyFor(o.suffix), value: values[o.suffix] ? "true" : "false" })),
+      [
+        ...OPTIONS.map((o) => ({ key: keyFor(o.suffix), value: values[o.suffix] ? "true" : "false" })),
+        { key: fastLaneKey, value: fastLane ? "true" : "false" },
+      ],
       { onConflict: "key" }
     );
     setSaving(false);
