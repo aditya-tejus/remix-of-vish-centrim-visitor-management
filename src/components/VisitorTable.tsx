@@ -526,28 +526,23 @@ export function VisitorTable({
 
   /** On phones each companion gets their own card, tagged to who they arrived with. */
   const renderCompanionCards = (visitor: Visitor) =>
-    companionParties
-      .filter((p) => p.legacyVisitorId === visitor.id && !p.isPrimary)
-      .map((party) => (
-        <div key={party.id} className="p-4 pl-8 space-y-2 bg-muted/20">
+    companionRowsForVisitor(visitor, companionParties).map((row) => (
+        <div key={row.key} className="p-4 pl-8 space-y-2 bg-muted/20">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-start gap-2">
               <UsersRound className="h-4 w-4 text-muted-foreground mt-0.5" aria-hidden />
               <div>
-                <p className="text-[14px] font-medium text-foreground">
-                  {party.nameStatus === "named"
-                    ? party.displayName
-                    : `Companion ${party.companionIndex} (name not recorded)`}
-                </p>
+                <p className="text-[14px] font-medium text-foreground">{row.name}</p>
                 <p className="text-[12px] text-muted-foreground">
-                  With {visitor.firstName} {visitor.surname}
-                  {party.relationship ? ` · ${party.relationship}` : ""}
+                  With {row.withPrimaryName}
+                  {row.relationship ? ` · ${row.relationship}` : ""}
+                  {row.source === "legacy" ? " · older record" : ""}
                 </p>
               </div>
             </div>
-            {party.checkOutTime ? (
+            {row.checkOutTime ? (
               <span className="text-[12px] text-muted-foreground">
-                Out {format(party.checkOutTime, "hh:mm a")}
+                Out {format(row.checkOutTime, "hh:mm a")}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-success">
@@ -556,28 +551,29 @@ export function VisitorTable({
             )}
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[12px] text-muted-foreground">In {format(party.checkInTime, "hh:mm a")}</span>
+            <span className="text-[12px] text-muted-foreground">In {format(row.checkInTime, "hh:mm a")}</span>
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-9 text-[12px] gap-1.5"
-                onClick={() => printCompanionBadge(party, visitor)}
+                onClick={() => printCompanionBadge(row, visitor)}
               >
                 <Printer className="h-3.5 w-3.5" aria-hidden /> Print badge
               </Button>
-              {!party.checkOutTime && canCheckOut && onCheckOutParty && (
+              {!row.checkOutTime && canCheckOut && onCheckOutParty && row.partyId && (
                 <Button
                   variant="outline"
                   size="sm"
                   className="h-9 text-[12px] gap-1.5"
-                  onClick={() => onCheckOutParty(party.id)}
+                  onClick={() => onCheckOutParty(row.partyId!)}
                 >
                   <LogOut className="h-3.5 w-3.5" aria-hidden /> Sign out
                 </Button>
               )}
             </div>
           </div>
+
         </div>
       ));
 
