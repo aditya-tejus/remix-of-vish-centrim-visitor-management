@@ -2,9 +2,11 @@ import { isOverstayedSync } from "@/hooks/useOverstayPolicy";
 import centrimLogo from "@/assets/centrim-life-logo.png";
 import {
   Settings, BarChart3, ChevronDown, Home, KeyRound, UtensilsCrossed, IdCard,
-  ListChecks, Siren, MonitorSmartphone, LayoutDashboard, Users,
+  ListChecks, Siren, MonitorSmartphone, LayoutDashboard,
   type LucideIcon,
 } from "lucide-react";
+import { buildNavigation } from "@/lib/navigation";
+
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
