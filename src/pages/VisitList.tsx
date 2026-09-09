@@ -1,7 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { AppHeader } from "@/components/AppHeader";
+import { AppShell } from "@/components/AppShell";
 import { VisitorTable } from "@/components/VisitorTable";
 import { useVisitors } from "@/hooks/useVisitors";
 import { CheckInSheet } from "@/components/checkin/CheckInSheet";
@@ -165,6 +163,7 @@ export default function VisitList() {
   const searchEmpty = searchQuery.trim().length > 0 && rows.length === 0;
 
   return (
+    <>
     <AppShell title="Visitor list" overstayedCount={overstayedCount}>
           {/* Page command bar */}
 
@@ -336,6 +335,6 @@ export default function VisitList() {
       )}
       <VisitListQRDialog open={qrOpen} onOpenChange={setQrOpen} />
       <HandoverPrintDialog open={handoverOpen} onOpenChange={setHandoverOpen} visitors={dateVisitors} date={selectedDate} />
-    </SidebarProvider>
+    </>
   );
 }
