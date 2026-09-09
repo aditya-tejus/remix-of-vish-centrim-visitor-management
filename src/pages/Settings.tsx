@@ -32,7 +32,7 @@ export default function SettingsPage() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <SidebarInset className="flex-1">
+        <SidebarInset className="flex-1 min-w-0">
           <header className="sticky top-0 z-30 bg-card border-b border-border h-14 flex items-center justify-between px-6">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
@@ -43,10 +43,10 @@ export default function SettingsPage() {
             </div>
             <SiteSwitcher compact />
           </header>
-          <main className="p-6">
-            <div className="flex gap-6">
+          <main className="p-4 sm:p-6">
+            <div className="flex flex-col lg:flex-row gap-6">
               {/* Settings Navigation */}
-              <div className="sticky top-20 self-start">
+              <div className="lg:sticky lg:top-20 self-start w-full lg:w-auto">
                 <SettingsNav active={active} onChange={setActive} />
               </div>
 

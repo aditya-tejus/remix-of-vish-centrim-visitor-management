@@ -190,7 +190,7 @@ export default function VisitorProfilePage() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <SidebarInset className="flex-1">
+        <SidebarInset className="flex-1 min-w-0">
           <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-sm">
             <div className="flex items-center gap-4 px-6 py-4">
               <SidebarTrigger />

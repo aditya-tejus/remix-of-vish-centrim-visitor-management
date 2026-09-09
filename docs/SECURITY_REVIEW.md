@@ -137,3 +137,44 @@ Not granted to anon: `kiosk_emergency_gate` (internal), `kiosk_prefill_visitor` 
   `property_keys` or `food_register` directly.
 - Linter unchanged from the Stage 6A baseline: 45 warnings (1 extension in public,
   16 anonymous SECURITY DEFINER kiosk functions, 28 signed-in SECURITY DEFINER functions).
+
+## Stage 6C — pilot readiness review
+
+### Fixed in this stage
+- **Anonymous settings read closed.** `settings` carried an unrestricted public SELECT
+  policy that ORed away the narrow kiosk filter, so an unauthenticated client could read
+  every setting row including notification recipients. Public SELECT is now removed;
+  signed-in staff read all settings, and the kiosk keeps only its narrow non-contact
+  policy. Verified anonymously: 44 keys returned, none matching email / recipient /
+  phone / contact / pin.
+- **Anonymous configuration writes removed.** INSERT / UPDATE / DELETE policies and table
+  privileges for `anon` were dropped on `health_questions`, `form_fields`,
+  `vaccination_fields`, `feedback_questions` and `feedback_surveys`. Verified: anonymous
+  insert and delete now return HTTP 401 / `42501 permission denied`.
+- **Contractor answers.** The public read policy on `contractor_question_answers` was
+  replaced with an authenticated-only policy. Verified anonymously: empty result.
+
+### Verified by test in this stage
+- Kiosk check-in end to end (type, destination, companions, screening, terms, confirm)
+  writes one visitor row stamped with the current site; no failed backend requests.
+- Kiosk check-out by name completes and sets `status = checked-out` with a timestamp.
+- Kiosk still functions with the tightened policies — question and field configuration
+  still loads anonymously (read-only).
+- Site scoping in `useVisitors`: non-legacy sites filter strictly on `branch_id`; the
+  legacy site additionally includes null-site rows so pre-site data is never orphaned and
+  never appears under a newer site.
+- Responsive review at 390px: Visit List, Today, Settings, Keys, People, Residents,
+  Food Register, Evacuation and On-site report all have zero horizontal overflow.
+- Temporary test records purged; `visitors` count for the test surname is 0.
+
+### Still true and not fixed
+- Browser CSV exports are not tamper-evident.
+- No email, SMS, push or Teams channel is configured; all alerting is in-app only.
+- Contractor credential documents are verified manually by staff; nothing checks
+  authenticity or expiry against an issuer.
+- Kiosk devices are not individually credentialled or bound to a site.
+- Retention periods and data-controller details are operator inputs; none are invented and
+  no jurisdiction period is asserted by the product.
+- Broad legacy public read policies remain on reference tables (`branches`, `person_types`,
+  `wings`, feedback configuration). These carry no personal data and are required by the
+  kiosk before sign-in.

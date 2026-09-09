@@ -118,7 +118,7 @@ export default function Visitors() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <SidebarInset className="flex-1">
+        <SidebarInset className="flex-1 min-w-0">
           <header className="sticky top-0 z-10 border-b border-border bg-card">
             <div className="flex items-center justify-between px-6 h-14">
               <div className="flex items-center gap-4">
@@ -131,7 +131,7 @@ export default function Visitors() {
             </div>
           </header>
 
-          <main className="p-6 space-y-4">
+          <main className="p-4 sm:p-6 space-y-4">
             {/* Search */}
             <div className="relative max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -139,7 +139,7 @@ export default function Visitors() {
             </div>
 
             <Tabs defaultValue="visitors">
-              <TabsList className="inline-flex items-center bg-muted rounded-lg p-1 gap-0.5 h-auto">
+              <TabsList className="flex flex-wrap items-center justify-start bg-muted rounded-lg p-1 gap-0.5 h-auto">
                 <TabsTrigger value="visitors" className="rounded-md h-8 px-4 text-[13px] font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-1.5">
                   <User className="h-3.5 w-3.5" />Visitors
                   <span className="text-[10px] rounded-full px-1.5 py-0.5 font-semibold">{byType.visitor.length}</span>

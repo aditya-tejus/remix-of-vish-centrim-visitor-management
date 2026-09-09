@@ -371,7 +371,7 @@ export function VisitorTable({
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
       <Tabs value={activeTab || "all"} onValueChange={onTabChange} defaultValue="all">
-        <div className="border-b border-border px-4">
+        <div className="border-b border-border px-4 overflow-x-auto">
           <TabsList className="inline-flex items-center bg-transparent rounded-none p-0 gap-0 h-auto">
             {Object.entries(visitorsByType).map(([type, list]) => (
               <TabsTrigger

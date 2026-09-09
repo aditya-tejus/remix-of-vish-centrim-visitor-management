@@ -131,7 +131,7 @@ export default function VisitList() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <SidebarInset className="flex-1">
+        <SidebarInset className="flex-1 min-w-0">
           <AppHeader
             title="Visitor List"
             overstayedCount={overstayedCount}
@@ -139,7 +139,7 @@ export default function VisitList() {
 
           {/* ZONE B — Page command bar */}
           <div className="sticky top-12 z-[9] border-b border-border bg-card/95 backdrop-blur-sm">
-            <div className="flex items-center justify-between px-6 py-2.5 gap-4">
+            <div className="flex flex-wrap items-center justify-between px-4 sm:px-6 py-2.5 gap-y-2 gap-x-4">
               {/* Left: clock + date nav */}
               <div className="flex items-center gap-3 shrink-0">
                 <span className="text-[13px] text-muted-foreground font-medium">
@@ -176,7 +176,7 @@ export default function VisitList() {
               </div>
 
               {/* Centre: search */}
-              <div className="relative flex-1 max-w-md">
+              <div className="relative order-last sm:order-none w-full sm:w-auto sm:flex-1 min-w-0 sm:max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
                   placeholder="Search by name, phone, or visiting..."

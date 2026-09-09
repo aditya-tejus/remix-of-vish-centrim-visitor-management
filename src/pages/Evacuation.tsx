@@ -559,7 +559,7 @@ export default function Evacuation() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <SidebarInset className="flex-1">
+        <SidebarInset className="flex-1 min-w-0">
           <header className="sticky top-0 z-20 border-b border-border bg-card/90 backdrop-blur-sm">
             <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-6">
               <div className="flex items-center gap-3">

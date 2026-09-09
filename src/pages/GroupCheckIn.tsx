@@ -121,7 +121,7 @@ export default function GroupCheckIn() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <SidebarInset className="flex-1">
+        <SidebarInset className="flex-1 min-w-0">
           <header className="sticky top-0 z-10 bg-card border-b border-border">
             <div className="flex items-center justify-between px-6 h-14">
               <div className="flex items-center gap-4">

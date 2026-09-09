@@ -67,22 +67,22 @@ export function AppHeader({
 
   return (
     <header className="sticky top-0 z-10 bg-card border-b border-border">
-      <div className="flex items-center justify-between px-6 h-14">
+      <div className="flex items-center justify-between gap-2 px-4 sm:px-6 min-h-14 py-2">
         {/* Left: sidebar trigger + page title */}
-        <div className="flex items-center gap-4">
-          <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <SidebarTrigger className="text-muted-foreground hover:text-foreground shrink-0" />
           {title && (
-            <div>
-              <h1 className="text-xl font-bold text-foreground leading-tight">{title}</h1>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold text-foreground leading-tight truncate">{title}</h1>
               {subtitle && (
-                <p className="text-[13px] text-muted-foreground">{subtitle}</p>
+                <p className="text-[13px] text-muted-foreground line-clamp-2">{subtitle}</p>
               )}
             </div>
           )}
         </div>
 
         {/* Right: clock + facility badge + toolbar + page actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Live clock */}
           <div className="hidden md:flex items-center gap-1.5 mr-1">
             <Clock className="h-3.5 w-3.5 text-muted-foreground" />

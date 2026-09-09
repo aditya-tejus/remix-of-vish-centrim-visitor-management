@@ -171,7 +171,7 @@ export default function Residents() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <SidebarInset className="flex-1">
+        <SidebarInset className="flex-1 min-w-0">
           <AppHeader
             title="Residents"
             subtitle="Manage resident presence, outings & returns"

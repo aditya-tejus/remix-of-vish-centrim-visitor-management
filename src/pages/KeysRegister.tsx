@@ -345,7 +345,7 @@ export default function KeysRegister() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <SidebarInset className="flex-1">
+        <SidebarInset className="flex-1 min-w-0">
           <AppHeader
             title="Keys Register"
             subtitle="Every property key, who has it right now, and when it is due back."
@@ -472,7 +472,7 @@ export default function KeysRegister() {
                               <div className={`h-9 w-9 rounded-lg flex items-center justify-center border ${style.className}`}>
                                 <KeyRound className="h-4 w-4" />
                               </div>
-                              <div className="min-w-[180px] flex-1">
+                              <div className="sm:min-w-[180px] flex-1 min-w-0">
                                 <p className="text-sm font-semibold text-foreground">
                                   {k.keyLabel}
                                   {k.copyNumber ? <span className="text-muted-foreground font-normal"> · copy {k.copyNumber}</span> : null}
@@ -483,7 +483,7 @@ export default function KeysRegister() {
                                   {k.storageLocation ? ` · kept in ${k.storageLocation}` : ""}
                                 </p>
                               </div>
-                              <div className="min-w-[200px]">
+                              <div className="sm:min-w-[200px] min-w-0">
                                 {k.currentIssue ? (
                                   <>
                                     <p className="text-sm text-foreground">

@@ -114,7 +114,7 @@ export default function OperationsReport() {
         <CardContent className="p-4 space-y-4">
           <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
             <div className="flex flex-wrap items-end justify-between gap-3">
-              <TabsList>
+              <TabsList className="flex-wrap h-auto">
                 <TabsTrigger value="onsite">On site now</TabsTrigger>
                 <TabsTrigger value="overdue">Not checked out</TabsTrigger>
                 <TabsTrigger value="history">Visit history</TabsTrigger>
@@ -159,6 +159,7 @@ export default function OperationsReport() {
                   description={tab === "history" ? "Try widening the date range." : undefined}
                 />
               ) : (
+                <div className="w-full overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -193,6 +194,7 @@ export default function OperationsReport() {
                     })}
                   </TableBody>
                 </Table>
+                </div>
               )}
             </TabsContent>
           </Tabs>
@@ -223,13 +225,13 @@ function Shell({ children, actions }: { children: React.ReactNode; actions?: Rea
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <SidebarInset className="flex-1">
+        <SidebarInset className="flex-1 min-w-0">
           <AppHeader
             title="Who is on site"
             subtitle="Live presence, people over their expected time, and visit history for this site."
             actions={actions}
           />
-          <main className="p-6 space-y-4">{children}</main>
+          <main className="p-4 sm:p-6 space-y-4">{children}</main>
         </SidebarInset>
       </div>
     </SidebarProvider>

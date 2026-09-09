@@ -139,3 +139,39 @@ Open
 - Contractor credential document verification still manual.
 - Security linter unchanged at 45 warnings (1 extension, 16 anonymous, 28 signed-in
   SECURITY DEFINER functions) — same intentional set documented in docs/SECURITY_REVIEW.md.
+
+## Stage 6C — final UX, regression and pilot readiness
+
+Done
+- Closed the anonymous `settings` read hole and all anonymous configuration writes
+  (health questions, form fields, vaccination fields, feedback questions and surveys);
+  contractor answers are authenticated-only. Details and evidence in docs/SECURITY_REVIEW.md.
+- Responsive fixes for phone and tablet: shared header, Visit List command bar, summary
+  cards, Settings navigation, Keys cards, People tabs, Operations report table and every
+  page shell (`min-w-0` on the content area). Zero horizontal overflow at 390px on all
+  reviewed routes.
+- Regression evidence: kiosk check-in and check-out run end to end with no failed backend
+  requests and correct site stamping; site filtering keeps legacy null-site rows with the
+  legacy site only. Test data purged.
+- Typecheck and build pass. Security linter unchanged at 45 warnings (1 extension,
+  16 anonymous kiosk SECURITY DEFINER functions, 28 signed-in ones) — the same intentional
+  set, with no new warning introduced by the lockdown migration.
+
+Pilot controls (how to disable a module)
+- Badges: Printing tab — turn off badge printing; `badge_show_destination` hides the
+  resident and room line.
+- Food register: `food_register_checkin_{type}` off removes it from check-in; the page is
+  hidden when the module is off in the operating-context pack.
+- Contractor enforcement: per-site `contractor_mandatory_credentials@<site>` — empty list
+  means no credential blocks anyone.
+- Keys/fobs: hidden without `keys.view`; issuing needs `keys.issue`.
+- External notifications: none exist to disable; the UI states "In-app only".
+
+Blockers before production
+- Fix now: none outstanding from this review.
+- Technical spike: tamper-evident export, kiosk device identity and site binding, a real
+  notification adapter.
+- Discover first: Centrim source-of-truth and sync ownership for people, residents, staff,
+  suppliers and properties.
+- Pilot control: manual contractor document verification, operator-set retention periods,
+  printed emergency roll-call fallback.
