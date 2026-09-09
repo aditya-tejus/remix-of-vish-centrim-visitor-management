@@ -11,7 +11,7 @@ import {
   SidebarHeader, SidebarFooter,
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useNavigate, useLocation } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useVisitors } from "@/hooks/useVisitors";
 import { useSite } from "@/contexts/SiteContext";
 import { useOperatingContext } from "@/contexts/OperatingContext";
