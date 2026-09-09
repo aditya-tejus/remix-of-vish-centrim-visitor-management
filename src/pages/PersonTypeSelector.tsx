@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AddVisitDialog } from "@/components/AddVisitDialog";
 import { useVisitors } from "@/hooks/useVisitors";
-import { User, Truck, Heart, Users, QrCode, ArrowRight } from "lucide-react";
+import { User, Truck, Heart, Users, UserSquare2, QrCode, ArrowRight, UsersRound } from "lucide-react";
 import { usePersonTypes } from "@/hooks/usePersonTypes";
 
 const ALL_PERSON_TYPES = [
@@ -12,16 +12,26 @@ const ALL_PERSON_TYPES = [
   { type: "contractor", label: "Contractor", description: "Maintenance, cleaning, IT, or building work", icon: Truck, color: "bg-warning/10 text-warning group-hover:bg-warning group-hover:text-warning-foreground" },
   { type: "volunteer", label: "Volunteer", description: "Voluntary workers and community helpers", icon: Heart, color: "bg-success/10 text-success group-hover:bg-success group-hover:text-success-foreground" },
   { type: "staff", label: "Staff", description: "Staff member or agency worker sign-in", icon: Users, color: "bg-info/10 text-info group-hover:bg-info group-hover:text-info-foreground" },
+  { type: "other", label: "Other", description: "Anyone who does not fit the types above", icon: UserSquare2, color: "bg-muted text-muted-foreground group-hover:bg-foreground group-hover:text-background" },
 ];
 
 export default function PersonTypeSelector() {
   const navigate = useNavigate();
   const { addVisitor } = useVisitors();
-  const { deskTypes } = usePersonTypes();
+  const { deskTypes, singleDeskType, loading } = usePersonTypes();
+  const labels = new Map(deskTypes.map((t) => [t.type as string, t.label]));
   const enabledDesk = new Set(deskTypes.map((t) => t.type as string));
-  const PERSON_TYPES = ALL_PERSON_TYPES.filter((pt) => enabledDesk.has(pt.type));
+  const PERSON_TYPES = ALL_PERSON_TYPES.filter((pt) => enabledDesk.has(pt.type))
+    .map((pt) => ({ ...pt, label: labels.get(pt.type) || pt.label }));
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<string>("visitor");
+
+  // Only one type in use here: skip the chooser and open that check-in straight away.
+  useEffect(() => {
+    if (loading || !singleDeskType) return;
+    setSelectedType(singleDeskType.type);
+    setDialogOpen(true);
+  }, [loading, singleDeskType]);
 
   const handleSelect = (type: string) => {
     if (type === "qr") {
@@ -77,6 +87,21 @@ export default function PersonTypeSelector() {
                 <div className="flex-1">
                   <span className="text-lg font-semibold text-foreground">QR Fast Lane</span>
                   <p className="text-[13px] text-muted-foreground mt-0.5">Scan a returning visitor's QR code for quick check-in</p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+
+              {/* Group arrival */}
+              <button
+                onClick={() => navigate("/group-checkin")}
+                className="group relative flex items-center gap-4 rounded-xl border-2 border-dashed border-border bg-card/50 p-6 transition-all duration-200 hover:border-primary hover:shadow-md active:scale-[0.98] text-left sm:col-span-2"
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                  <UsersRound className="h-6 w-6" />
+                </div>
+                <div className="flex-1">
+                  <span className="text-lg font-semibold text-foreground">Group arrival</span>
+                  <p className="text-[13px] text-muted-foreground mt-0.5">Sign in several people at once, each with their own record</p>
                 </div>
                 <ArrowRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
