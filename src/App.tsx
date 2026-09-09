@@ -75,7 +75,7 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
 
-            <Route path="/" element={<Staff><VisitList /></Staff>} />
+            <Route path="/" element={<Navigate to="/today" replace />} />
             <Route path="/dashboard" element={<Navigate to="/today" replace />} />
             <Route path="/workbench" element={<Navigate to="/today" replace />} />
             <Route path="/today" element={<Staff><HomeWorkbench /></Staff>} />
