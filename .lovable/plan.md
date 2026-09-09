@@ -1,102 +1,130 @@
-# Phase 8B-3 — Canonical visitor presentation and profile foundation
+# Phase 8B-3b — Visitor and contractor profile foundation
 
-Goal: every accountable person on site appears once, sourced from the canonical attendance records, and each person's profile tells the whole operational story at a glance. No schema rewrites, no historical repair, no redesign.
+Read-only composition stage. One person's record becomes a clear, layered page for reception:
+who they are, what is happening now, what needs attention, then the detail underneath.
 
-## 1. Canonical read model
+## Scope
 
-Add one shared reader (`src/hooks/useAccountablePeople.ts`, built on the existing `useAttendance`) that returns one row per accountable person:
+### 1. Visitor profile — progressive disclosure
 
-- `partyId`, `visitId`, `personId`, `legacyVisitorId`, `branchId`
-- `displayName`, `nameStatus` (named / unresolved), `isPrimary`, `companionIndex`
-- `withPrimaryName` for companions, so the list can show "With Sarah Nolan"
-- `personType`, `destinationLabel`, `checkInTime`, `checkOutTime`, derived `status`
-- `legacyVisitor` reference for fields not yet canonical (screening outcome, contact, contractor data)
+Rebuild the existing profile page (`src/pages/VisitorProfilePage.tsx`, currently ~830 lines with
+mixed concerns) as an ordered set of sections. Same route, same navigation, same actions.
 
-Rules:
-- Canonical first: if a visit exists for the arrival, the party rows are authoritative.
-- Safe fallback: legacy `visitors` rows are shown only when no canonical visit exists for them (matched via `visits.legacy_visitor_id`), never both.
-- No collapsing by name, email, mobile or person code for current attendance. Blank-contact and unresolved-name people each keep their own row.
-- Every query filters by the active site, using the existing legacy-site `or(branch_id.eq…, branch_id.is.null)` pattern.
-- Read-only. Nothing in this stage writes, merges or deletes records.
+Order top to bottom:
 
-## 2. Consumers to move onto the canonical reader
+1. **Identity header** — name, person type, site, on-site state and time on site, primary or
+   "With <primary name>" relationship, check-out action (canonical party check-out where a
+   canonical row exists).
+2. **Needs attention strip** — only rendered when something is true: watchlist flag, screening
+   warning or block, keys or fobs still out, contractor credential gaps. Each item is an icon
+   plus a text label plus a plain sentence — never colour alone.
+3. **Current visit** — arrival time, destination/resident, purpose, who they arrived with and
+   each companion's own state.
+4. **Details** — contact and person fields, limited to fields currently active in configuration.
+5. **Visit history** — canonical attendance first, legacy fallback marked "older record", paged.
+6. **Activity and audit** — permission-gated, site-scoped, collapsed by default.
 
-| Surface | Change |
-| --- | --- |
-| Visit List / Today / Presence | Rows come from the canonical reader; grouping only applies to the visual group/companion indent, never to row count |
-| Visitor Profile history (`useVisitorHistory`) | Query `visit_parties` joined to `visits` by `person_id` (fall back to `legacy_visitor_id`, then today's name+mobile match), site-scoped |
-| Badge issue (`badgeIssue.ts`, `printBadge.ts`) | Badge per party row; companion badges print "With <primary>" instead of the legacy companion JSON fallback |
-| CSV exports (`exportVisitors.ts`) | One line per accountable person, with columns: Party role (Primary/With <primary>), Person type, Site, Check-in, Check-out, Destination, Screening outcome. Legacy fallback rows are marked "Legacy record" |
+Sections 4-6 collapse; 1-3 are always open.
 
-Old legacy paths stay in the code behind the fallback branch so nothing disappears if canonical data is absent.
+### 2. Contractor profile foundation
 
-## 3. Directory UX
+For contractor-type people, the identity and current-visit sections additionally show: supplier
+or company reference, role/trade and work location where recorded on the visit, current status,
+screening result, and a **read-only** credential status list. Credential status is composed from
+the existing tables only (`credential_types`, `contractor_credentials`, `supplier_credentials`)
+via the existing helpers in `src/lib/contractorCredentials.ts` and the existing compliance panel.
+Missing or expired items are stated in words ("Insurance — expired 12 Aug"). No upload, no
+verification action, no review queue, no new contractor or supplier records created from a profile.
 
-- Current attendance: never collapsed. Companions render as an indented row directly beneath their primary, with a small "With <name>" label and their own status and sign-out control.
-- Repeat history: grouped visually only in the profile and history views (grouped by day, then by visit), not in the live list.
-- An unresolved companion shows "Name not recorded" with an inline "Add name" action for permitted staff (writes through the existing party RPC path only).
+### 3. Privacy-safe display
 
-## 4. Visitor profile information architecture
+- A field that is inactive in configuration is not shown as a current field.
+- Where a historic value exists for a now-inactive field, it appears only inside a collapsed
+  "Historic information no longer collected" block, gated on the same permission as audit
+  (`settings.administer` or `data.export` — see Defaults).
+- Screening detail continues to respect `screening.view`; assistance detail respects
+  `assistance.view`; credentials respect `contractor.credentials.view`.
 
-Progressive disclosure on `VisitorProfilePage`, with the quick panel (`VisitorProfile.tsx`) unchanged in purpose:
+### 4. Flags and icons
 
-1. Identity header — name, person type, on-site state and duration, site.
-2. Now — current visit: destination/resident, who they are with, expected checkout, keys held.
-3. Safety and screening — screening outcome, flags with severity, watchlist alerts, food register entries.
-4. Contact and details — only fields currently enabled by configuration; previously captured values for now-disabled fields appear in a collapsed "Historic details (no longer collected)" block, permission-gated.
-5. History — visit timeline.
-6. Record activity — audit events.
+Each flag = Lucide icon + visible text label + accessible name. No emoji, no decorative Unicode,
+no colour-only meaning. Reuse `StatusBadge` and `src/lib/statusPresentation.ts` from Increment 1.
 
-Lucide icons only, each with a visible label or `aria-label`. No emoji or decorative symbols.
+## Data approach
 
-## 5. Contractor profile foundation
+Read-only composition. **No schema change, no migration, no new RPC, no RLS change** is planned.
 
-For contractor person types, the profile adds a Company panel: supplier name (referenced from existing supplier records, never duplicated), role/trade, contact, current status, screening outcome, and a read-only credential/document status list from `contractor_credentials` (valid / expiring / expired / missing). A "Verification" link is a placeholder pointing to the future queue — the review workflow itself is not built here.
+- Attendance: existing `useAccountablePeople` / `buildAccountableRows`.
+- History: existing `useVisitorHistory` (already canonical-first, site-scoped), plus client-side
+  paging at 20 entries with "Show more".
+- Screening: existing visitor `screeningOutcome` / `screeningFlags` fields; question labels via
+  `useQuestionLabels`. Flags render as question label + severity, never raw answers.
+- Keys: `useOpenKeyIssues`.
+- Food register: `useFoodRegister`.
+- Watchlist: `useWatchlist`.
+- Credentials: `contractorCredentials` helpers + `useContractorPeople`.
+- Caching: existing hooks and React Query defaults. No new cache layer.
 
-## 6. Operational flags and warnings
+### Sources to verify before implementation
 
-One shared flag builder returning `{ severity: info | warning | critical, label, detail, action }`:
+These must be confirmed by a read at build time; the plan does not assert their current state:
 
-- critical: hard watchlist alert, blocked screening outcome, expired mandatory credential
-- warning: flagged screening, overdue key, overdue checkout, soft watchlist
-- info: food register entry, destination note, companion count
+1. **`useOpenKeyIssues`** — it selects open key issues with no visible site filter in the fetch.
+   Confirm whether `key_issues` rows reaching the profile are already site-scoped by RLS. If not,
+   filter by `branch_id` in the profile consumer before display.
+2. **`useFoodRegister`** — confirm site scoping and that a per-person read exists; if it only
+   supports the register page, show food context only when it maps cleanly, otherwise omit.
+3. **`audit_log`** — confirm it can be filtered to one person and one site with existing columns
+   and policies. If it cannot be scoped safely, the audit section ships as activity derived from
+   attendance and screening events only, and the audit_log view is deferred.
+4. **`form_fields`** — confirm the active/inactive flags used by `checkInFields` are the correct
+   authority for "currently collected", per person type.
+5. **Resident-visitor lookup** on the profile currently queries `visitors` with a name `ilike`
+   fallback; confirm the canonical `visited_resident_ids` path covers current records before
+   relying on it.
 
-Rendered in one consistent strip at the top of the profile and as compact indicators in the list, using the Increment 1 status presentation primitives so severity is readable without colour alone.
+## Recommended defaults
 
-## 7. Audit and history display
+- Historic/legacy value block gated on `settings.administer`.
+- Audit/activity section gated on `data.export`, site-scoped, newest 25 entries.
+- History page size 20.
+- Legacy rows labelled "older record" and read-only, matching the visit list wording.
+- Contractor credential states reuse existing valid / expiring / expired / missing / pending
+  vocabulary — no new states.
+- Companion rows on a profile link to their own accountable row context, not to a new master record.
 
-Visit timeline (arrival, companion changes, screening outcome, keys, checkout) plus record/configuration events from `audit_log` filtered to this person and site. Visible only to users holding the existing audit/settings permissions; hidden entirely otherwise, no partial leakage.
+## Acceptance criteria
 
-## 8. Data, API, RLS, performance
+- A visitor profile shows identity, current state, attention items, details, history and audit in
+  that order; nothing below section 3 is expanded by default.
+- A companion's profile shows "With <primary name>" and their own arrival/departure times, and
+  checking the companion out does not close the primary.
+- A contractor profile shows supplier/company, trade, destination, status, screening result and
+  credential status read-only; a missing credential is stated in words with an icon and label.
+- A person with no email and no mobile renders without blank rows and is never merged with another
+  blank-contact person.
+- A legacy-only record renders with the "older record" marker and no canonical-only actions.
+- Switching site never shows another site's visits, keys, food entries or audit lines.
+- A blocked screening outcome is visible in the attention strip with an explicit "Blocked" label.
+- A field inactive in configuration does not appear in Details; a historic value for it appears
+  only inside the gated collapsed block.
+- No profile action creates a `people`, `visitors`, `contractor_people` or `suppliers_min` record.
 
-- No schema change is expected. If a query needs a join the current RLS cannot serve, add a read-only security-definer RPC that re-checks permission and site access, rather than loosening a policy.
-- History paginates at 50 rows with "Load more"; live list keeps its existing 1000-row ceiling with a warning when exceeded.
-- Rollback: each consumer reads through the shared hook, so reverting the hook's canonical branch restores legacy behaviour with no data impact.
+## Tests
 
-## 9. Acceptance and verification
+Unit tests over pure composition helpers (new `src/lib/profileSections.ts`):
 
-- Two blank-contact arrivals on the same day appear as two rows, not one.
-- Primary plus two companions: three rows, companions labelled with the primary's name.
-- Companion-only checkout closes just that row; the primary stays open.
-- Switching site changes the list, profile history, badges and exports; no cross-site record ever appears.
-- Profile history for a person with canonical visits shows those visits; a person with only legacy records still shows them, marked as legacy.
-- Badge and export row counts equal the accountable-person count.
-- Suppliers, residents and staff on profiles resolve to existing master records, with no new duplicates created.
-- Typecheck, build, focused tests for the reader and flag builder, and a live browser pass over list, profile, badge and export.
+- visitor, companion, contractor, blank-contact and legacy-only profile shapes
+- site isolation of history, keys, food and audit inputs
+- screening warning vs block presentation
+- inactive-field suppression and historic-value gating
+- contractor with missing/expired/absent credentials
+- no duplicate-master-record side effects (composition functions are pure reads)
 
-## 10. Out of scope
+Plus typecheck, build, full Vitest run, and one authenticated live check of a real visitor,
+companion and contractor profile.
 
-Weekly emailed report, kiosk device binding, contractor document verification queue implementation, seed data, broad visual redesign, applying historical reconciliation, and any new navigation hierarchy.
+## Out of scope
 
-## Defaults chosen (no further clarification needed)
-
-- Canonical wins whenever a canonical visit exists; legacy is fallback only.
-- Companions are indented child rows, not separate top-level entries.
-- Legacy values for disabled fields are shown, collapsed and permission-gated, never deleted.
-- Contractor document status is read-only in this stage.
-- History pagination: 50 per page.
-- Audit panel requires existing settings/audit permission.
-
-## Prototype limitations to keep stating
-
-Historical records without canonical visits remain legacy-sourced until a reviewed reconciliation is applied. Badge printing stays browser-print. Credential status display is prototype evidence, not compliance certification.
+Weekly emailed report; kiosk device binding; seed data; contractor document verification workflow;
+historical reconciliation apply; navigation restructure; broad UI redesign.
