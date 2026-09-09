@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useContractorQuestions, type ContractorQuestion } from "@/hooks/useContractorQuestions";
 import { fetchMandatoryCredentialKeys } from "@/hooks/useMandatoryCredentials";
 import { useOperatingContext } from "@/contexts/OperatingContext";
+import { useContractorVerdict } from "@/hooks/useContractorDocuments";
 
 
 /** The one question that decides how hard a missing credential bites */
