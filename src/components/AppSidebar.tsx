@@ -1,10 +1,12 @@
 import { isOverstayedSync } from "@/hooks/useOverstayPolicy";
 import centrimLogo from "@/assets/centrim-life-logo.png";
 import {
-  Users, Settings, BarChart3, ChevronDown, Layers, Home, ClipboardList,
-  KeyRound, UtensilsCrossed, IdCard, ListChecks, Siren, DoorOpen,
+  Settings, BarChart3, ChevronDown, Home, KeyRound, UtensilsCrossed, IdCard,
+  ListChecks, Siren, MonitorSmartphone, LayoutDashboard,
   type LucideIcon,
 } from "lucide-react";
+import { buildNavigation } from "@/lib/navigation";
+
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
@@ -48,54 +50,35 @@ export function AppSidebar() {
     (v) => v.type === "resident" && v.status !== "checked-in"
   ).length;
 
-  const navGroups: NavGroup[] = [
-    {
-      label: "Visitor operations",
-      icon: Users,
-      items: [
-        { title: "Overdue", path: "/visit-list", icon: Layers, badge: todayOverstayed || null, badgeVariant: "red" },
-        { title: "Presence log", path: "/reports/presence", icon: ClipboardList },
-        { title: "Visitor profiles", path: "/visitors", icon: IdCard },
-      ],
+  const model = buildNavigation(
+    { foodRegister: !!modules.foodRegister, keysRegister: !!modules.keysRegister },
+    terms.residentPlural
+  );
+
+  const ICONS: Record<string, LucideIcon> = {
+    Today: LayoutDashboard,
+    "Visitor List": ListChecks,
+    [terms.residentPlural]: Home,
+    "Visitor Profiles": IdCard,
+    "Food Register": UtensilsCrossed,
+    "Keys & Fob Register": KeyRound,
+    Registers: KeyRound,
+    Reports: BarChart3,
+  };
+
+  const BADGES: Record<string, { count: number; variant: NavItem["badgeVariant"] }> = {
+    "Visitor List": {
+      count: todayOverstayed || activeVisitorCount,
+      variant: todayOverstayed > 0 ? "red" : "blue",
     },
-    {
-      label: "People and movements",
-      icon: DoorOpen,
-      items: [
-        { title: terms.residentPlural, path: "/residents", icon: Home, badge: residentsAwayCount || null, badgeVariant: "amber" },
-        { title: "Planner", path: "/calendar", icon: ClipboardList },
-      ],
-    },
-    ...(modules.keysRegister || modules.foodRegister
-      ? [{
-          label: "Registers",
-          icon: KeyRound,
-          items: [
-            ...(modules.keysRegister ? [{ title: "Keys and fobs", path: "/keys", icon: KeyRound }] : []),
-            ...(modules.foodRegister ? [{ title: "Food register", path: "/food-register", icon: UtensilsCrossed }] : []),
-          ],
-        }]
-      : []),
-    {
-      label: "Reports",
-      icon: BarChart3,
-      items: [
-        { title: "Visitor reports", path: "/reports" },
-        { title: "Feedback responses", path: "/reports/feedback-responses" },
-        { title: "Feedback reports", path: "/reports/feedback-reports" },
-        { title: "Safety and compliance", path: "/gdpr" },
-        { title: "Contractor documents", path: "/contractor-documents" },
-      ],
-    },
-    {
-      label: "Administration",
-      icon: Settings,
-      items: [
-        { title: "Settings", path: "/settings" },
-        { title: "Audit trail", path: "/audit-log" },
-      ],
-    },
-  ];
+    [terms.residentPlural]: { count: residentsAwayCount, variant: "amber" },
+  };
+
+  const navGroups: NavGroup[] = model.groups.map((group) => ({
+    label: group.label,
+    icon: ICONS[group.label] ?? BarChart3,
+    items: group.items.map((item) => ({ title: item.title, path: item.path })),
+  }));
 
   const badgeClasses: Record<string, string> = {
     blue: "bg-sidebar-primary text-sidebar-primary-foreground",
@@ -107,10 +90,17 @@ export function AppSidebar() {
   const isGroupActive = (group: NavGroup) =>
     group.items.some((item) => location.pathname === item.path);
 
-  const primaryItems = [
-    { title: "Visit list", path: "/", icon: ListChecks, match: ["/", "/visit-list"], badge: activeVisitorCount || null },
-    { title: "Today", path: "/today", icon: Home, match: ["/today"], badge: null as number | null },
-  ];
+  const primaryItems: (NavItem & { match: string[] })[] = model.primary.map((entry) => ({
+    title: entry.title,
+    path: entry.path,
+    icon: ICONS[entry.title],
+    match: entry.match ?? [entry.path],
+    badge: BADGES[entry.title]?.count || null,
+    badgeVariant: BADGES[entry.title]?.variant,
+  }));
+
+
+
 
   return (
     <Sidebar className="border-r-0">
@@ -131,6 +121,7 @@ export function AppSidebar() {
         <SidebarMenu className="space-y-0.5 px-1 pb-2">
           {primaryItems.map((item) => {
             const active = item.match.includes(location.pathname);
+            const Icon = item.icon ?? Home;
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
@@ -144,13 +135,15 @@ export function AppSidebar() {
                   }`}
                 >
                   <NavLink to={item.path} aria-current={active ? "page" : undefined}>
-                    <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+
                     <span className="flex-1 text-left">{item.title}</span>
                     {item.badge != null && item.badge > 0 && (
-                      <span className={`${badgeClasses.blue} flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold`}>
+                      <span className={`${badgeClasses[item.badgeVariant || "blue"]} flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold`}>
                         {item.badge}
                       </span>
                     )}
+
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -162,7 +155,7 @@ export function AppSidebar() {
         {navGroups.map((group) => (
           <Collapsible
             key={group.label}
-            defaultOpen={isGroupActive(group) || group.label === "Visitor operations"}
+            defaultOpen={isGroupActive(group)}
             className="group/nav-group"
           >
             <SidebarGroup>
@@ -212,31 +205,48 @@ export function AppSidebar() {
           </Collapsible>
         ))}
 
-        {/* Emergency — always visible, visually distinct, never noisy */}
+        {/* Settings, emergency and kiosk — always visible */}
         <div className="mt-2 px-1">
-          <SidebarMenu>
+          <SidebarMenu className="space-y-0.5">
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={location.pathname === "/evacuation"}
-                tooltip="Emergency roll call"
-                className="h-9 gap-2.5 rounded-lg border border-destructive/40 px-3 text-[13px] font-semibold text-destructive-foreground/90 hover:bg-destructive/20"
+                isActive={location.pathname === "/settings"}
+                tooltip="Settings"
+                className={`h-10 gap-2.5 rounded-lg px-3 text-[13px] font-semibold ${
+                  location.pathname === "/settings"
+                    ? "bg-sidebar-accent text-sidebar-foreground"
+                    : "text-sidebar-muted hover:bg-[rgba(255,255,255,0.05)] hover:text-sidebar-foreground"
+                }`}
               >
-                <NavLink to="/evacuation" aria-current={location.pathname === "/evacuation" ? "page" : undefined}>
-                  <Siren className="h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
-                  <span>Emergency roll call</span>
+                <NavLink to="/settings" aria-current={location.pathname === "/settings" ? "page" : undefined}>
+                  <Settings className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span className="flex-1 text-left">Settings</span>
                 </NavLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                tooltip="Open kiosk in a new tab"
+                isActive={location.pathname === "/evacuation"}
+                tooltip="Emergency Roll Call"
+                className="h-9 gap-2.5 rounded-lg border border-destructive/40 px-3 text-[13px] font-semibold text-destructive-foreground/90 hover:bg-destructive/20"
+              >
+                <NavLink to="/evacuation" aria-current={location.pathname === "/evacuation" ? "page" : undefined}>
+                  <Siren className="h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
+                  <span>Emergency Roll Call</span>
+                </NavLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                tooltip="Kiosk Mode opens in a new tab"
                 className="h-9 gap-2.5 rounded-lg px-3 text-[13px] font-medium text-sidebar-muted hover:bg-[rgba(255,255,255,0.05)] hover:text-sidebar-foreground"
               >
                 <a href="/kiosk" target="_blank" rel="noopener noreferrer">
-                  <Layers className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  <span>Open kiosk (new tab)</span>
+                  <MonitorSmartphone className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>Kiosk Mode (new tab)</span>
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -244,6 +254,7 @@ export function AppSidebar() {
         </div>
         </nav>
       </SidebarContent>
+
 
 
       <SidebarFooter className="px-3 pb-4">
