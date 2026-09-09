@@ -2981,6 +2981,7 @@ export type Database = {
       }
       kiosk_contractor_lookup: {
         Args: {
+          p_branch_id?: string
           p_first?: string
           p_last?: string
           p_mobile?: string
@@ -3082,7 +3083,7 @@ export type Database = {
         }[]
       }
       kiosk_resident_directory: {
-        Args: { p_search?: string }
+        Args: { p_branch_id?: string; p_search?: string }
         Returns: {
           area_name: string
           first_name: string
@@ -3128,7 +3129,7 @@ export type Database = {
         }[]
       }
       kiosk_staff_directory: {
-        Args: { p_search?: string }
+        Args: { p_branch_id?: string; p_search?: string }
         Returns: {
           department: string
           first_name: string
@@ -3137,14 +3138,14 @@ export type Database = {
         }[]
       }
       kiosk_supplier_directory: {
-        Args: never
+        Args: { p_branch_id?: string }
         Returns: {
           id: string
           name: string
         }[]
       }
       kiosk_watchlist_check: {
-        Args: { p_first: string; p_last: string }
+        Args: { p_branch_id?: string; p_first: string; p_last: string }
         Returns: {
           alert_type: string
           is_match: boolean
