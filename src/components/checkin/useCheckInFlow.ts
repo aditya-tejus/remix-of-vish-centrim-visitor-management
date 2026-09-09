@@ -9,6 +9,7 @@ import { Supplier } from "@/hooks/useSuppliers";
 import { FoodFormState, emptyFoodForm, isFoodFormValid } from "@/components/food/FoodFormFields";
 import { useOperatingContext, siteScopedKey } from "@/contexts/OperatingContext";
 import { resolveTermsContent } from "@/lib/segmentPacks";
+import { useSite } from "@/contexts/SiteContext";
 
 
 export type StepId = "identify" | "details" | "food" | "screening" | "confirm";
@@ -40,6 +41,7 @@ export interface CheckInFormData {
 
 export function useCheckInFlow(open: boolean) {
   const { pack, siteId } = useOperatingContext();
+  const { currentSiteId, isLegacySite } = useSite();
   const { residents: dbResidents } = useResidents();
   const { staff: dbStaff } = useStaffMembers();
 
@@ -174,11 +176,21 @@ export function useCheckInFlow(open: boolean) {
       return;
     }
     const q = searchQuery.toLowerCase();
-    supabase
+    let query = supabase
       .from("visitors")
       .select("id, first_name, surname, mobile, email, address")
       .or(`first_name.ilike.%${q}%,surname.ilike.%${q}%,mobile.ilike.%${q}%`)
-      .neq("type", "resident")
+      .neq("type", "resident");
+
+    // Site isolation: only offer people who have visited this site before.
+    // Records with no site stay visible only on the original/legacy site.
+    if (currentSiteId) {
+      query = isLegacySite
+        ? query.or(`branch_id.eq.${currentSiteId},branch_id.is.null`)
+        : query.eq("branch_id", currentSiteId);
+    }
+
+    query
       .order("check_in_time", { ascending: false })
       .limit(10)
       .then(({ data }) => {
@@ -198,7 +210,7 @@ export function useCheckInFlow(open: boolean) {
           setPreviousVisitors(unique);
         }
       });
-  }, [searchQuery]);
+  }, [searchQuery, currentSiteId, isLegacySite]);
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return previousVisitors;

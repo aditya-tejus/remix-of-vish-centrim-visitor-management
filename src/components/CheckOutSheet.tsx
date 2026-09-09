@@ -75,6 +75,7 @@ export function CheckOutSheet({
   const [keyKeepReason, setKeyKeepReason] = useState("");
   const [successName, setSuccessName] = useState("");
   const [successDuration, setSuccessDuration] = useState("");
+  const [successStaying, setSuccessStaying] = useState(0);
   const [bulkTimeOverride, setBulkTimeOverride] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   /** Plain message shown when a departure did not save, so nothing looks done that isn't. */
@@ -205,6 +206,7 @@ export function CheckOutSheet({
 
     setSuccessName(name);
     setSuccessDuration(dur);
+    setSuccessStaying(outcome ? outcome.remainingCompanions : 0);
     setShowSuccess(true);
     const v = selectedVisitor;
     setSelectedVisitor(null);
@@ -279,6 +281,11 @@ export function CheckOutSheet({
                 <div className="text-center space-y-1">
                   <p className="text-[16px] font-bold text-foreground">{successName} checked out</p>
                   <p className="text-[13px] text-muted-foreground">Duration: {successDuration}</p>
+                  {successStaying > 0 && (
+                    <p className="text-[13px] text-warning">
+                      {successStaying} still on site — this visit stays open for them.
+                    </p>
+                  )}
                 </div>
                 <Button
                   variant="outline"

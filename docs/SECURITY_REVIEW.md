@@ -196,3 +196,10 @@ documented 45-warning baseline with no new warning.
 - **Resident directory site isolation (fixed).** The authenticated resident query in `src/hooks/useResidents.ts` previously returned residents from all sites. It now filters on the current site, and records with no site are visible only on the original/legacy site so they are never mixed into newer sites. This affects every signed-in surface that lists residents: check-in destination, residents, food register, keys, evacuation.
 - The kiosk resident directory is unchanged and still goes through the restricted `kiosk_resident_directory` function returning name, room and area only.
 - No database, policy, grant, permission or settings changes were made in this pass. Security linter remains at the documented baseline.
+
+## Phase 7A closure verification (2026-09-09)
+
+- **Returning-visitor lookup site isolation (fixed).** The front-desk returning-visitor search in `src/components/checkin/useCheckInFlow.ts` queried past visitors across all sites. It is now scoped to the current site, with no-site records visible only on the original/legacy site. Verified in the interface: a person known at one site returns no matches at another.
+- The lookup shows name, and phone/email only where already held for that person at that site; no destination, resident or screening information is exposed at this step.
+- Failure testing used browser-level request blocking in the test session only. No production code, permission, policy or server-function change was made for testing, and no kiosk access path was altered.
+- Remaining limitation: this lookup matches on name and phone text; there is no verified identity check, so staff confirmation remains the control.
