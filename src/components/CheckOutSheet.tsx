@@ -651,12 +651,18 @@ export function CheckOutSheet({
 
           {/* Footer — only show when confirming */}
           {selectedVisitor && !showSuccess && (
-            <div className="shrink-0 border-t border-border p-5">
+            <div className="shrink-0 border-t border-border p-5 space-y-3">
+              {checkOutFailed && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-[13px] text-destructive">
+                  {checkOutFailed}
+                </div>
+              )}
               <Button
                 className="w-full h-12 text-[15px] font-semibold gap-2 rounded-xl bg-checkout hover:bg-checkout/90 text-checkout-foreground shadow-sm"
                 disabled={checkingOut === selectedVisitor.id}
                 onClick={handleConfirmCheckOut}
               >
+
                 {checkingOut === selectedVisitor.id ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
