@@ -62,8 +62,20 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
     setSaveFailed(false);
 
     const visitor = flow.buildVisitor();
-    const created = onAdd(visitor);
+    let created: Visitor;
+    try {
+      // Wait for the server before saying anyone is checked in.
+      created = await onAdd(visitor);
+    } catch {
+      submittingRef.current = false;
+      setSaving(false);
+      setSaveFailed(true);
+      return; // The form stays exactly as it is so the desk can try again.
+    }
+    submittingRef.current = false;
+    setSaving(false);
     setCreatedVisitorId(created?.id ?? null);
+
     const fullName = `${flow.formData.firstName} ${flow.formData.surname}`.trim();
 
     // Food register entry (linked to the resident's real record id)
