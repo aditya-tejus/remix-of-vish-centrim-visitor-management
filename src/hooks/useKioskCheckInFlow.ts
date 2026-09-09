@@ -233,16 +233,14 @@ export function useKioskCheckInFlow() {
   };
 
 
-  // Check if details step has required fields filled
-  const detailsValid = useMemo(() => {
-    // Always require firstName + surname
-    if (!formValues.firstName?.trim() || !formValues.surname?.trim()) return false;
-    // Check dynamic required fields
-    for (const field of activeFormFields) {
-      if (field.required && !formValues[field.field_key]?.trim()) return false;
-    }
-    return true;
-  }, [formValues, activeFormFields]);
+  // Same validation contract as the staff desk: names always, plus whatever
+  // this site has configured for this person type.
+  const missingFields = useMemo(
+    () => missingCheckInFields(formValues, activeFields),
+    [formValues, activeFields]
+  );
+  const missingFieldsHint = missingFieldsMessage(missingFields);
+  const detailsValid = missingFields.length === 0;
 
   const hasYesFlags = healthQuestions.some((q) => q.type === "yesno" && healthAnswers[q.id] === true);
 
