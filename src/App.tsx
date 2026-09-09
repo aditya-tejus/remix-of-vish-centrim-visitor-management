@@ -45,6 +45,7 @@ import KioskResidentLeave from "./pages/kiosk/KioskResidentLeave";
 import KioskQRScan from "./pages/kiosk/KioskQRScan";
 import KioskEvacuation from "./pages/kiosk/KioskEvacuation";
 import GroupCheckIn from "./pages/GroupCheckIn";
+import PersonTypeSelector from "./pages/PersonTypeSelector";
 
 
 const queryClient = new QueryClient();
@@ -78,7 +79,7 @@ const App = () => (
             <Route path="/visitors" element={<Staff><Visitors /></Staff>} />
             <Route path="/visitors/:id" element={<Staff><VisitorProfilePage /></Staff>} />
             <Route path="/check-in" element={<Navigate to="/" replace />} />
-            <Route path="/person-type" element={<Navigate to="/" replace />} />
+            <Route path="/person-type" element={<PersonTypeSelector />} />
             <Route path="/group-checkin" element={<GroupCheckIn />} />
             <Route path="/qr-fast-lane" element={<Navigate to="/" replace />} />
             <Route path="/residents" element={<Staff><Residents /></Staff>} />
