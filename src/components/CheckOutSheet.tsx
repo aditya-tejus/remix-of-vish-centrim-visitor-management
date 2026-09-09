@@ -77,6 +77,9 @@ export function CheckOutSheet({
   const [successDuration, setSuccessDuration] = useState("");
   const [bulkTimeOverride, setBulkTimeOverride] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  /** Plain message shown when a departure did not save, so nothing looks done that isn't. */
+  const [checkOutFailed, setCheckOutFailed] = useState<string | null>(null);
+
   const [leavingCompanions, setLeavingCompanions] = useState<number[]>([]);
 
   const checkedInVisitors = useMemo(
