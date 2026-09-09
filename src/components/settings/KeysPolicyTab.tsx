@@ -139,6 +139,12 @@ export function KeysPolicyTab() {
         />
       </div>
 
+      {saveError && (
+        <p className="flex items-start gap-2 rounded-xl border border-destructive bg-destructive/5 p-3 text-[13px] text-destructive">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" aria-hidden="true" />
+          {saveError}
+        </p>
+      )}
       <Button size="sm" onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
     </div>
   );
