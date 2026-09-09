@@ -1,4 +1,4 @@
-export type VisitorType = "visitor" | "resident" | "contractor" | "staff" | "volunteer";
+export type VisitorType = "visitor" | "resident" | "contractor" | "staff" | "volunteer" | "other";
 
 export interface CompanionDetail {
   name?: string;
@@ -48,6 +48,19 @@ export interface Visitor {
   qrCode?: string;
   personQr?: string;
   groupId?: string;
+  /** Group arrivals: the shared group name, carried on every attendee's own record. */
+  groupLabel?: string;
+  groupOrganiserName?: string;
+  groupOrganiserContact?: string;
+  /** Who confirmed the terms, and whether they confirmed for themselves. */
+  termsConfirmedBy?: string;
+  termsConfirmationMode?: "self" | "organiser_declared";
+  /** Volunteers only. */
+  volunteerRole?: string;
+  volunteerSupervisor?: string;
+  volunteerExpectedEnd?: Date;
+  /** "Other" person type: the plain-language reason for the visit. */
+  visitReasonOther?: string;
   /** Residents this person came to see (proper link, not just free text). */
   visitedResidentIds?: string[];
 

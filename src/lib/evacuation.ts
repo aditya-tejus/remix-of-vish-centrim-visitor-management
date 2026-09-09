@@ -188,11 +188,23 @@ export function buildRollCall({ visitors, residents, roomLabel = "Room" }: Build
       offSite: false,
       expectedReturn: v.expectedReturnDate ? new Date(v.expectedReturnDate) : null,
       accompaniedBy: v.accompaniedByName || v.accompaniedBy || "",
-      associatedWith: hostResident
-        ? [`Visiting ${hostResident.name}${hostResident.room ? ` (${roomDisplay(hostResident.room, roomLabel)})` : ""}`]
-        : host
-          ? [`Visiting ${host}`]
-          : [],
+      associatedWith: [
+        ...(hostResident
+          ? [`Visiting ${hostResident.name}${hostResident.room ? ` (${roomDisplay(hostResident.room, roomLabel)})` : ""}`]
+          : host
+            ? [`Visiting ${host}`]
+            : []),
+        // Group arrivals: each person is counted on their own, with the organiser shown for contact.
+        ...(v.groupId
+          ? [
+              `${(v as any).groupLabel || "Group arrival"}${
+                (v as any).groupOrganiserName
+                  ? ` — organiser ${(v as any).groupOrganiserName}${(v as any).groupOrganiserContact ? ` (${(v as any).groupOrganiserContact})` : ""}`
+                  : ""
+              }`,
+            ]
+          : []),
+      ],
       responsibleStaff: locationSource?.keyWorker || "",
     };
 

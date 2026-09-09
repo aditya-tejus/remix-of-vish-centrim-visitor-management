@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   MoreHorizontal, LogOut, Trash2, FileText, FileSpreadsheet, Users,
-  MessageSquare, KeyRound, ShieldAlert, AlertTriangle,
+  MessageSquare, KeyRound, ShieldAlert, AlertTriangle, UsersRound,
 } from "lucide-react";
 import { useOpenKeyIssues } from "@/hooks/useOpenKeyIssues";
 import { useWatchlist } from "@/hooks/useWatchlist";
@@ -210,6 +210,15 @@ export function VisitorTable({
             >
               {visitor.firstName} {visitor.surname}
             </button>
+            {visitor.groupId && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground shrink-0"
+                title={visitor.groupOrganiserName ? `Group organiser: ${visitor.groupOrganiserName}` : "Part of a group arrival"}
+              >
+                <UsersRound className="h-3 w-3" aria-hidden />
+                {visitor.groupLabel || "Group"}
+              </span>
+            )}
             {flagged && (
               <span title="On the watchlist — check instructions before allowing access" aria-label="On the watchlist">
                 <ShieldAlert className="h-3.5 w-3.5 text-destructive" />
@@ -264,6 +273,17 @@ export function VisitorTable({
               <FileText className="h-3.5 w-3.5 mr-2" />Export PDF
             </DropdownMenuItem>
           </>
+        )}
+        {visitor.groupId && visitor.status === "checked-in" && canCheckOut && onCheckOutMany && (
+          <DropdownMenuItem
+            onClick={() =>
+              onCheckOutMany(
+                visitors.filter((v) => v.groupId === visitor.groupId && v.status === "checked-in").map((v) => v.id),
+              )
+            }
+          >
+            <UsersRound className="h-3.5 w-3.5 mr-2" />Sign out whole group
+          </DropdownMenuItem>
         )}
         {onFeedback && (
           <DropdownMenuItem onClick={() => onFeedback(visitor)}>

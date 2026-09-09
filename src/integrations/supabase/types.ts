@@ -2609,6 +2609,9 @@ export type Database = {
           expected_return_date: string | null
           first_name: string
           group_id: string | null
+          group_label: string | null
+          group_organiser_contact: string | null
+          group_organiser_name: string | null
           health_answers: Json | null
           health_declaration: boolean | null
           id: string
@@ -2625,9 +2628,15 @@ export type Database = {
           status: string
           supplier_id: string | null
           surname: string
+          terms_confirmation_mode: string | null
+          terms_confirmed_by: string | null
           type: string
           visit_purpose: string | null
+          visit_reason_other: string | null
           visited_resident_ids: string[] | null
+          volunteer_expected_end: string | null
+          volunteer_role: string | null
+          volunteer_supervisor: string | null
           whom_to_visit: string | null
           work_location: string | null
           work_type: string | null
@@ -2652,6 +2661,9 @@ export type Database = {
           expected_return_date?: string | null
           first_name: string
           group_id?: string | null
+          group_label?: string | null
+          group_organiser_contact?: string | null
+          group_organiser_name?: string | null
           health_answers?: Json | null
           health_declaration?: boolean | null
           id?: string
@@ -2668,9 +2680,15 @@ export type Database = {
           status?: string
           supplier_id?: string | null
           surname: string
+          terms_confirmation_mode?: string | null
+          terms_confirmed_by?: string | null
           type?: string
           visit_purpose?: string | null
+          visit_reason_other?: string | null
           visited_resident_ids?: string[] | null
+          volunteer_expected_end?: string | null
+          volunteer_role?: string | null
+          volunteer_supervisor?: string | null
           whom_to_visit?: string | null
           work_location?: string | null
           work_type?: string | null
@@ -2695,6 +2713,9 @@ export type Database = {
           expected_return_date?: string | null
           first_name?: string
           group_id?: string | null
+          group_label?: string | null
+          group_organiser_contact?: string | null
+          group_organiser_name?: string | null
           health_answers?: Json | null
           health_declaration?: boolean | null
           id?: string
@@ -2711,9 +2732,15 @@ export type Database = {
           status?: string
           supplier_id?: string | null
           surname?: string
+          terms_confirmation_mode?: string | null
+          terms_confirmed_by?: string | null
           type?: string
           visit_purpose?: string | null
+          visit_reason_other?: string | null
           visited_resident_ids?: string[] | null
+          volunteer_expected_end?: string | null
+          volunteer_role?: string | null
+          volunteer_supervisor?: string | null
           whom_to_visit?: string | null
           work_location?: string | null
           work_type?: string | null

@@ -24,6 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ContractorScreening } from "@/components/ContractorScreening";
 import { Supplier } from "@/hooks/useSuppliers";
 import { useResidents } from "@/hooks/useResidents";
+import { usePersonTypes } from "@/hooks/usePersonTypes";
 import { useStaffMembers } from "@/hooks/useStaffMembers";
 
 interface AddVisitDialogProps {
@@ -37,7 +38,17 @@ const visitorTypes: { type: VisitorType; label: string; icon: typeof User }[] = 
   { type: "contractor", label: "Contractor", icon: Truck },
   { type: "volunteer", label: "Volunteer", icon: Heart },
   { type: "staff", label: "Staff", icon: UserCog },
+  { type: "other", label: "Other", icon: Users },
 ];
+
+/** Turn an "HH:mm" entry into a time on today's date. */
+function combineToday(hhmm: string): Date | undefined {
+  const [h, m] = hhmm.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return undefined;
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d;
+}
 
 interface VisitorProfile {
   id: string;
@@ -127,9 +138,18 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType, prefill
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [jurisdiction, setJurisdiction] = useState<"AU" | "UK">("AU");
   const [contractorGate, setContractorGate] = useState<{ blocked: boolean; reason: string | null }>({ blocked: false, reason: null });
+  const { extras: personTypeExtras, deskTypes } = usePersonTypes();
+  const [volunteerRole, setVolunteerRole] = useState("");
+  const [volunteerSupervisor, setVolunteerSupervisor] = useState("");
+  const [volunteerExpectedEnd, setVolunteerExpectedEnd] = useState("");
+  const [otherReason, setOtherReason] = useState("");
 
   const isResident = selectedType === "resident";
   const isContractor = selectedType === "contractor";
+  const isVolunteer = selectedType === "volunteer";
+  const enabledDeskTypes = new Set(deskTypes.map((t) => t.type as string));
+  const visibleTypes = visitorTypes.filter((t) => enabledDeskTypes.size === 0 || enabledDeskTypes.has(t.type));
+  const isOther = selectedType === "other";
   const steps = isResident
     ? ["Resident", "Schedule", "Reason", "Companions", "Confirm"]
     : isContractor
@@ -251,6 +271,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType, prefill
     setReturnNotificationOptIn(false);
     setPhoto(null); setCompanions([]); stopCamera();
     setContractorScreeningAnswers({}); setSelectedSupplier(null);
+    setVolunteerRole(""); setVolunteerSupervisor(""); setVolunteerExpectedEnd(""); setOtherReason("");
   };
 
   const handleSelectProfile = (profile: VisitorProfile) => {
@@ -307,6 +328,12 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType, prefill
       returnNotificationOptIn: isResident ? returnNotificationOptIn : undefined,
       accompaniedBy: isResident ? formData.accompaniedBy || undefined : undefined,
       accompaniedByName: isResident ? formData.accompaniedByName || undefined : undefined,
+      volunteerRole: isVolunteer && volunteerRole.trim() ? volunteerRole.trim() : undefined,
+      volunteerSupervisor: isVolunteer && volunteerSupervisor.trim() ? volunteerSupervisor.trim() : undefined,
+      volunteerExpectedEnd: isVolunteer && volunteerExpectedEnd ? combineToday(volunteerExpectedEnd) : undefined,
+      visitReasonOther: isOther && otherReason.trim() ? otherReason.trim() : undefined,
+      termsConfirmedBy: privacyAcknowledged ? `${formData.firstName} ${formData.surname}`.trim() : undefined,
+      termsConfirmationMode: privacyAcknowledged ? "self" : undefined,
     };
     onAdd(visitor);
 
@@ -403,7 +430,8 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType, prefill
 
   // Validation
   const canProceedStep2NonResident = formData.firstName && formData.surname && formData.email &&
-    formData.whomToVisit && formData.selectPerson;
+    formData.whomToVisit && formData.selectPerson &&
+    (!isOther || otherReason.trim().length >= 3);
   const canProceedResidentStep1 = !!selectedResident;
   const canProceedResidentStep2 = formData.email && formData.mobile;
 
@@ -828,7 +856,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType, prefill
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Type</p>
                 <div className="flex gap-2">
-                  {visitorTypes.map(({ type, label, icon: TypeIcon }) => (
+                  {visibleTypes.map(({ type, label, icon: TypeIcon }) => (
                     <button key={type} onClick={() => { setSelectedType(type); setSelectedResident(null); setSelectedProfile(null); }}
                       className={`flex-1 flex flex-col items-center gap-1 py-3 px-2 rounded-xl border-2 text-center transition-all ${
                         selectedType === type ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/30"
@@ -1091,7 +1119,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType, prefill
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Type</p>
                 <div className="flex gap-2">
-                  {visitorTypes.map(({ type, label, icon: TypeIcon }) => (
+                  {visibleTypes.map(({ type, label, icon: TypeIcon }) => (
                     <button key={type} onClick={() => { setSelectedType(type); setSelectedResident(null); setSelectedProfile(null); }}
                       className={`flex-1 flex flex-col items-center gap-1 py-3 px-2 rounded-xl border-2 text-center transition-all ${
                         selectedType === type ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/30"
@@ -1270,6 +1298,46 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType, prefill
                     placeholder="Any notes..." className="min-h-[50px] resize-none rounded-lg text-sm" />
                 </div>
               </div>
+
+              {isVolunteer && (personTypeExtras.volunteerRoleEnabled || personTypeExtras.volunteerSupervisorEnabled || personTypeExtras.volunteerExpectedEndEnabled) && (
+                <div className="space-y-2.5 pt-2 border-t border-border">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Volunteer Details</p>
+                  {personTypeExtras.volunteerRoleEnabled && (
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Role or programme (optional)</Label>
+                      <Input value={volunteerRole} onChange={(e) => setVolunteerRole(e.target.value)}
+                        placeholder="e.g. Music group" className="rounded-lg h-9 text-sm" />
+                    </div>
+                  )}
+                  {personTypeExtras.volunteerSupervisorEnabled && (
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Supervising staff member (optional)</Label>
+                      <Select value={volunteerSupervisor} onValueChange={setVolunteerSupervisor}>
+                        <SelectTrigger className="rounded-lg h-9"><SelectValue placeholder="Select staff member..." /></SelectTrigger>
+                        <SelectContent>
+                          {staffItems.map((st) => <SelectItem key={st.id} value={st.name}>{st.name} • {st.role}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {personTypeExtras.volunteerExpectedEndEnabled && (
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Expected finish time (optional)</Label>
+                      <Input type="time" value={volunteerExpectedEnd} onChange={(e) => setVolunteerExpectedEnd(e.target.value)}
+                        className="rounded-lg h-9 text-sm" />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {isOther && (
+                <div className="space-y-1 pt-2 border-t border-border">
+                  <Label className="text-[11px]">Reason for this visit</Label>
+                  <Input value={otherReason} onChange={(e) => setOtherReason(e.target.value)}
+                    placeholder="Say in plain words why this person is here" className="rounded-lg h-9 text-sm" />
+                  <p className="text-[10px] text-muted-foreground">Required so the arrival is clear to everyone reading the list later.</p>
+                </div>
+              )}
 
               {/* Companions */}
               {renderCompanions()}

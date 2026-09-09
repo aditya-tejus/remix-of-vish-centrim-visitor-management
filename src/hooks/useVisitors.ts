@@ -36,6 +36,15 @@ interface DbVisitor {
   qr_code: string | null;
   person_qr: string | null;
   group_id: string | null;
+  group_label?: string | null;
+  group_organiser_name?: string | null;
+  group_organiser_contact?: string | null;
+  terms_confirmed_by?: string | null;
+  terms_confirmation_mode?: string | null;
+  volunteer_role?: string | null;
+  volunteer_supervisor?: string | null;
+  volunteer_expected_end?: string | null;
+  visit_reason_other?: string | null;
   visited_resident_ids: string[] | null;
 }
 
@@ -69,6 +78,15 @@ function dbToVisitor(row: DbVisitor): Visitor {
     qrCode: row.qr_code ?? undefined,
     personQr: row.person_qr ?? undefined,
     groupId: row.group_id ?? undefined,
+    groupLabel: row.group_label ?? undefined,
+    groupOrganiserName: row.group_organiser_name ?? undefined,
+    groupOrganiserContact: row.group_organiser_contact ?? undefined,
+    termsConfirmedBy: row.terms_confirmed_by ?? undefined,
+    termsConfirmationMode: (row.terms_confirmation_mode as Visitor["termsConfirmationMode"]) ?? undefined,
+    volunteerRole: row.volunteer_role ?? undefined,
+    volunteerSupervisor: row.volunteer_supervisor ?? undefined,
+    volunteerExpectedEnd: row.volunteer_expected_end ? new Date(row.volunteer_expected_end) : undefined,
+    visitReasonOther: row.visit_reason_other ?? undefined,
     visitedResidentIds: row.visited_resident_ids ?? [],
   };
 }
@@ -211,6 +229,15 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     // Columns only staff (authenticated) may write
     if (!publicMode) {
       Object.assign(payload, {
+        group_label: visitor.groupLabel ?? null,
+        group_organiser_name: visitor.groupOrganiserName ?? null,
+        group_organiser_contact: visitor.groupOrganiserContact ?? null,
+        terms_confirmed_by: visitor.termsConfirmedBy ?? null,
+        terms_confirmation_mode: visitor.termsConfirmationMode ?? null,
+        volunteer_role: visitor.volunteerRole ?? null,
+        volunteer_supervisor: visitor.volunteerSupervisor ?? null,
+        volunteer_expected_end: visitor.volunteerExpectedEnd?.toISOString() ?? null,
+        visit_reason_other: visitor.visitReasonOther ?? null,
         expected_return_date: visitor.expectedReturnDate?.toISOString() ?? null,
         checkout_reason: visitor.checkoutReason ?? null,
         return_notification_opt_in: visitor.returnNotificationOptIn ?? false,
@@ -505,6 +532,8 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     refresh: fetchVisitors,
     addVisitor,
     addVisitorAsync,
+    /** Save that resolves only once stored, so a form can retry without duplicating. */
+    submitVisitor,
     /** Last successful read of the list, so the desk can see how fresh it is. */
     lastUpdated,
 

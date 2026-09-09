@@ -265,3 +265,23 @@ Known limitations:
 - With no-site records now excluded from newer sites, kiosks at a new site show nothing until that
   site's residents, staff and suppliers are assigned to it. Reception (signed-in) behaviour is unchanged.
 - Contractor credential verification is still a manual staff action; no external notification delivery.
+
+## Phase 7C — person types, volunteers and group arrivals (complete)
+- [x] Type chooser skipped when only one type is enabled; fixed order; "Other" off by default
+- [x] Volunteer role, supervisor and expected finish (site-configurable, optional)
+- [x] Group arrival: organiser (name and contact required) plus individual attendee records
+- [x] Each adult attendee confirms terms themselves; organiser-declared only for an assisted/child process, clearly labelled
+- [x] Partial save with retry and no duplicates; late attendees join the same group
+- [x] Independent attendee checkout; group checkout at the front desk only
+- [x] Group-aware visit list, overdue, badges, roll call, reports and audit
+
+Tested at Riverstone Aged Care: chooser order with "Other" hidden, volunteer optional fields,
+a group of five saved as five individual records, a forced failure on person three retried without
+creating a duplicate, a late arrival joining the same group, individual sign-out and whole-group
+sign-out from the front desk. Temporary Ztemp records were removed and none remain.
+
+Known limits after Phase 7C:
+- Whole-group sign-out is front desk only; the kiosk still signs people out one at a time.
+- Roll call lists every group member individually with the organiser's name and contact; this was
+  reviewed in code rather than by starting a live emergency.
+- Badges still print through the browser; no label-printer hardware is connected.

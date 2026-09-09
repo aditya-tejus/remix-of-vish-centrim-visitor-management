@@ -4,7 +4,7 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { usePersonTypes, PersonTypeConfigRow } from "@/hooks/usePersonTypes";
+import { usePersonTypes, PersonTypeConfigRow, PersonTypeExtras } from "@/hooks/usePersonTypes";
 import { useAuth } from "@/hooks/useAuth";
 import { useOperatingContext, siteScopedKey } from "@/contexts/OperatingContext";
 import { SettingExplainer } from "@/components/settings/SettingExplainer";
@@ -21,15 +21,16 @@ const FLAGS: { key: keyof PersonTypeConfigRow; label: string; help: string }[] =
 ];
 
 export function PersonTypesTab() {
-  const { personTypes, loading, reload } = usePersonTypes();
+  const { personTypes, extras, loading, reload } = usePersonTypes();
   const { role } = useAuth();
   const { siteId, siteName, pack } = useOperatingContext();
   const [rows, setRows] = useState<PersonTypeConfigRow[]>([]);
+  const [extraRows, setExtraRows] = useState<PersonTypeExtras>(extras);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
   const canEdit = role === "admin";
 
-  useEffect(() => { if (!loading) setRows(personTypes); }, [loading, personTypes]);
+  useEffect(() => { if (!loading) { setRows(personTypes); setExtraRows(extras); } }, [loading, personTypes, extras]);
 
   const update = (type: string, patch: Partial<PersonTypeConfigRow>) =>
     setRows((prev) => prev.map((r) => (r.type === type ? { ...r, ...patch } : r)));
@@ -48,6 +49,13 @@ export function PersonTypesTab() {
       { key: k(`person_type_rollcall_${r.type}`), value: r.rollCallIncluded ? "true" : "false" },
       { key: k(`person_type_label_${r.type}`), value: r.kioskLabel === r.label ? "" : r.kioskLabel.trim() },
     ]);
+    payload.push(
+      { key: k("volunteer_field_role"), value: extraRows.volunteerRoleEnabled ? "true" : "false" },
+      { key: k("volunteer_field_supervisor"), value: extraRows.volunteerSupervisorEnabled ? "true" : "false" },
+      { key: k("volunteer_field_expected_end"), value: extraRows.volunteerExpectedEndEnabled ? "true" : "false" },
+      { key: k("group_attendee_phone"), value: extraRows.groupAttendeePhoneEnabled ? "true" : "false" },
+      { key: k("group_organiser_declared_terms"), value: extraRows.organiserDeclaredTermsEnabled ? "true" : "false" },
+    );
     await supabase.from("settings").upsert(payload, { onConflict: "key" });
     await supabase.from("audit_log").insert({
       action: "settings_update",
@@ -113,6 +121,35 @@ export function PersonTypesTab() {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="rounded-xl border border-border p-4 space-y-3">
+        <div>
+          <p className="text-sm font-semibold text-foreground">Volunteers and group arrivals</p>
+          <p className="text-xs text-muted-foreground">Extra details your site collects. All of these are optional for the person signing in.</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+          {([
+            ["volunteerRoleEnabled", "Ask a volunteer's role or programme"],
+            ["volunteerSupervisorEnabled", "Ask which staff member is supervising"],
+            ["volunteerExpectedEndEnabled", "Ask what time the volunteer expects to finish"],
+            ["groupAttendeePhoneEnabled", "Ask each group attendee for a phone number"],
+            ["organiserDeclaredTermsEnabled", "Allow an organiser to confirm the terms for assisted or child attendees"],
+          ] as [keyof PersonTypeExtras, string][]).map(([key, label]) => (
+            <label key={key} className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-2.5 py-2">
+              <span className="text-xs text-foreground">{label}</span>
+              <Switch
+                checked={extraRows[key]}
+                disabled={!canEdit}
+                onCheckedChange={(v) => setExtraRows((prev) => ({ ...prev, [key]: v }))}
+              />
+            </label>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          A group organiser's name and contact number are always required. Organiser-declared terms are recorded as the organiser's
+          confirmation, never as the attendee's own.
+        </p>
       </div>
 
       <p className="text-xs text-muted-foreground">
