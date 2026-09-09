@@ -205,6 +205,7 @@ export function CheckOutSheet({
 
     setSuccessName(name);
     setSuccessDuration(dur);
+    setSuccessStaying(outcome ? outcome.remainingCompanions : 0);
     setShowSuccess(true);
     const v = selectedVisitor;
     setSelectedVisitor(null);
