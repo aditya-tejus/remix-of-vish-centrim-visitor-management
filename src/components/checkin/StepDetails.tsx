@@ -82,7 +82,7 @@ export function StepDetails({
 
   const addCompanion = () => {
     const empty: CompanionDetail = {};
-    activeCompanionFields.forEach((f) => { empty[f.field_key.replace("companion_", "")] = ""; });
+    activeCompanionFields.forEach((f) => { empty[f.key] = ""; });
     setCompanions((prev) => [...prev, empty]);
   };
 
