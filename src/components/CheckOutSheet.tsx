@@ -281,6 +281,11 @@ export function CheckOutSheet({
                 <div className="text-center space-y-1">
                   <p className="text-[16px] font-bold text-foreground">{successName} checked out</p>
                   <p className="text-[13px] text-muted-foreground">Duration: {successDuration}</p>
+                  {successStaying > 0 && (
+                    <p className="text-[13px] text-warning">
+                      {successStaying} still on site — this visit stays open for them.
+                    </p>
+                  )}
                 </div>
                 <Button
                   variant="outline"
