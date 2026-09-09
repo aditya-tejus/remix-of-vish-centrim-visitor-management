@@ -33,6 +33,7 @@ import {
 import { format, differenceInMinutes } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { enqueueOutcome, flushQueue, readQueue, clearQueueFor } from "@/lib/emergencyQueue";
+import { useAttendance } from "@/hooks/useAttendance";
 import {
   buildRollCall, sortPeople, attendanceKey, RollCallPerson,
   ASSISTANCE_ORDER, assistanceLabel, UNASSIGNED_AREA,
@@ -112,9 +113,12 @@ export default function Evacuation() {
 
   const markedBy = user?.email || "Staff";
 
+  // Canonical attendance decides who is still on site.
+  const { parties: attendanceParties } = useAttendance({ onlyOpen: true });
+
   const { onSite, offSite } = useMemo(
-    () => buildRollCall({ visitors, residents, roomLabel }),
-    [visitors, residents, roomLabel]
+    () => buildRollCall({ visitors, residents, roomLabel, parties: attendanceParties }),
+    [visitors, residents, roomLabel, attendanceParties]
   );
 
 
