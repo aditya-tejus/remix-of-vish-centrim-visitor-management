@@ -1,141 +1,138 @@
-# Phase 8A — Companion and Attendance Integrity
+# Phase 8A (revised) — Companion and Attendance Integrity
 
-Baseline commit a5d6661. Plan only; nothing is built in this turn.
+Baseline commit a5d6661. Plan only. No code, migrations or data changes in this turn.
 
-## Goal
+## Verified current state
 
-Every person physically on site — primary visitor and each companion — is an individually accountable attendance record with their own status and departure time, while still grouped under one arrival. Reception keeps a simple one-form arrival experience.
+Data (queried):
+- 134 legacy `visitors` rows: 12 with `additional_visitors > 0`, 8 with companion entries, 10 with a group id, 5 claiming extra people but carrying no companion names.
+- Canonical tables: 3 `visits`, 4 `visit_parties`, 3 `people`; only 3 legacy rows linked via `visits.legacy_visitor_id`.
 
-## Findings from inspection (verified)
+Existing trigger `sync_visit_from_visitor` (read in full) already:
+- skips residents; resolves branch via `default_site_id()`; normalises status;
+- finds or creates a `people` row by `legacy_visitor_id` or `person_qr`;
+- creates or updates the `visits` row keyed on `legacy_visitor_id`;
+- creates the primary party if absent and keeps its check-out time in step;
+- creates or updates named companion parties, matched by `display_name`;
+- **ignores** companions with a blank name and ignores `additional_visitors` entirely.
 
-- 134 visitor rows: 12 with `additional_visitors > 0`, 8 with companion detail entries, 10 with a group id, and 5 rows that claim extra people but carry no companion names at all.
-- Canonical tables are effectively empty relative to legacy: 3 `visits`, 4 `visit_parties`, 3 `people`, and only 3 visitor rows linked through `visits.legacy_visitor_id`. The `sync_visit_from_visitor` trigger has therefore not produced consistent coverage.
-- No frontend file reads `visits` or `visit_parties`; all screens read `visitors`. Companions exist only as JSON inside `visitors.companion_details`, and departures are stamped in that JSON by `src/lib/companionCheckout.ts`.
-- Companion fields are configurable per person type in `form_fields` (`CompanionFieldsManager`, `useCompanionFields`), but companion identity is never matched against `people`.
-- `Visitors.tsx` dedupes the directory on `email || mobile`, so people with blank contact details collapse into one row.
+Existing columns (verified) — nothing needs re-adding:
+- `visits`: id, branch_id, person_id, person_type, status, check_in_time, check_out_time, destination_wing_id, destination_resident_person_id, destination_label, group_id, source, legacy_visitor_id, created_at, updated_at.
+- `visit_parties`: id, visit_id, person_id, display_name, relationship, is_primary, check_in_time, check_out_time, created_at, updated_at.
+- `people`: id, first_name, surname, email, mobile, person_qr, default_person_type, organisation_id, branch_id, external_source, external_id, legacy_visitor_id, is_active, created_at, updated_at.
 
-## 1. Source of truth decision
+Frontend: no file reads `visits` or `visit_parties`. Companion departures are stamped into JSON by `src/lib/companionCheckout.ts`. `Visitors.tsx` dedupes on `email || mobile`, collapsing people with blank contacts.
 
-Proposed and needing approval before build:
+## 1. Source of truth and the trigger conflict — resolved
 
-- `people` — canonical identity per person, unique within a site. Never merged on name alone.
-- `visits` — one arrival event (one group), owning site, destination, source, times.
-- `visit_parties` — one row per attending person, primary or companion, each with its own check-in and check-out time. This becomes the attendance source of truth.
-- `visitors` — legacy compatibility record retained read-only for history, exports and any screen not yet migrated. It stays written for the primary person only, so nothing existing breaks, but no new logic reads companions from its JSON.
-- `companion_details` JSON — frozen. Kept for historical display, never the basis of live counts once 8A ships.
+**One authoritative writer: the trigger.** The check-in RPC does **not** write canonical tables directly. It writes the legacy `visitors` row inside one transaction; `sync_visit_from_visitor` produces `people`, `visits` and `visit_parties` in the same transaction; the RPC then reads back and returns `visit_id` plus the party ids. Duplicate canonical records are structurally impossible because only one code path inserts them.
 
-Because presence, occupancy, roll call and reports all currently read `visitors`, migration is staged: write canonical rows first, then flip readers behind a read switch, then retire JSON reads.
+This is chosen over "canonical first, legacy second" precisely because the latter would require suppressing or reconciling the trigger and leaves a duplicate-creation window.
 
-## 2. Reconciliation and backfill (idempotent)
+Trigger changes required (extend, do not replace the pattern):
+- Handle blank-named companions: create ordinal placeholder parties ("Companion 2", "Companion 3") instead of skipping them.
+- Handle `additional_visitors > n` with fewer companion entries: top up to the recorded headcount with placeholders.
+- Match companion parties by `(visit_id, companion_index)` rather than `display_name`, so duplicate names in one party stop colliding.
+- Do not clobber a party check-out time that is already set from the party-level path (only fill nulls from the legacy row).
+- Remain idempotent for repeat firing and for reconciliation re-runs.
 
-A single security-definer function `reconcile_visit_parties(p_branch_id uuid default null, p_limit int default null)` that can be run repeatedly and always converges:
+Roles after 8A: `people` = identity; `visits` = arrival event; `visit_parties` = attendance source of truth; `visitors` = compatibility record still written for the primary; `companion_details` JSON = frozen historical display only.
 
-- For each legacy visitor row lacking a `visits` row, create one keyed on `legacy_visitor_id` (unique), inheriting `branch_id`, times, status, group id, person type.
-- Create the primary `visit_parties` row keyed on (visit_id, is_primary) so re-runs cannot duplicate.
-- For each companion entry, create a party row keyed on (visit_id, companion_index).
-- Named companions: use the given name; carry any stored `checkedOutAt` into the party check-out time.
-- Empty or blank companion names: create a party row labelled "Companion 2" (ordinal within the visit) and flag `name_missing` so reception can complete it later. They still count for roll call.
-- Duplicate companion names in one visit: keep both, disambiguated by ordinal suffix in the display name. Never dedupe within a visit.
-- `additional_visitors > 0` with no companion entries (5 rows today): create the correct number of unnamed placeholder party rows so headcount matches the recorded arrival.
-- Already-synchronised records: detected by the unique keys above and skipped, with counters returned.
-- `people` rows are **not** created by backfill for historical companions; historical party rows keep `person_id` null and a display name only. Only forward check-ins resolve identity.
-- The function returns created/skipped/flagged counts and writes one `audit_log` entry per run.
+## 2. Precise schema delta
 
-## 3. Staff check-in write path
+`visit_parties` — add:
+- `companion_index int not null default 0` (0 = primary; 1..n = companions in order).
+- `status text not null default 'checked-in'` — individually mutable attendance status.
+- `name_status text not null default 'named'` with values `named` | `unresolved`.
+- unique index on `(visit_id, companion_index)`.
+- partial unique index on `(visit_id)` where `is_primary` — one primary per visit.
 
-One RPC, `check_in_party(p_payload jsonb)`, running in a single transaction:
+`visits` — add:
+- `client_request_id uuid` with a unique index — retry idempotency key.
+- no other column changes; `status` becomes derived (see §6).
 
-1. Resolve or create the primary person.
-2. Insert the `visits` row.
-3. Insert all `visit_parties` rows.
-4. Insert the legacy `visitors` row and link it.
+`people` — no changes.
 
-Retry safety: the client generates a `client_request_id` (UUID) held in component state for the whole attempt and sent unchanged on retry. The RPC upserts on that key and returns the existing visit if seen before, so a retry after a timeout can never create a second arrival. Partial saves are impossible because everything is one transaction.
+Also required: GRANTs for `authenticated`/`service_role` and site-scoped RLS on `visits` and `visit_parties` (reads scoped by `branch_id` through the existing site-access helper; writes via RPC only). Backfill of `companion_index` for the 4 existing party rows is part of reconciliation.
 
-## 4. Identity matching safeguards
+## 3. Historical reconciliation vs forward check-in — separated
 
-Lookup is scoped to the current site only. Matching order:
+**Reconciliation (`reconcile_visit_parties`, security definer, idempotent, per-site, dry-run flag):** covers history only. It creates missing visits and parties from legacy rows, fills `companion_index`, creates placeholder parties for unnamed companions and for the 5 headcount-only rows, and marks them `name_status = 'unresolved'`. It never creates `people` rows for historical companions (`person_id` stays null), never edits or deletes legacy rows, and reports created/skipped/flagged counts plus one `audit_log` entry per run. Second run must report zero changes.
 
-1. Exact QR / person code match — auto-link.
-2. Exact mobile or email match (normalised) — auto-link.
-3. Name-only match — **never auto-linked**. Reception sees a small "Possible match" prompt listing candidates with last visit date, and must choose "This is them" or "New person". Default is New person.
-4. No contact details at all — always create a new person.
+**Forward check-in:** companions are resolvable people. Where the configured companion fields include name and contact, reception can pick an existing person from this site or create a new one, and the party row gets a real `person_id`.
 
-No background merge job, no fuzzy merge. Merging existing duplicates is out of scope for 8A and flagged as a separate decision.
+## 4. Unresolved companions — display and later completion
 
-## 5. Configured companion fields
+- Shown everywhere as "Companion 2 — with Jane Smith", with a plain "Details missing" text marker (no symbol).
+- They count fully in occupancy and roll call.
+- A "Add this person's details" action on the party row sets `display_name`, optional `person_id` and flips `name_status` to `named`.
+- Completion updates identity fields only. `check_in_time`, `check_out_time`, `visit_id` and `companion_index` are immutable through that action, so the original attendance event is never rewritten; the change is written to `audit_log`.
 
-`form_fields` with the companion scope continue to drive the companion sub-form per person type: which fields appear, their order, labels and required flag. Validation rules:
+## 5. Reader cutover
 
-- A field marked required must be completed for every companion before "Sign in" enables.
-- If the name field is inactive for a person type, companions are recorded as ordinal placeholders and counted, without blocking arrival.
-- Required-field errors are shown inline per companion row with a text message, no symbols.
-- Configuration is read-only in this phase; no settings keys change.
+Order, one screen group per build increment behind a single internal read switch:
+1. Emergency Roll Call (`useEvacuation.ts`, `lib/evacuation.ts`) — largest safety gain.
+2. Visit List / presence (`useVisitors.ts`, `VisitorTable.tsx`, `VisitList.tsx`) and checkout (`CheckOutSheet.tsx`, `lib/companionCheckout.ts`).
+3. Visitors directory (`Visitors.tsx` — dedupe by person id, never by blank contact), profile history (`useVisitorHistory.ts`, `VisitorProfile.tsx`).
+4. Badges and exports (`lib/badgeIssue.ts`, `lib/exportVisitors.ts`).
 
-## 6. Per-person attendance
+Compatibility: legacy `visitors` rows keep being written and kept in step for the primary throughout, so reverting the frontend to the previous commit yields a fully working app on unchanged data. Rollback is code-only.
 
-Each `visit_parties` row carries its own status and check-out time. The visit is open while any party row is open, and closes automatically when the last one departs. Checkout options in the existing sheet:
+## 6. Individually mutable status, derived visit status
 
-- Check out one person.
-- Check out selected people.
-- Check out the whole group.
+- `check_out_party(p_party_id, p_time)` sets one party's status and check-out time.
+- A trigger on `visit_parties` recomputes the parent visit: open while any party is open; `check_out_time` = latest party departure once all are closed.
+- Bulk actions call the same RPC per party inside one transaction: check out one person, selected people, or the whole group.
+- The legacy `visitors` row is updated to stay consistent for the primary, with recursion guarded.
 
-Group grouping is preserved through `visit_id`, so companions never lose their link to the primary.
+## 7. Data-quality report (read-only)
 
-## 7. Visit List behaviour
+`visit_integrity_report()` returning counts and sample ids for:
+- legacy visitors with no visit (orphaned visitors);
+- visits with no `legacy_visitor_id` and no parties (orphaned visits);
+- visits with no primary party;
+- headcount mismatch: `1 + additional_visitors` vs party count;
+- duplicate parties on the same `(visit_id, companion_index)` prior to the unique index;
+- parties whose visit is closed but which remain open, and vice versa.
 
-- Default view lists every person individually — this is the accountability default.
-- A "Group arrivals" toggle collapses a party into one row with a count and an expander; state is per user session, not stored in settings.
-- Each row shows a plain text label: "Primary" or "With <primary name>".
-- Counts in the summary strip count people, not arrivals.
-- Existing privacy rules (destination hiding, resident lookup mode) apply identically to companion rows; companions never reveal more than the primary row would.
-- Lucide icons with visible labels only.
+Read-only, safe to run any time, surfaced to admins only; run before and after reconciliation.
 
-## 8. Downstream impact
+## 8. Explicitly out of scope
 
-- **Emergency roll call** — attendance built from open `visit_parties` rows, so unnamed companions appear as "Companion 2 (with Jane Smith)" and must be marked safe individually. This is the largest safety gain of the phase.
-- **Presence log / occupancy** — counts people rather than arrivals; numbers will rise for existing sites and this must be explained to users.
-- **Badges** — one badge per person; group print prints the set.
-- **Reports and exports** — gain a person-level row; totals change. Historical rows before backfill remain approximations and are labelled as such.
-- **Profile history** — companion visits appear on that person's timeline only where a person was resolved; historical unresolved companions stay on the primary's record.
+Kiosk device binding, weekly reports, contractor verification and screening-question outcomes are separate phases. The only kiosk touch in 8A is a compatibility one: `kiosk_check_in` must set companion data so the same trigger produces the same canonical rows — no kiosk UX change.
 
-## 9. Isolation and permissions
+## 9. Identity matching safeguards
 
-- Every new query and RPC filters on the caller's accessible sites via the existing site-access helper. Party rows inherit `branch_id` from the visit.
-- RLS on `visit_parties` and `visits` follows the existing visitors pattern: site-scoped read for staff, writes through the RPC only.
-- Permissions reuse `checkin.create` and `checkout.perform`. No new permission values.
+Site-scoped lookup only. Auto-link on exact person QR, or exact normalised mobile/email. Name-only matches are never auto-linked: reception sees candidate names with last visit date and must choose explicitly, defaulting to "New person". No contact details means a new person. No merge job; merging existing duplicate people is out of scope.
 
-## 10. Technical scope
+## 10. Configured companion fields
 
-Migrations:
-- Add `branch_id`, `status`, `person_type`, `companion_index`, `is_primary` handling and `client_request_id` where missing on `visits` / `visit_parties`; unique constraints for idempotency.
-- GRANTs and RLS policies for both tables.
-- Functions: `check_in_party`, `check_out_party`, `reconcile_visit_parties`; review `sync_visit_from_visitor` so it cannot fight the new writer.
+`form_fields` companion scope continues to drive which fields show, order, labels and required flags per person type. Required fields must be complete for every companion before sign-in enables, with inline text errors. If the name field is inactive for a type, companions are recorded as ordinal placeholders and still counted. No settings keys change.
 
-Frontend files expected to change:
-`src/hooks/useVisitors.ts`, `src/hooks/useVisitorHistory.ts`, `src/components/checkin/useCheckInFlow.ts`, `StepDetails.tsx`, `StepConfirm.tsx`, `src/components/CheckOutSheet.tsx`, `src/lib/companionCheckout.ts`, `src/components/VisitorTable.tsx`, `src/pages/VisitList.tsx`, `src/pages/Visitors.tsx` (dedupe fix — key on person id, never on blank contact), `src/hooks/useEvacuation.ts`, `src/lib/evacuation.ts`, `src/lib/badgeIssue.ts`, `src/lib/exportVisitors.ts`.
+## 11. UX constraints
 
-Kiosk (`useKioskCheckInFlow.ts`, `kiosk_check_in`) is updated in the same phase so both entry points write canonical rows; otherwise kiosk arrivals would regress.
+Individual accountability by default; an optional session-only "Group arrivals" collapse with a count and expander; plain text "Primary" / "With <name>" labels; existing destination and resident privacy rules apply identically to companion rows; labelled Lucide icons only, no emoji or symbol UI.
 
-## 11. Test plan
+## 12. Test plan
 
-Staff check-in with 0/1/3 companions; blank companion names; two companions with the same name; retry after a forced network failure (must produce exactly one visit); refresh and re-login mid-flow; kiosk check-in with companions; check out one companion, then the primary, then the group; bulk group checkout; roll call with an open party mid-drill; historical report before and after backfill; two different people with the same name and no contact details (must stay separate); a person with blank email and mobile (must not collapse in the directory); cross-site check that site B never sees site A parties; reconciliation run twice producing zero changes on the second run.
+Staff check-in with 0/1/3 companions; blank companion names; two companions with the same name in one party; forced network failure then retry (exactly one visit via `client_request_id`); refresh and re-login mid-flow; kiosk check-in with companions producing identical canonical rows; check out one companion, then the primary, then the whole group; bulk group checkout; roll call with an open party mid-drill; historical report before and after reconciliation; reconciliation run twice with zero second-run changes; integrity report clean after reconciliation; two same-name people with no contacts stay separate; blank-contact people do not collapse in the directory; site B never sees site A parties; rollback to previous frontend commit still works on migrated data.
 
-## 12. Rollback and compatibility
+## 13. Rollback
 
-- Legacy `visitors` writes continue throughout, so rolling the frontend back to the previous commit yields a working app on unchanged data.
-- Readers flip behind a single internal switch, allowing a code-only rollback without touching data.
-- Backfill only inserts; it never edits or deletes legacy rows, so it can be reversed by deleting rows created by a tagged run.
+Migrations are additive only. Reconciliation only inserts, tagged by run so a run can be reversed. Readers flip behind one switch. Trigger changes are a function replacement with the prior definition retained for immediate restore.
 
-## Blockers and decisions needing approval
+## Remaining decisions needing approval
 
-1. Confirm `visit_parties` becomes the attendance source of truth and `companion_details` is frozen.
-2. Occupancy and report numbers will increase once companions count individually. Confirm this is acceptable and how it should be explained.
-3. Historical companions get no `people` identity. Confirm.
-4. Merging existing duplicate people is excluded from 8A.
-5. Kiosk must be included in the same phase; confirm the wider scope.
-6. Placeholder rows for the 5 records with headcount but no names — confirm labelling as "Companion 2" etc.
+1. Trigger-as-authoritative-writer pattern (legacy insert drives canonical rows) — confirm.
+2. Occupancy, roll-call and report totals will rise once companions count individually; confirm and confirm the wording used to explain it.
+3. Historical companions get no `people` identity; confirm.
+4. Placeholder labelling "Companion 2" for the 5 headcount-only rows and all blank names; confirm.
+5. Merging existing duplicate people excluded from 8A; confirm.
+6. Reader cutover order above; confirm Roll Call goes first.
+7. Whether the "Add this person's details" completion action is limited to a permission (suggested: `person.edit`).
+
+Note: roadmap.md gains a Phase 8A entry with these items at build time; this turn is plan-only, so no file outside the plan is touched.
 
 ## Prototype limitation
 
-This is prototype work. Improved roll-call accountability is a design goal, not certified regulatory compliance, and must not be presented as such without independent review.
+Prototype work. Better companion accountability is a design goal, not certified regulatory compliance, and must not be presented as such without independent review.
