@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOperatingContext } from "@/contexts/OperatingContext";
+import { kioskRpc } from "@/lib/kioskRpc";
 
 const TYPE_DEFS = {
   visitor: { icon: UserRound, iconBg: "bg-primary/15", iconColor: "text-primary" },
@@ -92,16 +93,13 @@ export default function KioskCheckIn() {
     alertedRef.current = true;
     // Logged through a narrow server function: purpose, outcome and site only —
     // the kiosk never writes personal details into the audit record itself.
-    void supabase
-      .rpc("kiosk_log_event" as any, {
-        p_purpose: "check_in_screening",
-        p_outcome: "blocked",
-        p_branch_id: kioskSiteId ?? null,
-        p_detail: flow.selectedType || null,
-      })
-      .then(({ error }: { error: unknown }) => {
-        if (error) alertedRef.current = false;
-      });
+    void kioskRpc("kioskd_log_event", {
+      p_purpose: "check_in_screening",
+      p_outcome: "blocked",
+      p_detail: flow.selectedType || null,
+    }).then(({ error }: { error: unknown }) => {
+      if (error) alertedRef.current = false;
+    });
   }, [flow.screeningBlocked, flow.selectedType, kioskSiteId]);
 
   // Fast Lane: a recognised card fills in name and contact details only.

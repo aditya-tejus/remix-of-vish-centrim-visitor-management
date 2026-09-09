@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { kioskRpc } from "@/lib/kioskRpc";
 
 export interface StaffMember {
   id: string;
@@ -26,10 +27,7 @@ export function useStaffMembers({ publicMode = false, siteId = null }: UseStaffM
 
   const fetchStaff = useCallback(async () => {
     if (publicMode) {
-      const { data, error } = await supabase.rpc("kiosk_staff_directory" as any, {
-        p_search: null,
-        p_branch_id: siteId ?? null,
-      });
+      const { data, error } = await kioskRpc<any[]>("kioskd_staff_directory", { p_search: null });
       if (!error && data) {
         setStaff(
           (data as any[]).map((s) => ({

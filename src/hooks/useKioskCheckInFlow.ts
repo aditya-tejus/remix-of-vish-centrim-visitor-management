@@ -14,6 +14,7 @@ import { useOperatingContext, siteScopedKey } from "@/contexts/OperatingContext"
 import { resolveTermsContent } from "@/lib/segmentPacks";
 import { resolveScreeningPolicy, screeningStepApplies } from "@/lib/screeningPolicy";
 import { evaluateScreening, type ScreeningRuleQuestion } from "@/lib/screeningOutcome";
+import { kioskRpc } from "@/lib/kioskRpc";
 
 export type KioskStepId = "type" | "details" | "visiting" | "food" | "companions" | "screening" | "contractor" | "terms" | "confirm";
 
@@ -45,7 +46,7 @@ export function useKioskCheckInFlow() {
   useEffect(() => {
     let cancelled = false;
     if (!personQr) { setOverdueKeyCount(0); return; }
-    (supabase.rpc as any)("kiosk_open_key_holds", { p_person_qr: personQr }).then(({ data }: any) => {
+    kioskRpc<any[]>("kioskd_open_key_holds", { p_person_qr: personQr }).then(({ data }: any) => {
       if (!cancelled) setOverdueKeyCount(Number(data?.[0]?.overdue_items ?? 0));
     });
     return () => { cancelled = true; };
@@ -147,12 +148,11 @@ export function useKioskCheckInFlow() {
       const hasQr = !!params.qr?.trim();
       if (!hasName && !hasMobile && !hasQr) return null;
 
-      const { data } = await supabase.rpc("kiosk_returning_lookup" as any, {
+      const { data } = await kioskRpc<any[]>("kioskd_returning_lookup", {
         p_first: hasName ? params.firstName!.trim() : null,
         p_last: hasName ? params.surname!.trim() : null,
         p_mobile: hasMobile ? params.mobile!.trim() : null,
         p_qr: hasQr ? params.qr!.trim().toUpperCase() : null,
-        p_branch_id: siteId ?? null,
       });
       const prev = Array.isArray(data) ? (data[0] as any) : null;
       if (!prev) return null;

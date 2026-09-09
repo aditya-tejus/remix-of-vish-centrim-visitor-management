@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { PersonCredentialRecord } from "@/lib/contractorCredentials";
+import { kioskRpc } from "@/lib/kioskRpc";
 
 export interface ContractorPerson {
   id: string;
@@ -37,12 +38,11 @@ export async function findContractorPerson(params: {
   // It asks a narrow server function for identity only.
   const { data: session } = await supabase.auth.getSession();
   if (!session?.session) {
-    const { data } = await supabase.rpc("kiosk_contractor_lookup" as any, {
+    const { data } = await kioskRpc<any[]>("kioskd_contractor_lookup", {
       p_mobile: mobile || null,
       p_qr: qr || null,
       p_first: first || null,
       p_last: last || null,
-      p_branch_id: params.siteId ?? null,
     });
     const row = (data as any[])?.[0];
     if (!row) return null;

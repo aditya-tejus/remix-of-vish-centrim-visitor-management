@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSite } from "@/contexts/SiteContext";
+import { kioskRpc } from "@/lib/kioskRpc";
 
 export interface Resident {
   id: string;
@@ -42,10 +43,7 @@ export function useResidents(options: UseResidentsOptions = {}) {
   const fetchResidents = useCallback(async () => {
     // Kiosk: name, room and area only — no contact, care, clinical or risk information.
     if (publicMode) {
-      const { data, error } = await supabase.rpc("kiosk_resident_directory" as any, {
-        p_search: null,
-        p_branch_id: siteId ?? currentSiteId ?? null,
-      });
+      const { data, error } = await kioskRpc<any[]>("kioskd_resident_directory", { p_search: null });
       if (!error && data) {
         setResidents(
           (data as any[]).map((r) => ({

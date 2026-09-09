@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { kioskRpc } from "@/lib/kioskRpc";
 
 export interface Supplier {
   id: string;
@@ -32,9 +33,7 @@ export function useSuppliers({ publicMode = false, siteId = null }: UseSuppliers
 
   const fetchSuppliers = useCallback(async () => {
     if (publicMode) {
-      const { data } = await supabase.rpc("kiosk_supplier_directory" as any, {
-        p_branch_id: siteId ?? null,
-      });
+      const { data } = await kioskRpc<any[]>("kioskd_supplier_directory");
       if (data) {
         setSuppliers(
           (data as any[]).map((s) => ({

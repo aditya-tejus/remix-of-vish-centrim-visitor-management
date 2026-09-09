@@ -5,6 +5,7 @@ import { Visitor, CompanionDetail } from "@/types/visitor";
 import { toast } from "@/hooks/use-toast";
 import { policyFromRow } from "@/hooks/useReturnNotificationPolicy";
 import { useSite } from "@/contexts/SiteContext";
+import { kioskRpc } from "@/lib/kioskRpc";
 
 
 interface DbVisitor {
@@ -118,9 +119,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     // presence only — never visit history or personal details.
     if (publicMode) {
       // Scoped to the kiosk's own site so one building never lists another's people.
-      const { data, error } = await supabase.rpc("kiosk_presence_list" as any, {
-        p_branch_id: kioskSiteId ?? currentSiteId ?? null,
-      });
+      const { data, error } = await kioskRpc<any[]>("kioskd_presence_list");
       if (error) {
         setError("We could not reach the system. Please try again.");
       } else if (data) {
@@ -274,8 +273,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
 
     if (publicMode) {
       // Kiosk: purpose-specific server function. The kiosk has no table access.
-      const saved = Promise.resolve(supabase
-        .rpc("kiosk_check_in" as any, { p_payload: payload as any })
+      const saved = Promise.resolve(kioskRpc<any>("kioskd_check_in", { p_payload: payload as any })
         .then(({ data, error }) => {
           const row = Array.isArray(data) ? (data[0] as any) : (data as any);
           if (error || !row?.visitor_id) throw failed(error);
@@ -363,7 +361,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
 
     if (publicMode) {
       // Kiosk: narrow server function, no direct table write.
-      await supabase.rpc("kiosk_resident_leave" as any, {
+      await kioskRpc("kioskd_resident_leave", {
         p_visitor_id: visitorId,
         p_time: now.toISOString(),
         p_leave_type: details.leaveType ?? null,
@@ -431,7 +429,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
 
     if (publicMode) {
       if (!stillOpen) {
-        const { error } = await supabase.rpc("kiosk_check_out" as any, {
+        const { error } = await kioskRpc("kioskd_check_out", {
           p_visitor_id: id,
           p_time: checkOutTime.toISOString(),
         });
@@ -468,7 +466,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
 
     }
     if (publicMode) {
-      await supabase.rpc("kiosk_resident_return" as any, {
+      await kioskRpc("kioskd_resident_return", {
         p_visitor_id: id,
         p_time: checkInTime.toISOString(),
       });

@@ -8,6 +8,7 @@ import { useOperatingContext } from "@/contexts/OperatingContext";
 import { QrCode, Camera, CameraOff, Keyboard, ArrowLeft, LogOut, AlertTriangle, UserRoundPlus, UserRoundCheck, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Html5Qrcode } from "html5-qrcode";
+import { kioskRpc } from "@/lib/kioskRpc";
 
 /**
  * Fast Lane: a personal card or visit code only *recognises* someone. It never
@@ -75,12 +76,11 @@ export default function KioskQRScan() {
 
       // Otherwise ask the restricted lookup to recognise the code. It returns at
       // most one person's own saved details, scoped to this kiosk's site.
-      const { data, error } = await supabase.rpc("kiosk_returning_lookup" as any, {
+      const { data, error } = await kioskRpc<any[]>("kioskd_returning_lookup", {
         p_first: null,
         p_last: null,
         p_mobile: null,
         p_qr: trimmed,
-        p_branch_id: kioskSiteId,
       });
       setBusy(false);
       if (error) {

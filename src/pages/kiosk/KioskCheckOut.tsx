@@ -15,6 +15,7 @@ import { KioskSkeletonList } from "@/components/kiosk/KioskSkeleton";
 import { KioskErrorState } from "@/components/kiosk/KioskErrorState";
 import { useOperatingContext } from "@/contexts/OperatingContext";
 import { useKioskFastLane } from "@/hooks/useKioskFastLane";
+import { kioskRpc } from "@/lib/kioskRpc";
 
 type Phase = "search" | "companions" | "confirm" | "feedback" | "done";
 
@@ -38,7 +39,7 @@ export default function KioskCheckOut() {
     let cancelled = false;
     const qr = selected?.qrCode || selected?.qr_code || selected?.personQr || null;
     if (!qr) { setHeldCount(0); return; }
-    (supabase.rpc as any)("kiosk_open_key_holds", { p_person_qr: qr }).then(({ data }: any) => {
+    kioskRpc<any[]>("kioskd_open_key_holds", { p_person_qr: qr }).then(({ data }: any) => {
       if (!cancelled) setHeldCount(Number(data?.[0]?.open_items ?? 0));
     });
     return () => { cancelled = true; };
