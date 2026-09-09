@@ -1,5 +1,7 @@
 import { Visitor } from "@/types/visitor";
 import { format } from "date-fns";
+import { companionRowsForVisitor, primaryRowForVisitor, type PartyLike } from "@/lib/accountablePeople";
+
 
 function formatVisitorForExport(visitor: Visitor) {
   return {
