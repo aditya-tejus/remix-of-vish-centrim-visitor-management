@@ -405,20 +405,28 @@ export function useCheckInFlow(open: boolean) {
       whomToVisit: formData.selectPerson,
       address: enabled.address,
       status: "checked-in",
-      healthDeclaration: allHealthClear && formData.healthDeclaration,
+      healthDeclaration: policy.screeningEnabled ? allHealthClear && formData.healthDeclaration : false,
       additionalVisitors: companions.length,
       companionDetails: companions.length > 0 ? companions.map(normaliseCompanion) : undefined,
       comments: formData.comments,
-      bodyTemperature: formData.bodyTemperature ? parseFloat(formData.bodyTemperature) : undefined,
-      influenzaVaccineDate: formData.influenzaVaccineDate || undefined,
-      covidDose1Date: formData.covidDose1Date || undefined,
-      covidDose2Date: formData.covidDose2Date || undefined,
+      bodyTemperature: policy.screeningEnabled && formData.bodyTemperature ? parseFloat(formData.bodyTemperature) : undefined,
+      influenzaVaccineDate: policy.vaccinationEnabled ? formData.influenzaVaccineDate || undefined : undefined,
+      covidDose1Date: policy.vaccinationEnabled ? formData.covidDose1Date || undefined : undefined,
+      covidDose2Date: policy.vaccinationEnabled ? formData.covidDose2Date || undefined : undefined,
       retentionExpiry: new Date(Date.now() + 86400000 * 60),
-      acknowledgedPrivacy: privacyAcknowledged,
-      healthAnswers: { ...healthAnswers, ...contractorScreeningAnswers },
+      acknowledgedPrivacy: policy.privacyRequired ? privacyAcknowledged : false,
+      healthAnswers: policy.screeningEnabled
+        ? { ...healthAnswers, ...contractorScreeningAnswers }
+        : (Object.keys(contractorScreeningAnswers).length ? { ...contractorScreeningAnswers } : undefined),
+      // The outcome only — never a second copy of the answers themselves.
+      screeningOutcome: policy.screeningEnabled ? evaluation.outcome : undefined,
+      screeningFlags: policy.screeningEnabled && evaluation.flags.length
+        ? evaluation.flags.map((f) => ({ question_id: f.questionId, severity: f.severity, action: f.action }))
+        : undefined,
       // Proper link to the resident being visited, not just the typed name
       visitedResidentIds: selectedResident ? [selectedResident.id] : undefined,
     };
+
   };
 
   return {
