@@ -22,6 +22,9 @@ import { SurveyBuilder } from "@/components/feedback/SurveyBuilder";
 import { SettingsSectionHeader } from "@/components/settings/SettingsSectionHeader";
 import { PreviewPanel } from "@/components/settings/preview/PreviewPanel";
 import { useSettingsAccess } from "@/hooks/useSettingsAccess";
+import { SettingsAccessProvider } from "@/components/settings/SettingsAccessContext";
+import { ReadOnlyFence } from "@/components/settings/ReadOnlyFence";
+import { PersonTypesDraftProvider } from "@/components/settings/preview/personTypesDraft";
 
 const personTypes: SettingsSection[] = ["visitor", "contractor", "resident", "staff", "volunteer"];
 
@@ -33,19 +36,19 @@ const PREVIEW_SECTIONS: SettingsSection[] = [
 /** Honest note about where each section's values are stored today. */
 const STORAGE_NOTE: Partial<Record<SettingsSection, string>> = {
   context: "Stored on the site record itself, so it applies to this site only.",
-  "person-types": "Saved for this site. Sites without their own value use the account-wide value.",
-  visitor: "Some values are saved per site, others are shared across the account — each row says which.",
-  contractor: "Some values are saved per site, others are shared across the account — each row says which.",
-  volunteer: "Some values are saved per site, others are shared across the account — each row says which.",
-  staff: "Some values are saved per site, others are shared across the account — each row says which.",
-  resident: "Some values are saved per site, others are shared across the account — each row says which.",
-  presence: "Saved for this site.",
-  printing: "Shared across the account — there is one badge setup, not one per site.",
-  keys: "Saved for this site.",
-  feedback: "Shared across the account.",
-  compliance: "Shared across the account.",
-  governance: "Shared across the account.",
-  audit: "A record of changes, not a setting. Nothing here is saved.",
+  "person-types": "Saved for this site. Sites without their own value fall back to the account-wide value.",
+  visitor: "Saved once for the whole account, separately for each visitor type. Every site sees the same values.",
+  contractor: "Saved once for the whole account, separately for each visitor type. Every site sees the same values.",
+  volunteer: "Saved once for the whole account, separately for each visitor type. Every site sees the same values.",
+  staff: "Saved once for the whole account, separately for each visitor type. Every site sees the same values.",
+  resident: "Saved once for the whole account, separately for each visitor type. Every site sees the same values. Contractor credential rules are the exception and are saved per site.",
+  presence: "Saved once for the whole account. Every site sees the same values.",
+  printing: "Saved once for the whole account — there is one badge setup, not one per site.",
+  keys: "Saved once for the whole account. Every site sees the same key and fob rules.",
+  feedback: "Saved once for the whole account.",
+  compliance: "A checklist record, not a setting. Saved once for the whole account.",
+  governance: "Saved once for the whole account. The kiosk code is stored scrambled and is never shown again.",
+  audit: "A record of what happened, not a setting. Nothing here is saved.",
   integration: "A description of what could connect. Nothing is connected and nothing is saved.",
 };
 
@@ -92,24 +95,24 @@ export default function SettingsPage() {
                   deniedReason={access.deniedReason}
                   storageNote={STORAGE_NOTE[active]}
                 />
-                {isPersonType && <PersonTypeSettings type={active} />}
-                {active === "context" && <OperatingContextTab />}
-                {active === "person-types" && <PersonTypesTab />}
-                {active === "feedback" && <SurveyBuilder />}
-                {active === "presence" && <PresenceTab />}
-                {active === "printing" && <PrintingTab />}
-                {active === "keys" && <KeysPolicyTab />}
-
-                {active === "compliance" && <ComplianceTab />}
-                {active === "integration" && <IntegrationTab />}
-                {active === "audit" && <AuditTrailTab />}
-                {active === "governance" && (
-                  <div className="space-y-6">
-                    <LockGovernanceTab />
-                    <KioskStaffPinCard />
-                  </div>
-                )}
-
+                <ReadOnlyFence>
+                  {isPersonType && <PersonTypeSettings type={active} readOnly={!access.canEdit} />}
+                  {active === "context" && <OperatingContextTab />}
+                  {active === "person-types" && <PersonTypesTab />}
+                  {active === "feedback" && <SurveyBuilder />}
+                  {active === "presence" && <PresenceTab />}
+                  {active === "printing" && <PrintingTab />}
+                  {active === "keys" && <KeysPolicyTab />}
+                  {active === "compliance" && <ComplianceTab />}
+                  {active === "integration" && <IntegrationTab />}
+                  {active === "audit" && <AuditTrailTab />}
+                  {active === "governance" && (
+                    <div className="space-y-6">
+                      <LockGovernanceTab />
+                      <KioskStaffPinCard />
+                    </div>
+                  )}
+                </ReadOnlyFence>
               </div>
 
               {/* See the result before saving */}
