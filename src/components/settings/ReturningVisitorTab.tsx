@@ -4,6 +4,9 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { RotateCcw } from "lucide-react";
+import { siteScopedKey, useOperatingContext } from "@/contexts/OperatingContext";
+
+const FAST_LANE_KEY = "kiosk_fast_lane_enabled";
 
 interface Props {
   personType: string;
