@@ -1,8 +1,15 @@
 import { useNavigate } from "react-router-dom";
 import { AppShell } from "@/components/AppShell";
-import { Shield, ClipboardList, TrendingUp, BarChart3, ArrowRight, MessageSquare, Users } from "lucide-react";
+import { Shield, ClipboardList, TrendingUp, BarChart3, ArrowRight, MessageSquare, Users, CalendarRange } from "lucide-react";
 
 const REPORT_CARDS = [
+  {
+    title: "Visitor Report",
+    description: "Every person recorded at this site for a chosen week, with exports",
+    icon: CalendarRange,
+    path: "/reports/visitor-report",
+    color: "text-primary bg-primary/10",
+  },
   {
     title: "Who is on site",
     description: "Live presence, people over their expected time and visit history",

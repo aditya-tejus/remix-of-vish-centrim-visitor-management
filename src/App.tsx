@@ -32,6 +32,7 @@ import ReportsHome from "./pages/ReportsHome";
 import OperationsReport from "./pages/OperationsReport";
 import EvacuationReport from "./pages/EvacuationReport";
 import PresenceLog from "./pages/PresenceLog";
+import VisitorReport from "./pages/VisitorReport";
 import VisitTrends from "./pages/VisitTrends";
 import ReportsPage from "./pages/Reports";
 import CoverageChecklist from "./pages/CoverageChecklist";
@@ -94,6 +95,7 @@ const App = () => (
             <Route path="/reports/evacuation" element={<Staff><EvacuationReport /></Staff>} />
             <Route path="/reports/on-site" element={<Staff><OperationsReport /></Staff>} />
             <Route path="/reports/presence" element={<Staff><PresenceLog /></Staff>} />
+            <Route path="/reports/visitor-report" element={<Staff><VisitorReport /></Staff>} />
             <Route path="/reports/trends" element={<Staff><VisitTrends /></Staff>} />
             <Route path="/reports/feedback-responses" element={<Staff><FeedbackResponses /></Staff>} />
             <Route path="/reports/feedback-reports" element={<Staff><FeedbackAnalytics /></Staff>} />
