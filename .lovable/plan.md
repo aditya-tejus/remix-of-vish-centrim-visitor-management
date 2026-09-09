@@ -1,107 +1,80 @@
-# Phase 7F — Increment 2C: shell and landmarks for reports, privacy, audit, emergency and coverage
+# Phase 7F — Increment 2D: shell and landmarks for check-in entry points and registers
 
-Baseline: Increment 2B verified on `6d9de66c4049375e844c8419bfc9fff5e2ae704c`. This increment converts the remaining staff routes in scope to the shared `AppShell` pattern. Presentation and accessibility only — no data, permission, workflow, emergency-logic, export, print-template, schema, RLS, RPC or settings change.
+Baseline: Increment 2C verified on `2d5acf0682a497a9a1f0355e79e94dc4a47140e2`. Presentation only. No schema, RLS, RPC, settings-key, permission, workflow, print-template or business-rule changes.
 
-## Routes in scope
+## Routes and files in scope
 
-| Route | File | Current wrapper | New shell |
-|---|---|---|---|
-| `/reports` | `src/pages/ReportsHome.tsx` | SidebarProvider + SidebarInset + private header + `<main>` | AppShell |
-| `/reports/analytics` | `src/pages/Reports.tsx` | same | AppShell |
-| `/reports/on-site` | `src/pages/OperationsReport.tsx` | local `Shell()` helper: SidebarInset + AppHeader + `<main>` | AppShell (delete local Shell, keep the same three call sites) |
-| `/reports/evacuation` | `src/pages/EvacuationReport.tsx` | same as ReportsHome | AppShell |
-| `/gdpr` | `src/pages/GDPR.tsx` | same, dialogs outside SidebarInset | AppShell |
-| `/audit-log` | `src/pages/AuditLog.tsx` | same, count badge in header | AppShell |
-| `/evacuation` | `src/pages/Evacuation.tsx` | same, large action cluster in header, fixed mobile bar and three dialogs inside SidebarInset | AppShell |
-| `/coverage` | `src/pages/CoverageChecklist.tsx` | same | AppShell |
+| Route | File | Guarding in App.tsx |
+|---|---|---|
+| `/person-type` | `src/pages/PersonTypeSelector.tsx` | staff route, no Module wrapper |
+| `/group-checkin` | `src/pages/GroupCheckIn.tsx` | staff route |
+| `/food-register` | `src/pages/FoodRegister.tsx` | `Staff` + `Module name="foodRegister"` |
+| `/keys` | `src/pages/KeysRegister.tsx` | `Staff` + `Module name="keysRegister"` |
 
-Out of scope and untouched: kiosk, public check-in, registers, Residents, check-in/checkout, `App.tsx` routes, print templates.
+Supporting file, optional note only: `roadmap.md`.
+
+All four are staff routes rendered inside the staff router, not inside `KioskLayout`. The kiosk tree (`/kiosk/*`) is untouched. `PersonTypeSelector` contains a link that navigates to `/kiosk/qr-scan`; that link's behaviour stays exactly as it is.
 
 ## Findings from inspection
 
-1. **Every one of the eight routes renders two `main` landmarks today.** `SidebarInset` itself renders a `<main>`, and each page renders its own `<main>` inside it. This is the same defect fixed in 2A/2B and is the main reason for the conversion.
-2. **No page in this batch has a single `aria-label`.** Icon-only control found: the Audit Log refresh button (`size="icon"`, `title="Refresh"` only) — it needs an accessible name.
-3. **Heading levels are already sane** below the h1: GDPR, Evacuation and Coverage use `h2` for section headings, so removing the private page header leaves one h1 (from AppShell) plus existing `h2`s.
-4. **Print templates contain their own `h1`/`h2`** (`Evacuation.tsx` roll-call sheet, `EvacuationReport.tsx` report sheet). These are strings written into a new print window, not the app DOM. They stay byte-identical.
-5. **`AppHeader.title` is a string**, so the destructive `Shield` icon currently shown beside the Emergency Roll Call and Evacuation Report h1 has no place to go. See "Shell API" below.
-6. **Evacuation's header action cluster is workflow-critical** — event class select, Start drill/emergency, Pause/Resume, assembly point select, CSV, Print sheet, All safe, Reset, End roll call — each already permission-gated by `canActivate` / `canMark` / `canExport`. It moves verbatim into `AppShell actions`.
-7. **Evacuation's fixed mobile action bar and its three dialogs** (close, start prompt, correction) currently sit inside `SidebarInset` after `</main>`. GDPR's SAR, erasure and export-confirm dialogs sit after `SidebarInset` inside the provider.
-8. **OperationsReport** already uses `AppHeader` with a title/subtitle and an export action, and it renders `LoadingState` and `PermissionDeniedState` through the same Shell. That behaviour is preserved exactly.
-9. **Audit Log** shows an entry-count badge in the header — moves into `AppShell actions`.
+1. All four pages hand-roll `SidebarProvider` + `AppSidebar` + `SidebarInset` and then render their own `<main>`. Because `SidebarInset` itself renders a `<main>`, every one of these routes currently has two main landmarks — the same defect fixed in 2A–2C.
+2. `PersonTypeSelector` and `GroupCheckIn` also hand-roll a private `<header>` with `SidebarTrigger` and an `<h1>`, instead of `AppHeader`.
+3. `FoodRegister` and `KeysRegister` already use `AppHeader` (correct h1 and actions) but still keep the duplicate `SidebarInset`/`main` structure.
+4. `GroupCheckIn` has a permission-denied early return (`can("checkin.create")` false) that renders a `main` with no heading at all — a route with zero h1.
+5. `KeysRegister` renders `PermissionDeniedState` inside its main, so its heading stays correct in the denied case.
+6. Icon-only controls found: `GroupCheckIn` row remove button already has `aria-label="Remove person"`. No unlabelled icon-only controls were found in `FoodRegister` or `KeysRegister` at header level; the sweep during build will confirm any remaining ones in the keys row actions and label them without changing behaviour.
+7. `min-h-screen` is used on all four wrappers; `AppShell` already uses `min-h-dvh`, so conversion removes them.
+8. `GroupCheckIn` and `PersonTypeSelector` decorate their h1 with a Lucide icon (`UsersRound`). This is preserved via the existing additive `titleIcon` prop on `AppShell` (aria-hidden), so the visual cue survives without a second heading.
 
-## Shell API
+## Route-by-route landmark and heading map
 
-`AppShell` gains one optional, presentational prop: `titleIcon?: LucideIcon`, forwarded to `AppHeader`, rendered before the title text and marked `aria-hidden`. This preserves the existing emergency visual cue on `/evacuation` and `/reports/evacuation` without a second heading. No other shell behaviour changes. Files: `src/components/AppShell.tsx`, `src/components/AppHeader.tsx`.
+| Route | h1 (from AppHeader) | Subtitle | Header actions | Main content |
+|---|---|---|---|---|
+| `/person-type` | "New Check-In" | "Select the type of person checking in" | none | person-type grid, QR fast-lane tile (only when enabled), group arrival tile; `AddVisitDialog` stays outside main as today |
+| `/group-checkin` — allowed | "Group arrival" with `titleIcon={UsersRound}` | "Everyone gets their own record, so the roll call is right" | none | organiser card, attendee rows, save/print controls, watchlist dialog |
+| `/group-checkin` — denied | "Group arrival" (same shell, so the route keeps one h1) | same | none | existing "You cannot sign people in" card, unchanged wording |
+| `/food-register` | "Food Register" | existing subtitle | Export, Add Food (unchanged, same disabled rules) | filters card, table, record dialog |
+| `/keys` | "Keys Register" | existing subtitle | Export register, still gated on `canView && canExport` | summary tiles, filters, list, or `PermissionDeniedState` |
 
-If this prop is unwanted, the fallback is to drop the icon from the heading and leave the emergency cue to the in-page status strip.
+Each converted route then has exactly one `<main id="main-content">`, one h1, one `nav aria-label="Main"` from `AppSidebar`, and one skip link from `AppShell`.
 
-## Route-by-route landmark map
+## Preserved actions and permission constraints
 
-Every converted route: one skip link (shell), one `nav aria-label="Main"` (shell sidebar), one `<h1>` (shell header), one `<main id="main-content">` (shell).
+- `usePersonTypes` desk-type filtering, single-desk-type auto-open, `useKioskFastLane` gating, `/kiosk/qr-scan` navigation, `/group-checkin` navigation, `AddVisitDialog` with `initialType`.
+- Group check-in: `submitVisitor`, watchlist check and `WatchlistAlertDialog`, organiser-declared terms via `extras.organiserDeclaredTermsEnabled`, shared `groupId`, per-attendee state machine, badge issuing, `useOperatingContext` site scoping, `can("checkin.create")` gate.
+- Food register: `useFoodRegister` filters (from/to/resident/visitor name/search), site scoping including legacy null-branch rows, `exportCsvAudited` audit action and scope note, `AddFoodDialog` + `refetch`, record detail dialog.
+- Keys register: all counts, filters, add key, issue sheet, return/lost flows, `canView`/`canExport` gates, audited export.
+- No permission checks are added, removed, moved earlier, or relaxed.
 
-- `/reports` — h1 "Reports"; card grid in main.
-- `/reports/analytics` — h1 "Reports & Analytics"; stats, charts, tables in main.
-- `/reports/on-site` — h1 "Who is on site"; export action in header; loading and permission-denied states render inside the same main.
-- `/reports/evacuation` — h1 "Evacuation Report" with optional shield icon; compliance note, drill list, detail and print action unchanged in main.
-- `/gdpr` — h1 configuration-driven ("GDPR & Privacy" UK / "Privacy & Compliance" AU); tabs and section `h2`s in main; dialogs rendered inside main (portalled, so no visual change).
-- `/audit-log` — h1 "Audit Log"; entry-count badge and a labelled refresh button in header actions.
-- `/evacuation` — h1 "Emergency Roll Call" with optional shield icon; full action cluster in header actions; roll-call groups (`h2`), mobile bar and dialogs inside main.
-- `/coverage` — h1 "Coverage Checklist"; summary and list in main.
+## Tablet and kiosk implications
 
-## Preserved behaviour and permission constraints
+- No kiosk file changes. Kiosk keeps its own `KioskLayout` with no staff sidebar or admin controls.
+- These four routes are staff-facing; on a reception tablet the sidebar collapses as it already does on the other converted routes.
+- `AppShell` uses `min-h-dvh`, which is more correct than `min-h-screen` on tablet browsers with dynamic toolbars.
 
-- All permission gates untouched: `canView`, `canExport`, `canActivate`, `canMark`, `permsLoading`, the Evacuation read-only banner, and the GDPR/audit access paths.
-- All emergency state logic untouched: activation, pause/resume, drill vs real, mark-safe, reset, corrections, offline queue and retry, close-event flow, closed-event protections.
-- Exports (CSV, PDF, print windows) and their audit-trail side effects unchanged; print HTML strings unchanged.
-- Report filters, date ranges, tabs, search, action filter, charts and tables unchanged.
-- `/` stays the Visit List; no route table changes.
-- AU/UK wording continues to come from the existing configuration hooks; no literal AU/UK strings are added.
-- No emojis or decorative Unicode; Lucide icons only; icon-only controls get accessible names.
+## Risks and rollback
 
-## Accessibility fixes included
-
-- Remove the duplicate `main` on all eight routes.
-- `aria-label="Refresh audit log"` on the Audit Log refresh button (keeping the existing `title`).
-- Keep the `h2` section headings; no heading downgrades or additions beyond the shell h1.
-
-## Risks
-
-| Risk | Mitigation |
-|---|---|
-| Emergency page is high-pressure; a layout regression is operationally serious | Move the header cluster verbatim, change no handler, verify start/pause/mark/close and mobile bar in the browser at 768 and 1280 |
-| Dialog focus behaviour changes when dialogs move inside `main` | Radix portals to `body`; verify open/close/focus-return for all Evacuation and GDPR dialogs |
-| OperationsReport's local `Shell` is used by three return paths | Convert all three (loading, denied, normal) in the same edit and test each |
-| Sticky header offsets differ slightly from the private headers | Visual check at 768/1024/1280/1440 |
-| Print output drift | Print template strings are not edited; verify one drill print and one roll-call print still open and render |
+- Risk: keys register list rows and the food table can overflow at 768 if the removed wrapper changes width constraints. Mitigation: keep the existing `mainClassName` padding identical to the current `main` classes and re-measure at all four widths.
+- Risk: group check-in denied branch previously had no header; adding the shell header there is a visible change, but it is the fix for the missing-h1 defect.
+- Risk: moving the group/person-type h1 into `AppHeader` slightly changes heading typography to match the rest of the app. Accepted as the point of the increment.
+- Rollback: revert the four page files (and any roadmap note). No shared primitive changes are required beyond the already-shipped `titleIcon` prop, so rollback is file-local.
 
 ## Acceptance tests
 
-1. All eight routes load with exactly one `main`, one `h1`, one main `nav`, one skip link; skip link moves focus to content.
-2. Sidebar shows the correct active item (`aria-current`) on each route.
-3. `/reports/on-site`: loading, permission-denied and normal states all render in the shell; export button appears only with export permission and still records the audit toast.
-4. `/evacuation`: start drill and start real emergency prompts, pause/resume, assembly point select, mark all safe, reset, correction dialog, end roll call, offline banner and retry, CSV, print sheet — all present, permission-gated and working; mobile action bar still fixed at the bottom below `lg`.
-5. `/reports/evacuation`: drill list, detail and print still work; printed sheet identical.
-6. `/gdpr`: tab switching, SAR dialog, erasure dialog and export confirmation open, close and return focus; heading text follows AU/UK configuration.
-7. `/audit-log`: search, action filter, refresh (with accessible name) and entry count work.
-8. `/coverage` renders unchanged content.
-9. `/` still opens the Visit List; kiosk, registers, Residents, check-in unchanged.
-10. No new horizontal overflow at 768/1024/1280/1440 on converted routes.
-11. Typecheck and build pass; security linter stays at exactly 47 warnings; no temporary data.
+1. `/person-type`, `/group-checkin`, `/food-register`, `/keys` each render with exactly one `main`, one `h1`, one `nav[aria-label="Main"]`, one skip link.
+2. Skip link is first in keyboard order and moves focus to `#main-content` on each route.
+3. Sidebar active state correct; focus returns to the group trigger after collapse.
+4. Person type: each enabled type opens `AddVisitDialog` with the right type; single-desk-type auto-open still works; QR tile appears only when fast lane is on and still routes to `/kiosk/qr-scan`; group tile routes to `/group-checkin`.
+5. Group check-in: add/remove rows, terms acknowledgement, save all, per-row failure retry, watchlist block dialog, badge print; denied account sees the denial card under a correct h1.
+6. Food register: filters, clear filters, export (disabled when empty), add food refresh, record dialog open/close with focus return.
+7. Keys register: counts, filters, add key, issue sheet, return, export gating for a non-export account, denied state.
+8. No new horizontal overflow at 768/1024/1280/1440. Residents and Settings-preview overflow remain tracked and untouched.
+9. AU residential aged care, AU retirement village and UK care home terminology unchanged and still configuration-driven.
+10. Typecheck, build pass; security linter stays at exactly 47 warnings; no temporary data or settings created.
 
-## Tracked, not touched here
+## Blocked items and known limitations
 
-- Residents horizontal overflow at 768 and 1024.
-- Settings preview column overflow at ~1024.
-- Prototype status: these are accessibility and layout improvements in a prototype; nothing here constitutes certified regulatory or emergency-response compliance.
-
-## Rollback
-
-Each file is an isolated presentational conversion. Revert per file, or revert the whole increment, to return to `6d9de66c4049375e844c8419bfc9fff5e2ae704c` behaviour. The `titleIcon` prop is additive and optional, so reverting a page needs no shell revert.
-
-## Blocked items
-
-- None. Emergency behaviour will be exercised in the preview with whatever account state is available; if activation permission is unavailable to the test account, that specific control will be reported as visually verified only.
-
-## Files to change
-
-`src/components/AppShell.tsx`, `src/components/AppHeader.tsx` (optional title icon only), `src/pages/ReportsHome.tsx`, `src/pages/Reports.tsx`, `src/pages/OperationsReport.tsx`, `src/pages/EvacuationReport.tsx`, `src/pages/GDPR.tsx`, `src/pages/AuditLog.tsx`, `src/pages/Evacuation.tsx`, `src/pages/CoverageChecklist.tsx`, `roadmap.md`.
+- Permission-gated paths can only be exercised at the test account's permission level; denied states will be verified by forcing the render path in the browser only if the account allows, otherwise reported as blocked.
+- Tracked prior defects stay open: Residents horizontal overflow, Settings preview overflow near 1024.
+- `leave_types` stored symbols are not touched in this increment.
+- This is prototype-grade accessibility work; it is a design target, not an accessibility or regulatory certification.
