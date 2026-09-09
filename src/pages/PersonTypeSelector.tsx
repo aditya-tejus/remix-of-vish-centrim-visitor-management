@@ -5,6 +5,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { AddVisitDialog } from "@/components/AddVisitDialog";
 import { useVisitors } from "@/hooks/useVisitors";
 import { User, Truck, Heart, Users, UserSquare2, QrCode, ArrowRight, UsersRound } from "lucide-react";
+import { useKioskFastLane } from "@/hooks/useKioskFastLane";
 import { usePersonTypes } from "@/hooks/usePersonTypes";
 
 const ALL_PERSON_TYPES = [
@@ -16,6 +17,7 @@ const ALL_PERSON_TYPES = [
 ];
 
 export default function PersonTypeSelector() {
+  const { fastLaneEnabled } = useKioskFastLane();
   const navigate = useNavigate();
   const { addVisitor } = useVisitors();
   const { deskTypes, singleDeskType, loading } = usePersonTypes();
@@ -76,7 +78,8 @@ export default function PersonTypeSelector() {
                 </button>
               ))}
 
-              {/* QR Fast Lane */}
+              {/* QR Fast Lane — hidden when this site does not issue visitor codes */}
+              {fastLaneEnabled && (
               <button
                 onClick={() => handleSelect("qr")}
                 className="group relative flex items-center gap-4 rounded-xl border-2 border-dashed border-border bg-card/50 p-6 transition-all duration-200 hover:border-primary hover:shadow-md active:scale-[0.98] text-left sm:col-span-2"
@@ -90,6 +93,7 @@ export default function PersonTypeSelector() {
                 </div>
                 <ArrowRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
+              )}
 
               {/* Group arrival */}
               <button
