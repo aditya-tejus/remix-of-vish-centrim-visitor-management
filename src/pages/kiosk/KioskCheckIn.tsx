@@ -88,21 +88,19 @@ export default function KioskCheckIn() {
   useEffect(() => {
     if (!flow.screeningBlocked || alertedRef.current) return;
     alertedRef.current = true;
-    void supabase.from("audit_log").insert({
-      action: "kiosk_health_block",
-      performed_by: "Kiosk",
-      records_affected: 1,
-      details: {
-        name: `${flow.formValues.firstName || ""} ${flow.formValues.surname || ""}`.trim() || "Unknown",
-        visitor_type: flow.selectedType,
-        symptom_flag: flow.hasYesFlags,
-        body_temperature: flow.bodyTemperature,
-        blocked_at: new Date().toISOString(),
-      } as any,
-    }).then(({ error }) => {
-      if (error) alertedRef.current = false;
-    });
-  }, [flow.screeningBlocked, flow.hasYesFlags, flow.bodyTemperature, flow.formValues, flow.selectedType]);
+    // Logged through a narrow server function: purpose, outcome and site only —
+    // the kiosk never writes personal details into the audit record itself.
+    void supabase
+      .rpc("kiosk_log_event" as any, {
+        p_purpose: "check_in_screening",
+        p_outcome: "blocked",
+        p_branch_id: kioskSiteId ?? null,
+        p_detail: flow.selectedType || null,
+      })
+      .then(({ error }: { error: unknown }) => {
+        if (error) alertedRef.current = false;
+      });
+  }, [flow.screeningBlocked, flow.selectedType, kioskSiteId]);
 
 
 
