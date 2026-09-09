@@ -159,45 +159,32 @@ export default function GroupCheckIn() {
 
   if (!permissionsLoading && !can("checkin.create")) {
     return (
-      <SidebarProvider>
-        <div className="flex min-h-screen w-full">
-          <AppSidebar />
-          <SidebarInset className="flex-1 min-w-0">
-            <main className="p-6 max-w-lg">
-              <Card className="p-6 flex items-start gap-3">
-                <ShieldCheck className="h-5 w-5 text-muted-foreground mt-0.5" />
-                <div>
-                  <p className="font-semibold">You cannot sign people in</p>
-                  <p className="text-sm text-muted-foreground">Ask an administrator if you need this.</p>
-                </div>
-              </Card>
-            </main>
-          </SidebarInset>
-        </div>
-      </SidebarProvider>
+      <AppShell
+        title="Group arrival"
+        subtitle="Everyone gets their own record, so the roll call is right"
+        titleIcon={UsersRound}
+        titleIconClassName="h-5 w-5 shrink-0 text-primary"
+        mainClassName="p-6 max-w-lg"
+      >
+        <Card className="p-6 flex items-start gap-3">
+          <ShieldCheck className="h-5 w-5 text-muted-foreground mt-0.5" aria-hidden="true" />
+          <div>
+            <p className="font-semibold">You cannot sign people in</p>
+            <p className="text-sm text-muted-foreground">Ask an administrator if you need this.</p>
+          </div>
+        </Card>
+      </AppShell>
     );
   }
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <header className="sticky top-0 z-10 bg-card border-b border-border">
-            <div className="flex items-center gap-4 px-4 sm:px-6 h-14">
-              <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-              <div className="min-w-0">
-                <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-                  <UsersRound className="h-5 w-5 text-primary" /> Group arrival
-                </h1>
-                <p className="text-[13px] text-muted-foreground truncate">
-                  Everyone gets their own record, so the roll call is right
-                </p>
-              </div>
-            </div>
-          </header>
-
-          <main className="p-4 sm:p-6 space-y-5 max-w-3xl">
+    <AppShell
+      title="Group arrival"
+      subtitle="Everyone gets their own record, so the roll call is right"
+      titleIcon={UsersRound}
+      titleIconClassName="h-5 w-5 shrink-0 text-primary"
+      mainClassName="p-4 sm:p-6 space-y-5 max-w-3xl"
+    >
             <Card className="p-4 space-y-3">
               <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Organiser</p>
               <div className="grid gap-3 sm:grid-cols-2">
