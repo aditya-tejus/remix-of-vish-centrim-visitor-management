@@ -124,9 +124,10 @@ export function PersonTypesTab() {
       <SettingExplainer
         title="Visitor types"
         controls="Which types of people can sign in, what the kiosk calls them, and which parts of the sign-in apply to each."
-        appliesTo={siteName ? `${siteName} only` : "This account"}
+        appliesTo={siteName ? `${siteName}. Sites with no value of their own use the account-wide value.` : "This account"}
         changeableBy="Administrators and senior staff."
-        inherited={`${pack.label} defaults, with your changes on top`}
+        inherited={`Starting point: ${pack.label} built-in values, used until you save your own`}
+
         kioskEffect="Turning a type off removes its tile from the kiosk straight away."
         deskEffect="Turning a type off removes it from new sign-ins at the desk. Lists and reports keep the standard name."
         existingRecords="People already signed in stay on the list and in every report."
