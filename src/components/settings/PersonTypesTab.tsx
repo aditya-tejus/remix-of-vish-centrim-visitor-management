@@ -28,15 +28,47 @@ export function PersonTypesTab() {
   const [extraRows, setExtraRows] = useState<PersonTypeExtras>(extras);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
-  const canEdit = role === "admin";
+  const access = useSettingsAccess("person-types");
+  const canEdit = access.canEdit || role === "admin";
+  const [dirty, setDirty] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  useUnsavedGuard(dirty && canEdit);
 
-  useEffect(() => { if (!loading) { setRows(personTypes); setExtraRows(extras); } }, [loading, personTypes, extras]);
+  useEffect(() => { if (!loading) { setRows(personTypes); setExtraRows(extras); setDirty(false); } }, [loading, personTypes, extras]);
 
-  const update = (type: string, patch: Partial<PersonTypeConfigRow>) =>
+  const update = (type: string, patch: Partial<PersonTypeConfigRow>) => {
+    setDirty(true);
     setRows((prev) => prev.map((r) => (r.type === type ? { ...r, ...patch } : r)));
+  };
+
+  /** A kiosk name has to be usable on a tile. */
+  const nameError = (r: PersonTypeConfigRow) => {
+    const v = r.kioskLabel.trim();
+    if (v.length === 0) return null; // empty falls back to the built-in name
+    if (v.length > 30) return "Keep the kiosk name to 30 characters or fewer.";
+    return null;
+  };
+  const validationError = rows.map(nameError).find(Boolean) || null;
+
+  const resetRowToDefault = (type: string) => {
+    const d = PERSON_TYPE_DEFAULTS.find((x) => x.type === type);
+    if (!d) return;
+    update(type, {
+      kioskLabel: d.label,
+      destinationRequired: d.destinationRequired,
+      screeningApplies: d.screeningApplies,
+      privacyApplies: d.privacyApplies,
+      badgeApplies: d.badgeApplies,
+      rollCallIncluded: d.rollCallIncluded,
+    });
+  };
 
   const save = async () => {
+    if (validationError) return;
     setSaving(true);
+    setSaveError(null);
+
     const k = (key: string) => siteScopedKey(key, siteId);
     const payload = rows.flatMap((r) => [
       { key: k(`person_type_kiosk_${r.type}`), value: r.kioskEnabled ? "true" : "false" },
