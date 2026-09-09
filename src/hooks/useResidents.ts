@@ -33,6 +33,7 @@ interface UseResidentsOptions {
 
 export function useResidents(options: UseResidentsOptions = {}) {
   const { publicMode = false } = options;
+  const { currentSiteId, isLegacySite } = useSite();
   const [residents, setResidents] = useState<Resident[]>([]);
   const [loading, setLoading] = useState(true);
 
