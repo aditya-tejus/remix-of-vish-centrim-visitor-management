@@ -38,6 +38,7 @@ import ReportsPage from "./pages/Reports";
 import CoverageChecklist from "./pages/CoverageChecklist";
 // Kiosk
 import KioskLayout from "./pages/kiosk/KioskLayout";
+import { KioskDeviceProvider } from "@/contexts/KioskDeviceContext";
 import KioskAttract from "./pages/kiosk/KioskAttract";
 import KioskHome from "./pages/kiosk/KioskHome";
 import KioskCheckIn from "./pages/kiosk/KioskCheckIn";
@@ -68,6 +69,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <SiteProvider>
+          <KioskDeviceProvider>
           <OperatingContextProvider>
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
@@ -124,6 +126,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
           </OperatingContextProvider>
+          </KioskDeviceProvider>
           </SiteProvider>
         </AuthProvider>
       </BrowserRouter>

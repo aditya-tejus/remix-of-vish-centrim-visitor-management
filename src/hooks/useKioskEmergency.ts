@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { kioskRpc } from "@/lib/kioskRpc";
 
 /**
  * Kiosk emergency access.
@@ -31,7 +32,7 @@ export function useKioskEmergency(pin: string | null) {
   const refresh = useCallback(async () => {
     if (!pin) return;
     setLoading(true);
-    const { data, error } = await (supabase as any).rpc("kiosk_emergency_rollcall", { p_pin: pin });
+    const { data, error } = await kioskRpc<any[]>("kioskd_emergency_rollcall", { p_pin: pin });
     setLoading(false);
     if (error) {
       setError(error.message);
@@ -51,7 +52,7 @@ export function useKioskEmergency(pin: string | null) {
   const mark = useCallback(
     async (attendanceId: string, status: string, markedBy?: string, reason?: string) => {
       if (!pin) return false;
-      const { error } = await (supabase as any).rpc("kiosk_emergency_mark", {
+      const { error } = await kioskRpc("kioskd_emergency_mark", {
         p_pin: pin,
         p_attendance_id: attendanceId,
         p_status: status,

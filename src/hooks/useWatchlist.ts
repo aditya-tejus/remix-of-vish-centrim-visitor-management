@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { kioskRpc } from "@/lib/kioskRpc";
 
 export type WatchlistReasonCategory =
   | "court_order"
@@ -146,10 +147,9 @@ export function useWatchlist({ publicMode = false, siteId = null }: UseWatchlist
     surname: string
   ): Promise<WatchlistMatch | null> => {
     if (!firstName?.trim() || !surname?.trim()) return null;
-    const { data, error } = await supabase.rpc("kiosk_watchlist_check" as any, {
+    const { data, error } = await kioskRpc<any[]>("kioskd_watchlist_check", {
       p_first: firstName,
       p_last: surname,
-      p_branch_id: siteId ?? null,
     });
     const row = (data as any[])?.[0];
     if (error || !row?.is_match) return null;

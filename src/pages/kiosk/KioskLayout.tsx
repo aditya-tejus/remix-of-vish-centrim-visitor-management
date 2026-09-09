@@ -7,6 +7,9 @@ import { useIdleTimerWithWarning } from "@/hooks/useIdleTimer";
 import { KioskIdleWarning } from "@/components/kiosk/KioskIdleWarning";
 import { KioskPinPad } from "@/components/kiosk/KioskPinPad";
 import { useState } from "react";
+import { useKioskDevice } from "@/contexts/KioskDeviceContext";
+import { KioskActivation, KioskDeviceBlocked } from "@/pages/kiosk/KioskActivation";
+import { Loader2, Building2 } from "lucide-react";
 
 const ROUTE_LABELS: Record<string, string> = {
   "/kiosk/checkin": "Check In",
@@ -17,6 +20,24 @@ const ROUTE_LABELS: Record<string, string> = {
 };
 
 export default function KioskLayout() {
+  const { state, blockedReason, siteName, deviceName } = useKioskDevice();
+
+  if (state === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" aria-label="Starting kiosk" />
+      </div>
+    );
+  }
+  if (state === "unbound") return <KioskActivation />;
+  if (state === "blocked") {
+    return <KioskDeviceBlocked reason={blockedReason ?? "Please ask a staff member."} />;
+  }
+
+  return <KioskShell siteName={siteName} deviceName={deviceName} />;
+}
+
+function KioskShell({ siteName, deviceName }: { siteName: string | null; deviceName: string | null }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [helpOpen, setHelpOpen] = useState(false);
@@ -132,6 +153,11 @@ export default function KioskLayout() {
       </main>
 
       <footer className="relative z-10 flex items-center justify-center gap-2 py-2 text-[11px] text-muted-foreground/40 tracking-wide">
+        <span className="flex items-center gap-1.5" aria-label="This kiosk belongs to">
+          <Building2 className="h-3.5 w-3.5" aria-hidden />
+          {siteName ?? "Site not known"}{deviceName ? ` — ${deviceName}` : ""}
+        </span>
+        <span aria-hidden>·</span>
         <span className="flex items-center gap-1.5">
           Powered by
           <img src={centrimLogo} alt="Centrim Life" className="h-3.5 object-contain opacity-40" />

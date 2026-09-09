@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSite } from "@/contexts/SiteContext";
+import { useKioskDevice } from "@/contexts/KioskDeviceContext";
 import {
   DEFAULT_PACK_ID,
   packById,
@@ -52,18 +53,9 @@ const Ctx = createContext<OperatingContextState>({
   refresh: () => {},
 });
 
-/** Kiosks are pinned to a site with `?site=<id>`; the choice is remembered. */
-export function kioskSiteId(): string | null {
-  const fromUrl = new URLSearchParams(window.location.search).get("site");
-  if (fromUrl) {
-    localStorage.setItem("centrim.kioskSiteId", fromUrl);
-    return fromUrl;
-  }
-  return localStorage.getItem("centrim.kioskSiteId");
-}
-
 export function OperatingContextProvider({ children }: { children: ReactNode }) {
   const { currentSite } = useSite();
+  const { siteId: boundKioskSiteId } = useKioskDevice();
   const [tick, setTick] = useState(0);
   const [state, setState] = useState<{
     loading: boolean;
@@ -87,7 +79,7 @@ export function OperatingContextProvider({ children }: { children: ReactNode }) 
     let cancelled = false;
 
     (async () => {
-      const siteId = currentSite?.id ?? kioskSiteId();
+      const siteId = currentSite?.id ?? boundKioskSiteId;
 
       if (siteId) {
         // Site records are readable without a login so the kiosk shows the right wording.
@@ -130,7 +122,7 @@ export function OperatingContextProvider({ children }: { children: ReactNode }) 
     })();
 
     return () => { cancelled = true; };
-  }, [currentSite?.id, tick]);
+  }, [currentSite?.id, boundKioskSiteId, tick]);
 
   const value = useMemo<OperatingContextState>(
     () => ({

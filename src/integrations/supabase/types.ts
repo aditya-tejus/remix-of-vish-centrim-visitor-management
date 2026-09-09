@@ -1246,6 +1246,160 @@ export type Database = {
         }
         Relationships: []
       }
+      kiosk_activation_codes: {
+        Row: {
+          attempts: number
+          code_hash: string
+          created_at: string
+          created_by: string | null
+          device_id: string
+          expires_at: string
+          id: string
+          used_at: string | null
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          created_at?: string
+          created_by?: string | null
+          device_id: string
+          expires_at: string
+          id?: string
+          used_at?: string | null
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          created_at?: string
+          created_by?: string | null
+          device_id?: string
+          expires_at?: string
+          id?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kiosk_activation_codes_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "kiosk_devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kiosk_device_events: {
+        Row: {
+          actor_user_id: string | null
+          branch_id: string | null
+          created_at: string
+          detail: Json | null
+          device_id: string | null
+          event: string
+          id: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          branch_id?: string | null
+          created_at?: string
+          detail?: Json | null
+          device_id?: string | null
+          event: string
+          id?: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          branch_id?: string | null
+          created_at?: string
+          detail?: Json | null
+          device_id?: string | null
+          event?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kiosk_device_events_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kiosk_device_events_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "kiosk_devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kiosk_devices: {
+        Row: {
+          branch_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          last_checkin_at: string | null
+          last_seen_at: string | null
+          last_seen_version: string | null
+          name: string
+          notes: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          status: string
+          token_expires_at: string | null
+          token_hash: string | null
+          token_issued_at: string | null
+          token_prefix: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_checkin_at?: string | null
+          last_seen_at?: string | null
+          last_seen_version?: string | null
+          name: string
+          notes?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          status?: string
+          token_expires_at?: string | null
+          token_hash?: string | null
+          token_issued_at?: string | null
+          token_prefix?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_checkin_at?: string | null
+          last_seen_at?: string | null
+          last_seen_version?: string | null
+          name?: string
+          notes?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          status?: string
+          token_expires_at?: string | null
+          token_hash?: string | null
+          token_issued_at?: string | null
+          token_prefix?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kiosk_devices_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kiosk_security: {
         Row: {
           created_at: string
@@ -3068,6 +3222,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      kiosk_activate: {
+        Args: { p_code: string; p_version?: string }
+        Returns: {
+          branch_id: string
+          device_id: string
+          device_name: string
+          site_name: string
+          token: string
+        }[]
+      }
       kiosk_check_in: {
         Args: { p_payload: Json }
         Returns: {
@@ -3095,6 +3259,30 @@ export type Database = {
           supplier_name: string
           surname: string
         }[]
+      }
+      kiosk_device_context: {
+        Args: { p_token: string; p_version?: string }
+        Returns: {
+          branch_id: string
+          device_id: string
+          device_name: string
+          jurisdiction: string
+          site_name: string
+          status: string
+        }[]
+      }
+      kiosk_device_event: {
+        Args: {
+          p_branch: string
+          p_detail?: Json
+          p_device: string
+          p_event: string
+        }
+        Returns: undefined
+      }
+      kiosk_device_site: {
+        Args: { p_token: string; p_touch?: boolean }
+        Returns: string
       }
       kiosk_emergency_gate: {
         Args: { p_pin: string; p_purpose: string }
@@ -3137,6 +3325,8 @@ export type Database = {
           status: string
         }[]
       }
+      kiosk_hash: { Args: { p_value: string }; Returns: string }
+      kiosk_issue_code: { Args: { p_device_id: string }; Returns: string }
       kiosk_log_event: {
         Args: {
           p_branch_id?: string
@@ -3182,6 +3372,26 @@ export type Database = {
           whom_to_visit: string
         }[]
       }
+      kiosk_provision_device: {
+        Args: { p_branch_id: string; p_name: string }
+        Returns: {
+          activation_code: string
+          device_id: string
+        }[]
+      }
+      kiosk_random_code: { Args: never; Returns: string }
+      kiosk_rename_device: {
+        Args: { p_device_id: string; p_name: string }
+        Returns: undefined
+      }
+      kiosk_replace_device: {
+        Args: { p_device_id: string; p_name?: string }
+        Returns: {
+          activation_code: string
+          device_id: string
+        }[]
+      }
+      kiosk_require_admin: { Args: { p_branch: string }; Returns: undefined }
       kiosk_resident_directory: {
         Args: { p_branch_id?: string; p_search?: string }
         Returns: {
@@ -3228,6 +3438,11 @@ export type Database = {
           whom_to_visit: string
         }[]
       }
+      kiosk_rotate_token: { Args: { p_device_id: string }; Returns: string }
+      kiosk_set_device_status: {
+        Args: { p_device_id: string; p_status: string }
+        Returns: undefined
+      }
       kiosk_staff_directory: {
         Args: { p_branch_id?: string; p_search?: string }
         Returns: {
@@ -3246,6 +3461,186 @@ export type Database = {
       }
       kiosk_watchlist_check: {
         Args: { p_branch_id?: string; p_first: string; p_last: string }
+        Returns: {
+          alert_type: string
+          is_match: boolean
+        }[]
+      }
+      kioskd_check_in: {
+        Args: { p_payload: Json; p_token: string }
+        Returns: {
+          qr_code: string
+          visitor_id: string
+        }[]
+      }
+      kioskd_check_out: {
+        Args: { p_time: string; p_token: string; p_visitor_id: string }
+        Returns: boolean
+      }
+      kioskd_contractor_lookup: {
+        Args: {
+          p_first?: string
+          p_last?: string
+          p_mobile?: string
+          p_qr?: string
+          p_token: string
+        }
+        Returns: {
+          first_name: string
+          outstanding_credentials: string[]
+          person_id: string
+          supplier_id: string
+          supplier_name: string
+          surname: string
+        }[]
+      }
+      kioskd_emergency_mark: {
+        Args: {
+          p_attendance_id: string
+          p_marked_by: string
+          p_pin: string
+          p_reason?: string
+          p_status: string
+          p_token: string
+        }
+        Returns: boolean
+      }
+      kioskd_emergency_progress: {
+        Args: { p_pin: string; p_token: string }
+        Returns: {
+          accounted: number
+          drill_title: string
+          event_class: string
+          outstanding: number
+          total: number
+        }[]
+      }
+      kioskd_emergency_rollcall: {
+        Args: { p_pin: string; p_token: string }
+        Returns: {
+          assistance_level: string
+          attendance_id: string
+          contact_phone: string
+          drill_id: string
+          drill_state: string
+          drill_title: string
+          event_class: string
+          location_label: string
+          marked_safe_at: string
+          person_name: string
+          person_type: string
+          status: string
+        }[]
+      }
+      kioskd_log_event: {
+        Args: {
+          p_detail?: string
+          p_outcome: string
+          p_purpose: string
+          p_token: string
+        }
+        Returns: undefined
+      }
+      kioskd_open_key_holds: {
+        Args: { p_person_qr: string; p_token: string }
+        Returns: {
+          open_items: number
+          overdue_items: number
+        }[]
+      }
+      kioskd_prefill_visitor: {
+        Args: { p_first: string; p_last: string; p_token: string }
+        Returns: {
+          address: string
+          email: string
+          mobile: string
+          whom_to_visit: string
+        }[]
+      }
+      kioskd_presence_list: {
+        Args: { p_token: string }
+        Returns: {
+          accompanied_by_name: string
+          additional_visitors: number
+          check_in_time: string
+          check_out_time: string
+          expected_return_date: string
+          first_name: string
+          group_id: string
+          id: string
+          leave_type: string
+          qr_code: string
+          status: string
+          surname: string
+          type: string
+          whom_to_visit: string
+        }[]
+      }
+      kioskd_resident_directory: {
+        Args: { p_search?: string; p_token: string }
+        Returns: {
+          area_name: string
+          first_name: string
+          room: string
+          status: string
+          surname: string
+          visitor_id: string
+        }[]
+      }
+      kioskd_resident_leave: {
+        Args: {
+          p_accompanied_by_name?: string
+          p_expected_return?: string
+          p_leave_type?: string
+          p_reason?: string
+          p_time: string
+          p_token: string
+          p_visitor_id: string
+        }
+        Returns: boolean
+      }
+      kioskd_resident_return: {
+        Args: { p_time: string; p_token: string; p_visitor_id: string }
+        Returns: boolean
+      }
+      kioskd_returning_lookup: {
+        Args: {
+          p_first?: string
+          p_last?: string
+          p_mobile?: string
+          p_qr?: string
+          p_token: string
+        }
+        Returns: {
+          address: string
+          email: string
+          first_name: string
+          last_visit: string
+          mobile: string
+          person_qr: string
+          surname: string
+          visited_resident_ids: string[]
+          whom_to_visit: string
+        }[]
+      }
+      kioskd_staff_directory: {
+        Args: { p_search?: string; p_token: string }
+        Returns: {
+          department: string
+          first_name: string
+          id: string
+          surname: string
+        }[]
+      }
+      kioskd_supplier_directory: {
+        Args: { p_token: string }
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
+      kioskd_watchlist_check: {
+        Args: { p_first: string; p_last: string; p_token: string }
         Returns: {
           alert_type: string
           is_match: boolean
