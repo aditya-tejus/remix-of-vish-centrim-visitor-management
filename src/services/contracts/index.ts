@@ -18,6 +18,8 @@ export interface SiteRef {
   jurisdiction: "AU" | "UK" | string;
   /** rac | retirement_village | care_home | mixed */
   siteStructure: string | null;
+  /** IANA time zone for this site, when one has been recorded. */
+  timezone: string | null;
   isLegacyPlaceholder: boolean;
 }
 

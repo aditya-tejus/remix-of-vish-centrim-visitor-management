@@ -46,6 +46,7 @@ export const LocalPrototypeSiteDirectory: SiteDirectoryService = {
         organisationId: b.organisation_id ?? null,
         jurisdiction: b.jurisdiction ?? "AU",
         siteStructure: b.site_structure ?? null,
+        timezone: b.timezone ?? null,
         isLegacyPlaceholder: !!b.is_legacy_placeholder,
       })
     );
