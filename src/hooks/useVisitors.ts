@@ -97,7 +97,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     if (publicMode) {
       // Scoped to the kiosk's own site so one building never lists another's people.
       const { data, error } = await supabase.rpc("kiosk_presence_list" as any, {
-        p_branch_id: currentSiteId ?? null,
+        p_branch_id: kioskSiteId ?? currentSiteId ?? null,
       });
       if (error) {
         setError("We could not reach the system. Please try again.");
