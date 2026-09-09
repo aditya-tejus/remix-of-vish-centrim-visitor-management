@@ -85,6 +85,13 @@ export default function SettingsPage() {
                   description={SECTION_META[active].description}
                   scopes={SECTION_META[active].scopes}
                 />
+                <SettingsSectionHeader
+                  purpose={SECTION_META[active].description}
+                  audience={access.audience}
+                  canEdit={access.canEdit}
+                  deniedReason={access.deniedReason}
+                  storageNote={STORAGE_NOTE[active]}
+                />
                 {isPersonType && <PersonTypeSettings type={active} />}
                 {active === "context" && <OperatingContextTab />}
                 {active === "person-types" && <PersonTypesTab />}
@@ -104,6 +111,14 @@ export default function SettingsPage() {
                 )}
 
               </div>
+
+              {/* See the result before saving */}
+              {PREVIEW_SECTIONS.includes(active) && (
+                <aside className="w-full xl:w-[360px] shrink-0 xl:sticky xl:top-20 self-start">
+                  <PreviewPanel defaultType={isPersonType && active !== "resident" ? active : "visitor"} />
+                </aside>
+              )}
+
             </div>
           </main>
         </SidebarInset>
