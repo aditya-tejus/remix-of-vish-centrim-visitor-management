@@ -197,4 +197,12 @@ Tasks:
 ### Phase 7A follow-up (this pass)
 - Removed all emoji from check-in and public check-in type tiles, confirmation badge and Check-In page; replaced with lucide icons (User, Wrench, HeartHandshake, Briefcase, UserPlus).
 - Typecheck clean after change.
-- Not fully exercised: end-to-end front-desk check-in via automated browser (form step gating blocked the script); flow verified visually to step 3.
+
+### Phase 7A verification pass — resident destination selection (2026-09-09)
+- Root cause of the earlier stalled walkthrough: automated test targeting only. With fields addressed by placeholder and names entered before opening the destination selector, Next enables correctly and the selector offers Resident / Staff Member.
+- Verified end to end at the front desk: check-in completed (visitor appeared in On site now), then checked out with duration shown. No failed network calls; no console errors beyond pre-existing React ref warnings.
+- Real defect found and fixed: `useResidents` loaded residents with no site filter, so residents from the original site were offered at Riverstone (AU) and Willowbrook (UK). Now filtered by current site; records with no site remain visible only on the original/legacy site.
+- Resident selector now shows "No residents recorded for this site yet" instead of an empty control. Confirmed at Riverstone, where no residents are recorded.
+- Layout: no horizontal overflow at 768px.
+- Temporary test visitor and derived visit rows purged.
+- Still outstanding for Phase 7A closure: returning-visitor lookup, companion individual departure, duplicate-submit and forced save/checkout failure retry are code-reviewed but not yet click-tested; security linter unchanged from the documented 45-warning baseline.
