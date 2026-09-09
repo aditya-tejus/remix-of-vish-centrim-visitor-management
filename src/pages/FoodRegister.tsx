@@ -73,26 +73,21 @@ export default function FoodRegisterPage() {
   };
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <AppHeader
-            title="Food Register"
-            subtitle="A record of food brought into the home for residents."
-            actions={
-              <>
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={exportCsv} disabled={records.length === 0}>
-                  <Download className="h-3.5 w-3.5" /> Export
-                </Button>
-                <Button size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
-                  <Plus className="h-3.5 w-3.5" /> Add Food
-                </Button>
-              </>
-            }
-          />
-
-          <main className="p-6 space-y-4">
+    <AppShell
+      title="Food Register"
+      subtitle="A record of food brought into the home for residents."
+      actions={
+        <>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={exportCsv} disabled={records.length === 0}>
+            <Download className="h-3.5 w-3.5" /> Export
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
+            <Plus className="h-3.5 w-3.5" /> Add Food
+          </Button>
+        </>
+      }
+      mainClassName="p-6 space-y-4"
+    >
             <Card className="rounded-xl">
               <CardContent className="p-4 space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
