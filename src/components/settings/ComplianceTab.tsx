@@ -108,10 +108,10 @@ const statusConfig: Record<ReqStatus, { label: string; icon: typeof CheckCircle;
 };
 
 const statusOptions: { value: ReqStatus; label: string }[] = [
-  { value: "implemented", label: "✓ Done" },
-  { value: "partial", label: "◐ Partial" },
-  { value: "not-confirmed", label: "⚠ Verify" },
-  { value: "not-implemented", label: "✗ Missing" },
+  { value: "implemented", label: "Done" },
+  { value: "partial", label: "Partial" },
+  { value: "not-confirmed", label: "Needs checking" },
+  { value: "not-implemented", label: "Missing" },
 ];
 
 
