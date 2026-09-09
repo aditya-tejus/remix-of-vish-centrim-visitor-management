@@ -29,7 +29,9 @@ export default {
         },
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))'
+          foreground: 'hsl(var(--destructive-foreground))',
+          strong: 'hsl(var(--destructive-strong))',
+          solid: 'hsl(var(--destructive-solid))'
         },
         muted: {
           DEFAULT: 'hsl(var(--muted))',
@@ -49,24 +51,34 @@ export default {
         },
         success: {
           DEFAULT: 'hsl(var(--success))',
-          foreground: 'hsl(var(--success-foreground))'
+          foreground: 'hsl(var(--success-foreground))',
+          strong: 'hsl(var(--success-strong))',
+          solid: 'hsl(var(--success-solid))'
         },
         warning: {
           DEFAULT: 'hsl(var(--warning))',
-          foreground: 'hsl(var(--warning-foreground))'
+          foreground: 'hsl(var(--warning-foreground))',
+          strong: 'hsl(var(--warning-strong))',
+          solid: 'hsl(var(--warning-solid))'
         },
         checkout: {
           DEFAULT: 'hsl(var(--checkout))',
-          foreground: 'hsl(var(--checkout-foreground))'
+          foreground: 'hsl(var(--checkout-foreground))',
+          strong: 'hsl(var(--checkout-strong))',
+          solid: 'hsl(var(--checkout-solid))'
         },
         info: {
           DEFAULT: 'hsl(var(--info))',
-          foreground: 'hsl(var(--info-foreground))'
+          foreground: 'hsl(var(--info-foreground))',
+          strong: 'hsl(var(--info-strong))',
+          solid: 'hsl(var(--info-solid))'
         },
         emergency: {
           DEFAULT: 'hsl(var(--emergency))',
           foreground: 'hsl(var(--emergency-foreground))',
-          muted: 'hsl(var(--emergency-muted))'
+          muted: 'hsl(var(--emergency-muted))',
+          strong: 'hsl(var(--emergency-strong))',
+          solid: 'hsl(var(--emergency-solid))'
         },
 
         sidebar: {
