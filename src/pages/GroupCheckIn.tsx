@@ -51,7 +51,7 @@ export default function GroupCheckIn() {
   const { checkVisitor } = useWatchlist();
   const { extras } = usePersonTypes();
   const { can, loading: permissionsLoading } = usePermissions();
-  const { siteId, siteName } = useOperatingContext();
+  const { siteId, siteName, loading: siteLoading } = useOperatingContext();
   const { toast } = useToast();
 
   const [groupLabel, setGroupLabel] = useState("");
@@ -76,10 +76,11 @@ export default function GroupCheckIn() {
     () =>
       organiserName.trim().length > 1 &&
       organiserContact.trim().length > 4 &&
+      !siteLoading &&
       named.length > 0 &&
       outstanding.length > 0 &&
       outstanding.every(acknowledged),
-    [organiserName, organiserContact, named.length, outstanding, extras.organiserDeclaredTermsEnabled],
+    [organiserName, organiserContact, named.length, outstanding, siteLoading, extras.organiserDeclaredTermsEnabled],
   );
 
   const update = (id: string, patch: Partial<Attendee>) =>
