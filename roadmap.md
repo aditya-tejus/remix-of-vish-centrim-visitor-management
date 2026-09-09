@@ -383,3 +383,12 @@ Known limits after Phase 7E:
 - Verified: one main / one h1 / one labelled main nav / one skip link per route; skip link moves focus to main-content; Add Food dialog, person-type check-in dialog and group attendee rows all work; no overflow at 768/1280/1440.
 - Shared-component findings deferred to a later increment (not introduced here, present on earlier converted routes too): header action buttons push ~25-85px of horizontal overflow at 1024px on routes with header actions (same on /reports/on-site), and one unlabelled icon-only control in AppHeader.
 - Still tracked, untouched: Residents overflow (768/1024) and Settings preview overflow (~1024).
+
+## Phase 8A — Companion and attendance integrity (in progress)
+- Canonical attendance: `visit_parties` per person, written only through the visitors trigger; parent visit state derived from its parties.
+- Idempotent staff check-in via `check_in_party` with a per-attempt request key on visitors and visits.
+- Companions can be linked to an existing person at the current site or explicitly recorded as new; name-only matches require staff selection.
+- Visit List shows each companion as an individually accountable person with their own sign-out.
+- Directory de-duplication no longer collapses blank-contact or same-name people.
+- Outstanding in 8A: emergency roll call / presence log / badges / exports still read legacy visitor rows; the integrity report and historical reconciliation RPCs exist but have no admin screen yet; no party ordinal unique index until duplicates are reviewed.
+- Security linter: 51 warnings (baseline 47). The 4 new warnings are the four staff-callable attendance routines, which enforce permissions internally.
