@@ -31,6 +31,18 @@ Safety is kept by the tag stored behind the scenes on every seeded row, so remov
 - 3 keys or fobs: one issued today, one returned, one overdue.
 - Feedback answers so the feedback screens and Visitor Report have content.
 
+### 3a. Properly filled visitor profiles
+
+Every person created has a profile worth opening, not just a name on a list:
+
+- Full name, phone, relationship to the resident they visit, and a vehicle registration for a couple of them. Email and address stay optional and are left blank for most, in line with collecting only what is needed.
+- A scan code so the returning-visitor fast lane works at the kiosk.
+- Two or three earlier visits each, on different days, so the profile shows a visit history and the "been here before" panel has something to recognise.
+- Recorded answers to the check-in questions on each visit, including the warning and blocked cases, so the profile shows why an arrival was flagged.
+- Companions shown against the group visit on both the organiser's and the companions' profiles.
+- Contractor workers show their company, their documents and the resulting compliance state.
+- Residents show their room or villa, wing or stage, and their emergency contact.
+
 Australian and British sets never mix; each site only ever sees its own.
 
 ### 4. Load at all four sites
