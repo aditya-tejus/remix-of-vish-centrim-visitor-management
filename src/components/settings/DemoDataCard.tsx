@@ -27,8 +27,9 @@ import {
 
 /** What the loader creates, in the administrator's words. */
 const WILL_CREATE = [
-  "Two wings or units, and three residents with rooms",
-  "Visitors on site now, a group with two companions, a checked-out visit and an arrival with no sign-out",
+  "Two wings or units, and three residents with rooms and an emergency contact",
+  "A day of arrivals: visitors on site now, a group with two companions, a volunteer, a visiting nurse, a checked-out visit and one arrival with no sign-out",
+  "Earlier visits for the regular visitors, so their profiles show a history",
   "Check-in outcomes: clear, a warning and one declined arrival",
   "One contractor company with two people and pending, confirmed and expired documents",
   "Two food register entries",
@@ -134,8 +135,9 @@ export function DemoDataCard() {
               Demo data
             </CardTitle>
             <CardDescription>
-              Clearly marked practice records for {siteName}. Nothing is created until you confirm, and
-              removing them only deletes records this loader created.
+              Realistic practice records for {siteName}, matched to the country this site operates in.
+              Nothing is created until you confirm, and removing them only deletes records this loader
+              created.
             </CardDescription>
           </div>
           <Button variant="ghost" size="sm" onClick={refresh} disabled={loading || busy}>
@@ -151,7 +153,7 @@ export function DemoDataCard() {
         ) : run ? (
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="secondary">DEMO data loaded</Badge>
+              <Badge variant="secondary">Practice data loaded</Badge>
               <span className="text-sm text-muted-foreground">
                 Loaded {format(new Date(run.createdAt), "hh:mm a dd MMM yyyy")}
                 {run.createdByLabel ? ` by ${run.createdByLabel}` : ""}
@@ -210,7 +212,11 @@ export function DemoDataCard() {
             <AlertDialogTitle>Load demo data for {siteName}?</AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-2 text-left">
-                <p>These practice records will be created at {siteName} only. Every name starts with DEMO.</p>
+                <p>
+                  These practice records will be created at {siteName} only. The names are invented but
+                  realistic for this country, so this site shows a standing notice while practice data is
+                  loaded.
+                </p>
                 <ul className="list-disc pl-5 space-y-1">
                   {WILL_CREATE.map((w) => (
                     <li key={w}>{w}</li>
