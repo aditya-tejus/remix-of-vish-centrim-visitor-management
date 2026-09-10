@@ -1,127 +1,66 @@
-# Phase 8F — Navigation alignment and safe demo data
+# Realistic demo data for the AU and UK sites
 
-Two separate pieces of work: put the left-hand menu into the exact order the user asked for, and give administrators a deliberate "Load demo data" button with a matching "Remove demo data" button.
+Rework the existing "Demo data" loader so it produces a believable working day at each site, then load it at all four sites (Riverstone Aged Care and AU Sample Village in Australia; Willowbrook Care Home and UK Sample Care Home in the UK).
 
-No visual redesign, no new colours, no route removals, no permission changes.
+## What changes
 
-## Part 1 — Left navigation
+### 1. Realistic names, no DEMO prefix
 
-### Final menu
+Records get ordinary names that match the country — Australian names and wording at the AU sites, British names and wording at the UK sites. The DEMO wording disappears from the records themselves.
 
-```text
-Today                    (default screen after signing in)
-Visitor List
-Residents
-Visitor Profiles
-Registers
-  Food Register
-  Keys & Fob Register
-Reports
-  Visitor Report
-  Feedback Responses
-  Feedback Reports
-  Safety & Compliance
-  Presence Log
-  Audit Log
-Settings
-Emergency Roll Call
-Kiosk Mode
-```
+Safety is kept by the tag stored behind the scenes on every seeded row, so removal is still exact. To make up for losing the visible prefix:
 
-Every entry already has a working screen, so no placeholder pages are needed:
+- The Demo data card in Settings clearly states when practice data is loaded, at which site, when, and how many records.
+- A short "Practice data loaded" line appears at the top of Today while a site has an active load, with a link to the Settings card.
 
-| Menu entry | Screen |
-| --- | --- |
-| Today | `/today` |
-| Visitor List | `/visit-list` |
-| Residents | `/residents` |
-| Visitor Profiles | `/visitors` |
-| Food Register | `/food-register` |
-| Keys & Fob Register | `/keys` |
-| Visitor Report | `/reports/visitor-report` |
-| Feedback Responses | `/reports/feedback-responses` |
-| Feedback Reports | `/reports/feedback-reports` |
-| Safety & Compliance | `/gdpr` |
-| Presence Log | `/reports/presence` |
-| Audit Log | `/audit-log` |
-| Settings | `/settings` |
-| Emergency Roll Call | `/evacuation` |
-| Kiosk Mode | `/kiosk` (opens in a new tab) |
+### 2. Realistic dating
 
-### Duplicates to consolidate (menu only — no screen is deleted)
+- Residents are created as long-term occupants without an arrival that Today reads as an overstay.
+- Today's arrivals are spread across this morning and early afternoon, with sensible expected departure times.
+- Exactly one genuine overstay is created on purpose, so the overstay alert has something real to show.
+- Checked-out visits carry believable durations (30 minutes to two hours).
+- One arrival from yesterday has no sign-out recorded, which is what the missing-checkout follow-up is for.
 
-- "Overdue" pointed at the Visitor List: becomes the single **Visitor List** entry, keeping the overdue count as its badge.
-- "Visitor reports" (`/reports`) and "Contractor documents" (`/contractor-documents`) leave the menu. Both stay reachable: the Reports home card grid keeps its links, and contractor documents also stays linked from the contractor profile. Typing the address still works.
-- "Planner" (`/calendar`) leaves the menu and stays reachable by address and from Residents.
-- "Audit trail" and "Settings" no longer sit under an "Administration" group; Audit Log moves under Reports and Settings becomes a top-level entry.
+### 3. Scope per site — a busy day, roughly 35 records
 
-### Behaviour
+- 3 residents with rooms/villas (AU: villa and room numbers; UK: room numbers and wing names from the site's own wording).
+- 8 to 10 people arriving: family visitors, one group with two companions, a volunteer, a contractor worker, a district nurse type professional visitor.
+- Check-in question outcomes: mostly clear, one warning, one blocked arrival.
+- 1 contractor company with 2 workers and 3 documents in pending, verified and expired states, using each country's own credential wording (AU worker screening and insurance, UK DBS and insurance).
+- 2 food register entries linked to residents.
+- 3 keys or fobs: one issued today, one returned, one overdue.
+- Feedback answers so the feedback screens and Visitor Report have content.
 
-- Signing in lands on **Today**. `/` redirects there; `/dashboard`, `/workbench` keep redirecting there too. `/visit-list` stays the Visitor List address.
-- Registers and Reports are collapsible groups; a group opens automatically when the current page is inside it. Registers only lists the registers the site's operating pack switches on, and disappears entirely if both are off (unchanged rule).
-- Current page is marked for screen readers and shown visually; parent group shows an open state.
-- Emergency Roll Call keeps its distinct red-outlined treatment, directly above Kiosk Mode.
-- Lucide icons only, each with a visible text label; no emoji or decorative symbols.
-- Desktop: fixed sidebar. Tablet/mobile: existing collapsible drawer with a labelled toggle; no new pattern introduced.
+Australian and British sets never mix; each site only ever sees its own.
 
-## Part 2 — Demo data
+### 4. Load at all four sites
 
-### How it works for the administrator
+After the loader is updated, run it once per site so each has its own separate, independently removable set.
 
-Settings > Audit and exports gains a **Demo data** card, visible only to holders of `settings.administer`:
+## Still deliberately not created
 
-- Shows whether demo data is currently loaded for the selected site, when it was loaded and how many records exist.
-- "Load demo data" opens a confirmation listing exactly what will be created and the site it will be created against. Nothing runs until confirmed.
-- "Remove demo data" opens a confirmation showing the same counts and removes only the records created by that seed run.
-- Both actions are written to the audit trail with counts.
-- Never runs automatically, never on sign-in, never on first load.
+- Emergency roll call records — fake drill evidence would be misleading compliance evidence.
+- Kiosk devices — real device binding must not be faked.
+- Watchlist entries — safeguarding records are never invented.
+- Document files — contractor document records exist without an attached file.
 
-### What gets created (per site, respecting the site's AU/UK pack)
+These reasons stay listed on the Settings card.
 
-All names are obviously fake — "Demo Visitor Ana", "Demo Contractor Ltd", "DEMO Resident Room 12" — and every list row that comes from the seed shows a **DEMO** tag.
+## Technical notes
 
-- One AU example set at an AU site and one UK example set at a UK site, each using its own pack's wording; they are never mixed.
-- Residents with rooms/villas and a destination.
-- Visitors on site today, visitors with companions, visitors already checked out, and one arrival with no sign-out recorded.
-- Screening outcomes: clear, warning, and one blocked arrival.
-- Contractors with company links and documents in pending, verified and expired states.
-- Food register entries and keys/fobs issued, returned and overdue.
-- Feedback responses so the feedback screens and the Visitor Report have something to show.
+- Rewrite `seed_demo_data(uuid)` with country-aware name pools and a time model built from `now()` rather than fixed backdated dates; residents get no arrival that the overstay rule reads.
+- Keep the existing per-site run key, single active run rule, permission and site-access checks, audit entries and counts.
+- Trigger-derived `people` and `visits` rows are tagged during the seed (adding a nullable `demo_seed_run_id` to `people`) so `clear_demo_data` no longer has to infer them; cleanup order becomes: parties, visits, resident details, visitors, people, contractor documents/people, suppliers, keys, food, feedback, wings. Cleanup still refuses any predicate that is not scoped to a run id.
+- `src/lib/demoSeed.ts` cleanup order and `src/test/demoSeed.test.ts` updated to match; add tests for the new ordering and for the residents-are-not-overstays rule expressed as a pure helper.
+- Today's "practice data loaded" banner reads the active run for the current site only.
 
-Anything the existing schema cannot take safely is skipped and named in the card, rather than invented. Expected skips to confirm during build: emergency events (a demo roll call would create misleading compliance evidence — an administrator should start a drill instead) and kiosk devices (real device binding must not be faked).
+## Verification
 
-### Technical outline
-
-- New table `demo_seed_runs`: id, branch_id, seed_key, created_by, created_at, counts, status. Grants for authenticated and service role; RLS limits rows to sites the user can access and to `settings.administer`.
-- Every seeded row is tagged. Where a table has no spare column, a `demo_seed_run_id uuid` nullable column is added — additive only, nullable, no default, no effect on existing rows or queries.
-- `seed_demo_data(p_branch_id uuid)` — security definer, checks `settings.administer` and site access, refuses if an active run already exists for that site (idempotent by `seed_key = branch_id`), inserts inside one transaction, returns counts, writes an audit entry.
-- `clear_demo_data(p_run_id uuid)` — same checks, deletes only rows carrying that run id, in dependency order, returns counts, writes an audit entry. It can never touch a row with a null run id.
-- Rollback: remove demo data, then the additive column and tables can be dropped without affecting real records.
-- Performance: a few hundred rows per site; no indexes needed beyond the run-id column.
-
-### Acceptance criteria
-
-Navigation
-- Menu matches the list above exactly, in that order, at desktop, tablet and phone widths.
-- Signing in lands on Today; every entry opens its screen; no route or permission behaves differently than before.
-- No duplicate entry points to the same screen; consolidated screens remain reachable.
-- One main navigation landmark, correct current-page state, no emoji.
-
-Demo data
-- Nothing seeds without an explicit confirmation from an administrator.
-- A second load attempt at the same site is refused with a clear message.
-- Seeded rows appear only at their own site; the other site is unaffected.
-- Removal deletes exactly the seeded rows and nothing else; counts before and after match.
-- Both actions appear in the audit trail with counts and the site.
-- Non-administrators do not see the card and the functions refuse them.
-
-### Tests
-
-- Menu structure and order, active-page state, mobile drawer, registers hidden when the pack switches them off.
-- Redirect from `/` to Today; each menu target renders its screen.
-- Seed helper: run-key uniqueness, count summarisation, dependency-ordered delete list, refusal to delete untagged rows.
-- Live check: seed an AU site, confirm Today/Visitor List/Registers/Reports all show demo rows with DEMO tags, confirm the UK site is untouched, then remove and confirm zero remain.
+- Full tests, type check and build.
+- Load at each of the four sites in turn; confirm each site shows only its own records and the other three are unaffected.
+- Confirm Today shows no phantom overstays beyond the single intended one.
+- Confirm removal returns each table to its exact prior count and writes an audit entry.
 
 ## Out of scope
 
-Weekly email delivery, kiosk binding changes, contractor verification changes, historical reconciliation apply, and any broad visual redesign.
+Weekly email delivery, kiosk changes, contractor workflow changes, navigation changes, historical reconciliation, and any broad visual redesign.
