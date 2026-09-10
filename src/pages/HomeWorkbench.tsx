@@ -7,6 +7,7 @@ import { CheckOutSheet } from "@/components/CheckOutSheet";
 import { ResidentOutingDialog } from "@/components/ResidentOutingDialog";
 
 import { ActiveNowList } from "@/components/workbench/ActiveNowList";
+import { PracticeDataNotice } from "@/components/PracticeDataNotice";
 import { DayGroupedHistory } from "@/components/workbench/DayGroupedHistory";
 import { Button } from "@/components/ui/button";
 import { UserPlus, LogOut, DoorOpen, Clock, Users, AlertTriangle, ShieldAlert } from "lucide-react";
@@ -76,6 +77,8 @@ export default function HomeWorkbench() {
             pendingCount={pendingApprovals}
             mainClassName="p-6 space-y-6"
           >
+            <PracticeDataNotice />
+
             {/* Outbreak Mode banner */}
             {outbreakMode && (
               <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">

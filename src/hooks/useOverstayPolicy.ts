@@ -30,9 +30,13 @@ export function overstayHoursSync(personType: string) {
   return cachedMap?.[personType] ?? DEFAULT_OVERSTAY_HOURS;
 }
 
-/** Same rule everywhere: on site longer than this person type's threshold. */
+/**
+ * Same rule everywhere: on site longer than this person type's threshold.
+ * Residents live here, so their time in residence is never an overstay.
+ */
 export function isOverstayedSync(visitor: { type: string; status: string; checkInTime: Date }) {
   return (
+    visitor.type !== "resident" &&
     visitor.status === "checked-in" &&
     Date.now() - visitor.checkInTime.getTime() > overstayHoursSync(visitor.type) * 3600000
   );
