@@ -44,7 +44,9 @@ export function useQuestionLabels() {
     return () => { active = false; };
   }, []);
 
-  const labelFor = (key: string) => {
+  const labelFor = (key?: string | null) => {
+    // Older answer records can carry a missing key; never crash the profile.
+    if (!key) return "Question";
     if (labels[key]) return labels[key];
     // Old question that no longer exists — keep the record readable.
     const looksLikeId = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(key);
