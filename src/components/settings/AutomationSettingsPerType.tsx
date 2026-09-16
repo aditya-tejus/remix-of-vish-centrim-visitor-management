@@ -53,29 +53,7 @@ export function AutomationSettingsPerType({ personType }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-border p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-foreground">Auto Check-Out</p>
-            <p className="text-xs text-muted-foreground">Automatically check out after a set period</p>
-          </div>
-          <Switch checked={autoCheckout} onCheckedChange={setAutoCheckout} />
-        </div>
-        {autoCheckout && (
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-muted-foreground">After</label>
-            <Select value={autoCheckoutHours} onValueChange={setAutoCheckoutHours}>
-              <SelectTrigger className="h-8 w-24 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="4">4 hours</SelectItem>
-                <SelectItem value="8">8 hours</SelectItem>
-                <SelectItem value="12">12 hours</SelectItem>
-                <SelectItem value="24">24 hours</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-      </div>
+      {supportsAutoCheckout(personType) && <AutoCheckoutRuleCard personType={personType} />}
 
       <div className="rounded-lg border border-border p-4 space-y-3">
         <div className="flex items-center justify-between">
