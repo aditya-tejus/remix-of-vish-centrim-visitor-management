@@ -101,35 +101,37 @@ Deno.serve(async (req) => {
         });
         if (!decision.due || !decision.trigger) continue;
         const reason = reasonForRule(rule, decision.trigger);
-        const list = batches.get(reason) || [];
-        list.push(row.id);
-        batches.set(reason, list);
+        reasons.add(reason);
+        due.push({
+          id: row.id,
+          reason,
+          companions: Array.isArray(row.companion_details) ? row.companion_details : [],
+        });
       }
 
       let siteClosed = 0;
       const stamp = now.toISOString();
 
-      for (const [reason, ids] of batches) {
+      for (const item of due) {
+        // Anyone still on the visit leaves with it, so the on-site count stays honest.
+        const companions = item.companions.map((c: any) =>
+          c && !c.checkedOutAt ? { ...c, checkedOutAt: stamp } : c
+        );
+
         const { error: updErr } = await supabase
           .from("visitors")
           .update({
             status: "checked-out",
             check_out_time: stamp,
             auto_checked_out: true,
-            checkout_reason: reason,
+            checkout_reason: item.reason,
+            companion_details: companions,
           })
-          .in("id", ids)
+          .eq("id", item.id)
           .eq("status", "checked-in");
         if (updErr) throw new Error(`Update: ${updErr.message}`);
 
-        // Close the matching attendance rows so the on-site count stays honest.
-        await supabase
-          .from("visit_parties")
-          .update({ check_out_time: stamp })
-          .in("visitor_id", ids)
-          .is("check_out_time", null);
-
-        siteClosed += ids.length;
+        siteClosed += 1;
       }
 
       if (siteClosed > 0) {
