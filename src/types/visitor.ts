@@ -43,6 +43,8 @@ export interface Visitor {
   acknowledgedPrivacy: boolean;
   expectedReturnDate?: Date;
   checkoutReason?: string;
+  /** True when the system closed the visit, so the real departure time is unknown. */
+  autoCheckedOut?: boolean;
   leaveType?: string;
   returnNotificationOptIn?: boolean;
   accompaniedBy?: string;
