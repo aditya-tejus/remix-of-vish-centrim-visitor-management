@@ -210,8 +210,9 @@ export default function VisitList() {
                     {currentSite?.name || "This site"}
                   </span>
                   <span className="text-[11px] text-muted-foreground">
-                    {format(selectedDate, "EEE, dd MMM yyyy")}
-                    {!isToday(selectedDate) && " · not today"}
+                    {isLiveView
+                      ? "Always showing who is signed in right now"
+                      : `${format(selectedDate, "EEE, dd MMM yyyy")}${!isToday(selectedDate) ? " · not today" : ""}`}
                   </span>
                 </div>
                 <div className="flex items-center gap-0.5">
