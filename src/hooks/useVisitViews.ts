@@ -35,23 +35,23 @@ interface Args {
  * one visitor list and the one status model — there is no second query and no
  * second set of statuses.
  */
-export function useVisitViews({ dayVisitors, allVisitors, selectedDate, scheduledAvailable }: Args) {
+export function useVisitViews({ dayVisitors, liveVisitors, allVisitors, selectedDate, scheduledAvailable }: Args) {
   const { isOverstayed } = useOverstayPolicy();
 
   const onSite = useMemo(
     () =>
-      dayVisitors
+      liveVisitors
         .filter((v) => v.status === "checked-in")
         .sort((a, b) => b.checkInTime.getTime() - a.checkInTime.getTime()),
-    [dayVisitors]
+    [liveVisitors]
   );
 
   const overdue = useMemo(
     () =>
-      dayVisitors
+      liveVisitors
         .filter((v) => v.status === "checked-in" && isOverstayed(v))
         .sort((a, b) => a.checkInTime.getTime() - b.checkInTime.getTime()),
-    [dayVisitors, isOverstayed]
+    [liveVisitors, isOverstayed]
   );
 
   const recent = useMemo(
