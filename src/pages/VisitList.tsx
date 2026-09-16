@@ -96,12 +96,18 @@ export default function VisitList() {
     onQRScan: () => setQrOpen(true),
   });
 
-  // Date-filtered visitors (non-residents only)
+  // Everyone at this site who is not a resident, regardless of arrival day.
+  // The live views ("On site now", "Overdue") use this so that anyone still
+  // signed in from an earlier day never disappears from the desk's list.
+  const liveCandidates = useMemo(
+    () => visitors.filter((v) => v.type !== "resident"),
+    [visitors]
+  );
+
+  // Date-filtered visitors (non-residents only) for the historical views
   const dateVisitors = useMemo(
-    () => visitors
-      .filter((v) => v.type !== "resident")
-      .filter((v) => isSameDay(v.checkInTime, selectedDate)),
-    [visitors, selectedDate]
+    () => liveCandidates.filter((v) => isSameDay(v.checkInTime, selectedDate)),
+    [liveCandidates, selectedDate]
   );
 
   // Search includes the resident being visited, so typing a resident's name
