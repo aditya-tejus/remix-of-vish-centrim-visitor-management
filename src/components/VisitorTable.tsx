@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   MoreHorizontal, LogOut, Trash2, FileText, FileSpreadsheet, Users,
-  MessageSquare, KeyRound, ShieldAlert, AlertTriangle, UsersRound, Printer,
+  MessageSquare, KeyRound, ShieldAlert, AlertTriangle, UsersRound, Printer, Timer,
 } from "lucide-react";
 import { useOpenKeyIssues } from "@/hooks/useOpenKeyIssues";
 import { useWatchlist } from "@/hooks/useWatchlist";

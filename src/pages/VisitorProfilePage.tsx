@@ -436,6 +436,11 @@ export default function VisitorProfilePage() {
               {visitor.checkOutTime && (
                 <p className="text-[10px] text-muted-foreground">{format(visitor.checkOutTime, "dd MMM yyyy")}</p>
               )}
+              {visitor.autoCheckedOut && (
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Signed out automatically{visitor.checkoutReason ? ` · ${visitor.checkoutReason.replace(/^Signed out automatically /, "")}` : ""}
+                </p>
+              )}
             </div>
             <div className="rounded-lg bg-muted/40 p-3">
               <p className="text-[10px] text-muted-foreground font-medium">{isResident ? "Location" : "Visiting"}</p>
