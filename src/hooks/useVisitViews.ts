@@ -17,6 +17,12 @@ export interface VisitViewDef {
 interface Args {
   /** Non-resident arrivals for the selected day, already searched and type-filtered. */
   dayVisitors: Visitor[];
+  /**
+   * Non-resident people regardless of arrival day, already searched and
+   * type-filtered. The live views use this so anyone still signed in from an
+   * earlier day never disappears from reception's list.
+   */
+  liveVisitors: Visitor[];
   /** Everyone loaded for this site, used for the limited scheduled view. */
   allVisitors: Visitor[];
   selectedDate: Date;
