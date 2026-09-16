@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
 
       const { data: onSite, error: onSiteErr } = await supabase
         .from("visitors")
-        .select("id, type, check_in_time")
+        .select("id, type, check_in_time, companion_details")
         .eq("branch_id", branchId)
         .eq("status", "checked-in")
         .in("type", types)
@@ -78,8 +78,9 @@ Deno.serve(async (req) => {
       if (onSiteErr) throw new Error(`Visitors: ${onSiteErr.message}`);
       if (!onSite || onSite.length === 0) continue;
 
-      // Group by the exact reason so each batch carries an honest note.
-      const batches = new Map<string, string[]>();
+      // Group by the exact reason so each record carries an honest note.
+      const due: { id: string; reason: string; companions: any[] }[] = [];
+      const reasons = new Set<string>();
 
       for (const row of onSite) {
         const raw = siteRules.find((r: any) => r.person_type === row.type);
