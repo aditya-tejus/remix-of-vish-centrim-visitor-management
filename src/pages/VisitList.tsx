@@ -96,12 +96,18 @@ export default function VisitList() {
     onQRScan: () => setQrOpen(true),
   });
 
-  // Date-filtered visitors (non-residents only)
+  // Everyone at this site who is not a resident, regardless of arrival day.
+  // The live views ("On site now", "Overdue") use this so that anyone still
+  // signed in from an earlier day never disappears from the desk's list.
+  const liveCandidates = useMemo(
+    () => visitors.filter((v) => v.type !== "resident"),
+    [visitors]
+  );
+
+  // Date-filtered visitors (non-residents only) for the historical views
   const dateVisitors = useMemo(
-    () => visitors
-      .filter((v) => v.type !== "resident")
-      .filter((v) => isSameDay(v.checkInTime, selectedDate)),
-    [visitors, selectedDate]
+    () => liveCandidates.filter((v) => isSameDay(v.checkInTime, selectedDate)),
+    [liveCandidates, selectedDate]
   );
 
   // Search includes the resident being visited, so typing a resident's name
@@ -113,22 +119,28 @@ export default function VisitList() {
     return map;
   }, [residents]);
 
-  const searchedVisitors = useMemo(() => {
-    if (!searchQuery.trim()) return dateVisitors;
-    const q = searchQuery.toLowerCase();
-    return dateVisitors.filter((v) =>
-      `${v.firstName} ${v.surname}`.toLowerCase().includes(q) ||
-      v.mobile.toLowerCase().includes(q) ||
-      (v.whomToVisit || "").toLowerCase().includes(q) ||
-      (v.email || "").toLowerCase().includes(q) ||
-      (v.visitedResidentIds || []).some((id) => (residentNameById[id] || "").includes(q))
-    );
-  }, [dateVisitors, searchQuery, residentNameById]);
+  const applySearch = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return (list: Visitor[]) => {
+      if (!q) return list;
+      return list.filter((v) =>
+        `${v.firstName} ${v.surname}`.toLowerCase().includes(q) ||
+        v.mobile.toLowerCase().includes(q) ||
+        (v.whomToVisit || "").toLowerCase().includes(q) ||
+        (v.email || "").toLowerCase().includes(q) ||
+        (v.visitedResidentIds || []).some((id) => (residentNameById[id] || "").includes(q))
+      );
+    };
+  }, [searchQuery, residentNameById]);
 
-  const typeVisitors = useMemo(
-    () => (activeType === "all" ? searchedVisitors : searchedVisitors.filter((v) => v.type === activeType)),
-    [searchedVisitors, activeType]
-  );
+  const searchedVisitors = useMemo(() => applySearch(dateVisitors), [applySearch, dateVisitors]);
+  const searchedLive = useMemo(() => applySearch(liveCandidates), [applySearch, liveCandidates]);
+
+  const byType = (list: Visitor[]) =>
+    activeType === "all" ? list : list.filter((v) => v.type === activeType);
+
+  const typeVisitors = useMemo(() => byType(searchedVisitors), [searchedVisitors, activeType]);
+  const typeLive = useMemo(() => byType(searchedLive), [searchedLive, activeType]);
 
   // "Expected back" only exists where residents are tracked away with a return time.
   const scheduledAvailable = useMemo(
@@ -138,6 +150,7 @@ export default function VisitList() {
 
   const { views, rowsFor } = useVisitViews({
     dayVisitors: typeVisitors,
+    liveVisitors: typeLive,
     allVisitors: visitors,
     selectedDate,
     scheduledAvailable,
@@ -145,6 +158,9 @@ export default function VisitList() {
 
   const currentView = views.find((v) => v.key === activeView) ?? views[0];
   const rows = rowsFor(currentView.key);
+
+  // The two live views ignore the day picker — they always show who is signed in.
+  const isLiveView = currentView.key === "on-site" || currentView.key === "overdue";
 
   const typeChips = useMemo(
     () => [
@@ -154,8 +170,13 @@ export default function VisitList() {
     [deskTypes]
   );
 
-  const countForType = (type: string) =>
-    type === "all" ? searchedVisitors.length : searchedVisitors.filter((v) => v.type === type).length;
+  // Chip counts follow the active view so the numbers always match the rows.
+  const countForType = (type: string) => {
+    const base = isLiveView
+      ? searchedLive.filter((v) => v.status === "checked-in")
+      : searchedVisitors;
+    return type === "all" ? base.length : base.filter((v) => v.type === type).length;
+  };
 
   const handleCheckOutFromTable = (visitorId: string) => {
     setCheckOutPreSelectedId(visitorId);
@@ -189,8 +210,9 @@ export default function VisitList() {
                     {currentSite?.name || "This site"}
                   </span>
                   <span className="text-[11px] text-muted-foreground">
-                    {format(selectedDate, "EEE, dd MMM yyyy")}
-                    {!isToday(selectedDate) && " · not today"}
+                    {isLiveView
+                      ? "Always showing who is signed in right now"
+                      : `${format(selectedDate, "EEE, dd MMM yyyy")}${!isToday(selectedDate) ? " · not today" : ""}`}
                   </span>
                 </div>
                 <div className="flex items-center gap-0.5">

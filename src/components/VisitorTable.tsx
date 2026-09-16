@@ -18,7 +18,7 @@ import { useOpenKeyIssues } from "@/hooks/useOpenKeyIssues";
 import { useWatchlist } from "@/hooks/useWatchlist";
 import { useOverstayPolicy } from "@/hooks/useOverstayPolicy";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { format } from "date-fns";
+import { format, isToday } from "date-fns";
 import { exportVisitorsToCSV, exportVisitorToPDF } from "@/lib/exportVisitors";
 import { useToast } from "@/hooks/use-toast";
 import { CheckInReturnDialog } from "@/components/CheckInReturnDialog";
@@ -362,7 +362,14 @@ export function VisitorTable({
         {/* In — time first, duration as quiet supporting text */}
         <TableCell className="py-3">
           <div className="flex flex-col">
-            <span className="text-[13px] font-mono text-foreground">{format(visitor.checkInTime, "hh:mm a")}</span>
+            <span className="text-[13px] font-mono text-foreground">
+              {format(visitor.checkInTime, "hh:mm a")}
+              {!isToday(visitor.checkInTime) && (
+                <span className="ml-1.5 font-sans text-[11px] font-medium text-warning">
+                  Since {format(visitor.checkInTime, "dd MMM")}
+                </span>
+              )}
+            </span>
             <span className={`text-[11px] tabular-nums ${overstayed ? "text-destructive" : "text-muted-foreground"}`}>
               {formatDuration(visitor.checkInTime, visitor.checkOutTime)}
               {onSite ? " so far" : ""}
@@ -505,7 +512,12 @@ export function VisitorTable({
           <div onClick={(e) => e.stopPropagation()}>{overflowMenu(visitor)}</div>
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-muted-foreground">
-          <span>In {format(visitor.checkInTime, "hh:mm a")}</span>
+          <span>
+            In {format(visitor.checkInTime, "hh:mm a")}
+            {!isToday(visitor.checkInTime) && (
+              <span className="ml-1 font-medium text-warning">since {format(visitor.checkInTime, "dd MMM")}</span>
+            )}
+          </span>
           <span>
             {visitor.checkOutTime
               ? `Out ${format(visitor.checkOutTime, "hh:mm a")}`
