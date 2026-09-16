@@ -92,7 +92,7 @@ export function useVisitViews({ dayVisitors, liveVisitors, allVisitors, selected
         label: "On site now",
         count: onSite.length,
         emptyTitle: "Nobody is on site",
-        emptyDescription: "Everyone recorded for this day has already left.",
+        emptyDescription: "Everyone who signed in has already signed out.",
       },
       {
         key: "overdue",
