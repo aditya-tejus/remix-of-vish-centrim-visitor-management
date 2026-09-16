@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
               hours: r.hours,
               end_of_day_time: String(r.end_of_day_time).slice(0, 5),
             })),
-            reasons: [...batches.keys()],
+            reasons: [...reasons],
             count: siteClosed,
           },
           records_affected: siteClosed,
