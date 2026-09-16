@@ -32,6 +32,7 @@ interface DbVisitor {
   created_at: string;
   expected_return_date: string | null;
   checkout_reason: string | null;
+  auto_checked_out?: boolean | null;
   return_notification_opt_in: boolean;
   leave_type: string | null;
   accompanied_by: string | null;
@@ -73,6 +74,7 @@ function dbToVisitor(row: DbVisitor): Visitor {
     acknowledgedPrivacy: row.privacy_acknowledged,
     expectedReturnDate: row.expected_return_date ? new Date(row.expected_return_date) : undefined,
     checkoutReason: row.checkout_reason ?? undefined,
+    autoCheckedOut: (row as any).auto_checked_out ?? false,
     returnNotificationOptIn: row.return_notification_opt_in ?? false,
     leaveType: row.leave_type ?? undefined,
     accompaniedBy: row.accompanied_by ?? undefined,

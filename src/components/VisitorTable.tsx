@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   MoreHorizontal, LogOut, Trash2, FileText, FileSpreadsheet, Users,
-  MessageSquare, KeyRound, ShieldAlert, AlertTriangle, UsersRound, Printer,
+  MessageSquare, KeyRound, ShieldAlert, AlertTriangle, UsersRound, Printer, Timer,
 } from "lucide-react";
 import { useOpenKeyIssues } from "@/hooks/useOpenKeyIssues";
 import { useWatchlist } from "@/hooks/useWatchlist";
@@ -383,6 +383,15 @@ export function VisitorTable({
             <div className="flex flex-col">
               <span className="text-[13px] font-mono text-foreground">{format(visitor.checkOutTime, "hh:mm a")}</span>
               <span className="text-[11px] text-muted-foreground">{format(visitor.checkOutTime, "dd MMM")}</span>
+              {visitor.autoCheckedOut && (
+                <span
+                  className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground"
+                  title={visitor.checkoutReason || "Signed out automatically"}
+                >
+                  <Timer className="h-3 w-3" aria-hidden="true" />
+                  Signed out automatically
+                </span>
+              )}
             </div>
           ) : (
             <div className="flex flex-col">

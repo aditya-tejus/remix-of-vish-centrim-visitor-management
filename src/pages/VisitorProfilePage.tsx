@@ -225,7 +225,11 @@ export default function VisitorProfilePage() {
       { id: `${v.id}-in`, at: v.checkInTime, text: isResident ? "Left the home" : "Signed in" },
     ];
     if (v.checkOutTime) {
-      lines.push({ id: `${v.id}-out`, at: v.checkOutTime, text: isResident ? "Returned" : "Signed out" });
+      lines.push({
+        id: `${v.id}-out`,
+        at: v.checkOutTime,
+        text: isResident ? "Returned" : v.autoCheckedOut ? "Signed out automatically" : "Signed out",
+      });
     }
     if (v.screeningOutcome === "blocked" || v.screeningOutcome === "flagged") {
       lines.push({
@@ -435,6 +439,11 @@ export default function VisitorProfilePage() {
               </p>
               {visitor.checkOutTime && (
                 <p className="text-[10px] text-muted-foreground">{format(visitor.checkOutTime, "dd MMM yyyy")}</p>
+              )}
+              {visitor.autoCheckedOut && (
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Signed out automatically{visitor.checkoutReason ? ` · ${visitor.checkoutReason.replace(/^Signed out automatically /, "")}` : ""}
+                </p>
               )}
             </div>
             <div className="rounded-lg bg-muted/40 p-3">
