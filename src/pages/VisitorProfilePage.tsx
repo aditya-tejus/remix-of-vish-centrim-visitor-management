@@ -225,7 +225,11 @@ export default function VisitorProfilePage() {
       { id: `${v.id}-in`, at: v.checkInTime, text: isResident ? "Left the home" : "Signed in" },
     ];
     if (v.checkOutTime) {
-      lines.push({ id: `${v.id}-out`, at: v.checkOutTime, text: isResident ? "Returned" : "Signed out" });
+      lines.push({
+        id: `${v.id}-out`,
+        at: v.checkOutTime,
+        text: isResident ? "Returned" : v.autoCheckedOut ? "Signed out automatically" : "Signed out",
+      });
     }
     if (v.screeningOutcome === "blocked" || v.screeningOutcome === "flagged") {
       lines.push({
