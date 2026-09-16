@@ -47,6 +47,50 @@ export type Database = {
         }
         Relationships: []
       }
+      auto_checkout_rules: {
+        Row: {
+          branch_id: string
+          created_at: string
+          enabled: boolean
+          end_of_day_time: string
+          hours: number
+          id: string
+          mode: string
+          person_type: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          enabled?: boolean
+          end_of_day_time?: string
+          hours?: number
+          id?: string
+          mode?: string
+          person_type: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          enabled?: boolean
+          end_of_day_time?: string
+          hours?: number
+          id?: string
+          mode?: string
+          person_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auto_checkout_rules_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branch_notification_settings: {
         Row: {
           branch_id: string | null
@@ -3088,6 +3132,7 @@ export type Database = {
           accompanied_by_name: string | null
           additional_visitors: number | null
           address: string | null
+          auto_checked_out: boolean
           body_temperature: number | null
           branch_id: string | null
           check_in_time: string
@@ -3144,6 +3189,7 @@ export type Database = {
           accompanied_by_name?: string | null
           additional_visitors?: number | null
           address?: string | null
+          auto_checked_out?: boolean
           body_temperature?: number | null
           branch_id?: string | null
           check_in_time?: string
@@ -3200,6 +3246,7 @@ export type Database = {
           accompanied_by_name?: string | null
           additional_visitors?: number | null
           address?: string | null
+          auto_checked_out?: boolean
           body_temperature?: number | null
           branch_id?: string | null
           check_in_time?: string
