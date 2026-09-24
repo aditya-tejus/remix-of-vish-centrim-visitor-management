@@ -14,11 +14,10 @@ const corsHeaders = {
 /**
  * Hourly automatic sign-out.
  *
- * Each site decides, per person type, whether people still signed in are closed
- * off after a set number of hours, at an end-of-day time in the site's own local
- * time, or whichever comes first. Residents are never included. Records closed
- * this way are marked as automatic so nobody mistakes them for an observed
- * departure.
+ * Each site sets one closing time per person type, in the site's own local
+ * time. Anyone still signed in at that time is closed off. Residents are never
+ * included. Records closed this way are marked as automatic so nobody mistakes
+ * them for an observed departure.
  */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -35,7 +34,7 @@ Deno.serve(async (req) => {
 
     const { data: rules, error: rulesErr } = await supabase
       .from("auto_checkout_rules")
-      .select("branch_id, person_type, enabled, mode, hours, end_of_day_time")
+      .select("branch_id, person_type, enabled, end_of_day_time")
       .eq("enabled", true);
     if (rulesErr) throw new Error(`Rules: ${rulesErr.message}`);
 
@@ -89,8 +88,6 @@ Deno.serve(async (req) => {
           branchId,
           personType: raw.person_type,
           enabled: raw.enabled,
-          mode: raw.mode,
-          hours: raw.hours,
           endOfDayTime: String(raw.end_of_day_time).slice(0, 5),
         };
         const decision = isDueForAutoCheckout({
@@ -99,8 +96,8 @@ Deno.serve(async (req) => {
           now,
           timeZone,
         });
-        if (!decision.due || !decision.trigger) continue;
-        const reason = reasonForRule(rule, decision.trigger);
+        if (!decision.due) continue;
+        const reason = reasonForRule(rule);
         reasons.add(reason);
         due.push({
           id: row.id,
@@ -146,8 +143,6 @@ Deno.serve(async (req) => {
             timezone: timeZone,
             rules: siteRules.map((r: any) => ({
               person_type: r.person_type,
-              mode: r.mode,
-              hours: r.hours,
               end_of_day_time: String(r.end_of_day_time).slice(0, 5),
             })),
             reasons: [...reasons],
