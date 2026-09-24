@@ -1,13 +1,13 @@
 /**
  * Automatic sign-out rules (pure logic, no data access).
  *
- * A site can decide that people who forget to sign out are closed off either
- * after a set number of hours, at an end-of-day time in the site's own local
- * time, or whichever of the two comes first. Residents are never included —
- * living on site is not an overstay.
+ * A site chooses one closing time. Anyone of that person type still signed in
+ * at that time, in the site's own local clock, is signed out. Residents are
+ * never included — living on site is not an overstay.
  */
 
-export type AutoCheckoutMode = "hours" | "end_of_day" | "either";
+/** Kept for the stored column; only one rule shape is offered now. */
+export type AutoCheckoutMode = "end_of_day";
 
 /** Person types a rule may be set for. Residents are deliberately absent. */
 export const AUTO_CHECKOUT_PERSON_TYPES = ["visitor", "contractor", "volunteer", "staff"] as const;
@@ -17,17 +17,24 @@ export interface AutoCheckoutRule {
   branchId: string;
   personType: AutoCheckoutPersonType;
   enabled: boolean;
-  mode: AutoCheckoutMode;
-  /** Whole hours on site before an automatic sign-out. */
-  hours: number;
-  /** "HH:MM" in the site's own local time. */
+  /** "HH:MM" on the hour, in the site's own local time. */
   endOfDayTime: string;
 }
 
-export const HOUR_CHOICES = [4, 8, 12, 24] as const;
+/** Whole-hour closing times, so the hourly check acts within minutes. */
+export const END_OF_DAY_CHOICES = [
+  "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00",
+] as const;
+
+/** Rounds any stored time down to the hour. */
+export function toWholeHour(hhmm: string): string {
+  const h = parseInt((hhmm || "").split(":")[0], 10);
+  if (Number.isNaN(h)) return "22:00";
+  return `${String(Math.min(Math.max(h, 0), 23)).padStart(2, "0")}:00`;
+}
 
 export function defaultRule(branchId: string, personType: AutoCheckoutPersonType): AutoCheckoutRule {
-  return { branchId, personType, enabled: false, mode: "hours", hours: 12, endOfDayTime: "22:00" };
+  return { branchId, personType, enabled: false, endOfDayTime: "22:00" };
 }
 
 export function supportsAutoCheckout(personType: string): personType is AutoCheckoutPersonType {
@@ -54,18 +61,12 @@ const PLURAL: Record<AutoCheckoutPersonType, string> = {
 export function describeRule(rule: AutoCheckoutRule): string {
   const who = PLURAL[rule.personType];
   if (!rule.enabled) return `${who} are never signed out automatically. Reception signs everyone out.`;
-  const hoursPart = `still signed in after ${rule.hours} hours`;
-  const dayPart = `at ${formatClock(rule.endOfDayTime)} each day`;
-  if (rule.mode === "hours") return `${who} ${hoursPart} are signed out automatically.`;
-  if (rule.mode === "end_of_day") return `${who} still signed in ${dayPart} are signed out automatically.`;
-  return `${who} ${hoursPart}, or ${dayPart}, are signed out automatically — whichever comes first.`;
+  return `${who} still signed in at ${formatClock(rule.endOfDayTime)} are signed out automatically.`;
 }
 
 /** Short note stored on the record so staff can see which rule closed the visit. */
-export function reasonForRule(rule: AutoCheckoutRule, trigger: "hours" | "end_of_day"): string {
-  return trigger === "hours"
-    ? `Signed out automatically after ${rule.hours} hours`
-    : `Signed out automatically at end of day (${formatClock(rule.endOfDayTime)})`;
+export function reasonForRule(rule: AutoCheckoutRule): string {
+  return `Signed out automatically at end of day (${formatClock(rule.endOfDayTime)})`;
 }
 
 /** Local wall-clock time at a site, as minutes past midnight. */
@@ -92,14 +93,13 @@ function clockMinutes(hhmm: string): number {
 
 export interface DueDecision {
   due: boolean;
-  trigger?: "hours" | "end_of_day";
 }
 
 /**
  * Decides whether someone still signed in should now be signed out.
  *
- * `checkInTime` is absolute; the end-of-day comparison uses the site's own
- * local clock so an Australian and a UK site each close off at their own time.
+ * The comparison uses the site's own local clock, so an Australian and a UK
+ * site each close off at their own closing time.
  */
 export function isDueForAutoCheckout(params: {
   rule: AutoCheckoutRule;
@@ -110,22 +110,15 @@ export function isDueForAutoCheckout(params: {
   const { rule, checkInTime, now, timeZone } = params;
   if (!rule.enabled) return { due: false };
 
-  const hoursOnSite = (now.getTime() - checkInTime.getTime()) / 3_600_000;
-  const hoursDue = (rule.mode === "hours" || rule.mode === "either") && hoursOnSite >= rule.hours;
-  if (hoursDue) return { due: true, trigger: "hours" };
+  const nowMinutes = siteMinutesOfDay(now, timeZone);
+  const cutoff = clockMinutes(rule.endOfDayTime);
+  const checkInMinutes = siteMinutesOfDay(checkInTime, timeZone);
+  const sameLocalDay = siteDateKey(checkInTime, timeZone) === siteDateKey(now, timeZone);
 
-  if (rule.mode === "end_of_day" || rule.mode === "either") {
-    const nowMinutes = siteMinutesOfDay(now, timeZone);
-    const cutoff = clockMinutes(rule.endOfDayTime);
-    const checkInMinutes = siteMinutesOfDay(checkInTime, timeZone);
-    const sameLocalDay = siteDateKey(checkInTime, timeZone) === siteDateKey(now, timeZone);
-    // Past the end-of-day time today, and they arrived before it (or on an earlier day).
-    if (nowMinutes >= cutoff && (!sameLocalDay || checkInMinutes < cutoff)) {
-      return { due: true, trigger: "end_of_day" };
-    }
-    // Arrived on an earlier local day and the cutoff has already passed for that day.
-    if (!sameLocalDay) return { due: true, trigger: "end_of_day" };
-  }
+  // Past the closing time today, and they arrived before it (or on an earlier day).
+  if (nowMinutes >= cutoff && (!sameLocalDay || checkInMinutes < cutoff)) return { due: true };
+  // Left over from an earlier local day — that day's closing time has passed.
+  if (!sameLocalDay) return { due: true };
 
   return { due: false };
 }

@@ -5,6 +5,7 @@ import {
   AutoCheckoutRule,
   AutoCheckoutPersonType,
   defaultRule,
+  toWholeHour,
 } from "@/lib/autoCheckout";
 
 function rowToRule(row: any, branchId: string, personType: AutoCheckoutPersonType): AutoCheckoutRule {
@@ -12,9 +13,7 @@ function rowToRule(row: any, branchId: string, personType: AutoCheckoutPersonTyp
     branchId,
     personType,
     enabled: !!row.enabled,
-    mode: row.mode,
-    hours: row.hours ?? 12,
-    endOfDayTime: (row.end_of_day_time ?? "22:00").slice(0, 5),
+    endOfDayTime: toWholeHour((row.end_of_day_time ?? "22:00").slice(0, 5)),
   };
 }
 
@@ -35,7 +34,7 @@ export function useAutoCheckoutRule(personType: AutoCheckoutPersonType) {
     setLoading(true);
     supabase
       .from("auto_checkout_rules")
-      .select("enabled, mode, hours, end_of_day_time")
+      .select("enabled, end_of_day_time")
       .eq("branch_id", currentSiteId)
       .eq("person_type", personType)
       .maybeSingle()
@@ -61,9 +60,8 @@ export function useAutoCheckoutRule(personType: AutoCheckoutPersonType) {
         branch_id: currentSiteId,
         person_type: personType,
         enabled: rule.enabled,
-        mode: rule.mode,
-        hours: rule.hours,
-        end_of_day_time: `${rule.endOfDayTime}:00`,
+        mode: "end_of_day",
+        end_of_day_time: `${toWholeHour(rule.endOfDayTime)}:00`,
       },
       { onConflict: "branch_id,person_type" }
     );
