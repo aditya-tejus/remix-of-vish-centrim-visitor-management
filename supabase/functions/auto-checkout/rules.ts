@@ -3,14 +3,10 @@
  * Kept as its own copy because edge functions cannot import from the app source.
  */
 
-export type AutoCheckoutMode = "hours" | "end_of_day" | "either";
-
 export interface AutoCheckoutRule {
   branchId: string;
   personType: string;
   enabled: boolean;
-  mode: AutoCheckoutMode;
-  hours: number;
   /** "HH:MM" in the site's own local time. */
   endOfDayTime: string;
 }
@@ -23,10 +19,8 @@ export function formatClock(hhmm: string): string {
   return `${hour12}:${String(m).padStart(2, "0")} ${suffix}`;
 }
 
-export function reasonForRule(rule: AutoCheckoutRule, trigger: "hours" | "end_of_day"): string {
-  return trigger === "hours"
-    ? `Signed out automatically after ${rule.hours} hours`
-    : `Signed out automatically at end of day (${formatClock(rule.endOfDayTime)})`;
+export function reasonForRule(rule: AutoCheckoutRule): string {
+  return `Signed out automatically at end of day (${formatClock(rule.endOfDayTime)})`;
 }
 
 export function siteMinutesOfDay(now: Date, timeZone: string): number {
@@ -68,25 +62,17 @@ export function isDueForAutoCheckout(params: {
   checkInTime: Date;
   now: Date;
   timeZone: string;
-}): { due: boolean; trigger?: "hours" | "end_of_day" } {
+}): { due: boolean } {
   const { rule, checkInTime, now, timeZone } = params;
   if (!rule.enabled) return { due: false };
 
-  const hoursOnSite = (now.getTime() - checkInTime.getTime()) / 3_600_000;
-  if ((rule.mode === "hours" || rule.mode === "either") && hoursOnSite >= rule.hours) {
-    return { due: true, trigger: "hours" };
-  }
+  const nowMinutes = siteMinutesOfDay(now, timeZone);
+  const cutoff = clockMinutes(rule.endOfDayTime);
+  const checkInMinutes = siteMinutesOfDay(checkInTime, timeZone);
+  const sameLocalDay = siteDateKey(checkInTime, timeZone) === siteDateKey(now, timeZone);
 
-  if (rule.mode === "end_of_day" || rule.mode === "either") {
-    const nowMinutes = siteMinutesOfDay(now, timeZone);
-    const cutoff = clockMinutes(rule.endOfDayTime);
-    const checkInMinutes = siteMinutesOfDay(checkInTime, timeZone);
-    const sameLocalDay = siteDateKey(checkInTime, timeZone) === siteDateKey(now, timeZone);
-    if (nowMinutes >= cutoff && (!sameLocalDay || checkInMinutes < cutoff)) {
-      return { due: true, trigger: "end_of_day" };
-    }
-    if (!sameLocalDay) return { due: true, trigger: "end_of_day" };
-  }
+  if (nowMinutes >= cutoff && (!sameLocalDay || checkInMinutes < cutoff)) return { due: true };
+  if (!sameLocalDay) return { due: true };
 
   return { due: false };
 }
