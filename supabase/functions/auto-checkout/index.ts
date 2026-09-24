@@ -48,12 +48,17 @@ Deno.serve(async (req) => {
     const branchIds = [...new Set(rules.map((r: any) => r.branch_id))];
     const { data: branches, error: branchErr } = await supabase
       .from("branches")
-      .select("id, name, timezone")
+      .select("id, name, timezone, jurisdiction")
       .in("id", branchIds);
     if (branchErr) throw new Error(`Branches: ${branchErr.message}`);
 
+    // Sites without their own time zone fall back to their country's, so a
+    // closing time never silently runs on UTC.
+    const zoneForJurisdiction = (j: string | null) =>
+      j === "UK" ? "Europe/London" : j === "AU" ? "Australia/Sydney" : "UTC";
+
     const zoneOf = new Map<string, string>(
-      (branches || []).map((b: any) => [b.id, b.timezone || "UTC"]),
+      (branches || []).map((b: any) => [b.id, b.timezone || zoneForJurisdiction(b.jurisdiction)]),
     );
     const nameOf = new Map<string, string>(
       (branches || []).map((b: any) => [b.id, b.name]),
