@@ -143,9 +143,9 @@ export function IntegrationTab() {
                   <div className="space-y-0.5">
                     <Label htmlFor="notify" className="text-sm font-medium cursor-pointer flex items-center gap-2">
                       <Bell className="h-3.5 w-3.5 text-info" />
-                      Notify only
+                      Planned notification only
                     </Label>
-                    <p className="text-xs text-muted-foreground">No record created — staff are notified only.</p>
+                    <p className="text-xs text-muted-foreground">Planned mode only. No record is created and no message is sent.</p>
                   </div>
                 </div>
               </RadioGroup>

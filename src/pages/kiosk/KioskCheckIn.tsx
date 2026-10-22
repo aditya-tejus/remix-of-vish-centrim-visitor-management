@@ -168,7 +168,11 @@ export default function KioskCheckIn() {
 
   const handleReturningConfirm = () => {
     const match = returningMatch;
-    if (!match) return;
+    if (!match?.identityVerified) {
+      setReturningMatch(null);
+      setReturningChecked(true);
+      return;
+    }
     flow.setReturningVisitor(match);
     flow.setPersonQr(match.personQr || null);
     flow.setFormValues((fv: Record<string, string>) => ({
@@ -521,21 +525,24 @@ export default function KioskCheckIn() {
             {/* Match confirmation */}
             {returningMatch && (
               <div className="rounded-2xl border-2 border-success/30 bg-success/5 p-4 space-y-3">
-                <p className="text-base font-bold text-foreground">Is this you?</p>
+                <p className="text-base font-bold text-foreground">{returningMatch.identityVerified ? "Is this you?" : "Welcome back"}</p>
                 <div className="space-y-1">
                   <p className="text-lg font-bold text-foreground">{returningMatch.firstName} {returningMatch.surname}</p>
                   <p className="text-sm text-muted-foreground">
-                    {[returningMatch.mobile, returningMatch.whomToVisit && `Last visited ${returningMatch.whomToVisit}`]
+                    {[returningMatch.mobile || returningMatch.mobileHint, returningMatch.whomToVisit && `Last visited ${returningMatch.whomToVisit}`]
                       .filter(Boolean)
                       .join(" · ")}
                   </p>
                 </div>
+                {!returningMatch.identityVerified && (
+                  <p className="text-sm text-muted-foreground">Enter your details below, or use your mobile number or visitor card to retrieve saved details.</p>
+                )}
                 <div className="flex gap-3">
                   <Button variant="secondary" onClick={handleReturningReject} className="flex-1 h-14 text-base border border-border">
                     Not me
                   </Button>
                   <Button onClick={handleReturningConfirm} className="flex-1 h-14 text-base">
-                    That's me
+                    {returningMatch.identityVerified ? "That's me" : "Continue with my details"}
                   </Button>
                 </div>
               </div>

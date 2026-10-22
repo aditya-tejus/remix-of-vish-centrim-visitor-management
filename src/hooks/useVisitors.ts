@@ -491,11 +491,11 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
             ...(policy.notifyNokOnReturn ? ["next-of-kin"] : []),
           ];
           await supabase.from("audit_log").insert({
-            action: "return_notification_sent",
+            action: "return_confirmation_recorded",
             performed_by: "System",
             records_affected: 1,
-            change_reason: `Safe return confirmed${person ? ` for ${person.firstName} ${person.surname}` : ""}${named.length ? ` — notify ${named.join(", ")}` : ""}`,
-            details: { visitor_id: id, recipients: named } as any,
+            change_reason: `Safe return confirmed${person ? ` for ${person.firstName} ${person.surname}` : ""}${named.length ? ` — planned contacts: ${named.join(", ")}` : ""}. No message sent.`,
+            details: { visitor_id: id, intended_recipients: named, delivery_state: "not_configured", message_sent: false } as any,
           });
         }
       } catch {

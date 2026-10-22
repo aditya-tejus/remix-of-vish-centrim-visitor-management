@@ -385,8 +385,8 @@ export function ReturnNotificationSettingsTab() {
 
                 {/* Recipients */}
                 <RecipientSection
-                  label="Who gets the overdue alert?"
-                  description="Staff and email addresses to notify when a resident is overdue"
+                  label="Who should follow up an overdue return?"
+                  description="Planned contacts only — no email or text is sent"
                   staff={settings.overdueStaff}
                   emails={settings.overdueEmails}
                   onAddStaff={(s) => update({ overdueStaff: [...settings.overdueStaff, s] })}
@@ -435,7 +435,7 @@ export function ReturnNotificationSettingsTab() {
               <div className="p-4 space-y-5">
                 <div className="flex items-center justify-between rounded-lg border border-border p-3">
                   <div>
-                    <p className="text-sm font-medium text-foreground">Notify next-of-kin</p>
+                    <p className="text-sm font-medium text-foreground">Record next-of-kin contact requirement</p>
                     <p className="text-xs text-muted-foreground">
                       Record that the resident's emergency contact should be told when they return
                     </p>
@@ -447,8 +447,8 @@ export function ReturnNotificationSettingsTab() {
                 </div>
 
                 <RecipientSection
-                  label="Who gets the return confirmation?"
-                  description="Staff and email addresses to notify when a resident returns safely"
+                  label="Who should be told about the return?"
+                  description="Planned contacts only — no email or text is sent"
                   staff={settings.safeReturnStaff}
                   emails={settings.safeReturnEmails}
                   onAddStaff={(s) => update({ safeReturnStaff: [...settings.safeReturnStaff, s] })}

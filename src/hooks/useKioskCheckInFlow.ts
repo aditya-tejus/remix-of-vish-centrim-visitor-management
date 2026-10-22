@@ -1,4 +1,4 @@
-import { kioskScreeningOutcome, kioskMustSeeStaff } from "@/lib/kioskPrivacy";
+import { kioskScreeningOutcome, kioskMustSeeStaff, returningVisitorDetails } from "@/lib/kioskPrivacy";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchKeyPolicy, DEFAULT_KEY_POLICY, type KeyPolicy } from "@/hooks/useKeyPolicy";
@@ -149,25 +149,15 @@ export function useKioskCheckInFlow() {
       const hasQr = !!params.qr?.trim();
       if (!hasName && !hasMobile && !hasQr) return null;
 
-      const { data } = await kioskRpc<any[]>("kioskd_returning_lookup", {
-        p_first: hasName ? params.firstName!.trim() : null,
-        p_last: hasName ? params.surname!.trim() : null,
-        p_mobile: hasMobile ? params.mobile!.trim() : null,
-        p_qr: hasQr ? params.qr!.trim().toUpperCase() : null,
+      const { data } = await kioskRpc<any[]>("kioskd_returning_lookup_v2", {
+        p_first: hasName ? params.firstName?.trim() : null,
+        p_last: hasName ? params.surname?.trim() : null,
+        p_mobile: hasMobile ? params.mobile?.trim() : null,
+        p_qr: hasQr ? params.qr?.trim().toUpperCase() : null,
       });
       const prev = Array.isArray(data) ? (data[0] as any) : null;
       if (!prev) return null;
-      return {
-        firstName: prev.first_name || "",
-        surname: prev.surname || "",
-        email: prev.email || "",
-        mobile: prev.mobile || "",
-        address: prev.address || "",
-        whomToVisit: prev.whom_to_visit || "",
-        lastResidentId: Array.isArray(prev.visited_resident_ids) ? prev.visited_resident_ids[0] || null : null,
-        personQr: prev.person_qr || null,
-        lastVisit: prev.last_visit || null,
-      };
+      return returningVisitorDetails(prev);
     },
     [siteId]
   );
@@ -176,7 +166,7 @@ export function useKioskCheckInFlow() {
   const searchReturningVisitor = useCallback(
     async (firstName: string, surname: string) => {
       const match = await lookupReturningVisitor({ firstName, surname });
-      if (!match) return null;
+      if (!match?.identityVerified) return null;
       return {
         email: match.email,
         mobile: match.mobile,

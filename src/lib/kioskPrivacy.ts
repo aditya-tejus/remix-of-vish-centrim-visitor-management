@@ -26,6 +26,29 @@ export const kioskMustSeeStaff = (o: KioskScreeningOutcome) => o === "blocked" |
 
 export const KIOSK_CHECKOUT_MIN_CHARS = 2;
 
+/** Never treat a name match, or the presence of an attempted code, as verification. */
+export function returningVisitorDetails(row: {
+  first_name?: string | null; surname?: string | null; email?: string | null;
+  mobile?: string | null; address?: string | null; whom_to_visit?: string | null;
+  visited_resident_ids?: string[] | null; person_qr?: string | null;
+  last_visit?: string | null; identity_verified?: boolean | null;
+}) {
+  const identityVerified = row.identity_verified === true;
+  return {
+    firstName: row.first_name || "",
+    surname: row.surname || "",
+    identityVerified,
+    mobileHint: identityVerified ? "" : row.mobile || "",
+    email: identityVerified ? row.email || "" : "",
+    mobile: identityVerified ? row.mobile || "" : "",
+    address: identityVerified ? row.address || "" : "",
+    whomToVisit: identityVerified ? row.whom_to_visit || "" : "",
+    lastResidentId: identityVerified ? row.visited_resident_ids?.[0] || null : null,
+    personQr: identityVerified ? row.person_qr || null : null,
+    lastVisit: identityVerified ? row.last_visit || null : null,
+  };
+}
+
 export function maskSurname(firstName: string, surname: string): string {
   const first = (firstName || "").trim();
   const initial = (surname || "").trim().charAt(0).toUpperCase();

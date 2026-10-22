@@ -469,10 +469,10 @@ export default function VisitorAnalytics() {
                                 Add Welfare Note
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => {
-                                toast({ title: "Care Team Notified", description: `Lifestyle team alerted about ${r.residentName}.` });
+                                toast({ title: "Messaging unavailable", description: `No message was sent. Please contact the care team directly about ${r.residentName}.` });
                               }}>
                                 <Bell className="h-3.5 w-3.5 mr-2" />
-                                Notify Care Team
+                                Care team contact unavailable
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => {
                                 toast({ title: "Activity Scheduled", description: `A lifestyle activity prompt has been created for ${r.residentName}.` });

@@ -38,7 +38,8 @@ const EVENT_CATEGORIES: Record<string, { label: string; color: string; icon: any
   sar_export: { label: "SAR EXPORT", color: "bg-[hsl(263,70%,95%)] text-[hsl(263,70%,50%)]", icon: Download },
   user_login: { label: "LOGIN", color: "bg-destructive/10 text-destructive", icon: Lock },
   integration_sync: { label: "INTEGRATION", color: "bg-[hsl(263,70%,95%)] text-[hsl(263,70%,50%)]", icon: Link2 },
-  return_notification_sent: { label: "NOTIFICATION", color: "bg-[hsl(263,70%,95%)] text-[hsl(263,70%,50%)]", icon: Bell },
+  return_notification_sent: { label: "LEGACY RETURN RECORD (DELIVERY UNVERIFIED)", color: "bg-info/10 text-info", icon: Bell },
+  return_confirmation_recorded: { label: "RETURN RECORDED — NO MESSAGE SENT", color: "bg-info/10 text-info", icon: Bell },
   watchlist_triggered: { label: "WATCHLIST", color: "bg-destructive/10 text-destructive", icon: AlertTriangle },
   automated_retention_cleanup: { label: "SYSTEM", color: "bg-[hsl(263,70%,95%)] text-[hsl(263,70%,50%)]", icon: RefreshCw },
 };
