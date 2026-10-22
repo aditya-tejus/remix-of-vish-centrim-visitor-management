@@ -285,6 +285,8 @@ export const SEGMENT_PACKS: Record<SegmentPackId, SegmentPack> = {
 };
 
 export const SEGMENT_PACK_LIST = Object.values(SEGMENT_PACKS);
+/** Packs an administrator can choose. The guard pack is a state, not a choice. */
+export const SELECTABLE_PACKS = SEGMENT_PACK_LIST.filter((p) => p.id !== "uk_unconfigured");
 
 /** Safe default for pre-existing prototype data — never a real customer. */
 export const DEFAULT_PACK_ID: SegmentPackId = "au_rac";
@@ -292,14 +294,26 @@ export const DEFAULT_PACK_ID: SegmentPackId = "au_rac";
 /**
  * Resolves a pack from what the site record holds. Anything unrecognised falls
  * back to the legacy default so existing sites keep loading.
+ *
+ * UK sites also carry a nation (`branches.uk_nation`). England uses the
+ * configured England pack; Scotland, Wales and Northern Ireland resolve to
+ * the not-configured guard so no England-specific regulation is implied.
+ * A UK site with no nation recorded keeps the legacy behaviour (England).
  */
 export function resolvePack(
   jurisdiction?: string | null,
-  structure?: string | null
+  structure?: string | null,
+  ukNation?: string | null
 ): SegmentPack {
   const j = jurisdiction === "UK" ? "UK" : "AU";
   const s = (structure || "").toLowerCase();
-  if (j === "UK") return SEGMENT_PACKS.uk_care;
+  if (j === "UK") {
+    const n = (ukNation || "").trim().toLowerCase();
+    if (n === "scotland" || n === "wales" || n === "northern ireland") {
+      return SEGMENT_PACKS.uk_unconfigured;
+    }
+    return SEGMENT_PACKS.uk_care;
+  }
   if (s === "rv" || s === "retirement_village" || s === "village") return SEGMENT_PACKS.au_rv;
   return SEGMENT_PACKS.au_rac;
 }
