@@ -274,9 +274,12 @@ export function useKioskCheckInFlow() {
   const hasYesFlags = evaluation.flags.some((f) => f.questionId !== "body_temperature");
   const highTemperature = evaluation.flags.some((f) => f.questionId === "body_temperature");
   const screeningFlagged = evaluation.flagged;
-  // Unattended kiosk: a rule that blocks, or any concern during Outbreak Mode,
-  // hard-stops the check-in and asks the person to see reception.
-  const screeningBlocked = evaluation.blocked || (outbreakMode && screeningFlagged);
+  // Phase 9A: outbreak mode refers a flagged answer to staff (case-by-case
+  // decision), only a configured blocking rule is a block. Either way the
+  // unattended kiosk pauses and sends the person to reception.
+  const screeningOutcome = kioskScreeningOutcome({ ruleBlocked: evaluation.blocked, flagged: screeningFlagged, outbreakMode });
+  const screeningReferred = screeningOutcome === "refer_to_staff";
+  const screeningBlocked = kioskMustSeeStaff(screeningOutcome);
 
   // Outstanding keys or fobs: at an unattended kiosk we ask the person to see
   // reception rather than silently letting them in.
