@@ -196,12 +196,15 @@ export const SEGMENT_PACKS: Record<SegmentPackId, SegmentPack> = {
   },
   uk_care: {
     id: "uk_care",
-    label: "UK — care home / housing with care",
-    shortLabel: "UK care home",
+    label: "England — care home / housing with care",
+    shortLabel: "England care home",
     jurisdiction: "UK",
+    nation: "England",
     structure: "care_home",
+    regulatorNote:
+      "CQC Regulation 9A protects visiting and time away from the home. Any restriction must be individual, necessary and proportionate, decided case by case and recorded with reasons — never a blanket denial.",
     description:
-      "Rooms and units, UK wording, DBS and safeguarding checks, UK privacy notice and controller details, roll call grouped by unit.",
+      "Rooms and units, England wording (CQC Regulation 9A), DBS and safeguarding checks, UK GDPR privacy notice and controller details, roll call grouped by unit.",
     terms: {
       site: "Care home",
       area: "Unit",
@@ -226,9 +229,57 @@ export const SEGMENT_PACKS: Record<SegmentPackId, SegmentPack> = {
       infectionControl: true,
       safeguardingWording: true,
       warden: false,
+      selfReportedAway: false,
     },
     emergencyGrouping: ["Unit", "Room", "Person type"],
     credentialLabels: ["DBS check", "Right to work", "Insurance"],
+    privacy: UK_PRIVACY,
+  },
+  /**
+   * Guard state for Scotland, Wales and Northern Ireland. These nations have
+   * their own care regulators and visiting guidance; until a pack is
+   * configured for them the product must not imply England's CQC regime
+   * applies. Wording stays generic and no regulation is referenced.
+   */
+  uk_unconfigured: {
+    id: "uk_unconfigured",
+    label: "Scotland, Wales or Northern Ireland — pack not configured",
+    shortLabel: "UK nation not configured",
+    jurisdiction: "UK",
+    nation: null,
+    structure: "care_home",
+    regulatorNote:
+      "No jurisdiction pack is configured for this UK nation. Care Inspectorate (Scotland), Care Inspectorate Wales and RQIA (Northern Ireland) each have their own requirements. Generic wording is shown and no regulation is implied.",
+    description:
+      "Generic wording only. No nation-specific regulation, screening default or document set is applied.",
+    terms: {
+      site: "Care home",
+      area: "Unit",
+      areaPlural: "Units",
+      place: "Room",
+      placePlural: "Rooms",
+      property: null,
+      household: null,
+      resident: "Resident",
+      residentPlural: "Residents",
+      destination: "Who are you visiting?",
+      responsible: "Staff responsible",
+      associates: "People with them",
+    },
+    modules: {
+      residentLeave: true,
+      keysRegister: true,
+      foodRegister: false,
+      propertyFields: false,
+      household: false,
+      clinicalSupportFields: false,
+      infectionControl: false,
+      safeguardingWording: false,
+      warden: false,
+      selfReportedAway: false,
+    },
+    emergencyGrouping: ["Unit", "Room", "Person type"],
+    credentialLabels: ["Police check", "Insurance"],
     privacy: UK_PRIVACY,
   },
 };
