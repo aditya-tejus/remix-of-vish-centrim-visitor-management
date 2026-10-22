@@ -3,11 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSectionAccess } from "@/components/settings/SettingsAccessContext";
 import { useSite } from "@/contexts/SiteContext";
 import { useOperatingContext } from "@/contexts/OperatingContext";
-import { SEGMENT_PACK_LIST, SegmentPackId, packById } from "@/lib/segmentPacks";
+import { SELECTABLE_PACKS, SegmentPackId, UkNation, UK_NATIONS, packById } from "@/lib/segmentPacks";
 import { SettingExplainer } from "@/components/settings/SettingExplainer";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Check, Lock, Layers } from "lucide-react";
+import { Check, Lock, Layers, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const HIERARCHY = [
@@ -22,28 +22,32 @@ const HIERARCHY = [
 export function OperatingContextTab() {
   const { canEdit } = useSectionAccess();
   const { currentSite } = useSite();
-  const { pack, siteName, source, refresh, loading } = useOperatingContext();
+  const { pack, siteName, source, refresh, loading, ukNation } = useOperatingContext();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [choice, setChoice] = useState<SegmentPackId | null>(null);
+  const [nationChoice, setNationChoice] = useState<UkNation | null>(null);
 
   const isAdmin = canEdit;
   const selected = packById(choice ?? pack.id);
+  const effectiveNation: UkNation = nationChoice ?? ((ukNation as UkNation) || "England");
 
   const save = async () => {
     if (!isAdmin) return;
     setSaving(true);
     const next = selected;
+    const nation = next.jurisdiction === "UK" ? effectiveNation : null;
     if (currentSite) {
       await supabase
         .from("branches")
-        .update({ jurisdiction: next.jurisdiction, site_structure: next.structure })
+        .update({ jurisdiction: next.jurisdiction, site_structure: next.structure, uk_nation: nation } as any)
         .eq("id", currentSite.id);
     } else {
       await supabase.from("settings").upsert(
         [
           { key: "jurisdiction", value: next.jurisdiction },
           { key: "site_structure", value: next.structure },
+          { key: "uk_nation", value: nation ?? "" },
         ],
         { onConflict: "key" }
       );
@@ -52,11 +56,12 @@ export function OperatingContextTab() {
       action: "settings_update",
       performed_by: "Admin",
       records_affected: 1,
-      details: { setting: "operating_context", site: currentSite?.name ?? "account default", value: next.id } as any,
+      details: { setting: "operating_context", site: currentSite?.name ?? "account default", value: next.id, uk_nation: nation } as any,
       change_reason: "Operating context changed",
     });
     setSaving(false);
     setChoice(null);
+    setNationChoice(null);
     refresh();
     toast({ title: "Operating context saved", description: `${next.label} now applies to ${currentSite?.name ?? "this account"}.` });
   };
