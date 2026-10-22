@@ -564,3 +564,11 @@ Known limits after Phase 7E:
 - Verification: 134 tests pass; preview build log reports build OK. Authenticated live checks passed for name-only masking, invalid code plus valid name, mobile match, QR match, legacy masking, cross-site empty response, invalid-device refusal and an actual bound kiosk response. Visitor card lookup was exercised through the UI to the prefilled check-in form; no runtime errors. No arrival was submitted or visitor/resident record changed.
 - Two temporary verification kiosks were provisioned and then revoked, and browser bindings removed. Their device and audit history are retained deliberately; no active verification device remains.
 - Caveats: six-digit minimum mobile matching is inherited, not proof of ownership; no OTP or independent review. Name recognition can still reveal that a person visited. The wider linter baseline, notification delivery, retention/controller setup and emergency-export integrity remain unresolved. Later phases remain pending in the approved sequence.
+
+### Phase 9B — 22 October 2026
+- The UK pack is now the England pack ("England — care home / housing with care") with CQC Regulation 9A wording: restrictions must be individual, necessary, proportionate and recorded case by case.
+- New `uk_nation` column on sites (nullable, additive). England uses the configured pack; Scotland, Wales and Northern Ireland resolve to a "pack not configured" guard with generic wording and no implied regulation. UK sites with no nation recorded keep the legacy England behaviour.
+- AU retirement village pack now records that time away is optional and self-reported, with a regulator note pointing to state village law (NSW 1999 / Vic 1986), not aged-care rules.
+- Every pack carries a regulator note shown in Settings with the standing caveat that configuration is not legal compliance or legal advice.
+- Settings screen: administrators can pick the UK nation; the guard state shows a plain-language warning banner. The guard pack is never offered as a choice.
+- Verification: 146 tests pass (11 new pack tests), typecheck clean, build OK. No existing site records were changed.
