@@ -117,7 +117,10 @@ export const SEGMENT_PACKS: Record<SegmentPackId, SegmentPack> = {
     label: "Australia — residential aged care",
     shortLabel: "AU aged care",
     jurisdiction: "AU",
+    nation: "AU",
     structure: "rac",
+    regulatorNote:
+      "The strengthened Aged Care Quality Standard 7 and the Aged Care Act protect resident choice, private visits and transitions of care. Screening and watchlist measures must support, not override, a resident's wish to see their visitors.",
     description:
       "Rooms and wings, resident leave and return, infection-control questions, roll call grouped by wing.",
     terms: {
@@ -144,6 +147,7 @@ export const SEGMENT_PACKS: Record<SegmentPackId, SegmentPack> = {
       infectionControl: true,
       safeguardingWording: true,
       warden: false,
+      selfReportedAway: false,
     },
     emergencyGrouping: ["Wing", "Room", "Person type"],
     credentialLabels: ["Police check", "NDIS worker screening", "Insurance"],
@@ -154,9 +158,12 @@ export const SEGMENT_PACKS: Record<SegmentPackId, SegmentPack> = {
     label: "Australia — retirement village",
     shortLabel: "AU village",
     jurisdiction: "AU",
+    nation: "AU",
     structure: "rv",
+    regulatorNote:
+      "Retirement villages operate under state village law (for example the NSW Retirement Villages Act 1999 and the Victorian Retirement Villages Act 1986), not residential aged-care rules. Time away from the village is optional and self-reported by the independent resident.",
     description:
-      "Properties, stages and villas, households and associated people, keys and fobs register, roll call grouped by stage and villa.",
+      "Properties, stages and villas, households and associated people, keys and fobs register, optional self-reported time away, roll call grouped by stage and villa.",
     terms: {
       site: "Village",
       area: "Stage",
@@ -181,6 +188,7 @@ export const SEGMENT_PACKS: Record<SegmentPackId, SegmentPack> = {
       infectionControl: false,
       safeguardingWording: false,
       warden: true,
+      selfReportedAway: true,
     },
     emergencyGrouping: ["Stage", "Property / villa", "Household", "Person type"],
     credentialLabels: ["Police check", "Insurance", "Trade licence"],
