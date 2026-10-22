@@ -12,7 +12,14 @@
 export type Jurisdiction = "AU" | "UK";
 /** Stored on the site record (`branches.site_structure`). */
 export type SiteSegmentKey = "rac" | "rv" | "care_home";
-export type SegmentPackId = "au_rac" | "au_rv" | "uk_care";
+export type SegmentPackId = "au_rac" | "au_rv" | "uk_care" | "uk_unconfigured";
+/**
+ * UK nations are distinct regulatory regimes. Only England has a configured
+ * pack (CQC Regulation 9A). Scotland, Wales and Northern Ireland resolve to a
+ * "not configured" guard so the product never implies one UK-wide regulation.
+ */
+export type UkNation = "England" | "Scotland" | "Wales" | "Northern Ireland";
+export const UK_NATIONS: UkNation[] = ["England", "Scotland", "Wales", "Northern Ireland"];
 
 export interface SegmentTerms {
   /** "Home", "Village", "Care home" */
@@ -51,6 +58,12 @@ export interface SegmentModules {
   safeguardingWording: boolean;
   /** Village warden / responsible staff shown on roll call. */
   warden: boolean;
+  /**
+   * Retirement villages: time away from the village is optional and
+   * self-reported by the independent resident — never a mandated "leave"
+   * workflow with clinical framing.
+   */
+  selfReportedAway: boolean;
 }
 
 export interface SegmentPack {
@@ -58,8 +71,15 @@ export interface SegmentPack {
   label: string;
   shortLabel: string;
   jurisdiction: Jurisdiction;
+  /** null for the not-configured guard pack. */
+  nation: "AU" | UkNation | null;
   structure: SiteSegmentKey;
   description: string;
+  /**
+   * Operational guidance shown to administrators. Always paired with the
+   * caveat that configuration is not legal compliance.
+   */
+  regulatorNote: string;
   terms: SegmentTerms;
   modules: SegmentModules;
   /** Roll-call grouping, outermost first. */
