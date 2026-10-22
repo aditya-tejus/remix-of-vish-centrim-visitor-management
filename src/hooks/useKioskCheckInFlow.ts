@@ -1,3 +1,4 @@
+import { kioskScreeningOutcome, kioskMustSeeStaff } from "@/lib/kioskPrivacy";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchKeyPolicy, DEFAULT_KEY_POLICY, type KeyPolicy } from "@/hooks/useKeyPolicy";
@@ -341,6 +342,7 @@ export function useKioskCheckInFlow() {
     bodyTemperature,
     highTemperature,
     screeningBlocked,
+    screeningReferred,
     screeningFlagged,
     overdueKeyCount,
     keyBlocked,
