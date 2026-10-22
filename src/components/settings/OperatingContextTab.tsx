@@ -3,11 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSectionAccess } from "@/components/settings/SettingsAccessContext";
 import { useSite } from "@/contexts/SiteContext";
 import { useOperatingContext } from "@/contexts/OperatingContext";
-import { SEGMENT_PACK_LIST, SegmentPackId, packById } from "@/lib/segmentPacks";
+import { SELECTABLE_PACKS, SegmentPackId, UkNation, UK_NATIONS, packById } from "@/lib/segmentPacks";
 import { SettingExplainer } from "@/components/settings/SettingExplainer";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Check, Lock, Layers } from "lucide-react";
+import { Check, Lock, Layers, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const HIERARCHY = [
@@ -22,28 +22,32 @@ const HIERARCHY = [
 export function OperatingContextTab() {
   const { canEdit } = useSectionAccess();
   const { currentSite } = useSite();
-  const { pack, siteName, source, refresh, loading } = useOperatingContext();
+  const { pack, siteName, source, refresh, loading, ukNation } = useOperatingContext();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [choice, setChoice] = useState<SegmentPackId | null>(null);
+  const [nationChoice, setNationChoice] = useState<UkNation | null>(null);
 
   const isAdmin = canEdit;
   const selected = packById(choice ?? pack.id);
+  const effectiveNation: UkNation = nationChoice ?? ((ukNation as UkNation) || "England");
 
   const save = async () => {
     if (!isAdmin) return;
     setSaving(true);
     const next = selected;
+    const nation = next.jurisdiction === "UK" ? effectiveNation : null;
     if (currentSite) {
       await supabase
         .from("branches")
-        .update({ jurisdiction: next.jurisdiction, site_structure: next.structure })
+        .update({ jurisdiction: next.jurisdiction, site_structure: next.structure, uk_nation: nation } as any)
         .eq("id", currentSite.id);
     } else {
       await supabase.from("settings").upsert(
         [
           { key: "jurisdiction", value: next.jurisdiction },
           { key: "site_structure", value: next.structure },
+          { key: "uk_nation", value: nation ?? "" },
         ],
         { onConflict: "key" }
       );
@@ -52,11 +56,12 @@ export function OperatingContextTab() {
       action: "settings_update",
       performed_by: "Admin",
       records_affected: 1,
-      details: { setting: "operating_context", site: currentSite?.name ?? "account default", value: next.id } as any,
+      details: { setting: "operating_context", site: currentSite?.name ?? "account default", value: next.id, uk_nation: nation } as any,
       change_reason: "Operating context changed",
     });
     setSaving(false);
     setChoice(null);
+    setNationChoice(null);
     refresh();
     toast({ title: "Operating context saved", description: `${next.label} now applies to ${currentSite?.name ?? "this account"}.` });
   };
@@ -84,8 +89,19 @@ export function OperatingContextTab() {
         </div>
       )}
 
+      {pack.id === "uk_unconfigured" && (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/40">
+          <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-600 shrink-0" />
+          <p className="text-[13px] text-amber-900 dark:text-amber-200">
+            This site is recorded as <span className="font-medium">{ukNation || "a UK nation outside England"}</span>.
+            No jurisdiction pack is configured for that nation, so generic wording is shown and no regulation is
+            implied. Scotland, Wales and Northern Ireland each have their own care regulator and visiting guidance.
+          </p>
+        </div>
+      )}
+
       <div className="space-y-3">
-        {SEGMENT_PACK_LIST.map((p) => {
+        {SELECTABLE_PACKS.map((p) => {
           const active = selected.id === p.id;
           return (
             <button
@@ -118,12 +134,41 @@ export function OperatingContextTab() {
         })}
       </div>
 
+      {selected.jurisdiction === "UK" && (
+        <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+          <h3 className="text-sm font-semibold text-foreground">UK nation</h3>
+          <p className="text-[13px] text-muted-foreground">
+            UK nations have different care regulators. Only England has a configured pack (CQC Regulation 9A).
+            Choosing Scotland, Wales or Northern Ireland shows generic wording with no regulation implied.
+          </p>
+          <div className="flex flex-wrap gap-2 pt-1">
+            {UK_NATIONS.map((n) => (
+              <button
+                key={n}
+                type="button"
+                disabled={!isAdmin || loading}
+                onClick={() => setNationChoice(n)}
+                className={cn(
+                  "rounded-full border px-3 py-1.5 text-[13px] transition-colors",
+                  effectiveNation === n
+                    ? "border-primary bg-primary/5 text-foreground font-medium"
+                    : "border-border bg-card text-muted-foreground",
+                  !isAdmin && "cursor-default"
+                )}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {isAdmin && (
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-muted-foreground">
             Choosing a context changes wording and which optional registers appear. It does not, on its own, prove legal compliance.
           </p>
-          <Button onClick={save} disabled={saving || (choice ?? pack.id) === pack.id}>
+          <Button onClick={save} disabled={saving || ((choice ?? pack.id) === pack.id && nationChoice === null)}>
             {saving ? "Saving…" : "Save context"}
           </Button>
         </div>
@@ -159,8 +204,14 @@ export function OperatingContextTab() {
           <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Food register</dt><dd className="text-foreground">{pack.modules.foodRegister ? "On" : "Off"}</dd></div>
           <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Care support details</dt><dd className="text-foreground">{pack.modules.clinicalSupportFields ? "Shown" : "Hidden"}</dd></div>
           <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Privacy wording</dt><dd className="text-foreground">{pack.privacy.regimeName}</dd></div>
+          <div className="flex justify-between gap-3"><dt className="text-muted-foreground">Time away</dt><dd className="text-foreground">{pack.modules.selfReportedAway ? "Optional, self-reported" : "Leave and return workflow"}</dd></div>
         </dl>
         <p className="text-xs text-muted-foreground pt-1">{pack.privacy.retentionNote}</p>
+        <div className="rounded-lg bg-muted/50 p-3 mt-2">
+          <p className="text-[13px] text-foreground font-medium">Regulator note</p>
+          <p className="text-[13px] text-muted-foreground mt-0.5">{pack.regulatorNote}</p>
+          <p className="text-xs text-muted-foreground mt-1.5">This is operational guidance only — configuration is not legal compliance and is not legal advice.</p>
+        </div>
       </div>
     </div>
   );

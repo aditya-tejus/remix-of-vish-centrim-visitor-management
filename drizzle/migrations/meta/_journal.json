@@ -8,6 +8,13 @@
       "when": 1792630718446,
       "tag": "0000_protect_returning_kiosk_lookup",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792634524416,
+      "tag": "0001_add_uk_nation_to_branches",
+      "breakpoints": true
     }
   ]
 }

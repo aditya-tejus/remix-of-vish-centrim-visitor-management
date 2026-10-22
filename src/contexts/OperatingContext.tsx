@@ -32,6 +32,8 @@ interface OperatingContextState {
   terms: SegmentPack["terms"];
   modules: SegmentPack["modules"];
   jurisdiction: "AU" | "UK";
+  /** Recorded UK nation, when the site is in the UK. */
+  ukNation: string | null;
   /** Where the resolved value came from, shown to administrators. */
   source: "site" | "account default";
   refresh: () => void;
@@ -49,6 +51,7 @@ const Ctx = createContext<OperatingContextState>({
   terms: fallbackPack.terms,
   modules: fallbackPack.modules,
   jurisdiction: fallbackPack.jurisdiction,
+  ukNation: null,
   source: "account default",
   refresh: () => {},
 });
@@ -63,6 +66,7 @@ export function OperatingContextProvider({ children }: { children: ReactNode }) 
     siteId: string | null;
     siteName: string | null;
     organisationId: string | null;
+    ukNation: string | null;
     source: "site" | "account default";
   }>({
     loading: true,
@@ -70,6 +74,7 @@ export function OperatingContextProvider({ children }: { children: ReactNode }) 
     siteId: null,
     siteName: null,
     organisationId: null,
+    ukNation: null,
     source: "account default",
   });
 
@@ -85,17 +90,18 @@ export function OperatingContextProvider({ children }: { children: ReactNode }) 
         // Site records are readable without a login so the kiosk shows the right wording.
         const { data } = await supabase
           .from("branches")
-          .select("id, name, jurisdiction, site_structure, organisation_id")
+          .select("id, name, jurisdiction, site_structure, organisation_id, uk_nation")
           .eq("id", siteId)
           .maybeSingle();
         if (cancelled) return;
         if (data) {
           setState({
             loading: false,
-            pack: resolvePack(data.jurisdiction, data.site_structure),
+            pack: resolvePack(data.jurisdiction, data.site_structure, (data as any).uk_nation),
             siteId: data.id,
             siteName: data.name,
             organisationId: data.organisation_id,
+            ukNation: (data as any).uk_nation ?? null,
             source: "site",
           });
           return;
@@ -107,16 +113,17 @@ export function OperatingContextProvider({ children }: { children: ReactNode }) 
       const { data } = await supabase
         .from("settings")
         .select("key, value")
-        .in("key", ["jurisdiction", "site_structure"]);
+        .in("key", ["jurisdiction", "site_structure", "uk_nation"]);
       if (cancelled) return;
       const map: Record<string, string> = {};
       (data || []).forEach((r: any) => { map[r.key] = r.value; });
       setState({
         loading: false,
-        pack: resolvePack(map.jurisdiction, map.site_structure),
+        pack: resolvePack(map.jurisdiction, map.site_structure, map.uk_nation),
         siteId: null,
         siteName: null,
         organisationId: null,
+        ukNation: map.uk_nation ?? null,
         source: "account default",
       });
     })();
@@ -135,6 +142,7 @@ export function OperatingContextProvider({ children }: { children: ReactNode }) 
       terms: state.pack.terms,
       modules: state.pack.modules,
       jurisdiction: state.pack.jurisdiction,
+      ukNation: state.ukNation,
       source: state.source,
       refresh,
     }),

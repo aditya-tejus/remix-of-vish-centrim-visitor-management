@@ -12,7 +12,14 @@
 export type Jurisdiction = "AU" | "UK";
 /** Stored on the site record (`branches.site_structure`). */
 export type SiteSegmentKey = "rac" | "rv" | "care_home";
-export type SegmentPackId = "au_rac" | "au_rv" | "uk_care";
+export type SegmentPackId = "au_rac" | "au_rv" | "uk_care" | "uk_unconfigured";
+/**
+ * UK nations are distinct regulatory regimes. Only England has a configured
+ * pack (CQC Regulation 9A). Scotland, Wales and Northern Ireland resolve to a
+ * "not configured" guard so the product never implies one UK-wide regulation.
+ */
+export type UkNation = "England" | "Scotland" | "Wales" | "Northern Ireland";
+export const UK_NATIONS: UkNation[] = ["England", "Scotland", "Wales", "Northern Ireland"];
 
 export interface SegmentTerms {
   /** "Home", "Village", "Care home" */
@@ -51,6 +58,12 @@ export interface SegmentModules {
   safeguardingWording: boolean;
   /** Village warden / responsible staff shown on roll call. */
   warden: boolean;
+  /**
+   * Retirement villages: time away from the village is optional and
+   * self-reported by the independent resident — never a mandated "leave"
+   * workflow with clinical framing.
+   */
+  selfReportedAway: boolean;
 }
 
 export interface SegmentPack {
@@ -58,8 +71,15 @@ export interface SegmentPack {
   label: string;
   shortLabel: string;
   jurisdiction: Jurisdiction;
+  /** null for the not-configured guard pack. */
+  nation: "AU" | UkNation | null;
   structure: SiteSegmentKey;
   description: string;
+  /**
+   * Operational guidance shown to administrators. Always paired with the
+   * caveat that configuration is not legal compliance.
+   */
+  regulatorNote: string;
   terms: SegmentTerms;
   modules: SegmentModules;
   /** Roll-call grouping, outermost first. */
@@ -97,7 +117,10 @@ export const SEGMENT_PACKS: Record<SegmentPackId, SegmentPack> = {
     label: "Australia — residential aged care",
     shortLabel: "AU aged care",
     jurisdiction: "AU",
+    nation: "AU",
     structure: "rac",
+    regulatorNote:
+      "The strengthened Aged Care Quality Standard 7 and the Aged Care Act protect resident choice, private visits and transitions of care. Screening and watchlist measures must support, not override, a resident's wish to see their visitors.",
     description:
       "Rooms and wings, resident leave and return, infection-control questions, roll call grouped by wing.",
     terms: {
@@ -124,6 +147,7 @@ export const SEGMENT_PACKS: Record<SegmentPackId, SegmentPack> = {
       infectionControl: true,
       safeguardingWording: true,
       warden: false,
+      selfReportedAway: false,
     },
     emergencyGrouping: ["Wing", "Room", "Person type"],
     credentialLabels: ["Police check", "NDIS worker screening", "Insurance"],
@@ -134,9 +158,12 @@ export const SEGMENT_PACKS: Record<SegmentPackId, SegmentPack> = {
     label: "Australia — retirement village",
     shortLabel: "AU village",
     jurisdiction: "AU",
+    nation: "AU",
     structure: "rv",
+    regulatorNote:
+      "Retirement villages operate under state village law (for example the NSW Retirement Villages Act 1999 and the Victorian Retirement Villages Act 1986), not residential aged-care rules. Time away from the village is optional and self-reported by the independent resident.",
     description:
-      "Properties, stages and villas, households and associated people, keys and fobs register, roll call grouped by stage and villa.",
+      "Properties, stages and villas, households and associated people, keys and fobs register, optional self-reported time away, roll call grouped by stage and villa.",
     terms: {
       site: "Village",
       area: "Stage",
@@ -161,6 +188,7 @@ export const SEGMENT_PACKS: Record<SegmentPackId, SegmentPack> = {
       infectionControl: false,
       safeguardingWording: false,
       warden: true,
+      selfReportedAway: true,
     },
     emergencyGrouping: ["Stage", "Property / villa", "Household", "Person type"],
     credentialLabels: ["Police check", "Insurance", "Trade licence"],
@@ -168,12 +196,15 @@ export const SEGMENT_PACKS: Record<SegmentPackId, SegmentPack> = {
   },
   uk_care: {
     id: "uk_care",
-    label: "UK — care home / housing with care",
-    shortLabel: "UK care home",
+    label: "England — care home / housing with care",
+    shortLabel: "England care home",
     jurisdiction: "UK",
+    nation: "England",
     structure: "care_home",
+    regulatorNote:
+      "CQC Regulation 9A protects visiting and time away from the home. Any restriction must be individual, necessary and proportionate, decided case by case and recorded with reasons — never a blanket denial.",
     description:
-      "Rooms and units, UK wording, DBS and safeguarding checks, UK privacy notice and controller details, roll call grouped by unit.",
+      "Rooms and units, England wording (CQC Regulation 9A), DBS and safeguarding checks, UK GDPR privacy notice and controller details, roll call grouped by unit.",
     terms: {
       site: "Care home",
       area: "Unit",
@@ -198,14 +229,64 @@ export const SEGMENT_PACKS: Record<SegmentPackId, SegmentPack> = {
       infectionControl: true,
       safeguardingWording: true,
       warden: false,
+      selfReportedAway: false,
     },
     emergencyGrouping: ["Unit", "Room", "Person type"],
     credentialLabels: ["DBS check", "Right to work", "Insurance"],
     privacy: UK_PRIVACY,
   },
+  /**
+   * Guard state for Scotland, Wales and Northern Ireland. These nations have
+   * their own care regulators and visiting guidance; until a pack is
+   * configured for them the product must not imply England's CQC regime
+   * applies. Wording stays generic and no regulation is referenced.
+   */
+  uk_unconfigured: {
+    id: "uk_unconfigured",
+    label: "Scotland, Wales or Northern Ireland — pack not configured",
+    shortLabel: "UK nation not configured",
+    jurisdiction: "UK",
+    nation: null,
+    structure: "care_home",
+    regulatorNote:
+      "No jurisdiction pack is configured for this UK nation. Care Inspectorate (Scotland), Care Inspectorate Wales and RQIA (Northern Ireland) each have their own requirements. Generic wording is shown and no regulation is implied.",
+    description:
+      "Generic wording only. No nation-specific regulation, screening default or document set is applied.",
+    terms: {
+      site: "Care home",
+      area: "Unit",
+      areaPlural: "Units",
+      place: "Room",
+      placePlural: "Rooms",
+      property: null,
+      household: null,
+      resident: "Resident",
+      residentPlural: "Residents",
+      destination: "Who are you visiting?",
+      responsible: "Staff responsible",
+      associates: "People with them",
+    },
+    modules: {
+      residentLeave: true,
+      keysRegister: true,
+      foodRegister: false,
+      propertyFields: false,
+      household: false,
+      clinicalSupportFields: false,
+      infectionControl: false,
+      safeguardingWording: false,
+      warden: false,
+      selfReportedAway: false,
+    },
+    emergencyGrouping: ["Unit", "Room", "Person type"],
+    credentialLabels: ["Police check", "Insurance"],
+    privacy: UK_PRIVACY,
+  },
 };
 
 export const SEGMENT_PACK_LIST = Object.values(SEGMENT_PACKS);
+/** Packs an administrator can choose. The guard pack is a state, not a choice. */
+export const SELECTABLE_PACKS = SEGMENT_PACK_LIST.filter((p) => p.id !== "uk_unconfigured");
 
 /** Safe default for pre-existing prototype data — never a real customer. */
 export const DEFAULT_PACK_ID: SegmentPackId = "au_rac";
@@ -213,14 +294,26 @@ export const DEFAULT_PACK_ID: SegmentPackId = "au_rac";
 /**
  * Resolves a pack from what the site record holds. Anything unrecognised falls
  * back to the legacy default so existing sites keep loading.
+ *
+ * UK sites also carry a nation (`branches.uk_nation`). England uses the
+ * configured England pack; Scotland, Wales and Northern Ireland resolve to
+ * the not-configured guard so no England-specific regulation is implied.
+ * A UK site with no nation recorded keeps the legacy behaviour (England).
  */
 export function resolvePack(
   jurisdiction?: string | null,
-  structure?: string | null
+  structure?: string | null,
+  ukNation?: string | null
 ): SegmentPack {
   const j = jurisdiction === "UK" ? "UK" : "AU";
   const s = (structure || "").toLowerCase();
-  if (j === "UK") return SEGMENT_PACKS.uk_care;
+  if (j === "UK") {
+    const n = (ukNation || "").trim().toLowerCase();
+    if (n === "scotland" || n === "wales" || n === "northern ireland") {
+      return SEGMENT_PACKS.uk_unconfigured;
+    }
+    return SEGMENT_PACKS.uk_care;
+  }
   if (s === "rv" || s === "retirement_village" || s === "village") return SEGMENT_PACKS.au_rv;
   return SEGMENT_PACKS.au_rac;
 }
