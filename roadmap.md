@@ -547,6 +547,7 @@ Known limits after Phase 7E:
 ## Phase 9 — audit and redesign
 - [x] 9A Kiosk safety/privacy: outbreak refers flagged answers to staff instead of blocking; search-first masked kiosk sign-out list
 - [ ] 9A remainder: masked name-only returning lookup (server function change), health questions off by default for new types, "notify" wording audit
+- [ ] Current continuation: finish and verify the remaining Phase 9A privacy, default-setting and delivery-wording corrections before starting 9B.
 - [ ] 9B England / AU RV / AU RAC packs
 - [ ] 9C Roll call statuses (at home unconfirmed, physically confirmed)
 - [ ] 9D Design tokens and font refresh
