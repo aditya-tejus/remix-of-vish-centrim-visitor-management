@@ -1152,16 +1152,28 @@ export default function KioskCheckIn() {
               </div>
             )}
 
-            {flow.screeningBlocked && (
+            {flow.screeningBlocked && flow.screeningReferred && (
+              <div className="rounded-2xl bg-warning/10 border-2 border-warning/30 p-5 flex items-start gap-3">
+                <AlertTriangle className="h-6 w-6 text-warning shrink-0 mt-0.5" aria-hidden="true" />
+                <div>
+                  <p className="text-lg font-bold text-foreground">Please see reception to finish signing in</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    There are extra precautions on site at the moment. A staff member will talk with you about how your visit can go ahead safely.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {flow.screeningBlocked && !flow.screeningReferred && (
               <div className="rounded-2xl bg-destructive/10 border-2 border-destructive/30 p-5 flex items-start gap-3">
-                <AlertTriangle className="h-6 w-6 text-destructive shrink-0 mt-0.5" />
+                <AlertTriangle className="h-6 w-6 text-destructive shrink-0 mt-0.5" aria-hidden="true" />
                 <div>
                   <p className="text-lg font-bold text-destructive">Please see a staff member</p>
                   <p className="text-sm text-muted-foreground mt-1">
                     {flow.highTemperature
                       ? `Your recorded temperature (${flow.bodyTemperature}°C) is above the safe limit. `
                       : ""}
-                    We cannot complete your check-in at this screen. Reception has been notified and will assist you.
+                    This screen cannot finish your check-in. Please go to reception and a staff member will help you.
                   </p>
                 </div>
               </div>
