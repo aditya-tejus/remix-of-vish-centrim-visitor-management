@@ -16,6 +16,7 @@ import { KioskErrorState } from "@/components/kiosk/KioskErrorState";
 import { useOperatingContext } from "@/contexts/OperatingContext";
 import { useKioskFastLane } from "@/hooks/useKioskFastLane";
 import { kioskRpc } from "@/lib/kioskRpc";
+import { kioskCheckoutMatches, maskSurname, KIOSK_CHECKOUT_MIN_CHARS } from "@/lib/kioskPrivacy";
 
 type Phase = "search" | "companions" | "confirm" | "feedback" | "done";
 
@@ -50,11 +51,10 @@ export default function KioskCheckOut() {
     [visitors]
   );
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return checkedIn;
-    const q = search.toLowerCase();
-    return checkedIn.filter((v) => `${v.firstName} ${v.surname}`.toLowerCase().includes(q));
-  }, [checkedIn, search]);
+  // Search-first: nobody is listed on the foyer screen until the person types
+  // at least two letters of their own name.
+  const filtered = useMemo(() => kioskCheckoutMatches(checkedIn, search), [checkedIn, search]);
+  const searchTooShort = search.trim().length < KIOSK_CHECKOUT_MIN_CHARS;
 
   const handleSelect = (v: any) => {
     setSelected(v);
@@ -266,10 +266,15 @@ export default function KioskCheckOut() {
       <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto kiosk-scroll-fade" role="list" aria-label="Checked in visitors">
         {loading ? (
           <KioskSkeletonList count={4} />
+        ) : searchTooShort ? (
+          <div className="text-center py-12 space-y-3">
+            <Search className="h-12 w-12 text-muted-foreground/40 mx-auto" aria-hidden="true" />
+            <p className="text-muted-foreground text-lg">Type the first two letters of your name to find yourself.</p>
+          </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-12 space-y-3">
-            <LogOut className="h-12 w-12 text-muted-foreground/40 mx-auto" />
-            <p className="text-muted-foreground text-lg">No visitors currently checked in</p>
+            <LogOut className="h-12 w-12 text-muted-foreground/40 mx-auto" aria-hidden="true" />
+            <p className="text-muted-foreground text-lg">No match found. Please check the spelling or ask reception.</p>
           </div>
         ) : (
           filtered.map((v) => {
@@ -278,8 +283,8 @@ export default function KioskCheckOut() {
             return (
               <KioskPersonCard
                 key={v.id}
-                name={`${v.firstName} ${v.surname}`}
-                subtitle={`${v.type} • In since ${format(new Date(v.checkInTime), "h:mm a")}${isOverstay ? " • ⚠ Overstay" : ""}`}
+                name={maskSurname(v.firstName, v.surname)}
+                subtitle={`In since ${format(new Date(v.checkInTime), "h:mm a")}${isOverstay ? " · Past expected time" : ""}`}
                 accentColor="warning"
                 rightIcon={<LogOut className="h-5 w-5 text-warning shrink-0" aria-hidden="true" />}
                 onClick={() => handleSelect(v)}
