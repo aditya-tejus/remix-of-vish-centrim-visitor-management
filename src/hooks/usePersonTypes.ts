@@ -61,12 +61,12 @@ export const PERSON_TYPE_DEFAULTS: {
   badgeApplies: boolean;
   rollCallIncluded: boolean;
 }[] = [
-  { type: "visitor", label: "Visitor", description: "Family, friend, or guest", destinationRequired: true, screeningApplies: true, privacyApplies: true, badgeApplies: true, rollCallIncluded: true },
-  { type: "contractor", label: "Contractor", description: "Tradesperson or supplier", destinationRequired: false, screeningApplies: true, privacyApplies: true, badgeApplies: true, rollCallIncluded: true },
-  { type: "volunteer", label: "Volunteer", description: "Volunteer or helper", destinationRequired: true, screeningApplies: true, privacyApplies: true, badgeApplies: true, rollCallIncluded: true },
+  { type: "visitor", label: "Visitor", description: "Family, friend, or guest", destinationRequired: true, screeningApplies: false, privacyApplies: true, badgeApplies: true, rollCallIncluded: true },
+  { type: "contractor", label: "Contractor", description: "Tradesperson or supplier", destinationRequired: false, screeningApplies: false, privacyApplies: true, badgeApplies: true, rollCallIncluded: true },
+  { type: "volunteer", label: "Volunteer", description: "Volunteer or helper", destinationRequired: true, screeningApplies: false, privacyApplies: true, badgeApplies: true, rollCallIncluded: true },
   { type: "staff", label: "Staff", description: "Staff member sign-in", destinationRequired: false, screeningApplies: false, privacyApplies: false, badgeApplies: false, rollCallIncluded: true },
-  { type: "resident", label: "Resident", description: "Resident leaving or returning (kiosk tile only)", destinationRequired: false, screeningApplies: true, privacyApplies: false, badgeApplies: false, rollCallIncluded: true },
-  { type: "other", label: "Other", description: "Anyone who does not fit the types above (off unless switched on)", destinationRequired: true, screeningApplies: true, privacyApplies: true, badgeApplies: true, rollCallIncluded: true },
+  { type: "resident", label: "Resident", description: "Resident leaving or returning (kiosk tile only)", destinationRequired: false, screeningApplies: false, privacyApplies: false, badgeApplies: false, rollCallIncluded: true },
+  { type: "other", label: "Other", description: "Anyone who does not fit the types above (off unless switched on)", destinationRequired: true, screeningApplies: false, privacyApplies: true, badgeApplies: true, rollCallIncluded: true },
 ];
 
 const FLAG_KEYS = [
@@ -87,7 +87,7 @@ function pick(map: Record<string, string>, key: string, siteId: string | null) {
   return scoped !== undefined && scoped !== "" ? scoped : map[key];
 }
 
-function build(map: Record<string, string>, siteId: string | null): PersonTypeConfigRow[] {
+export function buildPersonTypeConfig(map: Record<string, string>, siteId: string | null): PersonTypeConfigRow[] {
   return PERSON_TYPE_DEFAULTS.map((d) => {
     const get = (f: string) => pick(map, `person_type_${f}_${d.type}`, siteId);
     const bool = (f: string, fallback: boolean) => {
@@ -147,7 +147,7 @@ function buildExtras(map: Record<string, string>, siteId: string | null): Person
 export function usePersonTypes() {
   const { siteId } = useOperatingContext();
   const [extras, setExtras] = useState<PersonTypeExtras>(() => buildExtras({}, null));
-  const [rows, setRows] = useState<PersonTypeConfigRow[]>(() => build({}, null));
+  const [rows, setRows] = useState<PersonTypeConfigRow[]>(() => buildPersonTypeConfig({}, null));
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -158,7 +158,7 @@ export function usePersonTypes() {
       .in("key", [...PERSON_TYPE_SETTING_KEYS, ...scoped]);
     const map: Record<string, string> = {};
     (data || []).forEach((r: any) => { map[r.key] = r.value; });
-    setRows(build(map, siteId));
+    setRows(buildPersonTypeConfig(map, siteId));
     setExtras(buildExtras(map, siteId));
     setLoading(false);
   }, [siteId]);

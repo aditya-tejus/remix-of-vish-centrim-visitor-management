@@ -84,8 +84,7 @@ Not granted to anon: `kiosk_emergency_gate` (internal), `kiosk_prefill_visitor` 
 ## 5. Open blockers (must be resolved before any real deployment)
 
 1. Independent security and privacy review has not been done.
-2. (Phase 9A: the kiosk sign-out list is now search-first with surname initials.) `kiosk_returning_lookup` name-only path still returns a returning visitor's own
-   contact details; consider requiring mobile or QR at sites with higher privacy needs.
+2. Phase 9A continuation (22 October 2026): name-only returning lookup now returns a masked mobile hint and suppresses email, address, destination, resident identifiers, reusable QR and visit metadata. Both compatibility and new device-bound RPCs use the protected projection. Authenticated live checks verified name-only, valid-name/invalid-code, mobile, QR, cross-site and invalid-device cases; the card-to-check-in prefill flow was checked in the UI. Residual risks remain: name recognition reveals a previous visit, and a mobile match (inherited minimum six digits) is not proof of ownership or OTP verification. An independent privacy/security assessment is still required.
 3. Real retention periods, controller and privacy-officer details are unset.
 4. No email/SMS delivery exists; notifications are in-app and audit only.
 5. ~~Kiosk devices are not bound to a site~~ — superseded by Phase 8D device binding (`kioskd_*` functions take a device token and resolve the site server-side). Not independently re-tested.

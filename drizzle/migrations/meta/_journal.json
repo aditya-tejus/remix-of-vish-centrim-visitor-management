@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1792630718446,
+      "tag": "0000_protect_returning_kiosk_lookup",
+      "breakpoints": true
+    }
+  ]
+}

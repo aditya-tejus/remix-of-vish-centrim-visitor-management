@@ -3892,6 +3892,27 @@ export type Database = {
           whom_to_visit: string
         }[]
       }
+      kiosk_returning_lookup_v2: {
+        Args: {
+          p_branch_id?: string
+          p_first?: string
+          p_last?: string
+          p_mobile?: string
+          p_qr?: string
+        }
+        Returns: {
+          address: string
+          email: string
+          first_name: string
+          identity_verified: boolean
+          last_visit: string
+          mobile: string
+          person_qr: string
+          surname: string
+          visited_resident_ids: string[]
+          whom_to_visit: string
+        }[]
+      }
       kiosk_rotate_token: { Args: { p_device_id: string }; Returns: string }
       kiosk_set_device_status: {
         Args: { p_device_id: string; p_status: string }
@@ -4084,6 +4105,27 @@ export type Database = {
           address: string
           email: string
           first_name: string
+          last_visit: string
+          mobile: string
+          person_qr: string
+          surname: string
+          visited_resident_ids: string[]
+          whom_to_visit: string
+        }[]
+      }
+      kioskd_returning_lookup_v2: {
+        Args: {
+          p_first?: string
+          p_last?: string
+          p_mobile?: string
+          p_qr?: string
+          p_token: string
+        }
+        Returns: {
+          address: string
+          email: string
+          first_name: string
+          identity_verified: boolean
           last_visit: string
           mobile: string
           person_qr: string

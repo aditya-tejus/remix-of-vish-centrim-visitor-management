@@ -546,7 +546,8 @@ Known limits after Phase 7E:
 
 ## Phase 9 — audit and redesign
 - [x] 9A Kiosk safety/privacy: outbreak refers flagged answers to staff instead of blocking; search-first masked kiosk sign-out list
-- [ ] 9A remainder: masked name-only returning lookup (server function change), health questions off by default for new types, "notify" wording audit
+- [x] 9A remainder: masked name-only returning lookup (server function change), Check-in Questions off by default for unconfigured types, delivery-wording corrections.
+- [x] Current continuation: remaining Phase 9A corrections verified; 9B and later phases are not implemented in this slice.
 - [ ] 9B England / AU RV / AU RAC packs
 - [ ] 9C Roll call statuses (at home unconfirmed, physically confirmed)
 - [ ] 9D Design tokens and font refresh
@@ -554,3 +555,12 @@ Known limits after Phase 7E:
 - [ ] 9F Screen redesigns
 - [ ] 9G Additional staff roles
 - [x] 9H (partial) SECURITY_REVIEW blockers updated
+
+### Phase 9A continuation — 22 October 2026
+- Added device-bound returning lookup v2 with a server-computed verification flag. A name-only match returns a masked mobile hint and no email, address, destination, resident IDs, reusable QR or visit timestamp. The old signatures remain available but now use the same protected projection. A wrong mobile/code combined with a valid name never unlocks details. Null site no longer means all sites.
+- Kiosk confirmation never copies masked contact data into the form; a name match continues with manually entered details. Mobile/card matches retain prefill and QR behaviour.
+- Built-in fallback values for Check-in Questions and vaccination are off. Explicit existing account/site choices are untouched; previously unconfigured types now resolve off. Contractor document checks remain separate and unchanged. No settings rows were rewritten.
+- Corrected false care-team messaging toast, planned-recipient labels, and future safe-return audit action (`return_confirmation_recorded`, intended recipients, no message sent). Historical audit rows are preserved and legacy labels state that delivery is unverified.
+- Verification: 134 tests pass; preview build log reports build OK. Authenticated live checks passed for name-only masking, invalid code plus valid name, mobile match, QR match, legacy masking, cross-site empty response, invalid-device refusal and an actual bound kiosk response. Visitor card lookup was exercised through the UI to the prefilled check-in form; no runtime errors. No arrival was submitted or visitor/resident record changed.
+- Two temporary verification kiosks were provisioned and then revoked, and browser bindings removed. Their device and audit history are retained deliberately; no active verification device remains.
+- Caveats: six-digit minimum mobile matching is inherited, not proof of ownership; no OTP or independent review. Name recognition can still reveal that a person visited. The wider linter baseline, notification delivery, retention/controller setup and emergency-export integrity remain unresolved. Later phases remain pending in the approved sequence.
