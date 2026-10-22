@@ -84,11 +84,12 @@ Not granted to anon: `kiosk_emergency_gate` (internal), `kiosk_prefill_visitor` 
 ## 5. Open blockers (must be resolved before any real deployment)
 
 1. Independent security and privacy review has not been done.
-2. `kiosk_returning_lookup` name-only path still returns a returning visitor's own
+2. (Phase 9A: the kiosk sign-out list is now search-first with surname initials.) `kiosk_returning_lookup` name-only path still returns a returning visitor's own
    contact details; consider requiring mobile or QR at sites with higher privacy needs.
 3. Real retention periods, controller and privacy-officer details are unset.
 4. No email/SMS delivery exists; notifications are in-app and audit only.
-5. Kiosk devices are not bound to a site by a device credential (`?site=` only).
+5. ~~Kiosk devices are not bound to a site~~ — superseded by Phase 8D device binding (`kioskd_*` functions take a device token and resolve the site server-side). Not independently re-tested.
+7. Linter now reports roughly 105 findings (was 43 at this review); not yet re-classified.
 6. Emergency exports rely on browser print/CSV; no tamper-evident export format.
 
 ## 6. Contractors and the keys / fobs register (Stage 6A)

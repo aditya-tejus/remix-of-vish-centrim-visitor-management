@@ -543,3 +543,14 @@ Known limits after Phase 7E:
 - Live check at Riverstone Aged Care with a temporary 4:00 am rule: 5 visitors still signed in from earlier days were closed, each marked "Signed out automatically at end of day (4:00 am)", the audit entry recorded site, rule and count of 5, and both the records and the test rule were reverted afterwards.
 - Tests: `src/test/autoCheckout.test.ts` rewritten (10 passing) covering off, site-local closing time across AU/UK, before-closing-time, leftovers from an earlier day, late arrivals, resident exclusion, defaults, hour rounding and wording. Full suite 115 passing; typecheck and build pass.
 - Limits unchanged: hourly granularity, the recorded time is when the job ran rather than the real departure, companions close with the same stamp, and nobody is notified.
+
+## Phase 9 — audit and redesign
+- [x] 9A Kiosk safety/privacy: outbreak refers flagged answers to staff instead of blocking; search-first masked kiosk sign-out list
+- [ ] 9A remainder: masked name-only returning lookup (server function change), health questions off by default for new types, "notify" wording audit
+- [ ] 9B England / AU RV / AU RAC packs
+- [ ] 9C Roll call statuses (at home unconfirmed, physically confirmed)
+- [ ] 9D Design tokens and font refresh
+- [ ] 9E Split large screens (check-in, kiosk, evacuation, keys)
+- [ ] 9F Screen redesigns
+- [ ] 9G Additional staff roles
+- [x] 9H (partial) SECURITY_REVIEW blockers updated
