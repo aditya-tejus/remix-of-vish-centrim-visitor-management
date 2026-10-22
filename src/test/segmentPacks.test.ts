@@ -53,7 +53,7 @@ describe("segment pack resolution", () => {
       expect(pack.nation).toBeNull();
     }
     const guard = resolvePack("UK", "care_home", "Wales");
-    expect(guard.regulatorNote).toContain("not configured");
+    expect(guard.regulatorNote).toContain("No jurisdiction pack is configured");
     expect(guard.regulatorNote).not.toContain("Regulation 9A applies");
     expect(guard.modules.infectionControl).toBe(false);
   });
