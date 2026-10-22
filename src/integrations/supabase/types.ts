@@ -144,6 +144,7 @@ export type Database = {
           organisation_id: string | null
           site_structure: string | null
           timezone: string | null
+          uk_nation: string | null
           updated_at: string
         }
         Insert: {
@@ -157,6 +158,7 @@ export type Database = {
           organisation_id?: string | null
           site_structure?: string | null
           timezone?: string | null
+          uk_nation?: string | null
           updated_at?: string
         }
         Update: {
@@ -170,6 +172,7 @@ export type Database = {
           organisation_id?: string | null
           site_structure?: string | null
           timezone?: string | null
+          uk_nation?: string | null
           updated_at?: string
         }
         Relationships: [
