@@ -330,3 +330,18 @@ Unreachable screens
 - Known wording exception outside this pass: Resident leave types keep a user-entered symbol
   field (an icon character stored with each leave type). Changing it would alter stored data,
   so it was left as-is and is recorded here rather than silently changed.
+
+## Phase 9C — emergency evidence boundary (25 October 2026)
+
+This section supersedes earlier claims that a presence list proves who is physically on site,
+that all non-unaccounted statuses are accounted for, or that device validation alone isolates emergency RPCs.
+
+- Nullable evidence columns preserve legacy rows without invented verification. Physical safety requires a qualifying method; reported safety and confirmed absence have separate counts. Assistance/not-located remain outstanding.
+- Server triggers validate site consistency, emergency.mark_safe, outcome/status/method combinations, corrections, confirmation actor, future timestamps and closed-event immutability. Audit inserts are atomic with attendance changes, including evidence-only changes.
+- Restrictive authenticated policies constrain attendance writes, event writes and audit reads to permissions/sites. Existing table grants are not broadened. PIN-only rollcall/mark/progress execution is revoked for PUBLIC/anon/authenticated; bound device wrappers constrain attendance/event site.
+- Shared PIN emergency access intentionally returns minimal response fields, including assistance level but no safeguarding flags. It identifies an authorised PIN operator, not a verified individual. Server actor UUID is authoritative for signed-in staff; kiosk actor remains “Kiosk (PIN)”. No device UUID is captured in outcome audit yet.
+- Offline queue includes only identifiers, outcome/method/time and operator UUID. Evidence replay requires the same signed-in operator; closed writes are rejected. Unsynchronised outcomes are not counted as authoritative safety.
+- Inventory found a pre-existing PIN-denial durability concern: denied logs written before a raised exception may roll back, defeating persistent lockout counts. Earlier claims of verified rate limiting are withdrawn pending repair and live verification.
+- Report regulatory wording now references Aged Care Act 2024 / strengthened Standards effective 1 November 2025 for AU RAC; AU village and other UK nation caveats are separate. Reports do not assert legal compliance.
+- Schema application verified; 141 historical attendance outcomes remain NULL. 178 unit tests passed; harness build/typecheck passed. Public unbound kiosk gate checked on desktop/mobile, not the bound PIN workflow.
+- Authenticated mutation, multi-site denial, correction audit and close/replay read-back remain unverified: session mint found no matching requesting-user account. No emergency was created for verification. Activation/snapshot and closure/general-audit are still non-atomic multi-request workflows; later arrivals require explicit recording.

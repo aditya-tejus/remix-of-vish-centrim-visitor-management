@@ -22,6 +22,10 @@ export interface KioskRollCallRow {
   status: string;
   assistance_level: string | null;
   marked_safe_at: string | null;
+  outcome?: string | null;
+  confirmation_method?: string | null;
+  confirmed_at?: string | null;
+  presence_basis?: string | null;
 }
 
 export function useKioskEmergency(pin: string | null) {
@@ -32,7 +36,7 @@ export function useKioskEmergency(pin: string | null) {
   const refresh = useCallback(async () => {
     if (!pin) return;
     setLoading(true);
-    const { data, error } = await kioskRpc<any[]>("kioskd_emergency_rollcall", { p_pin: pin });
+    const { data, error } = await kioskRpc<any[]>("kioskd_emergency_rollcall_v2", { p_pin: pin });
     setLoading(false);
     if (error) {
       setError(error.message);
@@ -50,13 +54,13 @@ export function useKioskEmergency(pin: string | null) {
   }, [pin, refresh]);
 
   const mark = useCallback(
-    async (attendanceId: string, status: string, markedBy?: string, reason?: string) => {
+    async (attendanceId: string, outcome: string, method?: string, reason?: string) => {
       if (!pin) return false;
-      const { error } = await kioskRpc("kioskd_emergency_mark", {
+      const { error } = await kioskRpc("kioskd_emergency_mark_v2", {
         p_pin: pin,
         p_attendance_id: attendanceId,
-        p_status: status,
-        p_marked_by: markedBy || "Kiosk (PIN)",
+        p_outcome: outcome,
+        p_method: method || null,
         p_reason: reason || null,
       });
       if (error) {
