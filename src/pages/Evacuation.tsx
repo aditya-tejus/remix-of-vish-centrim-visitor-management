@@ -1,5 +1,5 @@
 import { OutcomeDialog } from "@/components/emergency/OutcomeDialog";
-import { EmergencyOutcome, ConfirmationMethod, emergencyPolicy, emergencyCounts, initialEmergencyOutcome, legacyStatusFor, outcomeExport, arrivalBasis, canCloseEmergency, emergencyRegulatoryNote } from "@/lib/emergencyPolicy";
+import { EmergencyOutcome, ConfirmationMethod, EmergencyEvidence, emergencyPolicy, emergencyCounts, initialEmergencyOutcome, legacyStatusFor, outcomeExport, arrivalBasis, canCloseEmergency, emergencyRegulatoryNote } from "@/lib/emergencyPolicy";
 import { useState, useMemo, useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -140,7 +140,7 @@ export default function Evacuation() {
   const snapshotKeys = new Set(snapshotPeople.map(p => p.key));
   const onSite = activeDrill ? [...snapshotPeople.filter(p => !p.offSite), ...currentOnSite.filter(p => !snapshotKeys.has(p.key))] : currentOnSite;
   const offSite = activeDrill ? snapshotPeople.filter(p => p.offSite) : currentOffSite;
-  const evidenceOf = (p: RollCallPerson) => attendance.find(a => attendanceKey(a) === p.key) || {status: "unaccounted", outcome: initialEmergencyOutcome(structure, p.type, p.offSite)};
+  const evidenceOf = (p: RollCallPerson): EmergencyEvidence => attendance.find(a => attendanceKey(a) === p.key) || {status: "unaccounted", outcome: initialEmergencyOutcome(structure, p.type, p.offSite)};
 
 
 

@@ -1,3 +1,6 @@
+import { OutcomeDialog } from "@/components/emergency/OutcomeDialog";
+import { emergencyPolicy, emergencyCounts, EmergencyOutcome, ConfirmationMethod } from "@/lib/emergencyPolicy";
+import { KioskRollCallRow } from "@/hooks/useKioskEmergency";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -23,9 +26,10 @@ export default function KioskEvacuation({ onExit }: { onExit?: () => void }) {
   const [pin, setPin] = useState<string | null>((location.state as any)?.pin || null);
   const [pinOpen, setPinOpen] = useState(!((location.state as any)?.pin));
   const [search, setSearch] = useState("");
+  const [recording, setRecording] = useState<KioskRollCallRow | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const { rows, error, mark, refresh } = useKioskEmergency(pin);
+  const { rows, loading, error, mark, refresh } = useKioskEmergency(pin);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -37,15 +41,17 @@ export default function KioskEvacuation({ onExit }: { onExit?: () => void }) {
     );
   }, [rows, search]);
 
-  const safeCount = rows.filter((r) => ACCOUNTED.includes(r.status)).length;
+  const counts = emergencyCounts(rows);
+  const safeCount = counts.accounted;
   const progress = rows.length ? Math.round((safeCount / rows.length) * 100) : 0;
 
   const exit = () => (onExit ? onExit() : navigate("/kiosk/home"));
 
-  const setStatus = async (id: string, status: string) => {
+  const setStatus = async (id: string, outcome: EmergencyOutcome, method?: ConfirmationMethod, reason?: string) => {
     setBusy(true);
-    const ok = await mark(id, status, "Kiosk (PIN)");
+    const ok = await mark(id, outcome, method, reason);
     setBusy(false);
+    if (ok) setRecording(null);
     if (!ok) toast({ title: "Could not record that", description: error || "Please try again.", variant: "destructive" });
   };
 
@@ -68,6 +74,8 @@ export default function KioskEvacuation({ onExit }: { onExit?: () => void }) {
     );
   }
 
+  if (loading && rows.length === 0) return <p role="status">Loading roll call…</p>;
+  if (error && rows.length === 0) return <div role="alert" className="space-y-4"><p>Roll call unavailable. Use the site emergency plan and printed fallback.</p><Button className="h-14" onClick={() => void refresh()}>Try again</Button><Button className="h-14" onClick={exit}>Back to kiosk</Button></div>;
   if (rows.length === 0) {
     return (
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-xl mx-auto space-y-6 py-6 text-center">
@@ -104,6 +112,8 @@ export default function KioskEvacuation({ onExit }: { onExit?: () => void }) {
         </div>
       </div>
 
+      <p className="text-sm text-foreground">{counts.physical} physically verified · {counts.reported} reported / legacy · {counts.notPresent} confirmed not present · {counts.outstanding} outstanding</p>
+      {error && <p role="alert" className="text-destructive">Could not save the outcome. Try again.</p>}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         <Input
@@ -116,7 +126,7 @@ export default function KioskEvacuation({ onExit }: { onExit?: () => void }) {
 
       <div className="space-y-2 max-h-[calc(100vh-380px)] overflow-y-auto kiosk-scroll-fade">
         {filtered.map((r) => {
-          const accounted = ACCOUNTED.includes(r.status);
+          const accounted = emergencyPolicy(r).accounted;
           return (
             <div
               key={r.attendance_id}
@@ -132,47 +142,16 @@ export default function KioskEvacuation({ onExit }: { onExit?: () => void }) {
                     <p className="text-[12px] text-warning">Assistance: {r.assistance_level}</p>
                   )}
                 </div>
-                {accounted ? (
-                  <Button
-                    variant="secondary"
-                    disabled={busy}
-                    className="h-12 min-w-[96px] rounded-xl border border-border gap-1.5"
-                    onClick={() => setStatus(r.attendance_id, "unaccounted")}
-                  >
-                    <Undo2 className="h-4 w-4" /> Undo
-                  </Button>
-                ) : (
-                  <Button
-                    disabled={busy}
-                    className="h-12 min-w-[112px] rounded-xl bg-success hover:bg-success/90 text-success-foreground gap-1.5"
-                    onClick={() => setStatus(r.attendance_id, "safe")}
-                  >
-                    <Check className="h-5 w-5" /> Safe
-                  </Button>
-                )}
+                <Button variant="outline" disabled={busy} className="h-14" aria-label={`Record outcome for ${r.person_name}`} onClick={() => setRecording(r)}>Record outcome</Button>
               </div>
-              {!accounted && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Button variant="outline" disabled={busy} className="h-10 rounded-xl text-xs gap-1"
-                    onClick={() => setStatus(r.attendance_id, "safe_elsewhere")}>
-                    <MapPin className="h-3.5 w-3.5" /> Safe elsewhere
-                  </Button>
-                  <Button variant="outline" disabled={busy} className="h-10 rounded-xl text-xs"
-                    onClick={() => setStatus(r.attendance_id, "not_located")}>
-                    Not located
-                  </Button>
-                  <Button variant="outline" disabled={busy} className="h-10 rounded-xl text-xs"
-                    onClick={() => setStatus(r.attendance_id, "assistance_required")}>
-                    Assistance required
-                  </Button>
-                </div>
-              )}
+              <p className="text-sm text-foreground mt-2">{emergencyPolicy(r).label} · {emergencyPolicy(r).methodLabel}</p>
             </div>
           );
         })}
         {filtered.length === 0 && <p className="text-center text-muted-foreground py-10">No one matches that search.</p>}
       </div>
 
+      {recording && <OutcomeDialog name={recording.person_name} busy={busy} correction={emergencyPolicy(recording).accounted} onClose={() => setRecording(null)} onSave={async (outcome, method, reason) => { await setStatus(recording.attendance_id, outcome, method, reason); }} />}
       <p className="text-center text-[12px] text-muted-foreground">
         Staff close the emergency and record review notes on a computer.
       </p>
