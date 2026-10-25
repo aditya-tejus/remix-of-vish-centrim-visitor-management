@@ -19,6 +19,8 @@ import { Supplier } from "@/hooks/useSuppliers";
 import { FoodFormState, emptyFoodForm, isFoodFormValid } from "@/components/food/FoodFormFields";
 import { useOperatingContext, siteScopedKey } from "@/contexts/OperatingContext";
 import { resolveTermsContent } from "@/lib/segmentPacks";
+import { missingRequiredAnswers, staffCheckInIssues } from "@/lib/staffCheckInRules";
+import { useOpenKeyIssues } from "@/hooks/useOpenKeyIssues";
 import { useSite } from "@/contexts/SiteContext";
 
 
@@ -31,6 +33,7 @@ export interface VisitorProfile {
   mobile: string;
   email: string;
   address: string;
+  personQr?: string;
 }
 
 export interface CheckInFormData {
@@ -49,7 +52,11 @@ export interface CheckInFormData {
   covidDose2Date: string;
 }
 
-export function useCheckInFlow(open: boolean) {
+export interface StaffCheckInPrefill {
+  firstName?: string; surname?: string; mobile?: string; email?: string; address?: string; type?: VisitorType;
+}
+
+export function useCheckInFlow(open: boolean, initialType?: VisitorType, prefill?: StaffCheckInPrefill) {
   const { pack, siteId } = useOperatingContext();
   const { currentSiteId, isLegacySite } = useSite();
   const { residents: dbResidents } = useResidents();
@@ -94,16 +101,38 @@ export function useCheckInFlow(open: boolean) {
 
 
   // Dynamic settings-driven fields
-  const { personTypes } = usePersonTypes();
+  const { personTypes, extras, loading: typesLoading } = usePersonTypes();
+  const { overdueForName, policy: keyPolicy } = useOpenKeyIssues();
+  const [keyOverrideReason, setKeyOverrideReason] = useState("");
+  const [volunteerRole, setVolunteerRole] = useState("");
+  const [volunteerSupervisor, setVolunteerSupervisor] = useState("");
+  const [volunteerExpectedEnd, setVolunteerExpectedEnd] = useState("");
+  const [otherReason, setOtherReason] = useState("");
+  const openedRef = useRef(false);
+  useEffect(() => {
+    if (!open) { openedRef.current = false; return; }
+    if (openedRef.current) return;
+    openedRef.current = true;
+    setSelectedType(prefill?.type || initialType || "visitor");
+    if (prefill) {
+      setFormData(prev => ({ ...prev, firstName: prefill.firstName || "", surname: prefill.surname || "", mobile: prefill.mobile || "", email: prefill.email || "", address: prefill.address || "" }));
+      setIsReturning(true);
+    }
+  }, [open, initialType, prefill]);
+  const personConfig = personTypes.find(p => p.type === selectedType);
+  const overdueKeys = overdueForName(`${formData.firstName} ${formData.surname}`.trim());
+  const keyBlocked = keyPolicy.enforcement === "block" && overdueKeys.length > 0 && keyOverrideReason.trim().length < 3;
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsError, setSettingsError] = useState(false);
   // One shared rule set for the desk and the kiosk.
   const policy = useMemo(
     () => resolveScreeningPolicy(personTypes.find((p) => p.type === (selectedType as any)) || null),
     [personTypes, selectedType]
   );
-  const { data: dbQuestions = [] } = useActiveHealthQuestions(selectedType as any);
-  const { data: dbVaccFields = [] } = useActiveVaccinationFields(selectedType as any);
-  const { data: companionFieldsConfig = [] } = useCompanionFields(selectedType as any);
-  const { data: mainVisitorFields = [] } = useFormFields(selectedType as any, "");
+  const { data: dbQuestions = [], isPending: questionsLoading, isError: questionsError } = useActiveHealthQuestions(selectedType as any);
+  const { data: dbVaccFields = [], isPending: vaccinationsLoading, isError: vaccinationsError } = useActiveVaccinationFields(selectedType as any);
+  const { data: companionFieldsConfig = [], isPending: companionsLoading, isError: companionsError } = useCompanionFields(selectedType as any);
+  const { data: mainVisitorFields = [], isPending: fieldsLoading, isError: fieldsError } = useFormFields(selectedType as any, "");
 
   // Companion-only fields, plus the main visitor's own fields where they still
   // make sense for a second person on the same arrival.
@@ -173,6 +202,8 @@ export function useCheckInFlow(open: boolean) {
 
   // Load settings (including dynamic T&C content per type)
   useEffect(() => {
+    let cancelled = false;
+    setSettingsLoading(true);
     supabase
       .from("settings")
       .select("key, value")
@@ -184,7 +215,10 @@ export function useCheckInFlow(open: boolean) {
         `food_register_checkin_${selectedType}`,
       ])
 
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        setSettingsError(!!error);
+        setSettingsLoading(false);
         if (data) {
           const map: Record<string, string> = {};
           data.forEach((r: any) => { map[r.key] = r.value; });
@@ -206,6 +240,7 @@ export function useCheckInFlow(open: boolean) {
 
         }
       });
+    return () => { cancelled = true; };
   }, [selectedType, siteId, pack]);
 
   // Fetch previous visitors
@@ -214,10 +249,12 @@ export function useCheckInFlow(open: boolean) {
       setPreviousVisitors([]);
       return;
     }
+    if (!currentSiteId) { setPreviousVisitors([]); return; }
+    let cancelled = false;
     const q = searchQuery.toLowerCase();
     let query = supabase
       .from("visitors")
-      .select("id, first_name, surname, mobile, email, address")
+      .select("id, first_name, surname, mobile, email, address, person_qr")
       .or(`first_name.ilike.%${q}%,surname.ilike.%${q}%,mobile.ilike.%${q}%`)
       .neq("type", "resident");
 
@@ -233,6 +270,7 @@ export function useCheckInFlow(open: boolean) {
       .order("check_in_time", { ascending: false })
       .limit(10)
       .then(({ data }) => {
+        if (cancelled) return;
         if (data) {
           const seen = new Set<string>();
           const unique: VisitorProfile[] = [];
@@ -242,13 +280,14 @@ export function useCheckInFlow(open: boolean) {
               seen.add(key);
               unique.push({
                 id: r.id, firstName: r.first_name, surname: r.surname,
-                mobile: r.mobile || "", email: r.email || "", address: r.address || "",
+                mobile: r.mobile || "", email: r.email || "", address: r.address || "", personQr: r.person_qr || undefined,
               });
             }
           }
           setPreviousVisitors(unique);
         }
       });
+    return () => { cancelled = true; };
   }, [searchQuery, currentSiteId, isLegacySite]);
 
   const searchResults = useMemo(() => {
@@ -297,6 +336,7 @@ export function useCheckInFlow(open: boolean) {
       influenzaVaccineDate: "", covidDose1Date: "", covidDose2Date: "",
     });
     setHealthAnswers({});
+    setKeyOverrideReason(""); setVolunteerRole(""); setVolunteerSupervisor(""); setVolunteerExpectedEnd(""); setOtherReason(""); setContractorGate({ blocked: false, reason: null });
     setOverrideReason("");
     setOverrideApprovedBy(null);
     setPrivacyAcknowledged(false);
@@ -316,7 +356,7 @@ export function useCheckInFlow(open: boolean) {
   const evaluation = useMemo(
     () =>
       evaluateScreening(
-        healthQuestions as unknown as ScreeningRuleQuestion[],
+        healthQuestions.map(q => ({ ...q, expectedAnswer: q.expected_answer, warningAnswers: q.warning_answers, staffMessage: q.staff_message, outcomeAction: q.outcome_action })) as ScreeningRuleQuestion[],
         healthAnswers,
         { bodyTemperature: Number.isNaN(bodyTemperature as number) ? null : bodyTemperature }
       ),
@@ -356,28 +396,31 @@ export function useCheckInFlow(open: boolean) {
     [companions, activeCompanionFields]
   );
 
-  const canProceed = useMemo(() => {
-    switch (step) {
-      case "identify":
-        return true; // Can always proceed (new or returning)
-      case "details":
-        return missingFields.length === 0 && companionsComplete;
-      case "food":
-        return bringingFood === false || (bringingFood === true && isFoodFormValid(foodForm));
-      case "screening":
-        // Contractors are blocked when the highest-risk credential is missing/expired
-        return !contractorBlocked;
-      case "confirm":
-        return (
-          (!policy.privacyRequired || privacyAcknowledged) &&
-          !contractorBlocked &&
-          (!screeningBlocked || !!overrideApprovedBy) &&
-          (!screeningFlagged || overrideValid || !!overrideApprovedBy)
-        );
-      default:
-        return true;
-    }
-  }, [step, missingFields, privacyAcknowledged, policy.privacyRequired, screeningFlagged, screeningBlocked, overrideApprovedBy, overrideValid, contractorBlocked, bringingFood, foodForm, companionsComplete]);
+  const missingAnswers = missingRequiredAnswers(healthQuestions, healthAnswers).concat(
+    missingRequiredAnswers(vaccinationFields.map(v => ({ id: `vacc_${v.name}`, label: v.label, type: v.field_type, required: v.required })), healthAnswers)
+  );
+  const configurationLoading = !!(typesLoading || fieldsLoading || companionsLoading || questionsLoading || vaccinationsLoading || settingsLoading);
+  const configurationError = !!(fieldsError || companionsError || questionsError || vaccinationsError || settingsError);
+  const validationIssues = staffCheckInIssues({
+    missingDetails: missingFields.map(f => f.label),
+    destinationRequired: !!personConfig?.destinationRequired,
+    destination: formData.selectPerson,
+    companionsComplete, missingAnswers,
+    foodApplies: foodStepApplies,
+    foodComplete: bringingFood === false || (bringingFood === true && isFoodFormValid(foodForm)),
+    privacyRequired: policy.privacyRequired, privacyAcknowledged,
+    contractorBlocked, contractorReason: contractorGate.reason,
+    screeningBlocked, screeningFlagged, overrideApproved: !!overrideApprovedBy, overrideValid,
+    keyBlocked, otherReasonRequired: selectedType === "other", otherReason,
+  });
+  if (!currentSiteId) validationIssues.unshift("Select a site before checking in");
+  if (configurationLoading) validationIssues.unshift("Loading check-in requirements…");
+  if (configurationError) validationIssues.unshift("Check-in requirements could not be loaded. Close and reopen to retry.");
+  const canSubmit = validationIssues.length === 0;
+  const canProceed = !configurationLoading && !configurationError && (step === "confirm" ? canSubmit :
+    step === "details" ? missingFields.length === 0 && companionsComplete && (!personConfig?.destinationRequired || !!formData.selectPerson.trim()) && (selectedType !== "other" || otherReason.trim().length >= 3) :
+    step === "food" ? bringingFood === false || (bringingFood === true && isFoodFormValid(foodForm)) :
+    step === "screening" ? !contractorBlocked && missingAnswers.length === 0 : true);
 
 
 
@@ -394,8 +437,16 @@ export function useCheckInFlow(open: boolean) {
       qrCode: visitQr,
       clientRequestId: requestId,
       // Stable personal card code — reused when a returning visitor is recognised
-      personQr: (selectedProfile as any)?.personQr || visitQr,
+      personQr: selectedProfile?.personQr || visitQr,
 
+      supplierId: selectedType === "contractor" ? selectedSupplier?.id : undefined,
+      contractorScreening: selectedType === "contractor" ? { ...contractorScreeningAnswers } : undefined,
+      volunteerRole: selectedType === "volunteer" && extras.volunteerRoleEnabled ? volunteerRole.trim() || undefined : undefined,
+      volunteerSupervisor: selectedType === "volunteer" && extras.volunteerSupervisorEnabled ? volunteerSupervisor.trim() || undefined : undefined,
+      volunteerExpectedEnd: selectedType === "volunteer" && extras.volunteerExpectedEndEnabled && volunteerExpectedEnd ? (() => { const date = new Date(); const [h,m] = volunteerExpectedEnd.split(":").map(Number); date.setHours(h,m,0,0); return date; })() : undefined,
+      visitReasonOther: selectedType === "other" ? otherReason.trim() || undefined : undefined,
+      termsConfirmedBy: policy.privacyRequired && privacyAcknowledged ? `${formData.firstName} ${formData.surname}`.trim() : undefined,
+      termsConfirmationMode: policy.privacyRequired && privacyAcknowledged ? "self" : undefined,
       firstName: formData.firstName,
       surname: formData.surname,
       email: enabled.email,
@@ -472,7 +523,10 @@ export function useCheckInFlow(open: boolean) {
     residentItems, staffItems,
 
     // Actions
-    canProceed, resetForm, buildVisitor,
+    canProceed, canSubmit, validationIssues, configurationLoading, configurationError, resetForm, buildVisitor,
+    extras, volunteerRole, setVolunteerRole, volunteerSupervisor, setVolunteerSupervisor,
+    volunteerExpectedEnd, setVolunteerExpectedEnd, otherReason, setOtherReason,
+    overdueKeys, keyPolicy, keyOverrideReason, setKeyOverrideReason,
 
     // Food register
     bringingFood, setBringingFood, foodForm, setFoodForm, foodStepApplies, selectedResident,
