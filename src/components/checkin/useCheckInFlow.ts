@@ -490,7 +490,7 @@ export function useCheckInFlow(open: boolean, initialType?: VisitorType, prefill
     selectedType, setSelectedType,
 
     // Search / returning visitor
-    searchQuery, setSearchQuery, searchResults, selectedProfile, selectProfile, isReturning,
+    searchQuery, setSearchQuery, searchResults, selectedProfile, setSelectedProfile, selectProfile, isReturning, setIsReturning,
 
     // Form
     formData, updateField, setFormData,
