@@ -2,7 +2,7 @@ import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { ScreeningEvaluation } from "@/lib/screeningOutcome";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollText, Shield, FileText, Users, Phone, Mail, Check, MapPin, Thermometer } from "lucide-react";
+import { ScrollText, Shield, FileText } from "lucide-react";
 import { CompanionDetail, VisitorType } from "@/types/visitor";
 import { CheckInFormData } from "./useCheckInFlow";
 import { TimeOverride } from "@/components/TimeOverride";
@@ -24,13 +24,6 @@ interface StepConfirmProps {
   setCheckInTimeOverride: (val: string | null) => void;
 }
 
-const TYPE_BADGES: Record<string, { label: string; className: string }> = {
-  visitor: { label: "Visitor", className: "bg-primary/10 text-primary border-primary/20" },
-  contractor: { label: "Contractor", className: "bg-warning/10 text-warning border-warning/20" },
-  volunteer: { label: "Volunteer", className: "bg-success/10 text-success border-success/20" },
-  staff: { label: "Staff", className: "bg-muted text-muted-foreground border-border" },
-};
-
 export function StepConfirm({
   formData,
   privacyRequired = true,
@@ -47,9 +40,6 @@ export function StepConfirm({
   checkInTimeOverride,
   setCheckInTimeOverride,
 }: StepConfirmProps) {
-  const typeBadge = TYPE_BADGES[selectedType] || TYPE_BADGES.visitor;
-  const hasHealthFlags = Object.values(healthAnswers).some((v) => v === true);
-
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">

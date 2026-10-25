@@ -1,16 +1,11 @@
 import { ConfiguredDetails } from "./ConfiguredDetails";
 import { Destination } from "./Destination";
 import { AdditionalPeople } from "./AdditionalPeople";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Camera, Check, X, Users, Phone, Mail, UserCircle, MapPin, MessageSquare, Search, UserCheck, UserPlus } from "lucide-react";
-import { usePeopleLookup } from "@/hooks/usePeopleLookup";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Camera, Check, X, Phone, Mail } from "lucide-react";
 import { CompanionDetail, VisitorType } from "@/types/visitor";
 import { CheckInFormData, VisitorProfile } from "./useCheckInFlow";
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import type { CompanionFieldSpec } from "@/lib/companionFields";
 import type { CheckInFieldSpec } from "@/lib/checkInFields";
 
@@ -53,6 +48,13 @@ export function StepDetails({
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showCamera, setShowCamera] = useState(false);
+  useEffect(() => () => { streamRef.current?.getTracks().forEach(track => track.stop()); }, []);
+  useEffect(() => {
+    if (showCamera && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      void videoRef.current.play();
+    }
+  }, [showCamera]);
 
   const startCamera = useCallback(async () => {
     try {
@@ -119,10 +121,8 @@ export function StepDetails({
       {/* Personal details — exactly what this site asks for this person type */}
       <div className="flex flex-col-reverse gap-4">
         {/* Photo capture — compact left column */}
-        <div className="w-full">
-          <p className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
-            <Camera className="h-3 w-3" aria-hidden /> Photo
-          </p>
+        <details className="w-full">
+          <summary className="cursor-pointer py-2 text-sm font-medium text-muted-foreground">Photo{photo ? " captured" : " (optional)"}</summary>
           {photo ? (
             <div className="space-y-2">
               <img src={photo} alt="" className="h-[120px] w-[120px] rounded-control object-cover border-2 border-success/30 shadow-sm" />
@@ -155,7 +155,7 @@ export function StepDetails({
           )}
           <canvas ref={canvasRef} className="hidden" />
           <input ref={fileInputRef} type="file" accept="image/*" capture="user" className="hidden" onChange={handleFileUpload} />
-        </div>
+        </details>
 
         <ConfiguredDetails fields={activeFields} values={formData as unknown as Record<string, unknown>} onChange={updateField} />
       </div>

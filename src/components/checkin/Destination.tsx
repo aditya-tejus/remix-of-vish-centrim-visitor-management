@@ -12,7 +12,6 @@ export function Destination({ formData, updateField, residentItems, staffItems, 
  activeFields: CheckInFieldSpec[];
 }) {
  return (
-      {/* Visit details */}
       <div className="border-t border-border pt-4 space-y-4">
         <p className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5">
           <MapPin className="h-3 w-3" /> Destination / host
