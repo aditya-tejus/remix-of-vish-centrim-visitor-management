@@ -292,6 +292,17 @@ export function buildRollCall({ visitors, residents, roomLabel = "Room", parties
     }
   });
 
+  // The resident directory is a sweep roster, never proof of physical presence.
+  const represented = new Set([...onSite, ...offSite].filter(p => p.type === "resident").map(p => p.visitorId));
+  residents.filter(r => !represented.has(r.visitorId)).forEach(r => onSite.push({
+    key: `${r.visitorId}:self`, visitorId: r.visitorId, companionIndex: null,
+    name: r.name, type: "resident", typeLabel: "Resident", area: r.wing || UNASSIGNED_AREA,
+    room: roomDisplay(r.room, roomLabel), unit: unitOf(r.room), phone: r.mobile,
+    emergencyContactName: r.emergencyContactName || "", emergencyContactPhone: r.emergencyContactPhone || "",
+    assistance: assistanceFor(r), checkInTime: null, host: "", workLocation: "", offSite: false,
+    expectedReturn: null, accompaniedBy: "", associatedWith: [], responsibleStaff: r.keyWorker || "",
+  }));
+
   // Residents learn who is with them right now.
   const withResident = (p: RollCallPerson) => {
     if (p.type !== "resident") return p;

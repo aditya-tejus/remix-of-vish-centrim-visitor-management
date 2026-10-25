@@ -51,7 +51,7 @@ interface AttendanceRecord extends EmergencyEvidence {
 
 export default function EvacuationReport() {
   const { can } = usePermissions();
-  const { pack } = useOperatingContext();
+  const { ukNation } = useOperatingContext();
   const [drills, setDrills] = useState<DrillRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -91,7 +91,7 @@ export default function EvacuationReport() {
   };
 
 
-  const complianceNote = emergencyRegulatoryNote(isVillageView ? "rv" : isUK ? (pack.id === "uk_unconfigured" ? "other_uk" : "england") : "rac");
+  const complianceNote = emergencyRegulatoryNote(isVillageView ? "rv" : isUK ? (ukNation && ukNation !== "England" ? "other_uk" : "england") : "rac");
 
   useEffect(() => {
     let cancelled = false;

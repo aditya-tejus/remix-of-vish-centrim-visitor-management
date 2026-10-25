@@ -36,7 +36,7 @@ export function qualifyingPhysicalMethod(method?: string | null) {
 }
 export function emergencyPolicy(row: EmergencyEvidence) {
   const outcome = row.outcome;
-  const verified = Boolean(row.confirmed_at && row.confirmation_method);
+  const verified = Boolean(row.confirmed_at && row.confirmation_method && Object.hasOwn(METHOD_LABELS, row.confirmation_method));
   const physical = outcome === "physically_safe" && verified && qualifyingPhysicalMethod(row.confirmation_method);
   const notPresent = outcome === "not_present_confirmed" && verified;
   const reported = outcome === "reported_safe" && verified;
@@ -74,7 +74,7 @@ export function legacyStatusFor(outcome: EmergencyOutcome): string {
 }
 export function validOutcomeMethod(outcome: EmergencyOutcome, method?: string | null) {
   if (outcome === "physically_safe") return qualifyingPhysicalMethod(method);
-  if (["reported_safe", "not_present_confirmed", "assistance_required", "cannot_locate"].includes(outcome)) return Boolean(method && method in METHOD_LABELS);
+  if (["reported_safe", "not_present_confirmed", "assistance_required", "cannot_locate"].includes(outcome)) return Boolean(method && Object.hasOwn(METHOD_LABELS, method));
   return !method;
 }
 export function arrivalBasis(snapshotAt?: string | null, arrivalAt?: string | null, basis?: string | null) {

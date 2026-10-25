@@ -1,3 +1,5 @@
+import { escapeHtml } from "@/lib/emergencyPrint";
+import { useOperatingContext } from "@/contexts/OperatingContext";
 import { OutcomeDialog } from "@/components/emergency/OutcomeDialog";
 import { EmergencyOutcome, ConfirmationMethod, EmergencyEvidence, emergencyPolicy, emergencyCounts, initialEmergencyOutcome, legacyStatusFor, outcomeExport, arrivalBasis, canCloseEmergency, emergencyRegulatoryNote } from "@/lib/emergencyPolicy";
 import { useState, useMemo, useEffect } from "react";
@@ -71,6 +73,7 @@ const STATUS_PRIORITY: Record<string, number> = {
 
 export default function Evacuation() {
   const { visitors } = useVisitors();
+  const { ukNation } = useOperatingContext();
   const { residents } = useResidents();
   const { user } = useAuth();
   const { areaLabel, roomLabel, structure } = useSiteStructure();
@@ -232,23 +235,24 @@ export default function Evacuation() {
 
   /** Records an outcome for a group of people, creating the event if needed. */
   const setStatusFor = async (people: RollCallPerson[], status: AttendanceStatus, reason?: string, outcome?: EmergencyOutcome, method?: ConfirmationMethod) => {
-    if (people.length === 0) return;
+    if (people.length === 0) return false;
     if (!canMark) {
       toast({ title: "Not allowed", description: "You do not have permission to record roll call outcomes.", variant: "destructive" });
-      return;
+      return false;
     }
     if (!activeDrill) {
       // Never let a tap silently declare a live emergency — it must be chosen.
       setStartPrompt(true);
-      return;
+      return false;
     }
     setBusy(true);
     try {
       const drill = await ensureDrill();
-      const { data: rows } = await supabase
+      const { data: rows, error: rowsError } = await supabase
         .from("evacuation_attendance" as any)
         .select("id, visitor_id, parent_visitor_id, companion_index")
         .eq("drill_id", drill.id);
+      if (rowsError) throw rowsError;
       const found = new Map(((rows || []) as any[]).map((r) => [attendanceKey(r), r.id as string]));
 
       for (const p of people) {
@@ -277,8 +281,10 @@ export default function Evacuation() {
           }
         }
       }
+      return true;
     } catch (e: any) {
       toast({ title: "Could not update roll call", description: e?.message || "Please try again.", variant: "destructive" });
+      return false;
     } finally {
       setBusy(false);
     }
@@ -345,9 +351,9 @@ export default function Evacuation() {
     };
 
     filtered.forEach((p) => {
-      if (groupBy === "area") push(p.area || (p.type === "resident" ? UNASSIGNED_AREA : `${p.typeLabel}s`), p);
+      if (groupBy === "area") push(p.area || (p.type === "resident" ? UNASSIGNED_AREA : `${escapeHtml(p.typeLabel)}s`), p);
       else if (groupBy === "assistance") push(p.assistance.level, p);
-      else if (groupBy === "type") push(`${p.typeLabel}s`, p);
+      else if (groupBy === "type") push(`${escapeHtml(p.typeLabel)}s`, p);
       else push(!accountedFor(p) ? "Not accounted for" : "Accounted for", p);
     });
 
@@ -377,23 +383,6 @@ export default function Evacuation() {
   const assistanceCount = onSite.filter((p) => statusOf(p) === "assistance_required").length;
   const lateCount = onSite.filter(isLateArrival).length;
 
-
-  const markGroupSafe = async (g: Group) => {
-    const pending = g.people.filter((p) => !accountedFor(p));
-    if (pending.length === 0) return;
-    await setStatusFor(pending, "safe");
-    toast({ title: `${g.label} accounted for`, description: `${pending.length} people marked safe.` });
-  };
-
-  const markAllSafe = async () => {
-    const pending = onSite.filter((p) => !accountedFor(p));
-    await setStatusFor(pending, "safe");
-    toast({ title: "All marked safe", description: `${pending.length} people marked as safe.` });
-  };
-
-  const resetAll = async () => {
-    await setStatusFor(onSite.filter((p) => accountedFor(p)), "unaccounted");
-  };
 
   const jumpToNext = () => {
     const next = filtered.find((p) => !accountedFor(p));
@@ -499,16 +488,16 @@ export default function Evacuation() {
     const body = groups.map((g) => {
       const wardens = [...new Set(g.people.map((p) => p.responsibleStaff).filter(Boolean))];
       return `
-      <tr class="grp"><td colspan="8">${g.label} — ${g.people.length} people${wardens.length ? ` · responsible: ${wardens.join(", ")}` : ""}</td></tr>
+      <tr class="grp"><td colspan="8">${escapeHtml(g.label)} — ${g.people.length} people${wardens.length ? ` · responsible: ${escapeHtml(wardens.join(", "))}` : ""}</td></tr>
       ${g.people.map((p) => {
         const s = statusOf(p);
-        return `<tr class="${s === "unaccounted" ? "danger" : "safe"}">
+        return `<tr class="${emergencyPolicy(evidenceOf(p)).unresolved ? "danger" : "safe"}">
         <td>${accountedFor(p) ? "Recorded" : "Outstanding"}</td>
-        <td><strong>${p.name}</strong>${p.room ? `<br><small>${p.room}</small>` : ""}</td>
-        <td>${p.typeLabel}</td>
-        <td>${can("assistance.view") ? p.assistance.label : "Restricted"}${p.assistance.aids.length ? `<br><small>${p.assistance.aids.join(", ")}</small>` : ""}${p.assistance.flags.length ? `<br><small>${p.assistance.flags.join(", ")}</small>` : ""}</td>
-        <td>${p.phone || "—"}</td>
-        <td>${p.emergencyContactName ? `${p.emergencyContactName}<br>${p.emergencyContactPhone || ""}` : "—"}</td>
+        <td><strong>${escapeHtml(p.name)}</strong>${p.room ? `<br><small>${escapeHtml(p.room)}</small>` : ""}</td>
+        <td>${escapeHtml(p.typeLabel)}</td>
+        <td>${can("assistance.view") ? p.assistance.label : "Restricted"}${can("assistance.view") && p.assistance.aids.length ? `<br><small>${escapeHtml(p.assistance.aids.join(", "))}</small>` : ""}${can("assistance.view") && p.assistance.flags.length ? `<br><small>${escapeHtml(p.assistance.flags.join(", "))}</small>` : ""}</td>
+        <td>${escapeHtml(p.phone || "—")}</td>
+        <td>${p.emergencyContactName ? `${escapeHtml(p.emergencyContactName)}<br>${escapeHtml(p.emergencyContactPhone || "")}` : "—"}</td>
         <td>${p.associatedWith.length ? p.associatedWith.join("<br>") : "—"}</td>
         <td>${emergencyPolicy(evidenceOf(p)).label}<br>${emergencyPolicy(evidenceOf(p)).methodLabel}</td>
       </tr>`;
@@ -518,13 +507,13 @@ export default function Evacuation() {
 
 
     const offSiteRows = offSite.map((p) => `<tr>
-      <td>Off-site record</td><td><strong>${p.name}</strong>${p.room ? `<br><small>${p.room}</small>` : ""}</td>
-      <td>Off site</td><td>${p.assistance.label}</td><td>${p.phone || "—"}</td>
-      <td>${p.emergencyContactName ? `${p.emergencyContactName}<br>${p.emergencyContactPhone || ""}` : "—"}</td>
-      <td>${p.expectedReturn ? `Back ${format(p.expectedReturn, "dd MMM HH:mm")}` : "Away"}</td>
+      <td>Off-site record</td><td><strong>${escapeHtml(p.name)}</strong>${p.room ? `<br><small>${escapeHtml(p.room)}</small>` : ""}</td>
+      <td>Off-site record</td><td>${can("assistance.view") ? escapeHtml(p.assistance.label) : "Restricted"}</td><td>${escapeHtml(p.phone || "—")}</td>
+      <td>${p.emergencyContactName ? `${escapeHtml(p.emergencyContactName)}<br>${escapeHtml(p.emergencyContactPhone || "")}` : "—"}</td>
+      <td>${emergencyPolicy(evidenceOf(p)).label}<br>${emergencyPolicy(evidenceOf(p)).methodLabel}</td><td>${p.expectedReturn ? `Back ${format(p.expectedReturn, "dd MMM HH:mm")}` : "Away"}</td>
     </tr>`).join("");
 
-    const footer = emergencyRegulatoryNote(isVillageView ? "rv" : isUK ? "england" : "rac");
+    const footer = emergencyRegulatoryNote(isVillageView ? "rv" : isUK ? (ukNation && ukNation !== "England" ? "other_uk" : "england") : "rac");
 
     const html = `<!DOCTYPE html><html><head><title>Roll Call</title><style>
       @page{size:A4 portrait;margin:12mm}
@@ -658,7 +647,7 @@ export default function Evacuation() {
           <div className="flex shrink-0 flex-col gap-2 max-w-[180px]">
             <span className="text-xs text-foreground">{emergencyPolicy(evidenceOf(p)).label}</span>
             <span className="text-xs text-muted-foreground">{emergencyPolicy(evidenceOf(p)).methodLabel}{evidenceOf(p).confirmed_at ? ` · ${format(new Date(evidenceOf(p).confirmed_at as string), "hh:mm a")}` : ""}</span>
-            <Button disabled={busy || !canMark || !activeDrill} variant="outline" className="h-14" aria-label={`Record outcome for ${p.name}`} onClick={() => togglePerson(p)}>Record outcome</Button>
+            <Button disabled={busy || !canMark || !activeDrill} variant="outline" className="h-14" aria-label={`Record outcome for ${escapeHtml(p.name)}`} onClick={() => togglePerson(p)}>Record outcome</Button>
           </div>
 
         </div>
@@ -728,7 +717,7 @@ export default function Evacuation() {
                 <WifiOff className="h-4 w-4 shrink-0" />
                 <span>
                   {offline ? "No connection. " : ""}
-                  {pending > 0 ? `${pending} outcome${pending === 1 ? "" : "s"} waiting to save (person reference and status only).` : "Outcomes will be saved when the connection returns."}
+                  {pending > 0 ? `${pending} outcome${pending === 1 ? "" : "s"} waiting to save (reference, outcome, method and time only).` : "Outcomes will be saved when the connection returns."}
                 </span>
                 {pending > 0 && (
                   <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" disabled={retrying} onClick={retryPending}>
@@ -941,8 +930,8 @@ export default function Evacuation() {
           )}
 
           {recording && <OutcomeDialog name={recording.name} busy={busy} correction={emergencyPolicy(evidenceOf(recording)).accounted} onClose={() => setRecording(null)} onSave={async (outcome, method, reason) => {
-            await setStatusFor([recording], legacyStatusFor(outcome) as AttendanceStatus, reason, outcome, method);
-            setRecording(null);
+            const saved = await setStatusFor([recording], legacyStatusFor(outcome) as AttendanceStatus, reason, outcome, method);
+            if (saved) setRecording(null);
           }} />}
           <Dialog open={closing} onOpenChange={setClosing}>
             <DialogContent className="rounded-xl">
