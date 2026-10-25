@@ -17,7 +17,19 @@ export default function KioskAttract() {
 
   useEffect(() => {
     const interval = setInterval(() => setTime(new Date()), 1000);
-    return (
+    return () => clearInterval(interval);
+  }, []);
+
+  // Keep the existing rotating phone check-in token and route unchanged.
+  const [qrToken, setQrToken] = useState(() => createKioskQrToken());
+  useEffect(() => {
+    const id = setInterval(() => setQrToken(createKioskQrToken()), 30 * 1000);
+    return () => clearInterval(id);
+  }, []);
+  const publicCheckinUrl = `${window.location.origin}/kiosk/checkin?k=${qrToken}`;
+  const handleStart = useCallback(() => navigate("/kiosk/home"), [navigate]);
+
+  return (
     <main className="kiosk-surface min-h-dvh flex flex-col items-center justify-center bg-background px-6 py-10" onClick={handleStart}>
       <div className="w-full max-w-xl text-center space-y-6">
         <img src={centrimLogo} alt="Centrim Life" className="h-14 max-w-full object-contain mx-auto" />

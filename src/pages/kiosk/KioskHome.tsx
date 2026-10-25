@@ -25,7 +25,10 @@ export default function KioskHome() {
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return (
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
     <div className="kiosk-surface w-full max-w-3xl mx-auto px-4 sm:px-8 py-8 sm:py-12 space-y-8">
       <div className="text-center space-y-3">
         <img src={centrimLogo} alt="Centrim Life" className="h-12 sm:h-14 max-w-full object-contain mx-auto" />
