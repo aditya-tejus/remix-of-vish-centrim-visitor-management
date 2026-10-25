@@ -79,6 +79,8 @@ export function useCheckInFlow(open: boolean, initialType?: VisitorType, prefill
   const [healthAnswers, setHealthAnswers] = useState<Record<string, any>>({});
   const [overrideReason, setOverrideReason] = useState("");
   const [overrideApprovedBy, setOverrideApprovedBy] = useState<string | null>(null);
+  // Approval belongs to these answers, not a later edited screening.
+  useEffect(() => { setOverrideApprovedBy(null); }, [healthAnswers, selectedType, formData.bodyTemperature]);
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [companions, setCompanions] = useState<CompanionDetail[]>([]);
   // Held for the whole attempt, including retries, so one arrival is saved once.
@@ -109,16 +111,18 @@ export function useCheckInFlow(open: boolean, initialType?: VisitorType, prefill
   const [volunteerExpectedEnd, setVolunteerExpectedEnd] = useState("");
   const [otherReason, setOtherReason] = useState("");
   const openedRef = useRef(false);
+  const attemptSiteRef = useRef<string | null>(null);
   useEffect(() => {
     if (!open) { openedRef.current = false; return; }
     if (openedRef.current) return;
     openedRef.current = true;
+    attemptSiteRef.current = currentSiteId;
     setSelectedType(prefill?.type || initialType || "visitor");
     if (prefill) {
       setFormData(prev => ({ ...prev, firstName: prefill.firstName || "", surname: prefill.surname || "", mobile: prefill.mobile || "", email: prefill.email || "", address: prefill.address || "" }));
       setIsReturning(true);
     }
-  }, [open, initialType, prefill]);
+  }, [open, initialType, prefill, currentSiteId]);
   const personConfig = personTypes.find(p => p.type === selectedType);
   const overdueKeys = overdueForName(`${formData.firstName} ${formData.surname}`.trim());
   const keyBlocked = keyPolicy.enforcement === "block" && overdueKeys.length > 0 && keyOverrideReason.trim().length < 3;
@@ -414,6 +418,7 @@ export function useCheckInFlow(open: boolean, initialType?: VisitorType, prefill
     keyBlocked, otherReasonRequired: selectedType === "other", otherReason,
   });
   if (!currentSiteId) validationIssues.unshift("Select a site before checking in");
+  if (attemptSiteRef.current && attemptSiteRef.current !== currentSiteId) validationIssues.unshift("The site changed. Close and reopen check-in for the selected site.");
   if (configurationLoading) validationIssues.unshift("Loading check-in requirements…");
   if (configurationError) validationIssues.unshift("Check-in requirements could not be loaded. Close and reopen to retry.");
   const canSubmit = validationIssues.length === 0;

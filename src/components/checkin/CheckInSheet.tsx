@@ -3,7 +3,7 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, UserPlus, ShieldAlert, ShieldCheck, UtensilsCrossed, Printer } from "lucide-react";
+import { CheckCircle2, UserPlus, ShieldAlert, ShieldCheck, UtensilsCrossed, Printer } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { Visitor } from "@/types/visitor";
@@ -30,14 +30,6 @@ interface CheckInSheetProps {
   prefill?: StaffCheckInPrefill;
 
 }
-
-const stepLabels: Record<string, string> = {
-  identify: "Identify",
-  details: "Details",
-  food: "Food",
-  screening: "Screening",
-  confirm: "Confirm",
-};
 
 export function CheckInSheet({ open, onOpenChange, onAdd, initialType, prefill }: CheckInSheetProps) {
   const flow = useCheckInFlow(open, initialType, prefill);
@@ -68,9 +60,10 @@ export function CheckInSheet({ open, onOpenChange, onAdd, initialType, prefill }
     setSaving(true);
     setSaveFailed(false);
 
-    const visitor = flow.buildVisitor();
+    let visitor: Omit<Visitor, "id">;
     let created: Visitor;
     try {
+      visitor = flow.buildVisitor();
       // Wait for the server before saying anyone is checked in.
       created = await onAdd(visitor);
     } catch {
@@ -195,7 +188,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd, initialType, prefill }
                   selectedProfile={flow.selectedProfile}
                   onSelectProfile={(profile) => {
                     flow.selectProfile(profile);
-
+                    document.getElementById("staff-detail-core-first-name")?.focus();
                   }}
                   onNewPerson={() => document.getElementById("staff-detail-core-first-name")?.focus()}
                 />
