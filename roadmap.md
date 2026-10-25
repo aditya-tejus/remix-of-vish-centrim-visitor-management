@@ -549,7 +549,7 @@ Known limits after Phase 7E:
 - [x] 9A remainder: masked name-only returning lookup (server function change), Check-in Questions off by default for unconfigured types, delivery-wording corrections.
 - [x] Current continuation: remaining Phase 9A corrections verified; 9B and later phases are not implemented in this slice.
 - [x] 9B England / AU RV / AU RAC packs
-- [ ] 9C Roll call statuses (at home unconfirmed, physically confirmed)
+- [ ] 9C Roll call evidence implementation delivered; authenticated outcome/closure UAT remains blocked by unavailable session (see Phase 9C evidence).
 - [ ] 9D Design tokens and font refresh
 - [ ] 9E Split large screens (check-in, kiosk, evacuation, keys)
 - [ ] 9F Screen redesigns
@@ -572,3 +572,14 @@ Known limits after Phase 7E:
 - Every pack carries a regulator note shown in Settings with the standing caveat that configuration is not legal compliance or legal advice.
 - Settings screen: administrators can pick the UK nation; the guard state shows a plain-language warning banner. The guard pack is never offered as a choice.
 - Verification: 146 tests pass (11 new pack tests), typecheck clean, build OK. No existing site records were changed.
+
+### Phase 9C evidence — 25 October 2026
+- Added nullable outcomes, verification methods, confirmation actor/time and presence basis without backfilling historical attendance. Legacy status constraints remain intact. All 141 historical attendance rows still have NULL outcome.
+- Deployed and schema-verified migrations `0002_emergency_evidence_and_site_guards` and `0003_emergency_progress_and_provenance` through the Cloud migration tool, not an undeployed hand-authored migration.
+- Canonical policy shared by staff/kiosk/report/CSV/print: physical safety requires sighting or staff physical verification; reported safety, confirmed absence, assistance and unresolved states remain distinct. Legacy safe means method unrecorded, never physical evidence.
+- Resident directory is included as a sweep roster; no-attendance residents and independent villa residents default to location unconfirmed. Families remain individual guest lines. No blind whole-site/area/villa safe action remains. Frozen event identities remain after sign-out; later additions carry later-arrival provenance.
+- Evidence and corrections create atomic outcome audit rows. Restrictive site/permission policies and immutable snapshot identity guard added. Device rollcall/mark/progress now constrain to the bound site; PIN-only emergency RPC access revoked from public/anon/authenticated.
+- 178 tests passed (32 new policy/roster tests); harness typecheck/build OK. Public unbound kiosk tested at desktop/mobile: setup gate only, no names or outcome controls, no runtime error or horizontal overflow.
+- No event started, no resident/visitor records modified, no data erased and no publication.
+- Remaining UAT: signed-in staff evidence read-back, bound PIN outcome read-back, cross-site write refusal, correction audit and closed-event replay. Self-session mint failed because no requesting-user account matched; no alternate account chosen without permission. Mutation UAT deliberately not simulated with a live emergency.
+- Open limitations: event activation/snapshot creation remains two requests; later arrivals persist only when explicitly recorded; event close/review general audit remains a separate request; shared PIN identifies an authorised operator group, not an individual staff member; PIN denial logging/lockout durability requires separate correction and verification. Phase 9D has not started.
