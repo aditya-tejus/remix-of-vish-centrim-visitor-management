@@ -751,12 +751,16 @@ export type Database = {
           actor_label: string
           actor_user_id: string | null
           attendance_id: string | null
+          confirmation_method: string | null
+          confirmed_at: string | null
           created_at: string
           drill_id: string
           id: string
+          new_outcome: string | null
           new_status: string | null
           note: string | null
           person_name: string | null
+          previous_outcome: string | null
           previous_status: string | null
           reason: string | null
           source: string
@@ -766,12 +770,16 @@ export type Database = {
           actor_label?: string
           actor_user_id?: string | null
           attendance_id?: string | null
+          confirmation_method?: string | null
+          confirmed_at?: string | null
           created_at?: string
           drill_id: string
           id?: string
+          new_outcome?: string | null
           new_status?: string | null
           note?: string | null
           person_name?: string | null
+          previous_outcome?: string | null
           previous_status?: string | null
           reason?: string | null
           source?: string
@@ -781,12 +789,16 @@ export type Database = {
           actor_label?: string
           actor_user_id?: string | null
           attendance_id?: string | null
+          confirmation_method?: string | null
+          confirmed_at?: string | null
           created_at?: string
           drill_id?: string
           id?: string
+          new_outcome?: string | null
           new_status?: string | null
           note?: string | null
           person_name?: string | null
+          previous_outcome?: string | null
           previous_status?: string | null
           reason?: string | null
           source?: string
@@ -815,7 +827,11 @@ export type Database = {
           associated_with: string | null
           branch_id: string | null
           companion_index: number | null
+          confirmation_method: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
           contact_phone: string | null
+          correction_reason: string | null
           created_at: string
           drill_id: string
           emergency_contact_name: string | null
@@ -826,9 +842,11 @@ export type Database = {
           marked_safe_at: string | null
           note: string | null
           notes: string | null
+          outcome: string | null
           parent_visitor_id: string | null
           person_name: string
           person_type: string
+          presence_basis: string | null
           responsible_staff: string | null
           room_label: string | null
           status: string
@@ -840,7 +858,11 @@ export type Database = {
           associated_with?: string | null
           branch_id?: string | null
           companion_index?: number | null
+          confirmation_method?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           contact_phone?: string | null
+          correction_reason?: string | null
           created_at?: string
           drill_id: string
           emergency_contact_name?: string | null
@@ -851,9 +873,11 @@ export type Database = {
           marked_safe_at?: string | null
           note?: string | null
           notes?: string | null
+          outcome?: string | null
           parent_visitor_id?: string | null
           person_name: string
           person_type?: string
+          presence_basis?: string | null
           responsible_staff?: string | null
           room_label?: string | null
           status?: string
@@ -865,7 +889,11 @@ export type Database = {
           associated_with?: string | null
           branch_id?: string | null
           companion_index?: number | null
+          confirmation_method?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           contact_phone?: string | null
+          correction_reason?: string | null
           created_at?: string
           drill_id?: string
           emergency_contact_name?: string | null
@@ -876,9 +904,11 @@ export type Database = {
           marked_safe_at?: string | null
           note?: string | null
           notes?: string | null
+          outcome?: string | null
           parent_visitor_id?: string | null
           person_name?: string
           person_type?: string
+          presence_basis?: string | null
           responsible_staff?: string | null
           room_label?: string | null
           status?: string
@@ -3664,6 +3694,15 @@ export type Database = {
           scope: string
         }[]
       }
+      emergency_is_accounted: {
+        Args: {
+          p_at: string
+          p_method: string
+          p_outcome: string
+          p_status: string
+        }
+        Returns: boolean
+      }
       ensure_user_bootstrap: { Args: never; Returns: undefined }
       has_permission: {
         Args: {
@@ -3998,6 +4037,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      kioskd_emergency_mark_v2: {
+        Args: {
+          p_attendance_id: string
+          p_method?: string
+          p_outcome: string
+          p_pin: string
+          p_reason?: string
+          p_token: string
+        }
+        Returns: boolean
+      }
       kioskd_emergency_progress: {
         Args: { p_pin: string; p_token: string }
         Returns: {
@@ -4022,6 +4072,27 @@ export type Database = {
           marked_safe_at: string
           person_name: string
           person_type: string
+          status: string
+        }[]
+      }
+      kioskd_emergency_rollcall_v2: {
+        Args: { p_pin: string; p_token: string }
+        Returns: {
+          assistance_level: string
+          attendance_id: string
+          confirmation_method: string
+          confirmed_at: string
+          contact_phone: string
+          drill_id: string
+          drill_state: string
+          drill_title: string
+          event_class: string
+          location_label: string
+          marked_safe_at: string
+          outcome: string
+          person_name: string
+          person_type: string
+          presence_basis: string
           status: string
         }[]
       }
