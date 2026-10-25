@@ -146,17 +146,17 @@ describe("staff check-in baseline payload and guards", () => {
 describe("staff sheet mocked save and accessible interactions", () => {
   async function fillSimpleStaff() {
     await waitFor(() => expect(screen.queryByText("Loading check-in requirements…")).not.toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: "Staff", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Staff" }));
     fireEvent.change(screen.getByRole("textbox", { name: "First name" }), { target: { value: "Ann" } });
     fireEvent.change(screen.getByRole("textbox", { name: "Surname" }), { target: { value: "Lee" } });
-    await waitFor(() => expect(screen.getByRole("button", { name: "Check In", exact: true })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Check In" })).toBeEnabled());
   }
   it("waits for confirmed save and prevents duplicate rapid submissions", async () => {
     let resolveSave: ((value: any) => void) | undefined;
-    const onAdd = vi.fn(() => new Promise<any>(resolve => { resolveSave = resolve; }));
+    const onAdd = vi.fn((_visitor: any) => new Promise<any>(resolve => { resolveSave = resolve; }));
     render(<CheckInSheet open onOpenChange={vi.fn()} onAdd={onAdd} />);
     await fillSimpleStaff();
-    const button = screen.getByRole("button", { name: "Check In", exact: true });
+    const button = screen.getByRole("button", { name: "Check In" });
     fireEvent.click(button); fireEvent.click(button);
     expect(onAdd).toHaveBeenCalledTimes(1);
     expect(screen.queryByText("Ann Lee checked in!")).not.toBeInTheDocument();
@@ -167,7 +167,7 @@ describe("staff sheet mocked save and accessible interactions", () => {
     const onAdd = vi.fn().mockRejectedValueOnce(new Error("offline")).mockImplementation(async value => ({ ...value, id: "saved-a" }));
     render(<CheckInSheet open onOpenChange={vi.fn()} onAdd={onAdd} />);
     await fillSimpleStaff();
-    fireEvent.click(screen.getByRole("button", { name: "Check In", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Check In" }));
     await screen.findByRole("alert");
     expect(screen.getByRole("textbox", { name: "First name" })).toHaveValue("Ann");
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
@@ -180,7 +180,7 @@ describe("staff sheet mocked save and accessible interactions", () => {
     render(<CheckInSheet open onOpenChange={vi.fn()} onAdd={onAdd} />);
     expect(screen.getByRole("dialog", { name: "Check In" })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Returning visitor lookup" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Check In", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Check In" }));
     expect(onAdd).not.toHaveBeenCalled();
   });
 });
