@@ -1,8 +1,8 @@
-# Centrim Life Design System (Phase 7F, Increment 1)
+# Centrim Life Design System (Phase 9D / first 9F slice)
 
 Scope of this document: how screens should look, read and behave. It records the
-tokens and shared building blocks introduced in Increment 1. No page has been
-changed yet; later increments apply these rules screen by screen.
+tokens and shared building blocks. Phase 9D applies the foundation and the first
+9F slice to Today, Visit List, header/sidebar and kiosk welcome/home/shell only.
 
 This is a prototype design standard. It is **not** a compliance or accessibility
 certification. Contrast and WCAG 2.2 AA items below are design targets verified by
@@ -54,15 +54,17 @@ reads like an ordinary validation error. It must not be used for anything else.
 
 ## 3. Typography
 
-Inter, via `--font-sans`. Fixed scale — do not introduce arbitrary pixel sizes:
+Source Sans 3, locally bundled in weights 400/500/600/700 through package CSS,
+via `--font-sans`, with system UI / Segoe UI / Roboto fallbacks. Its humanist
+forms and open counters suit reception and older kiosk users. Fixed scale:
 
 | Step | Class | Use |
 | --- | --- | --- |
-| 12px | `text-xs` | Meta, timestamps, counts, badge text |
-| 14px | `text-sm` | Table rows, form help, secondary body |
-| 16px | `text-base` | Default body, all form fields, kiosk body |
+| 12px | `text-xs` | Rare small staff meta only |
+| 14px | `text-sm` | Secondary text, timestamps, supporting controls |
+| 16px | `text-base` | Staff body, names, search and form fields |
 | 18px | `text-lg` | Card and section titles |
-| 20–24px | `text-xl` / `text-2xl` | Page titles |
+| 20–24px | `text-xl` / `text-2xl` | Kiosk body / staff page titles |
 | 30px+ | `text-3xl`+ | Emergency totals and kiosk headings only |
 
 Nothing below 12px is permitted in staff screens, and nothing below 16px for
@@ -76,8 +78,8 @@ input text on kiosk. Use `tabular-nums` for times, counts and totals.
 - Touch targets: `min-h-touch` / `min-w-touch` (44px) minimum on desktop and
   tablet, `min-h-kiosk` (56px) on kiosk.
 - Borders: 1px `border-border`. Cards may use the existing `shadow-card`.
-- Radii: `rounded-control` for controls and fields, `rounded-card` for cards,
-  sheets and dialogs, `rounded-pill` for chips and status badges.
+- Radii: `rounded-control` for controls and status labels, `rounded-card` (8px)
+  for repeated framed items; existing rounded-xl modal convention remains.
 
 ## 5. Focus and motion
 
@@ -128,6 +130,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 | `ui/data-table-shell.tsx` | Toolbar, announced result count, one "Clear filters" control |
 | `components/states/index.tsx` (existing) | Loading, empty, error, permission, offline |
 | `components/ui/*` (existing shadcn) | Buttons, inputs, dialogs, sheets, tables |
+| `ui/reception-primitives.tsx` | Compact QuickAction, MetricStrip, AttentionRow, KioskActionTile; presentation only |
 
 These do not replace existing components; they standardise the frame around them.
 
@@ -175,9 +178,8 @@ No horizontal overflow at 768, 1024, 1280 or 1440 on any route.
 
 ## 11. Known limitations
 
-- Increment 1 adds tokens and building blocks only. Existing screens still use
-  arbitrary text sizes, `h-screen`, unlabelled icon buttons and symbol glyphs;
-  those are fixed in later increments.
+- Remaining modules have not received a screen-by-screen visual review. Shared
+  tokens do not establish accessibility conformance of untouched screens.
 - The `leave_types.emoji` column is untouched. The table holds no rows, and the
   UI will move to a fixed display-only Lucide mapping in a later increment; no
   stored data is migrated.
@@ -199,3 +201,27 @@ status words two additional token families were added:
 `StatusBadge` is accessible by default. Measured contrast (page background):
 success 4.82 / 8.70, warning 4.77 / 7.20, error 4.69 / 4.67, emergency 4.71 /
 4.68, info 4.66 / 5.88, sign-out 4.69 / 5.28 (light / dark).
+
+## 13. Phase 9D visual foundation and bounded first slice
+
+- Light canvas near #F6F9FE (`--background`), white surfaces (`--card`), deep
+  Centrim blue near #123F8C (`--primary`), charcoal foreground and subtle borders.
+  Logo remains unchanged; bright `--brand-accent` is restrained. Dark primary
+  pairs a light blue fill with a dark foreground for readable controls.
+- Semantic emergency and status-strong/solid roles remain separate. Attendance
+  status labels do not imply physically verified emergency safety.
+- Global body/secondary/kiosk font, page gutter, section gap, density and touch
+  tokens are centralised. Light shadows use token values, not decorative elevation.
+- Today uses an action toolbar, compact metric strip, attention rows, on-site
+  list then recent activity. Existing handlers/counts are unchanged.
+- Visit List shows search and named commands, wrapping view/type controls, and
+  date controls only in historic/expected-back views. Below wide desktop it uses
+  readable stacked rows; no horizontally scrolling table is required.
+- Header uses PageHeader as its single title treatment and retains the site
+  switcher, occupancy, outbreak control and notifications. White sidebar with
+  deep blue current-route indicator; emergency entry remains red and labelled.
+- Kiosk welcome/home/shell use plain light surfaces, dominant Sign In/Sign Out,
+  configured resident/card actions, labelled Help and visible Start Over. PIN,
+  binding, idle warning, routes and check-in/out logic are unchanged. Help uses
+  the existing accessible Dialog primitive; no photographic blur or pulsing CTA.
+- No operational record, schema, policy or RPC is changed in this slice.

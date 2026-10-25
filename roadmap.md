@@ -550,9 +550,9 @@ Known limits after Phase 7E:
 - [x] Current continuation: remaining Phase 9A corrections verified; 9B and later phases are not implemented in this slice.
 - [x] 9B England / AU RV / AU RAC packs
 - [ ] 9C Roll call evidence implementation delivered; authenticated outcome/closure UAT remains blocked by unavailable session (see Phase 9C evidence).
-- [ ] 9D Design tokens and font refresh
+- [x] 9D Design tokens and locally bundled Source Sans 3 foundation
 - [ ] 9E Split large screens (check-in, kiosk, evacuation, keys)
-- [ ] 9F Screen redesigns
+- [ ] 9F Screen redesigns — first slice implemented: Today, Visit List, sidebar/header, kiosk welcome/home/shell; remaining screens await review
 - [ ] 9G Additional staff roles
 - [x] 9H (partial) SECURITY_REVIEW blockers updated
 
