@@ -14,6 +14,7 @@ export default {
     },
     extend: {
       colors: {
+        'brand-accent': 'hsl(var(--brand-accent))',
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
@@ -128,7 +129,7 @@ export default {
       },
       fontFamily: {
         sans: [
-          'Inter',
+          'Source Sans 3',
           'ui-sans-serif',
           'system-ui',
           '-apple-system',
