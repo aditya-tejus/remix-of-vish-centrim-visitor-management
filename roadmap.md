@@ -592,3 +592,10 @@ Known limits after Phase 7E:
 - Verification: 182 tests pass (178 existing + 4 command-wiring tests); harness typecheck/build reports build OK. Playwright checked 390/768/1024/1440 widths: staff routes redirect to sign-in and kiosk routes show device setup only, all with one main/h1, no document overflow and no page errors. Screenshots inspected; these checks do NOT verify authenticated reception or bound kiosk rendering/interactions.
 - [ ] Visual UAT: signed-in Today/Visit List, bound welcome/home, all row actions, dark-mode and first-viewport layout require an available authorised session/device. Self-session mint has no matching requesting-user account; no other user selected and no device provisioned.
 - Remaining scope: resident/profile/register/report/settings/check-in screen redesigns and Phase 9E decomposition. Stop here for review. No publication, operational writes, schema/RPC/RLS/route/emergency-policy changes.
+
+### Phase 9E-A / 9F-2a — staff-assisted check-in bounded package
+- [ ] Map Today, Visit List, profile and type-preset entry paths, configuration, payload and guards.
+- [ ] Characterise existing staff validation/payload with mocked tests before refactoring.
+- [ ] Extract reversible staff presentation/rules; align staff entry points without merging group or resident movement workflows.
+- [ ] Apply reception-density layout, labelled controls, preserved conditional fields and honest save/retry.
+- [ ] Run full tests and inspect preview/compiler signals; record evidence and remaining gaps. No live arrival submissions or operational writes.
