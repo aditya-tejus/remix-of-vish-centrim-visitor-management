@@ -13,6 +13,7 @@ export interface QueuedOutcome {
   markedAt: string;
   outcome?: string;
   method?: string;
+  actorId?: string;
 }
 
 const KEY = "centrim.emergency.queue.v1";
@@ -25,7 +26,7 @@ export function readQueue(): QueuedOutcome[] {
     if (!Array.isArray(parsed)) return [];
     return parsed
       .filter((q) => q && typeof q.attendanceId === "string" && typeof q.drillId === "string" && typeof q.status === "string")
-      .map((q) => ({ attendanceId: q.attendanceId, drillId: q.drillId, status: q.status, outcome: q.outcome, method: q.method, markedAt: q.markedAt || new Date().toISOString() }));
+      .map((q) => ({ attendanceId: q.attendanceId, drillId: q.drillId, status: q.status, outcome: q.outcome, method: q.method, actorId: q.actorId, markedAt: q.markedAt || new Date().toISOString() }));
   } catch {
     return [];
   }
@@ -58,10 +59,14 @@ export function clearQueueFor(drillId: string) {
 export async function flushQueue(drillId?: string): Promise<{ sent: number; pending: number }> {
   const all = readQueue();
   const target = drillId ? all.filter((q) => q.drillId === drillId) : all;
+  const { data } = await supabase.auth.getUser();
+  const actorId = data.user?.id;
+  if (!actorId) return {sent: 0, pending: all.length};
   let sent = 0;
   const failed: QueuedOutcome[] = [];
 
   for (const item of target) {
+    if (item.outcome && item.actorId !== actorId) { failed.push(item); continue; }
     const { error } = await supabase
       .from("evacuation_attendance" as any)
       .update({

@@ -82,6 +82,7 @@ export interface RollCallSeed {
   associatedWith?: string;
   structure?: string;
   offSite?: boolean;
+  noAttendance?: boolean;
 }
 
 
@@ -108,7 +109,7 @@ export const ACCOUNTED_STATUSES: AttendanceStatus[] = ["safe", "safe_elsewhere",
 function seedColumns(p: RollCallSeed) {
   const isCompanion = p.companionIndex != null;
   return {
-    outcome: initialEmergencyOutcome(p.structure || "rac", p.type, p.offSite),
+    outcome: initialEmergencyOutcome(p.structure || "rac", p.type, p.offSite || p.noAttendance),
     presence_basis: p.offSite ? "offsite_record" : "snapshot",
     person_name: p.name,
     person_type: p.type,
@@ -350,7 +351,7 @@ export function useEvacuationMutations() {
           ...seedColumns(person),
 
           status: outcome ? legacyStatusFor(outcome) : status || "unaccounted",
-          outcome: outcome || initialEmergencyOutcome(person.structure || "rac", person.type, person.offSite),
+          outcome: outcome || initialEmergencyOutcome(person.structure || "rac", person.type, person.offSite || person.noAttendance),
           presence_basis: person.offSite ? "offsite_record" : "later_arrival",
           confirmation_method: method || null,
           confirmed_at: outcome ? new Date().toISOString() : null,

@@ -91,7 +91,7 @@ export default function EvacuationReport() {
   };
 
 
-  const complianceNote = emergencyRegulatoryNote(isVillageView ? "rv" : isUK ? (ukNation && ukNation !== "England" ? "other_uk" : "england") : "rac");
+  const complianceNote = emergencyRegulatoryNote(isVillageView ? "rv" : isUK ? (ukNation && ukNation.trim().toLowerCase() !== "england" ? "other_uk" : "england") : "rac");
 
   useEffect(() => {
     let cancelled = false;
@@ -200,13 +200,13 @@ export default function EvacuationReport() {
       <tr class="grp"><td colspan="10"><strong>${escapeHtml(g.area)}</strong> — ${g.accounted} of ${g.total} accounted for${g.wardens.length ? ` · responsible: ${escapeHtml(g.wardens.join(", "))}` : ""}</td></tr>
       ${g.units.map((u) => u.people.map((r, i) => `<tr>
         <td>${escapeHtml(r.person_name)}</td><td>${escapeHtml(r.person_type)}</td>
-        <td>${i === 0 ? (u.unit || "—") : ""}</td>
-        <td>${can("assistance.view") ? r.assistance_level || "—" : "Restricted"}</td><td>${r.contact_phone || "—"}</td>
-        <td>${r.emergency_contact_name ? `${r.emergency_contact_name} ${r.emergency_contact_phone || ""}` : "—"}</td>
+        <td>${i === 0 ? escapeHtml(u.unit || "—") : ""}</td>
+        <td>${can("assistance.view") ? escapeHtml(r.assistance_level || "—") : "Restricted"}</td><td>${escapeHtml(r.contact_phone || "—")}</td>
+        <td>${r.emergency_contact_name ? `${escapeHtml(r.emergency_contact_name)} ${escapeHtml(r.emergency_contact_phone || "")}` : "—"}</td>
         <td>${escapeHtml(r.associated_with || "—")}</td>
         <td>${escapeHtml(r.responsible_staff || "—")}</td>
-        <td>${statusText(r)}<br>${outcomeExport(r)["Verification method"]}<br>${r.presence_basis || "legacy_unknown"}</td>
-        <td>${r.marked_safe_at ? format(new Date(r.marked_safe_at), "HH:mm") : "—"}${r.marked_by ? `<br><small>${r.marked_by}</small>` : ""}</td>
+        <td>${statusText(r)}<br>${outcomeExport(r)["Verification method"]}<br>${escapeHtml(r.presence_basis || "legacy_unknown")}</td>
+        <td>${r.marked_safe_at ? format(new Date(r.marked_safe_at), "HH:mm") : "—"}${r.marked_by ? `<br><small>${escapeHtml(r.marked_by)}</small>` : ""}</td>
       </tr>`).join("")).join("")}
     `).join("")}</tbody></table>
 
@@ -317,7 +317,7 @@ export default function EvacuationReport() {
                                             {r.status === "evacuated_offsite" && <Ambulance className="inline h-3 w-3 mr-1" />}
                                             {statusText(r)} · {emergencyPolicy(r).methodLabel}
                                             {r.marked_safe_at ? ` · ${format(new Date(r.marked_safe_at), "HH:mm")}` : ""}
-                                            {r.marked_by ? ` · ${r.marked_by}` : ""}
+                                            {r.marked_by ? ` · ${escapeHtml(r.marked_by)}` : ""}
                                           </span>
                                         </div>
                                       </div>
