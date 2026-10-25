@@ -103,11 +103,11 @@ export function AppSidebar() {
 
 
   return (
-    <Sidebar className="border-r-0">
-      <SidebarHeader className="px-5 py-4">
+    <Sidebar className="border-r border-sidebar-border">
+      <SidebarHeader className="px-5 py-5">
         <div className="flex min-w-0 items-center gap-2">
-          <img src={centrimLogo} alt="Centrim Life" className="h-9 min-w-0 flex-1 object-contain object-left" />
-          <span className="shrink-0 rounded bg-sidebar-primary/15 px-1.5 py-0.5 text-[11px] font-semibold tracking-wide text-sidebar-primary">
+          <img src={centrimLogo} alt="Centrim Life" className="h-8 min-w-0 flex-1 object-contain object-left" />
+          <span className="shrink-0 rounded bg-sidebar-primary/15 px-1.5 py-0.5 text-xs font-semibold tracking-wide text-sidebar-primary">
             Visitors
           </span>
         </div>
@@ -128,10 +128,10 @@ export function AppSidebar() {
                   asChild
                   isActive={active}
                   tooltip={item.title}
-                  className={`h-10 gap-2.5 rounded-lg px-3 text-[13px] font-semibold ${
+                  className={`min-h-touch h-11 gap-2.5 rounded-lg px-3 text-sm font-semibold ${
                     active
-                      ? "bg-sidebar-accent text-sidebar-foreground"
-                      : "text-sidebar-muted hover:bg-[rgba(255,255,255,0.05)] hover:text-sidebar-foreground"
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground border-l-2 border-l-sidebar-primary"
+                      : "text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground"
                   }`}
                 >
                   <NavLink to={item.path} aria-current={active ? "page" : undefined}>
@@ -139,7 +139,7 @@ export function AppSidebar() {
 
                     <span className="flex-1 text-left">{item.title}</span>
                     {item.badge != null && item.badge > 0 && (
-                      <span className={`${badgeClasses[item.badgeVariant || "blue"]} flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold`}>
+                      <span className={`${badgeClasses[item.badgeVariant || "blue"]} flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-xs font-bold`}>
                         {item.badge}
                       </span>
                     )}
@@ -160,7 +160,7 @@ export function AppSidebar() {
           >
             <SidebarGroup>
               <SidebarGroupLabel asChild>
-                <CollapsibleTrigger className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-semibold text-sidebar-foreground transition-colors hover:bg-[rgba(255,255,255,0.05)]">
+                <CollapsibleTrigger className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 min-h-touch text-sm font-semibold text-sidebar-foreground transition-colors hover:bg-sidebar-accent">
                   <group.icon className="h-4 w-4 text-sidebar-muted" aria-hidden="true" />
                   <span className="flex-1 text-left">{group.label}</span>
                   <ChevronDown
@@ -180,16 +180,16 @@ export function AppSidebar() {
                             asChild
                             isActive={active}
                             tooltip={item.title}
-                            className={`h-9 gap-2 rounded-lg pl-9 text-[13px] font-medium transition-all duration-150
+                            className={`min-h-touch h-11 gap-2 rounded-lg pl-9 text-sm font-medium transition-all duration-150
                               ${active
-                                ? "bg-sidebar-accent text-sidebar-foreground"
-                                : "text-sidebar-muted hover:bg-[rgba(255,255,255,0.05)] hover:text-sidebar-foreground"
+                                ? "bg-sidebar-accent text-sidebar-accent-foreground border-l-2 border-l-sidebar-primary"
+                                : "text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground"
                               }`}
                           >
                             <NavLink to={item.path} aria-current={active ? "page" : undefined}>
                               <span className="flex-1">{item.title}</span>
                               {item.badge != null && item.badge > 0 && (
-                                <span className={`${badgeClasses[item.badgeVariant || "blue"]} flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold`}>
+                                <span className={`${badgeClasses[item.badgeVariant || "blue"]} flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-xs font-bold`}>
                                   {item.badge}
                                 </span>
                               )}
@@ -213,10 +213,10 @@ export function AppSidebar() {
                 asChild
                 isActive={location.pathname === "/settings"}
                 tooltip="Settings"
-                className={`h-10 gap-2.5 rounded-lg px-3 text-[13px] font-semibold ${
+                className={`min-h-touch h-11 gap-2.5 rounded-lg px-3 text-sm font-semibold ${
                   location.pathname === "/settings"
-                    ? "bg-sidebar-accent text-sidebar-foreground"
-                    : "text-sidebar-muted hover:bg-[rgba(255,255,255,0.05)] hover:text-sidebar-foreground"
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground border-l-2 border-l-sidebar-primary"
+                    : "text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 }`}
               >
                 <NavLink to="/settings" aria-current={location.pathname === "/settings" ? "page" : undefined}>
@@ -230,10 +230,10 @@ export function AppSidebar() {
                 asChild
                 isActive={location.pathname === "/evacuation"}
                 tooltip="Emergency Roll Call"
-                className="h-9 gap-2.5 rounded-lg border border-destructive/40 px-3 text-[13px] font-semibold text-destructive-foreground/90 hover:bg-destructive/20"
+                className="min-h-touch h-11 gap-2.5 rounded-lg border border-destructive/40 px-3 text-sm font-semibold text-destructive-strong hover:bg-destructive/20"
               >
                 <NavLink to="/evacuation" aria-current={location.pathname === "/evacuation" ? "page" : undefined}>
-                  <Siren className="h-4 w-4 shrink-0 text-destructive" aria-hidden="true" />
+                  <Siren className="h-4 w-4 shrink-0 text-destructive-strong" aria-hidden="true" />
                   <span>Emergency Roll Call</span>
                 </NavLink>
               </SidebarMenuButton>
@@ -242,7 +242,7 @@ export function AppSidebar() {
               <SidebarMenuButton
                 asChild
                 tooltip="Kiosk Mode opens in a new tab"
-                className="h-9 gap-2.5 rounded-lg px-3 text-[13px] font-medium text-sidebar-muted hover:bg-[rgba(255,255,255,0.05)] hover:text-sidebar-foreground"
+                className="min-h-touch h-11 gap-2.5 rounded-lg px-3 text-sm font-medium text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground"
               >
                 <a href="/kiosk" target="_blank" rel="noopener noreferrer">
                   <MonitorSmartphone className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -258,9 +258,9 @@ export function AppSidebar() {
 
 
       <SidebarFooter className="px-3 pb-4">
-        <div className="rounded-lg bg-sidebar-accent p-3">
-          <p className="text-[11px] font-medium text-sidebar-muted">Current site</p>
-          <p className="truncate text-[13px] font-semibold text-sidebar-foreground">
+        <div className="border-t border-sidebar-border pt-3">
+          <p className="text-xs font-medium text-sidebar-muted">Current site</p>
+          <p className="truncate text-sm font-semibold text-sidebar-foreground">
             {currentSite?.name ?? "No site selected"}
           </p>
         </div>

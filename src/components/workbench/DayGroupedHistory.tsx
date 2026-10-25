@@ -35,7 +35,7 @@ export function DayGroupedHistory({ visitors }: DayGroupedHistoryProps) {
     events.forEach((e) => {
       const key = startOfDay(e.time).toISOString();
       if (!dayMap.has(key)) dayMap.set(key, []);
-      dayMap.get(key)!.push(e);
+      dayMap.get(key)?.push(e);
     });
 
     dayMap.forEach((evts, key) => {
@@ -52,14 +52,14 @@ export function DayGroupedHistory({ visitors }: DayGroupedHistoryProps) {
   }, [visitors]);
 
   return (
-    <div className="rounded-xl border border-border bg-card">
+    <div className="border-t border-border">
       <div className="flex items-center gap-2 px-5 py-3.5 border-b border-border">
         <Clock className="h-4 w-4 text-muted-foreground" />
-        <h2 className="text-[15px] font-semibold text-foreground">Recent Activity</h2>
+        <h2 className="text-lg font-semibold text-foreground">Recent Activity</h2>
       </div>
 
       {grouped.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+        <div className="flex flex-col items-center justify-center py-7 text-muted-foreground">
           <p className="text-sm font-medium">No activity yet</p>
         </div>
       ) : (
@@ -67,8 +67,8 @@ export function DayGroupedHistory({ visitors }: DayGroupedHistoryProps) {
           {grouped.map((group) => (
             <div key={group.label}>
               {/* Date card */}
-              <div className="sticky top-0 bg-muted/80 backdrop-blur-sm px-5 py-1.5 border-b border-border">
-                <span className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider">{group.label}</span>
+              <div className="sticky top-0 bg-muted px-5 py-1.5 border-b border-border">
+                <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">{group.label}</span>
               </div>
               <div className="divide-y divide-border">
                 {group.events.slice(0, 10).map((event) => (
@@ -79,17 +79,17 @@ export function DayGroupedHistory({ visitors }: DayGroupedHistoryProps) {
                       {event.type === "check-in" ? <LogIn className="h-3.5 w-3.5" /> : <LogOut className="h-3.5 w-3.5" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium text-foreground truncate">
+                      <p className="text-base font-medium text-foreground truncate">
                         {event.visitor.firstName} {event.visitor.surname}
                       </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {event.type === "check-in" ? "Checked in" : "Checked out"} · {format(event.time, "HH:mm")}
+                      <p className="text-sm text-muted-foreground">
+                        {event.type === "check-in" ? "Checked in" : "Checked out"} · {format(event.time, "hh:mm a")}
                       </p>
                     </div>
                   </div>
                 ))}
                 {group.events.length > 10 && (
-                  <div className="px-5 py-2 text-[12px] text-muted-foreground">
+                  <div className="px-5 py-2 text-sm text-muted-foreground">
                     +{group.events.length - 10} more events
                   </div>
                 )}

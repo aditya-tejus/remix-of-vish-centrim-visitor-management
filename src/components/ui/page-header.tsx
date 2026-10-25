@@ -15,6 +15,7 @@ export interface PageHeaderProps {
   description?: string;
   /** Decorative icon shown next to the title. */
   icon?: LucideIcon;
+  iconClassName?: string;
   /** Current site or scope, shown as quiet context text. */
   context?: React.ReactNode;
   /** Primary and secondary actions. Critical actions must carry visible text. */
@@ -29,6 +30,7 @@ export function PageHeader({
   title,
   description,
   icon: Icon,
+  iconClassName,
   context,
   actions,
   as: Heading = "h1",
@@ -38,7 +40,7 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 border-b border-border pb-4 md:flex-row md:items-start md:justify-between",
+        "flex flex-col gap-3 md:flex-row md:items-start md:justify-between",
         className,
       )}
     >
@@ -46,13 +48,13 @@ export function PageHeader({
         <Heading
           id={id}
           tabIndex={-1}
-          className="flex items-center gap-2 text-xl font-semibold tracking-tight text-foreground focus-visible:outline-none md:text-2xl"
+          className="flex items-center gap-2 text-2xl font-semibold text-foreground"
         >
-          {Icon && <Icon aria-hidden="true" className="h-5 w-5 shrink-0 text-muted-foreground" />}
-          <span className="truncate">{title}</span>
+          {Icon && <Icon aria-hidden="true" className={cn("h-5 w-5 shrink-0 text-muted-foreground", iconClassName)} />}
+          <span className="break-words">{title}</span>
         </Heading>
         {description && <p className="max-w-2xl text-sm text-muted-foreground">{description}</p>}
-        {context && <p className="text-xs text-muted-foreground">{context}</p>}
+        {context && <p className="text-sm text-muted-foreground">{context}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2 md:justify-end">{actions}</div>}
     </div>

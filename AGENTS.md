@@ -6,3 +6,5 @@
 - External-message audit events describe intended recipients and actual delivery state, not delivery success; legacy audit rows remain unchanged.
 - Keep emergency evidence/counting in `src/lib/emergencyPolicy.ts`; legacy statuses never establish physical verification, and server triggers enforce method, site, permission and closed-event guards.
 - Emergency offline replay carries outcome/method/time and operator UUID without personal record details; never replay evidence under a different signed-in operator.
+- Shared visual roles live in global CSS/Tailwind tokens and existing UI primitives; reception-primitives contains presentation-only action/metric/attention/kiosk pieces, so no workflow or data logic is duplicated.
+- Self-host font weights through package CSS imports so reception and kiosk typography works without a remote font request.

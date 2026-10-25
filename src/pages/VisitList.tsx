@@ -201,87 +201,56 @@ export default function VisitList() {
     <AppShell title="Visitor list" overstayedCount={overstayedCount}>
           {/* Page command bar */}
 
-          <div className="sticky top-12 z-[9] border-b border-border bg-card/95 backdrop-blur-sm">
-            <div className="flex flex-wrap items-center justify-between px-4 sm:px-6 py-2.5 gap-y-2 gap-x-4">
-              {/* Left: which site and which day */}
-              <div className="flex items-center gap-3 shrink-0 min-w-0">
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[13px] font-medium text-foreground truncate">
-                    {currentSite?.name || "This site"}
-                  </span>
-                  <span className="text-[11px] text-muted-foreground">
-                    {isLiveView
-                      ? "Always showing who is signed in right now"
-                      : `${format(selectedDate, "EEE, dd MMM yyyy")}${!isToday(selectedDate) ? " · not today" : ""}`}
-                  </span>
-                </div>
-                <div className="flex items-center gap-0.5">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Previous day" onClick={() => setSelectedDate(d => subDays(d, 1))}>
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  {!isToday(selectedDate) && (
-                    <Button variant="ghost" size="sm" className="h-8 text-[12px] px-2" onClick={() => setSelectedDate(new Date())}>
-                      Today
-                    </Button>
-                  )}
-                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Next day" onClick={() => setSelectedDate(d => addDays(d, 1))}>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Pick a date">
-                        <CalendarDays className="h-4 w-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" selected={selectedDate} onSelect={(date) => date && setSelectedDate(date)} initialFocus />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-
+          <div className="border-b border-border bg-card">
+            <div className="flex flex-wrap items-center justify-between px-4 sm:px-6 py-4 gap-3">
+              {!isLiveView && <div className="flex flex-wrap items-center gap-1">
+                <Button variant="ghost" size="icon" className="min-h-touch min-w-touch" aria-label="Previous day" onClick={() => setSelectedDate(d => subDays(d, 1))}><ChevronLeft /></Button>
+                <Popover><PopoverTrigger asChild><Button variant="outline" className="min-h-touch"><CalendarDays aria-hidden />{format(selectedDate, "EEE, dd MMM yyyy")}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={selectedDate} onSelect={(date) => date && setSelectedDate(date)} initialFocus /></PopoverContent></Popover>
+                <Button variant="ghost" size="icon" className="min-h-touch min-w-touch" aria-label="Next day" onClick={() => setSelectedDate(d => addDays(d, 1))}><ChevronRight /></Button>
+                {!isToday(selectedDate) && <Button variant="ghost" onClick={() => setSelectedDate(new Date())}>Today</Button>}
+              </div>}
               {/* Centre: search */}
-              <div className="relative order-last sm:order-none w-full sm:w-auto sm:flex-1 min-w-0 sm:max-w-md">
+              <div className="relative w-full md:flex-1 min-w-0 md:min-w-64 md:max-w-lg">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" aria-hidden />
                 <Input
                   aria-label="Search visits"
                   placeholder="Search name, phone, or who they are visiting"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-9 pl-9 text-[13px] bg-muted/50 border-transparent focus:border-border focus:bg-card"
+                  className="min-h-touch pl-10 pr-12 text-base bg-background border-input"
                 />
                 {searchQuery && (
-                  <button
+                  <Button variant="ghost" size="icon"
                     onClick={() => setSearchQuery("")}
                     aria-label="Clear search"
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 min-h-touch min-w-touch text-muted-foreground"
                   >
                     <X className="h-3.5 w-3.5" />
-                  </button>
+                  </Button>
                 )}
               </div>
 
               {/* Right: primary action first, supporting actions after */}
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex flex-wrap items-center gap-2">
                 {canCheckIn && (
-                  <Button onClick={() => setAddDialogOpen(true)} size="sm" className="h-9 text-[13px] gap-1.5 px-4 shadow-sm">
+                  <Button onClick={() => setAddDialogOpen(true)} size="sm" className="min-h-touch text-sm gap-1.5 px-4 shadow-sm">
                     <Plus className="h-4 w-4" aria-hidden />
                     Check In
                   </Button>
                 )}
                 {canCheckOut && (
-                  <Button variant="ghost" size="sm" className="h-9 text-[13px] gap-1.5 text-muted-foreground" onClick={() => setCheckOutSheetOpen(true)}>
+                  <Button variant="ghost" size="sm" className="min-h-touch text-sm gap-1.5 text-muted-foreground" onClick={() => setCheckOutSheetOpen(true)}>
                     <LogOut className="h-4 w-4" aria-hidden />
-                    <span className="hidden xl:inline">Check Out</span>
+                    <span >Check Out</span>
                   </Button>
                 )}
-                <Button variant="ghost" size="sm" className="h-9 text-[13px] gap-1.5 text-muted-foreground" onClick={() => setQrOpen(true)}>
+                <Button variant="ghost" size="sm" className="min-h-touch text-sm gap-1.5 text-muted-foreground" onClick={() => setQrOpen(true)}>
                   <QrCode className="h-4 w-4" aria-hidden />
-                  <span className="hidden xl:inline">QR</span>
+                  <span >QR</span>
                 </Button>
-                <Button variant="ghost" size="sm" className="h-9 text-[13px] gap-1.5 text-muted-foreground" onClick={() => setHandoverOpen(true)}>
+                <Button variant="ghost" size="sm" className="min-h-touch text-sm gap-1.5 text-muted-foreground" onClick={() => setHandoverOpen(true)}>
                   <Printer className="h-4 w-4" aria-hidden />
-                  <span className="hidden xl:inline">Handover</span>
+                  <span >Handover</span>
                 </Button>
               </div>
             </div>
@@ -291,24 +260,24 @@ export default function VisitList() {
           <VisitViewSwitch views={views} active={currentView.key} onChange={setActiveView} />
 
           {/* Person-type chips, always starting at All */}
-          <div className="flex items-center gap-2 overflow-x-auto px-4 sm:px-6 py-2">
+          <div className="flex items-center gap-2 flex-wrap px-4 sm:px-6 py-3">
             {typeChips.map((chip) => (
-              <button
+              <Button variant="ghost"
                 key={chip.value}
                 onClick={() => setActiveType(chip.value)}
                 aria-pressed={activeType === chip.value}
-                className={`shrink-0 rounded-full border px-3 py-1.5 text-[12px] font-medium transition-colors ${
+                className={`min-h-touch shrink-0 rounded-control border px-3 py-1.5 text-sm font-medium transition-colors ${
                   activeType === chip.value
                     ? "border-primary/40 bg-primary/10 text-primary"
                     : "border-border text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {chip.label} <span className="tabular-nums">{countForType(chip.value)}</span>
-              </button>
+              </Button>
             ))}
-            <div className="ml-auto hidden sm:flex items-center gap-2 text-[11px] text-muted-foreground">
+            <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
               {lastUpdated && <span>Updated {format(lastUpdated, "hh:mm a")}</span>}
-              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Refresh list" onClick={() => refresh()}>
+              <Button variant="ghost" size="icon" className="min-h-touch min-w-touch" aria-label="Refresh list" onClick={() => refresh()}>
                 <RefreshCw className="h-3.5 w-3.5" />
               </Button>
             </div>
@@ -337,7 +306,7 @@ export default function VisitList() {
                 emptyTitle={searchEmpty ? "No matches" : currentView.emptyTitle}
                 emptyDescription={
                   searchEmpty
-                    ? `Nothing on this day matches "${searchQuery}". Try a different spelling, or clear the search.`
+                    ? `No visits in this view match "${searchQuery}". Try a different spelling, or clear the search.`
                     : currentView.emptyDescription
                 }
                 canCheckOut={canCheckOut}

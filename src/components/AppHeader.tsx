@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import centrimLogo from "@/assets/centrim-life-logo.png";
+import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { NotificationBell } from "@/components/NotificationBell";
 import { Clock, Users, ShieldAlert, type LucideIcon } from "lucide-react";
@@ -73,42 +74,33 @@ export function AppHeader({
 
   return (
     <header className="sticky top-0 z-10 bg-card border-b border-border">
-      <div className="flex items-center justify-between gap-2 px-4 sm:px-6 min-h-14 py-2">
+      <div className="flex items-center justify-between gap-3 px-4 sm:px-6 min-h-20 py-3 flex-wrap">
         {/* Left: sidebar trigger + page title */}
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-          <SidebarTrigger aria-label="Toggle navigation" className="text-muted-foreground hover:text-foreground shrink-0" />
-          {title && (
-            <div className="min-w-0">
-              <h1 className="text-lg sm:text-xl font-bold text-foreground leading-tight truncate flex items-center gap-2">
-                {TitleIcon && <TitleIcon className={titleIconClassName ?? "h-5 w-5 shrink-0"} aria-hidden="true" />}
-                <span className="truncate">{title}</span>
-              </h1>
-              {subtitle && (
-                <p className="text-[13px] text-muted-foreground line-clamp-2">{subtitle}</p>
-              )}
-            </div>
-          )}
+          <SidebarTrigger aria-label="Toggle navigation" className="min-h-touch min-w-touch text-muted-foreground hover:text-foreground shrink-0" />
+          {title && <PageHeader title={title} description={subtitle} icon={TitleIcon} iconClassName={titleIconClassName} className="pb-0" />}
+
         </div>
 
         {/* Right: clock + facility badge + toolbar + page actions */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center flex-wrap gap-2 min-w-0">
           {/* Live clock */}
-          <div className="hidden md:flex items-center gap-1.5 mr-1">
+          <div className="hidden xl:flex items-center gap-1.5 mr-1">
             <Clock className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
-            <span className="text-[13px] font-mono font-medium text-muted-foreground tabular-nums">
+            <span className="text-sm font-mono font-medium text-muted-foreground tabular-nums">
               {format(now, "hh:mm a")}
             </span>
           </div>
 
-          <div className="w-px h-5 bg-border" />
+          <div className="hidden xl:block w-px h-5 bg-border" />
 
           {/* Live occupancy */}
           <div
-            className={`hidden md:flex items-center gap-1.5 px-2 py-1 rounded-lg mx-1 ${
+            className={`hidden xl:flex items-center gap-1.5 px-2 py-1 rounded-lg mx-1 ${
               atLimit
-                ? "bg-destructive/10 text-destructive"
+                ? "bg-destructive/10 text-destructive-strong"
                 : nearLimit
-                ? "bg-warning/10 text-warning"
+                ? "bg-warning/10 text-warning-strong"
                 : "text-muted-foreground"
             }`}
             role="status"
@@ -119,18 +111,18 @@ export function AppHeader({
             }
           >
             <Users className="h-3.5 w-3.5" aria-hidden="true" />
-            <span className="text-[13px] font-medium tabular-nums">
+            <span className="text-sm font-medium tabular-nums">
               {onSiteCount}{cap ? ` / ${cap}` : ""}
             </span>
-            {atLimit && <span className="text-[11px] font-semibold">At limit</span>}
-            {nearLimit && <span className="text-[11px] font-semibold">Near limit</span>}
+            {atLimit && <span className="text-xs font-semibold">At limit</span>}
+            {nearLimit && <span className="text-xs font-semibold">Near limit</span>}
           </div>
 
           {/* Outbreak Mode */}
           {outbreakMode && (
             <>
-              <div className="w-px h-5 bg-border" />
-              <button
+              <div className="hidden xl:block w-px h-5 bg-border" />
+              <Button variant="ghost"
                 type="button"
                 onClick={toggleOutbreak}
                 aria-pressed={true}
@@ -140,20 +132,20 @@ export function AppHeader({
                     ? "Outbreak Mode is on — click to turn off"
                     : "Outbreak Mode is on — kiosk check-in is blocked for anyone reporting symptoms"
                 }
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg mx-1 bg-destructive/10 text-destructive ${
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg mx-1 bg-destructive/10 text-destructive-strong ${
                   isAdmin ? "hover:bg-destructive/20 cursor-pointer" : "cursor-default"
                 } disabled:opacity-70`}
               >
                 <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
-                <span className="text-[11px] font-semibold uppercase tracking-wide">Outbreak Mode On</span>
-                {isAdmin && <span className="text-[10px] font-medium opacity-70">Turn off</span>}
-              </button>
+                <span className="text-xs font-semibold uppercase tracking-wide">Outbreak Mode On</span>
+                {isAdmin && <span className="text-xs font-medium opacity-70">Turn off</span>}
+              </Button>
             </>
           )}
           {!outbreakMode && isAdmin && (
             <>
-              <div className="w-px h-5 bg-border" />
-              <button
+              <div className="hidden xl:block w-px h-5 bg-border" />
+              <Button variant="ghost"
                 type="button"
                 onClick={toggleOutbreak}
                 aria-pressed={false}
@@ -162,19 +154,19 @@ export function AppHeader({
                 className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded-lg mx-1 text-muted-foreground hover:text-foreground hover:bg-secondary"
               >
                 <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
-                <span className="text-[11px] font-medium">Outbreak Mode off</span>
-              </button>
+                <span className="text-xs font-medium">Outbreak Mode off</span>
+              </Button>
             </>
           )}
 
-          <div className="w-px h-5 bg-border" />
+          <div className="hidden xl:block w-px h-5 bg-border" />
 
           {/* Current site context */}
-          <div className="hidden lg:flex items-center mx-1">
+          <div className="flex items-center min-w-0">
             <SiteSwitcher compact />
           </div>
 
-          <div className="w-px h-5 bg-border" />
+          <div className="hidden xl:block w-px h-5 bg-border" />
 
           {/* Icon toolbar */}
           <div className="flex items-center gap-0.5">
@@ -191,8 +183,8 @@ export function AppHeader({
           {/* Page-specific actions */}
           {actions && (
             <>
-              <div className="w-px h-5 bg-border" />
-              <div className="flex items-center gap-1.5">
+              <div className="hidden xl:block w-px h-5 bg-border" />
+              <div className="flex flex-wrap items-center gap-1.5">
                 {actions}
               </div>
             </>
