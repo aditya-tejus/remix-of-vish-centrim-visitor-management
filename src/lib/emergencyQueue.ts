@@ -69,7 +69,7 @@ export async function flushQueue(drillId?: string): Promise<{ sent: number; pend
         ...(item.outcome ? { outcome: item.outcome, confirmation_method: item.method || null, confirmed_at: item.markedAt } : {}),
         marked_safe_at: item.status === "unaccounted" ? null : item.markedAt,
       } as any)
-      .eq("id", item.attendanceId);
+      .eq("id", item.attendanceId).eq("drill_id", item.drillId);
 
     if (!error) sent += 1;
     else if (/closed/i.test(error.message)) sent += 0; // dropped: event is closed
