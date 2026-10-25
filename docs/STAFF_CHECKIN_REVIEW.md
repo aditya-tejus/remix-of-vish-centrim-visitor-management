@@ -75,11 +75,11 @@ attribution are retained/connected in the canonical staff form. No automatic
 approval of flagged answers. Approval is invalidated if screening answers change.
 Unselected site and site changes block saving; returning search stays site-filtered.
 
-Baseline: 182 tests before edits. Final: 219 tests in 22 files, including 37 new
-staff tests (12 pure, 25 hook/component). They cover five types, configured fields,
+Baseline: 182 tests before edits. Final: 222 tests in 22 files, including 40 new
+staff tests (12 pure, 28 hook/component). They cover five types, configured fields,
 consent, companions, food/key/block rules, contractor gate/payload, fresh profile
 declarations, request-key retry, double submission, config failure/loading,
-site lookup/change and screening approval invalidation. Mocked component submit
+site lookup/change, personal QR prefill, exact retry payload and in-flight screening approval invalidation. Mocked component submit
 proves confirmed success/read-back and preserved answers after failure; not a live
 credential or server permission verification. Harness typecheck/build: build OK.
 
@@ -96,12 +96,12 @@ technology UAT remain unverified (this package uses mocked checks only).
   configuration permissions/query architecture were not broadened here.
 - Resident selection still resolves display names; same-name residents require
   a separate ID-selection correction. Returning search is last ten arrivals and
-  name/email deduplicated; it is not canonical person lookup. Profile prefill does
-  not carry reusable QR identity through its current caller.
+  name/email deduplicated; it is not canonical person lookup. Profile prefill now
+  preserves its existing reusable QR without skipping fresh declarations.
 - Custom detail values, photo/signature and dedicated vaccination-date properties
   are not mapped by existing persistence. Configured vaccination answers travel
-  in `health_answers` only when screening is enabled; vaccination-only storage
-  remains an existing gap. File answers keep local file metadata, not uploaded
+  in `health_answers`; existing shared policy disables vaccinations when screening
+  is off and remains unchanged. File answers keep local file metadata, not uploaded
   credential evidence. No persistence claim is made for these controls.
 - Food record and warning/key audit are separate follow-up requests; not atomic
   with arrival and not guaranteed if those requests fail. Supervisor-block audit

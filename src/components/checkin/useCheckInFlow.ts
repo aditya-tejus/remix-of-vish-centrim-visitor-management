@@ -479,8 +479,8 @@ export function useCheckInFlow(open: boolean, initialType?: VisitorType, prefill
       covidDose2Date: policy.vaccinationEnabled ? formData.covidDose2Date || undefined : undefined,
       retentionExpiry: new Date(Date.now() + 86400000 * 60),
       acknowledgedPrivacy: policy.privacyRequired ? privacyAcknowledged : false,
-      healthAnswers: policy.screeningEnabled || policy.vaccinationEnabled
-        ? { ...Object.fromEntries(Object.entries(healthAnswers).filter(([key]) => key.startsWith("vacc_") ? policy.vaccinationEnabled : policy.screeningEnabled)), ...contractorScreeningAnswers }
+      healthAnswers: policy.screeningEnabled
+        ? { ...healthAnswers, ...contractorScreeningAnswers }
         : (Object.keys(contractorScreeningAnswers).length ? { ...contractorScreeningAnswers } : undefined),
       // The outcome only — never a second copy of the answers themselves.
       screeningOutcome: policy.screeningEnabled ? evaluation.outcome : undefined,

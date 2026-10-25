@@ -55,11 +55,12 @@ beforeEach(() => {
 });
 
 describe("staff check-in baseline payload and guards", () => {
-  it("preserves vaccination-only answers without disabled screening answers", () => {
+  it("preserves the existing rule that vaccinations are disabled when questions are off", () => {
     fixtures.types = buildPersonTypeConfig({ person_type_screening_visitor: "false", person_type_vaccination_visitor: "true" }, "site-a");
     const { result } = renderHook(() => useCheckInFlow(true));
     act(() => result.current.setHealthAnswers({ vacc_flu: "2026-10-01", disabledQuestion: true }));
-    expect(result.current.buildVisitor().healthAnswers).toEqual({ vacc_flu: "2026-10-01" });
+    expect(result.current.policy.vaccinationEnabled).toBe(false);
+    expect(result.current.buildVisitor().healthAnswers).toBeUndefined();
   });
   it("preserves profile-prefilled personal QR without reusing consent", () => {
     const { result } = renderHook(() => useCheckInFlow(true, "visitor", { personQr: "ABC123DEF456", firstName: "Ann", surname: "Lee" }));
