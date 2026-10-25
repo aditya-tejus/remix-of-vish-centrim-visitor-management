@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
+import { EmergencyOutcome, ConfirmationMethod, initialEmergencyOutcome, legacyStatusFor } from "@/lib/emergencyPolicy";
 
 export interface EvacuationPoint {
   id: string;
@@ -59,6 +60,10 @@ export interface EvacuationAttendance {
   marked_safe_at: string | null;
   marked_by: string | null;
   notes: string;
+  outcome?: string | null;
+  confirmation_method?: string | null;
+  confirmed_at?: string | null;
+  presence_basis?: string | null;
 }
 
 /** Anyone who can appear on a roll call, including named companions. */
@@ -75,6 +80,8 @@ export interface RollCallSeed {
   room?: string;
   responsibleStaff?: string;
   associatedWith?: string;
+  structure?: string;
+  offSite?: boolean;
 }
 
 
@@ -101,6 +108,8 @@ export const ACCOUNTED_STATUSES: AttendanceStatus[] = ["safe", "safe_elsewhere",
 function seedColumns(p: RollCallSeed) {
   const isCompanion = p.companionIndex != null;
   return {
+    outcome: initialEmergencyOutcome(p.structure || "rac", p.type, p.offSite),
+    presence_basis: p.offSite ? "offsite_record" : "snapshot",
     person_name: p.name,
     person_type: p.type,
     visitor_id: isCompanion ? null : p.visitorId || null,
@@ -251,12 +260,16 @@ export function useEvacuationMutations() {
   });
 
   const markSafe = useMutation({
-    mutationFn: async ({ id, pointId, status, markedBy, note }: { id: string; pointId?: string; status?: AttendanceStatus; markedBy?: string; note?: string }) => {
+    mutationFn: async ({ id, pointId, status, markedBy, note, outcome, method, reason }: { id: string; pointId?: string; status?: AttendanceStatus; markedBy?: string; note?: string; outcome?: EmergencyOutcome; method?: ConfirmationMethod; reason?: string }) => {
       const next = status || "safe";
       const { error } = await supabase
         .from("evacuation_attendance" as any)
         .update({
-          status: next,
+          status: outcome ? legacyStatusFor(outcome) : next,
+          outcome: outcome || null,
+          confirmation_method: method || null,
+          confirmed_at: outcome ? new Date().toISOString() : null,
+          correction_reason: reason || null,
           marked_by: markedBy || null,
           marked_safe_at: new Date().toISOString(),
           evacuation_point_id: pointId || null,
@@ -275,21 +288,10 @@ export function useEvacuationMutations() {
       const reason = typeof input === "string" ? undefined : input.reason;
       const { error } = await supabase
         .from("evacuation_attendance" as any)
-        .update({ status: "unaccounted", marked_safe_at: null, evacuation_point_id: null } as any)
+        .update({ status: "unaccounted", outcome: "attendance_unverified", confirmation_method: null, confirmed_at: null, correction_reason: reason || null, marked_safe_at: null, evacuation_point_id: null } as any)
         .eq("id", id);
       if (error) throw error;
-      if (reason) {
-        const { data: latest } = await supabase
-          .from("emergency_actions" as any)
-          .select("id")
-          .eq("attendance_id", id)
-          .order("created_at", { ascending: false })
-          .limit(1);
-        const actionId = (latest as any[])?.[0]?.id;
-        if (actionId) {
-          await supabase.from("emergency_actions" as any).update({ reason, action: "correction" } as any).eq("id", actionId);
-        }
-      }
+
     },
     onSuccess: invalidateAll,
   });
@@ -339,7 +341,7 @@ export function useEvacuationMutations() {
 
   // Adds someone who arrived after the roll call started
   const addAttendee = useMutation({
-    mutationFn: async ({ drillId, person, status, pointId, markedBy, branchId }: { drillId: string; person: RollCallSeed; status?: AttendanceStatus; pointId?: string; markedBy?: string; branchId?: string | null }) => {
+    mutationFn: async ({ drillId, person, status, pointId, markedBy, branchId, outcome, method, reason }: { drillId: string; person: RollCallSeed; status?: AttendanceStatus; pointId?: string; markedBy?: string; branchId?: string | null; outcome?: EmergencyOutcome; method?: ConfirmationMethod; reason?: string }) => {
       const { data, error } = await supabase
         .from("evacuation_attendance" as any)
         .insert({
@@ -347,7 +349,12 @@ export function useEvacuationMutations() {
           branch_id: branchId || null,
           ...seedColumns(person),
 
-          status: status || "unaccounted",
+          status: outcome ? legacyStatusFor(outcome) : status || "unaccounted",
+          outcome: outcome || initialEmergencyOutcome(person.structure || "rac", person.type, person.offSite),
+          presence_basis: person.offSite ? "offsite_record" : "later_arrival",
+          confirmation_method: method || null,
+          confirmed_at: outcome ? new Date().toISOString() : null,
+          correction_reason: reason || null,
           marked_safe_at: status && status !== "unaccounted" ? new Date().toISOString() : null,
           marked_by: markedBy || null,
           evacuation_point_id: pointId || null,
