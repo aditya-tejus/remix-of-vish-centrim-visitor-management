@@ -78,7 +78,7 @@ export function AppHeader({
         {/* Left: sidebar trigger + page title */}
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <SidebarTrigger aria-label="Toggle navigation" className="min-h-touch min-w-touch text-muted-foreground hover:text-foreground shrink-0" />
-          {title && <PageHeader title={title} description={subtitle} icon={TitleIcon} className="pb-0" />}
+          {title && <PageHeader title={title} description={subtitle} icon={TitleIcon} iconClassName={titleIconClassName} className="pb-0" />}
 
         </div>
 

@@ -103,7 +103,7 @@ function KioskShell({ siteName, deviceName }: { siteName: string | null; deviceN
         </div>
       </header>
 
-      {/* Content — frosted glass panel */}
+      {/* Plain, readable content surface */}
       <main className="relative z-10 flex-1 flex items-center justify-center p-4 sm:p-8">
         <div className={`w-full ${isEvacuation || isHome ? "max-w-3xl" : "max-w-2xl"} ${isHome ? "" : "bg-card rounded-card border border-border p-4 sm:p-8"}`}>
           <Outlet />

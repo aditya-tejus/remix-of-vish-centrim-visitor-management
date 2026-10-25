@@ -225,3 +225,8 @@ success 4.82 / 8.70, warning 4.77 / 7.20, error 4.69 / 4.67, emergency 4.71 /
   binding, idle warning, routes and check-in/out logic are unchanged. Help uses
   the existing accessible Dialog primitive; no photographic blur or pulsing CTA.
 - No operational record, schema, policy or RPC is changed in this slice.
+- Verification: 182 behavior tests pass; automated compiler/build is clean.
+  Public browser checks at 390/768/1024/1440 confirm sign-in/device-setup gates,
+  one main/h1 and no document overflow or page errors. Staff surfaces and bound
+  kiosk views could not be live-tested without a matching authorised session;
+  first-viewport, dark-mode, full action and assistive-technology UAT remain open.
