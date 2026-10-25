@@ -44,7 +44,7 @@ export function StepConfirm({
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
         <p className="text-base font-semibold">{formData.firstName} {formData.surname}</p>
-        {evaluation && <StatusBadge status={evaluation.blocked ? "blocked" : evaluation.flagged ? "needs-review" : "clear"} />}
+        {evaluation && <StatusBadge status={evaluation.blocked ? "blocked" : evaluation.flagged ? "flagged" : "clear"} />}
         {companions.length > 0 && <span className="text-sm text-muted-foreground">With {companions.length} companion{companions.length === 1 ? "" : "s"}</span>}
       </div>
 
