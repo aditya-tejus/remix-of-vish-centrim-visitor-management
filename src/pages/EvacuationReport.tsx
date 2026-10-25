@@ -1,3 +1,7 @@
+import { escapeHtml } from "@/lib/emergencyPrint";
+import { emergencyPolicy, emergencyCounts, emergencyRegulatoryNote, outcomeExport, EmergencyEvidence } from "@/lib/emergencyPolicy";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useOperatingContext } from "@/contexts/OperatingContext";
 import { useState, useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
@@ -22,9 +26,11 @@ interface DrillRecord {
   notes: string | null;
   unaccounted_reason: string | null;
   event_type: string | null;
+  event_class: string | null;
+  state: string;
 }
 
-interface AttendanceRecord {
+interface AttendanceRecord extends EmergencyEvidence {
   id: string;
   drill_id: string;
   person_name: string;
@@ -44,6 +50,8 @@ interface AttendanceRecord {
 
 
 export default function EvacuationReport() {
+  const { can } = usePermissions();
+  const { pack } = useOperatingContext();
   const [drills, setDrills] = useState<DrillRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -59,7 +67,7 @@ export default function EvacuationReport() {
     rows.forEach((r) => {
       const a = r.area_label || "No area recorded";
       if (!areas.has(a)) areas.set(a, []);
-      areas.get(a)!.push(r);
+      areas.get(a)?.push(r);
     });
     return [...areas.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
@@ -68,12 +76,12 @@ export default function EvacuationReport() {
         list.forEach((r) => {
           const u = r.room_label || "";
           if (!units.has(u)) units.set(u, []);
-          units.get(u)!.push(r);
+          units.get(u)?.push(r);
         });
         return {
           area,
           wardens: [...new Set(list.map((r) => r.responsible_staff).filter(Boolean))] as string[],
-          accounted: list.filter((r) => r.status !== "unaccounted").length,
+          accounted: emergencyCounts(list).accounted,
           total: list.length,
           units: [...units.entries()]
             .sort(([a], [b]) => (parseInt(a.replace(/\D/g, "")) || 0) - (parseInt(b.replace(/\D/g, "")) || 0) || a.localeCompare(b))
@@ -83,9 +91,7 @@ export default function EvacuationReport() {
   };
 
 
-  const complianceNote = isUK
-    ? "Evidence for the Regulatory Reform (Fire Safety) Order 2005 and CQC Regulation 12 (safe care and treatment). Retain fire drill and roll call records for inspection."
-    : "Evidence for the Aged Care Quality Standards — emergency and disaster management, and the Aged Care Act 1997. Retain drill and roll call records for accreditation review.";
+  const complianceNote = emergencyRegulatoryNote(isVillageView ? "rv" : isUK ? (pack.id === "uk_unconfigured" ? "other_uk" : "england") : "rac");
 
   useEffect(() => {
     let cancelled = false;
@@ -96,7 +102,8 @@ export default function EvacuationReport() {
       .order("started_at", { ascending: false })
       .limit(50);
     // History belongs to the site you are working in.
-    if (currentSiteId) query = query.eq("branch_id", currentSiteId);
+    if (!currentSiteId) { setDrills([]); setLoading(false); return; }
+    query = query.eq("branch_id", currentSiteId);
     query.then(({ data }) => {
       if (cancelled) return;
       setDrills((data || []) as any);
@@ -107,13 +114,16 @@ export default function EvacuationReport() {
 
 
   const loadAttendance = async (drillId: string) => {
-    if (attendance[drillId]) return;
-    const { data } = await supabase
+    if (attendance[drillId]) return attendance[drillId];
+    const { data, error } = await supabase
       .from("evacuation_attendance")
       .select("*")
       .eq("drill_id", drillId)
       .order("person_name");
-    setAttendance((prev) => ({ ...prev, [drillId]: (data || []) as any }));
+    if (error) throw error;
+    const rows = (data || []) as unknown as AttendanceRecord[];
+    setAttendance((prev) => ({ ...prev, [drillId]: rows }));
+    return rows;
   };
 
   const toggle = async (id: string) => {
@@ -125,24 +135,23 @@ export default function EvacuationReport() {
   const minutesToAccount = (d: DrillRecord) =>
     d.ended_at ? differenceInMinutes(new Date(d.ended_at), new Date(d.started_at)) : null;
 
-  const statusText = (s: string) =>
-    s === "safe" ? "Safe" : s === "evacuated_offsite" ? "Evacuated off-site" : "Not accounted for";
+  const statusText = (row: AttendanceRecord) => emergencyPolicy(row).label;
 
   const exportDrillCSV = async (d: DrillRecord) => {
-    await loadAttendance(d.id);
-    const rows = attendance[d.id] || (await supabase.from("evacuation_attendance").select("*").eq("drill_id", d.id)).data as any[] || [];
-    const headers = ["Name", "Type", areaLabel, roomLabel, "Assistance", "Phone", "Emergency contact", "Emergency phone", "With / visiting", "Responsible staff", "Outcome", "Marked at", "Marked by"];
+    if (!can("emergency.export")) return;
+    const rows = await loadAttendance(d.id) || [];
+    const headers = ["Name", "Type", areaLabel, roomLabel, "Assistance", "Phone", "Emergency contact", "Emergency phone", "With / visiting", "Responsible staff", "Outcome", "Method", "Confirmed at", "Presence basis", "Marked at", "Marked by"];
     const body = rows.map((r: AttendanceRecord) => [
-      r.person_name, r.person_type, r.area_label || "", r.room_label || "", r.assistance_level || "",
+      r.person_name, r.person_type, r.area_label || "", r.room_label || "", can("assistance.view") ? r.assistance_level || "" : "Restricted",
       r.contact_phone || "", r.emergency_contact_name || "", r.emergency_contact_phone || "",
       r.associated_with || "", r.responsible_staff || "",
-      statusText(r.status), r.marked_safe_at ? format(new Date(r.marked_safe_at), "dd/MM/yyyy HH:mm") : "", r.marked_by || "",
+      statusText(r), outcomeExport(r)["Verification method"], r.confirmed_at || "", r.presence_basis || "legacy_unknown", r.marked_safe_at ? format(new Date(r.marked_safe_at), "dd/MM/yyyy HH:mm") : "", r.marked_by || "",
     ]);
 
     const csv = [
-      [`"${d.title}"`].join(","),
+      [`"${escapeHtml(d.title)}"`].join(","),
       [`"Started ${format(new Date(d.started_at), "dd/MM/yyyy HH:mm")}"`].join(","),
-      [`"Accounted for: ${d.accounted_for} of ${d.total_people}"`].join(","),
+      [`"Accounted for (verified or reported): ${emergencyCounts(rows).accounted} of ${rows.length}"`].join(","),
       d.unaccounted_reason ? [`"Reason: ${d.unaccounted_reason.replace(/"/g, '""')}"`].join(",") : "",
       "",
       headers.join(","),
@@ -160,9 +169,10 @@ export default function EvacuationReport() {
   };
 
   const printDrill = async (d: DrillRecord) => {
-    await loadAttendance(d.id);
-    const rows = (attendance[d.id] || []) as AttendanceRecord[];
-    const html = `<!DOCTYPE html><html><head><title>${d.title}</title><style>
+    if (!can("emergency.export")) return;
+    const rows = await loadAttendance(d.id) || [];
+    const counts = emergencyCounts(rows);
+    const html = `<!DOCTYPE html><html><head><title>${escapeHtml(d.title)}</title><style>
       body{font-family:Arial,sans-serif;margin:24px;color:#111}
       h1{font-size:19px;margin:0 0 2px;color:#dc2626}
       .sub{font-size:12px;color:#6b7280;margin-bottom:12px}
@@ -176,26 +186,26 @@ export default function EvacuationReport() {
       .reason{margin:12px 0;padding:8px;border:1px solid #fca5a5;background:#fef2f2;font-size:12px;border-radius:6px}
       .footer{margin-top:18px;font-size:10px;color:#6b7280;border-top:1px solid #e5e7eb;padding-top:8px}
     </style></head><body>
-    <h1>${d.title}</h1>
-    <div class="sub">${d.event_type === "incident" ? "Real incident" : "Drill"} • started ${format(new Date(d.started_at), "dd MMMM yyyy, HH:mm")} by ${d.started_by}</div>
+    <h1>${escapeHtml(d.title)}</h1>
+    <div class="sub">${d.event_class === "real" ? "Real emergency" : d.event_class === "drill" ? "Practice drill" : "Legacy event — classification unverified"} • started ${format(new Date(d.started_at), "dd MMMM yyyy, HH:mm")} by ${escapeHtml(d.started_by)}</div>
     <div class="meta">
-      <div><strong>People on site</strong><br>${d.total_people}</div>
-      <div><strong>Accounted for</strong><br>${d.accounted_for}</div>
-      <div><strong>Not accounted for</strong><br>${Math.max(d.total_people - d.accounted_for, 0)}</div>
-      <div><strong>Time to account</strong><br>${minutesToAccount(d) != null ? `${minutesToAccount(d)} min` : "In progress"}</div>
+      <div><strong>Roll call records</strong><br>${counts.total}</div>
+      <div><strong>Accounted for</strong><br>${counts.accounted} (${counts.physical} physically verified)</div>
+      <div><strong>Outstanding action</strong><br>${counts.outstanding}</div>
+      <div><strong>Event duration</strong><br>${minutesToAccount(d) != null ? `${minutesToAccount(d)} min` : "In progress"}</div>
     </div>
-    ${d.unaccounted_reason ? `<div class="reason"><strong>Exceptions recorded:</strong> ${d.unaccounted_reason}</div>` : ""}
+    ${d.unaccounted_reason ? `<div class="reason"><strong>Exceptions recorded:</strong> ${escapeHtml(d.unaccounted_reason)}</div>` : ""}
     <table><thead><tr><th>Name</th><th>Type</th><th>${roomLabel}</th><th>Assistance</th><th>Phone</th><th>Emergency contact</th><th>With / visiting</th><th>Responsible</th><th>Outcome</th><th>Marked</th></tr></thead>
     <tbody>${groupRows(rows).map((g) => `
-      <tr class="grp"><td colspan="10"><strong>${g.area}</strong> — ${g.accounted} of ${g.total} accounted for${g.wardens.length ? ` · responsible: ${g.wardens.join(", ")}` : ""}</td></tr>
+      <tr class="grp"><td colspan="10"><strong>${escapeHtml(g.area)}</strong> — ${g.accounted} of ${g.total} accounted for${g.wardens.length ? ` · responsible: ${escapeHtml(g.wardens.join(", "))}` : ""}</td></tr>
       ${g.units.map((u) => u.people.map((r, i) => `<tr>
-        <td>${r.person_name}</td><td>${r.person_type}</td>
+        <td>${escapeHtml(r.person_name)}</td><td>${escapeHtml(r.person_type)}</td>
         <td>${i === 0 ? (u.unit || "—") : ""}</td>
-        <td>${r.assistance_level || "—"}</td><td>${r.contact_phone || "—"}</td>
+        <td>${can("assistance.view") ? r.assistance_level || "—" : "Restricted"}</td><td>${r.contact_phone || "—"}</td>
         <td>${r.emergency_contact_name ? `${r.emergency_contact_name} ${r.emergency_contact_phone || ""}` : "—"}</td>
-        <td>${r.associated_with || "—"}</td>
-        <td>${r.responsible_staff || "—"}</td>
-        <td>${statusText(r.status)}</td>
+        <td>${escapeHtml(r.associated_with || "—")}</td>
+        <td>${escapeHtml(r.responsible_staff || "—")}</td>
+        <td>${statusText(r)}<br>${outcomeExport(r)["Verification method"]}<br>${r.presence_basis || "legacy_unknown"}</td>
         <td>${r.marked_safe_at ? format(new Date(r.marked_safe_at), "HH:mm") : "—"}${r.marked_by ? `<br><small>${r.marked_by}</small>` : ""}</td>
       </tr>`).join("")).join("")}
     `).join("")}</tbody></table>
@@ -227,7 +237,8 @@ export default function EvacuationReport() {
               </div>
             ) : (
               drills.map((d) => {
-                const missing = Math.max(d.total_people - d.accounted_for, 0);
+                const actualCounts = attendance[d.id] ? emergencyCounts(attendance[d.id]) : null;
+                const missing = actualCounts?.outstanding;
                 const open = openId === d.id;
                 const rows = attendance[d.id] || [];
                 return (
@@ -237,22 +248,22 @@ export default function EvacuationReport() {
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-semibold text-foreground">{d.title}</p>
-                            <Badge variant="outline" className="text-[10px] capitalize">{d.event_type === "incident" ? "Real incident" : "Drill"}</Badge>
+                            <Badge variant="outline" className="text-[10px] capitalize">{d.event_class === "real" ? "Real emergency" : d.event_class === "drill" ? "Practice drill" : "Legacy classification"}</Badge>
                             <Badge variant={d.status === "completed" ? "secondary" : "destructive"} className="text-[10px]">{d.status}</Badge>
                           </div>
                           <p className="text-[12px] text-muted-foreground mt-0.5">
                             {format(new Date(d.started_at), "dd MMM yyyy HH:mm")} · started by {d.started_by}
-                            {minutesToAccount(d) != null && <> · <Clock className="inline h-3 w-3" /> {minutesToAccount(d)} min to account</>}
+                            {minutesToAccount(d) != null && <> · <Clock className="inline h-3 w-3" /> {minutesToAccount(d)} min event duration</>}
                           </p>
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="text-right">
-                            <p className="text-sm font-semibold text-foreground">{d.accounted_for} / {d.total_people}</p>
+                            <p className="text-sm font-semibold text-foreground">{actualCounts ? `${actualCounts.accounted} / ${actualCounts.total}` : "Open to verify outcomes"}</p>
                             <p className="text-[11px] text-muted-foreground">accounted for</p>
                           </div>
                           {missing === 0
                             ? <CheckCircle2 className="h-5 w-5 text-success" />
-                            : <span className="flex items-center gap-1 text-destructive text-xs font-medium"><AlertTriangle className="h-4 w-4" />{missing} missing</span>}
+                            : <span className="flex items-center gap-1 text-destructive text-xs font-medium"><AlertTriangle className="h-4 w-4" />{missing ?? "Unverified"} outstanding</span>}
                           <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
                         </div>
                       </div>
@@ -266,8 +277,8 @@ export default function EvacuationReport() {
                           </div>
                         )}
                         <div className="flex gap-2">
-                          <Button variant="outline" size="sm" onClick={() => exportDrillCSV(d)} className="h-8 gap-1.5 text-xs"><Download className="h-3.5 w-3.5" /> Export CSV</Button>
-                          <Button variant="outline" size="sm" onClick={() => printDrill(d)} className="h-8 gap-1.5 text-xs"><Printer className="h-3.5 w-3.5" /> Print</Button>
+                          <Button variant="outline" size="sm" disabled={!can("emergency.export")} onClick={() => exportDrillCSV(d)} className="h-8 gap-1.5 text-xs"><Download className="h-3.5 w-3.5" /> Export CSV</Button>
+                          <Button variant="outline" size="sm" disabled={!can("emergency.export")} onClick={() => printDrill(d)} className="h-8 gap-1.5 text-xs"><Printer className="h-3.5 w-3.5" /> Print</Button>
                         </div>
                         {rows.length === 0 ? (
                           <p className="text-[13px] text-muted-foreground">No attendance records for this roll call.</p>
@@ -290,21 +301,21 @@ export default function EvacuationReport() {
                                       </div>
                                     )}
                                     {u.people.map((r) => (
-                                      <div key={r.id} className={`rounded-lg border px-3 py-2 ${r.status === "unaccounted" ? "border-destructive/30 bg-destructive/5" : "border-border"}`}>
+                                      <div key={r.id} className={`rounded-lg border px-3 py-2 ${emergencyPolicy(r).unresolved ? "border-destructive/30 bg-destructive/5" : "border-border"}`}>
                                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                                           <span className="text-[13px] font-medium text-foreground">{r.person_name}</span>
                                           <Badge variant="outline" className="text-[10px] capitalize">{r.person_type}</Badge>
                                           {r.room_label && <span className="text-[12px] text-muted-foreground">{r.room_label}</span>}
-                                          {r.assistance_level && <span className="text-[12px] text-muted-foreground">{r.assistance_level}</span>}
+                                          {can("assistance.view") && r.assistance_level && <span className="text-[12px] text-muted-foreground">{r.assistance_level}</span>}
                                           {r.contact_phone && <span className="text-[12px] text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" />{r.contact_phone}</span>}
                                           {r.emergency_contact_phone && (
                                             <span className="text-[12px] text-muted-foreground">{r.emergency_contact_name || "Emergency"}: {r.emergency_contact_phone}</span>
                                           )}
                                           {r.associated_with && <span className="text-[12px] text-muted-foreground">{r.associated_with}</span>}
                                           {r.responsible_staff && <span className="text-[12px] text-muted-foreground">Warden: {r.responsible_staff}</span>}
-                                          <span className={`ml-auto text-[12px] font-medium ${r.status === "unaccounted" ? "text-destructive" : "text-success"}`}>
+                                          <span className={`ml-auto text-[12px] font-medium ${emergencyPolicy(r).unresolved ? "text-destructive" : "text-success"}`}>
                                             {r.status === "evacuated_offsite" && <Ambulance className="inline h-3 w-3 mr-1" />}
-                                            {statusText(r.status)}
+                                            {statusText(r)} · {emergencyPolicy(r).methodLabel}
                                             {r.marked_safe_at ? ` · ${format(new Date(r.marked_safe_at), "HH:mm")}` : ""}
                                             {r.marked_by ? ` · ${r.marked_by}` : ""}
                                           </span>
