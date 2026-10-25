@@ -140,6 +140,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd, initialType, prefill }
     setShowSuccess(true);
     if (!flow.badgePrintingEnabled) {
       setTimeout(() => {
+        attemptedPayloadRef.current = null;
         flow.resetForm();
         setShowSuccess(false);
         onOpenChange(false);

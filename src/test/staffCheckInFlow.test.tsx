@@ -3,12 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useCheckInFlow } from "@/components/checkin/useCheckInFlow";
 import { buildPersonTypeConfig } from "@/hooks/usePersonTypes";
 import { CheckInSheet } from "@/components/checkin/CheckInSheet";
+import { supabase } from "@/integrations/supabase/client";
 
 const fixtures = vi.hoisted(() => ({
   settings: [] as { key: string; value: string }[],
   fields: [] as any[], questions: [] as any[], companions: [] as any[],
   people: [] as any[], queryCalls: [] as any[], types: [] as any[], site: "site-a" as string | null,
   pending: false, configError: false,
+  vaccinations: [] as any[],
 }));
 vi.mock("@/contexts/SiteContext", () => ({ useSite: () => ({ currentSiteId: fixtures.site, currentSite: { name: "Test site" }, isLegacySite: false }) }));
 vi.mock("@/hooks/usePeopleLookup", () => ({ usePeopleLookup: () => ({ matches: [], searching: false }) }));
@@ -27,7 +29,7 @@ vi.mock("@/hooks/usePersonTypes", async (original) => ({
 }));
 vi.mock("@/hooks/useHealthQuestions", () => ({
   useActiveHealthQuestions: () => ({ data: fixtures.questions }),
-  useActiveVaccinationFields: () => ({ data: [] }),
+  useActiveVaccinationFields: () => ({ data: fixtures.vaccinations }),
 }));
 vi.mock("@/hooks/useFormFields", () => ({
   useFormFields: () => ({ data: fixtures.fields, isPending: fixtures.pending, isError: fixtures.configError }),
@@ -49,9 +51,32 @@ beforeEach(() => {
   fixtures.settings = []; fixtures.fields = []; fixtures.questions = []; fixtures.companions = [];
   fixtures.people = []; fixtures.queryCalls = []; fixtures.types = buildPersonTypeConfig({}, "site-a");
   fixtures.site = "site-a"; fixtures.pending = false; fixtures.configError = false;
+  fixtures.vaccinations = []; vi.mocked(supabase.rpc).mockResolvedValue({ error: null } as any);
 });
 
 describe("staff check-in baseline payload and guards", () => {
+  it("preserves vaccination-only answers without disabled screening answers", () => {
+    fixtures.types = buildPersonTypeConfig({ person_type_screening_visitor: "false", person_type_vaccination_visitor: "true" }, "site-a");
+    const { result } = renderHook(() => useCheckInFlow(true));
+    act(() => result.current.setHealthAnswers({ vacc_flu: "2026-10-01", disabledQuestion: true }));
+    expect(result.current.buildVisitor().healthAnswers).toEqual({ vacc_flu: "2026-10-01" });
+  });
+  it("preserves profile-prefilled personal QR without reusing consent", () => {
+    const { result } = renderHook(() => useCheckInFlow(true, "visitor", { personQr: "ABC123DEF456", firstName: "Ann", surname: "Lee" }));
+    expect(result.current.buildVisitor().personQr).toBe("ABC123DEF456");
+    expect(result.current.privacyAcknowledged).toBe(false);
+  });
+  it("rejects an old approval finishing after answers change", async () => {
+    let resolveApproval: ((value: any) => void) | undefined;
+    vi.mocked(supabase.rpc).mockImplementationOnce(() => new Promise<any>(resolve => { resolveApproval = resolve; }) as any);
+    const { result } = renderHook(() => useCheckInFlow(true));
+    act(() => { result.current.setHealthAnswers({ q: true }); result.current.setOverrideReason("Reviewed by supervisor"); });
+    let pending: Promise<string | null> | undefined;
+    act(() => { pending = result.current.approveBlockedScreening(); });
+    act(() => result.current.setHealthAnswers({ q: false }));
+    await act(async () => { resolveApproval?.({ error: null }); await pending; });
+    expect(result.current.overrideApprovedBy).toBeNull();
+  });
   it.each(["visitor", "contractor", "volunteer", "staff", "other"] as const)("preserves %s type and required names", (type) => {
     const { result } = renderHook(() => useCheckInFlow(true));
     act(() => { result.current.setSelectedType(type); result.current.setStep("details"); });
@@ -207,6 +232,7 @@ describe("staff sheet mocked save and accessible interactions", () => {
     await screen.findByText("Ann Lee checked in!");
     expect(onAdd).toHaveBeenCalledTimes(2);
     expect(onAdd.mock.calls[1][0].clientRequestId).toBe(onAdd.mock.calls[0][0].clientRequestId);
+    expect(onAdd.mock.calls[1][0]).toEqual(onAdd.mock.calls[0][0]);
   });
   it("does not submit invalid details and names the sheet and search", async () => {
     const onAdd = vi.fn();
