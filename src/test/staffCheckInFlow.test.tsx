@@ -1,14 +1,17 @@
-import { act, cleanup, renderHook } from "@testing-library/react";
+import { act, cleanup, renderHook, render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useCheckInFlow } from "@/components/checkin/useCheckInFlow";
 import { buildPersonTypeConfig } from "@/hooks/usePersonTypes";
+import { CheckInSheet } from "@/components/checkin/CheckInSheet";
 
 const fixtures = vi.hoisted(() => ({
   settings: [] as { key: string; value: string }[],
   fields: [] as any[], questions: [] as any[], companions: [] as any[],
   people: [] as any[], queryCalls: [] as any[], types: [] as any[],
 }));
-vi.mock("@/contexts/SiteContext", () => ({ useSite: () => ({ currentSiteId: "site-a", isLegacySite: false }) }));
+vi.mock("@/contexts/SiteContext", () => ({ useSite: () => ({ currentSiteId: "site-a", currentSite: { name: "Test site" }, isLegacySite: false }) }));
+vi.mock("@/hooks/usePeopleLookup", () => ({ usePeopleLookup: () => ({ matches: [], searching: false }) }));
+vi.mock("@/components/ContractorScreening", () => ({ ContractorScreening: () => <div>Contractor requirements</div> }));
 vi.mock("@/contexts/OperatingContext", () => ({
   useOperatingContext: () => ({ siteId: "site-a", pack: { jurisdiction: "AU" } }),
   siteScopedKey: (key: string, site: string) => `${key}@${site}`,
@@ -90,5 +93,94 @@ describe("staff check-in baseline payload and guards", () => {
     const { result } = renderHook(() => useCheckInFlow(true));
     act(() => { result.current.updateField("mobile", "0400"); result.current.updateField("selectPerson", "Rose Lee"); });
     expect(result.current.buildVisitor()).toMatchObject({ mobile: "0400", visitedResidentIds: ["resident-a"] });
+  });
+  it("preserves preset and profile prefill without skipping fresh consent", async () => {
+    const { result } = renderHook(() => useCheckInFlow(true, "contractor", { firstName: "Ann", surname: "Lee", type: "volunteer" }));
+    await act(async () => {});
+    expect(result.current.selectedType).toBe("volunteer");
+    expect(result.current.formData.firstName).toBe("Ann");
+    expect(result.current.canSubmit).toBe(false);
+    expect(result.current.privacyAcknowledged).toBe(false);
+  });
+  it("retains contractor supplier and dedicated answer payload", () => {
+    const { result } = renderHook(() => useCheckInFlow(true));
+    act(() => { result.current.setSelectedType("contractor"); result.current.setSelectedSupplier({ id: "supplier-a" } as any); result.current.setContractorScreeningAnswers({ access: false }); });
+    expect(result.current.buildVisitor()).toMatchObject({ supplierId: "supplier-a", contractorScreening: { access: false }, healthAnswers: { access: false } });
+  });
+  it("records explicit consent attribution", () => {
+    const { result } = renderHook(() => useCheckInFlow(true));
+    act(() => { result.current.updateField("firstName", "Ann"); result.current.updateField("surname", "Lee"); result.current.setPrivacyAcknowledged(true); });
+    expect(result.current.buildVisitor()).toMatchObject({ termsConfirmedBy: "Ann Lee", termsConfirmationMode: "self", acknowledgedPrivacy: true });
+  });
+  it("uses configured blocked outcomes instead of silently accepting them", () => {
+    fixtures.types = buildPersonTypeConfig({ person_type_screening_visitor: "true" }, "site-a");
+    fixtures.questions = [{ id: "q", question: "Symptoms?", type: "yesno", required: true, warning_answers: ["yes"], outcome_action: "block", severity: "critical" }];
+    const { result } = renderHook(() => useCheckInFlow(true));
+    act(() => result.current.setHealthAnswers({ q: true }));
+    expect(result.current.screeningBlocked).toBe(true);
+    expect(result.current.validationIssues).toContain("Supervisor approval is required for this check-in");
+  });
+  it("blocks unanswered required questions and accepts explicit No", () => {
+    fixtures.types = buildPersonTypeConfig({ person_type_screening_visitor: "true" }, "site-a");
+    fixtures.questions = [{ id: "q", question: "Symptoms?", type: "yesno", required: true }];
+    const { result } = renderHook(() => useCheckInFlow(true));
+    expect(result.current.validationIssues).toContain("Answer: Symptoms?");
+    act(() => result.current.setHealthAnswers({ q: false }));
+    expect(result.current.validationIssues).not.toContain("Answer: Symptoms?");
+  });
+  it("reuses the deliberately selected returning personal code", () => {
+    const { result } = renderHook(() => useCheckInFlow(true));
+    act(() => result.current.selectProfile({ id: "old", firstName: "Ann", surname: "Lee", email: "", mobile: "", address: "", personQr: "ABC123DEF456" }));
+    expect(result.current.buildVisitor().personQr).toBe("ABC123DEF456");
+  });
+  it("saves configured volunteer extras", () => {
+    const { result } = renderHook(() => useCheckInFlow(true));
+    act(() => { result.current.setSelectedType("volunteer"); result.current.setVolunteerRole("Gardening"); result.current.setVolunteerSupervisor("Sam"); result.current.setVolunteerExpectedEnd("14:30"); });
+    const payload = result.current.buildVisitor();
+    expect(payload).toMatchObject({ volunteerRole: "Gardening", volunteerSupervisor: "Sam" });
+    expect(payload.volunteerExpectedEnd?.getHours()).toBe(14);
+    expect(payload.volunteerExpectedEnd?.getMinutes()).toBe(30);
+  });
+});
+
+describe("staff sheet mocked save and accessible interactions", () => {
+  async function fillSimpleStaff() {
+    await waitFor(() => expect(screen.queryByText("Loading check-in requirements…")).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Staff", exact: true }));
+    fireEvent.change(screen.getByRole("textbox", { name: "First name" }), { target: { value: "Ann" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Surname" }), { target: { value: "Lee" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Check In", exact: true })).toBeEnabled());
+  }
+  it("waits for confirmed save and prevents duplicate rapid submissions", async () => {
+    let resolveSave: ((value: any) => void) | undefined;
+    const onAdd = vi.fn(() => new Promise<any>(resolve => { resolveSave = resolve; }));
+    render(<CheckInSheet open onOpenChange={vi.fn()} onAdd={onAdd} />);
+    await fillSimpleStaff();
+    const button = screen.getByRole("button", { name: "Check In", exact: true });
+    fireEvent.click(button); fireEvent.click(button);
+    expect(onAdd).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Ann Lee checked in!")).not.toBeInTheDocument();
+    await act(async () => resolveSave?.({ ...onAdd.mock.calls[0][0], id: "saved-a" }));
+    expect(screen.getByText("Ann Lee checked in!")).toBeInTheDocument();
+  });
+  it("preserves answers and request key on failed save and retry", async () => {
+    const onAdd = vi.fn().mockRejectedValueOnce(new Error("offline")).mockImplementation(async value => ({ ...value, id: "saved-a" }));
+    render(<CheckInSheet open onOpenChange={vi.fn()} onAdd={onAdd} />);
+    await fillSimpleStaff();
+    fireEvent.click(screen.getByRole("button", { name: "Check In", exact: true }));
+    await screen.findByRole("alert");
+    expect(screen.getByRole("textbox", { name: "First name" })).toHaveValue("Ann");
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    await screen.findByText("Ann Lee checked in!");
+    expect(onAdd).toHaveBeenCalledTimes(2);
+    expect(onAdd.mock.calls[1][0].clientRequestId).toBe(onAdd.mock.calls[0][0].clientRequestId);
+  });
+  it("does not submit invalid details and names the sheet and search", async () => {
+    const onAdd = vi.fn();
+    render(<CheckInSheet open onOpenChange={vi.fn()} onAdd={onAdd} />);
+    expect(screen.getByRole("dialog", { name: "Check In" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Returning visitor lookup" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Check In", exact: true }));
+    expect(onAdd).not.toHaveBeenCalled();
   });
 });
