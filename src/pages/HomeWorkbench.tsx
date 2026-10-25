@@ -10,6 +10,7 @@ import { ActiveNowList } from "@/components/workbench/ActiveNowList";
 import { PracticeDataNotice } from "@/components/PracticeDataNotice";
 import { DayGroupedHistory } from "@/components/workbench/DayGroupedHistory";
 import { Button } from "@/components/ui/button";
+import { QuickAction, MetricStrip, AttentionRow } from "@/components/ui/reception-primitives";
 import { UserPlus, LogOut, DoorOpen, Clock, Users, AlertTriangle, ShieldAlert } from "lucide-react";
 import { useOccupancy } from "@/hooks/useOccupancy";
 import { useOutbreakMode } from "@/hooks/useOutbreakMode";
@@ -75,16 +76,16 @@ export default function HomeWorkbench() {
             overdueCount={overdueResidents}
             draftCount={draftCount}
             pendingCount={pendingApprovals}
-            mainClassName="p-6 space-y-6"
+            mainClassName="p-4 sm:p-6 space-y-5 max-w-[1600px] w-full mx-auto"
           >
             <PracticeDataNotice />
 
             {/* Outbreak Mode banner */}
             {outbreakMode && (
-              <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-                <ShieldAlert className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+              <div className="flex items-start gap-3 rounded-card border border-destructive/30 bg-destructive/5 p-4">
+                <ShieldAlert className="h-5 w-5 text-destructive-strong shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-semibold text-destructive">Outbreak Mode is on</p>
+                  <p className="text-sm font-semibold text-destructive-strong">Outbreak Mode is on</p>
                   <p className="text-[13px] text-muted-foreground mt-0.5">
                     Self check-in at the kiosk is blocked for anyone reporting symptoms or a temperature above 37.8&deg;C.
                     They are asked to see a staff member, and reception is alerted. An admin can turn this off from the header.
@@ -96,7 +97,7 @@ export default function HomeWorkbench() {
             {/* Live occupancy */}
             {cap !== null && (
               <div
-                className={`flex items-center justify-between gap-4 rounded-xl border p-4 ${
+                className={`flex items-center justify-between gap-4 rounded-card border p-4 ${
                   atLimit
                     ? "border-destructive/30 bg-destructive/5"
                     : nearLimit
@@ -107,7 +108,7 @@ export default function HomeWorkbench() {
                 <div className="flex items-center gap-3">
                   <div
                     className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                      atLimit ? "bg-destructive/10 text-destructive" : nearLimit ? "bg-warning/10 text-warning" : "bg-primary/10 text-primary"
+                      atLimit ? "bg-destructive/10 text-destructive-strong" : nearLimit ? "bg-warning/10 text-warning-strong" : "bg-primary/10 text-primary"
                     }`}
                   >
                     <Users className="h-5 w-5" />
@@ -131,7 +132,7 @@ export default function HomeWorkbench() {
                 </div>
                 <p
                   className={`text-2xl font-bold tabular-nums ${
-                    atLimit ? "text-destructive" : nearLimit ? "text-warning" : "text-foreground"
+                    atLimit ? "text-destructive-strong" : nearLimit ? "text-warning-strong" : "text-foreground"
                   }`}
                 >
                   {onSiteCount} / {cap}
@@ -139,122 +140,51 @@ export default function HomeWorkbench() {
               </div>
             )}
 
-            {/* 3 Big Action Buttons */}
-            <section>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <button
-                  onClick={() => setAddDialogOpen(true)}
-                  className="group relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-border bg-card p-8 min-h-[160px] transition-all duration-200 hover:border-primary hover:shadow-md active:scale-[0.98]"
-                >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                    <UserPlus className="h-7 w-7" />
-                  </div>
-                  <span className="text-lg font-semibold text-foreground">Check-In</span>
-                  <span className="text-[13px] text-muted-foreground">Register a visitor, contractor or volunteer</span>
-                </button>
-
-                <button
-                  onClick={() => setCheckOutDialogOpen(true)}
-                  className="group relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-border bg-card p-8 min-h-[160px] transition-all duration-200 hover:border-warning hover:shadow-md active:scale-[0.98]"
-                >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-warning/10 text-warning transition-colors group-hover:bg-warning group-hover:text-warning-foreground">
-                    <LogOut className="h-7 w-7" />
-                  </div>
-                  <span className="text-lg font-semibold text-foreground">Check-Out</span>
-                  <span className="text-[13px] text-muted-foreground">Sign out a visitor or mark departure</span>
-                </button>
-
-                <button
-                  onClick={() => setResidentLeaveOpen(true)}
-                  className="group relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-border bg-card p-8 min-h-[160px] transition-all duration-200 hover:border-info hover:shadow-md active:scale-[0.98]"
-                >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-info/10 text-info transition-colors group-hover:bg-info group-hover:text-info-foreground">
-                    <DoorOpen className="h-7 w-7" />
-                  </div>
-                  <span className="text-lg font-semibold text-foreground">Resident Leave</span>
-                  <span className="text-[13px] text-muted-foreground">Manage resident departures & returns</span>
-                  {residentsOnLeave > 0 && (
-                    <span className="absolute top-3 right-3 flex h-6 min-w-[24px] items-center justify-center rounded-full bg-info text-info-foreground text-xs font-bold px-1.5">
-                      {residentsOnLeave}
-                    </span>
-                  )}
-                </button>
-              </div>
+            <section aria-label="Reception actions" className="flex flex-wrap items-center gap-2">
+              <QuickAction icon={UserPlus} onClick={() => setAddDialogOpen(true)}>Check In</QuickAction>
+              <QuickAction icon={LogOut} variant="outline" onClick={() => setCheckOutDialogOpen(true)}>Check Out</QuickAction>
+              <QuickAction icon={DoorOpen} variant="outline" onClick={() => setResidentLeaveOpen(true)}>Resident Leave{residentsOnLeave > 0 ? ` (${residentsOnLeave})` : ""}</QuickAction>
             </section>
-
-            {/* Summary cards */}
-            <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="rounded-lg border border-border bg-card p-4">
-                <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                  <Users className="h-4 w-4" />
-                  <span className="text-[12px] font-medium uppercase tracking-wider">On-Site Now</span>
-                </div>
-                <p className="text-2xl font-bold text-foreground">{activeVisitors.length}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-card p-4">
-                <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                  <LogOut className="h-4 w-4" />
-                  <span className="text-[12px] font-medium uppercase tracking-wider">Checked Out</span>
-                </div>
-                <p className="text-2xl font-bold text-foreground">{checkedOutVisitors.length}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-card p-4">
-                <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                  <DoorOpen className="h-4 w-4" />
-                  <span className="text-[12px] font-medium uppercase tracking-wider">On Leave</span>
-                </div>
-                <p className="text-2xl font-bold text-foreground">{residentsOnLeave}</p>
-              </div>
-              <div className="rounded-lg border border-border bg-card p-4">
-                <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span className="text-[12px] font-medium uppercase tracking-wider">Overstayed</span>
-                </div>
-                <p className={`text-2xl font-bold ${overstayedCount > 0 ? "text-destructive" : "text-foreground"}`}>{overstayedCount}</p>
-              </div>
-            </section>
+            <MetricStrip items={[
+              { label: "On site now", value: activeVisitors.length, icon: Users },
+              { label: "Signed out", value: checkedOutVisitors.length, icon: LogOut },
+              { label: "Residents away", value: residentsOnLeave, icon: DoorOpen },
+              { label: "Overdue visits", value: overstayedCount, icon: Clock, attention: overstayedCount > 0 },
+            ]} />
 
             {/* Needs attention */}
-            <section className="rounded-xl border border-border bg-card">
-              <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                <h2 className="text-sm font-semibold text-foreground">Needs attention</h2>
-                <button
+            <section className="border-b border-border pb-3">
+              <div className="flex items-center justify-between py-2">
+                <h2 className="text-lg font-semibold text-foreground">Needs attention</h2>
+                <Button variant="outline"
                   onClick={() => navigate("/evacuation")}
-                  className="inline-flex min-h-[36px] items-center gap-2 rounded-lg border border-destructive/30 px-3 text-[13px] font-medium text-destructive hover:bg-destructive/10"
+                  className="inline-flex min-h-touch items-center gap-2 rounded-lg border border-destructive/30 px-3 text-[13px] font-medium text-destructive-strong hover:bg-destructive/10"
                 >
                   <ShieldAlert className="h-4 w-4" aria-hidden="true" /> Emergency roll call
-                </button>
+                </Button>
               </div>
               <ul className="divide-y divide-border">
                 {[
-                  { label: "Visitors still on site past their expected time", count: overstayedCount, path: "/visit-list", tone: "text-destructive" },
-                  { label: "Residents overdue back from leave", count: overdueResidents, path: "/residents", tone: "text-warning" },
-                  { label: "Leave requests waiting for approval", count: pendingApprovals, path: "/residents", tone: "text-warning" },
+                  { label: "Visitors still on site past their expected time", count: overstayedCount, path: "/visit-list", tone: "text-destructive-strong" },
+                  { label: "Residents overdue back from leave", count: overdueResidents, path: "/residents", tone: "text-warning-strong" },
+                  { label: "Leave requests waiting for approval", count: pendingApprovals, path: "/residents", tone: "text-warning-strong" },
                 ].map((row) => (
                   <li key={row.label}>
-                    <button
-                      onClick={() => navigate(row.path)}
-                      className="flex w-full min-h-[48px] items-center justify-between gap-4 px-4 py-3 text-left hover:bg-muted/50"
-                    >
-                      <span className="text-[13px] text-foreground">{row.label}</span>
-                      <span className={`text-base font-bold tabular-nums ${row.count > 0 ? row.tone : "text-muted-foreground"}`}>
-                        {row.count}
-                      </span>
-                    </button>
+                    <AttentionRow label={row.label} count={row.count} onClick={() => navigate(row.path)} />
                   </li>
                 ))}
               </ul>
               {overstayedCount === 0 && overdueResidents === 0 && pendingApprovals === 0 && (
-                <p className="px-4 pb-3 text-[13px] text-muted-foreground">Nothing outstanding right now.</p>
+                <p className="py-1 text-sm text-muted-foreground">Nothing outstanding right now.</p>
               )}
             </section>
 
 
 
             {/* Two-column layout: Active Now + History */}
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <div className="space-y-6">
               {/* Active Now — pinned, wider */}
-              <div className="lg:col-span-3">
+              <div className="min-w-0">
                 <ActiveNowList
                   visitors={activeVisitors}
                   onCheckOut={checkOutVisitor}
@@ -263,7 +193,7 @@ export default function HomeWorkbench() {
               </div>
 
               {/* Day-grouped history */}
-              <div className="lg:col-span-2">
+              <div className="min-w-0">
                 <DayGroupedHistory visitors={visitors} />
               </div>
             </div>

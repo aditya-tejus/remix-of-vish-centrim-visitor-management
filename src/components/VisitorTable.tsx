@@ -2,6 +2,7 @@ import { useState, useEffect, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import { Visitor } from "@/types/visitor";
 import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -167,35 +168,35 @@ export function VisitorTable({
   /** Who or where the person went — hidden entirely when the site keeps it private. */
   const destinationBlock = (visitor: Visitor) => {
     if (!visitor.whomToVisit) {
-      return <span className="text-[12px] text-muted-foreground italic">Not recorded</span>;
+      return <span className="text-sm text-muted-foreground italic">Not recorded</span>;
     }
     const res = residentFor(visitor);
     if (!showDestination) {
       return (
         <div className="flex flex-col">
-          <span className="text-[13px] text-foreground">
+          <span className="text-sm text-foreground">
             {res?.wing ? `${areaLabel} ${res.wing}` : "Recorded"}
           </span>
-          <span className="text-[11px] text-muted-foreground">Name hidden by site privacy setting</span>
+          <span className="text-sm text-muted-foreground">Name hidden by site privacy setting</span>
         </div>
       );
     }
     return res ? (
       <div className="flex flex-col">
         <button
-          className="text-[13px] text-primary hover:underline text-left"
+          className="text-sm text-primary hover:underline text-left"
           onClick={(e) => { e.stopPropagation(); navigate(`/visitors/${res.visitorId}`); }}
         >
           {res.name}
         </button>
-        <span className="text-[11px] text-muted-foreground">
+        <span className="text-sm text-muted-foreground">
           {[res.room ? `${roomLabel} ${res.room}` : "", res.wing].filter(Boolean).join(" · ") || "Resident"}
         </span>
       </div>
     ) : (
       <div className="flex flex-col">
-        <span className="text-[13px] text-foreground">{visitor.whomToVisit}</span>
-        <span className="text-[11px] text-muted-foreground">
+        <span className="text-sm text-foreground">{visitor.whomToVisit}</span>
+        <span className="text-sm text-muted-foreground">
           {visitor.type === "staff" ? "Department" : visitor.type === "contractor" ? "Staff" : "Resident"}
         </span>
       </div>
@@ -215,16 +216,16 @@ export function VisitorTable({
           </AvatarFallback>
         </Avatar>
         <div className="flex flex-col min-w-0">
-          <div className="flex items-center gap-1.5 min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5 min-w-0">
             <button
-              className="font-semibold text-[15px] text-primary hover:underline text-left truncate"
+              className="min-h-touch font-semibold text-base text-foreground hover:text-primary text-left whitespace-normal break-words"
               onClick={(e) => { e.stopPropagation(); navigate(`/visitors/${visitor.id}`); }}
             >
               {visitor.firstName} {visitor.surname}
             </button>
             {visitor.groupId && (
               <span
-                className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground shrink-0"
+                className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-sm font-medium text-muted-foreground shrink-0"
                 title={visitor.groupOrganiserName ? `Group organiser: ${visitor.groupOrganiserName}` : "Part of a group arrival"}
               >
                 <UsersRound className="h-3 w-3" aria-hidden />
@@ -233,12 +234,12 @@ export function VisitorTable({
             )}
             {flagged && (
               <span title="On the watchlist — check instructions before allowing access" aria-label="On the watchlist">
-                <ShieldAlert className="h-3.5 w-3.5 text-destructive" />
+                <ShieldAlert className="h-3.5 w-3.5 text-destructive-strong" />
               </span>
             )}
             {overstayed && (
               <span
-                className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-destructive"
+                className="inline-flex items-center gap-0.5 text-sm font-semibold text-destructive-strong"
                 title={`On site longer than ${hoursFor(visitor.type)}h`}
               >
                 <AlertTriangle className="h-3 w-3" aria-hidden /> Overdue
@@ -247,15 +248,15 @@ export function VisitorTable({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {personType === "all" && (
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-sm text-muted-foreground">
                 {typeLabelsMap[visitor.type] || visitor.type}
               </span>
             )}
             {keys.length > 0 && (
               <button
                 onClick={(e) => { e.stopPropagation(); navigate("/keys"); }}
-                className={`inline-flex items-center gap-1 text-[11px] font-medium ${
-                  overdueKey ? "text-destructive" : "text-warning"
+                className={`inline-flex items-center gap-1 text-sm font-medium ${
+                  overdueKey ? "text-destructive-strong" : "text-warning-strong"
                 }`}
               >
                 <KeyRound className="h-3 w-3" aria-hidden />
@@ -271,7 +272,7 @@ export function VisitorTable({
   const overflowMenu = (visitor: Visitor) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" aria-label={`More actions for ${visitor.firstName} ${visitor.surname}`}>
+        <Button variant="ghost" size="icon" className="min-h-touch min-w-touch text-muted-foreground" aria-label={`More actions for ${visitor.firstName} ${visitor.surname}`}>
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
@@ -305,7 +306,7 @@ export function VisitorTable({
         {canDelete && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => onDelete(visitor.id)}>
+            <DropdownMenuItem className="text-destructive-strong focus:text-destructive-strong" onClick={() => onDelete(visitor.id)}>
               <Trash2 className="h-3.5 w-3.5 mr-2" />Delete Record
             </DropdownMenuItem>
           </>
@@ -323,7 +324,7 @@ export function VisitorTable({
       <Button
         variant="outline"
         size="sm"
-        className="h-9 text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
+        className="min-h-touch text-sm gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
         onClick={() => onCheckOut(visitor.id)}
       >
         <LogOut className="h-3 w-3" aria-hidden />
@@ -342,7 +343,7 @@ export function VisitorTable({
         key={visitor.id}
         className={`group transition-colors cursor-pointer ${
           onSite
-            ? "bg-primary/[0.03] border-l-[3px] border-l-primary"
+            ? "bg-card border-l-[3px] border-l-primary"
             : "hover:bg-muted/50"
         }`}
         onClick={() => navigate(`/visitors/${visitor.id}`)}
@@ -362,15 +363,15 @@ export function VisitorTable({
         {/* In — time first, duration as quiet supporting text */}
         <TableCell className="py-3">
           <div className="flex flex-col">
-            <span className="text-[13px] font-mono text-foreground">
+            <span className="text-sm tabular-nums text-foreground">
               {format(visitor.checkInTime, "hh:mm a")}
               {!isToday(visitor.checkInTime) && (
-                <span className="ml-1.5 font-sans text-[11px] font-medium text-warning">
+                <span className="ml-1.5 font-sans text-sm font-medium text-warning-strong">
                   Since {format(visitor.checkInTime, "dd MMM")}
                 </span>
               )}
             </span>
-            <span className={`text-[11px] tabular-nums ${overstayed ? "text-destructive" : "text-muted-foreground"}`}>
+            <span className={`text-sm tabular-nums ${overstayed ? "text-destructive-strong" : "text-muted-foreground"}`}>
               {formatDuration(visitor.checkInTime, visitor.checkOutTime)}
               {onSite ? " so far" : ""}
             </span>
@@ -381,11 +382,11 @@ export function VisitorTable({
         <TableCell className="py-3">
           {visitor.checkOutTime ? (
             <div className="flex flex-col">
-              <span className="text-[13px] font-mono text-foreground">{format(visitor.checkOutTime, "hh:mm a")}</span>
-              <span className="text-[11px] text-muted-foreground">{format(visitor.checkOutTime, "dd MMM")}</span>
+              <span className="text-sm tabular-nums text-foreground">{format(visitor.checkOutTime, "hh:mm a")}</span>
+              <span className="text-sm text-muted-foreground">{format(visitor.checkOutTime, "dd MMM")}</span>
               {visitor.autoCheckedOut && (
                 <span
-                  className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground"
+                  className="mt-0.5 inline-flex items-center gap-1 text-sm text-muted-foreground"
                   title={visitor.checkoutReason || "Signed out automatically"}
                 >
                   <Timer className="h-3 w-3" aria-hidden="true" />
@@ -395,11 +396,8 @@ export function VisitorTable({
             </div>
           ) : (
             <div className="flex flex-col">
-              <span className={`inline-flex items-center gap-1.5 text-[12px] font-medium ${overstayed ? "text-destructive" : "text-success"}`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${overstayed ? "bg-destructive" : "bg-success"}`} />
-                {overstayed ? "Overdue" : "On site"}
-              </span>
-              <span className="text-[11px] text-muted-foreground">
+              <StatusBadge status={overstayed ? "overdue" : "on-site"} />
+              <span className="text-sm text-muted-foreground">
                 Due {format(new Date(visitor.checkInTime.getTime() + hoursFor(visitor.type) * 3600000), "hh:mm a")}
               </span>
             </div>
@@ -411,7 +409,7 @@ export function VisitorTable({
         {showCompanions && (
           <TableCell className="py-3">
             {visitor.additionalVisitors > 0 ? (
-              <Badge variant="secondary" className="text-[10px] gap-1 font-semibold">
+              <Badge variant="secondary" className="text-sm gap-1 font-semibold">
                 <Users className="h-3 w-3" aria-hidden />{visitor.additionalVisitors}
               </Badge>
             ) : (
@@ -454,8 +452,8 @@ export function VisitorTable({
           <div className="flex items-center gap-2 pl-4">
             <UsersRound className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
             <div className="flex flex-col">
-              <span className="text-[13px] text-foreground">{row.name}</span>
-              <span className="text-[11px] text-muted-foreground">
+              <span className="text-sm text-foreground">{row.name}</span>
+              <span className="text-sm text-muted-foreground">
                 With {row.withPrimaryName}
                 {row.relationship ? ` · ${row.relationship}` : ""}
                 {row.source === "legacy" ? " · older record" : ""}
@@ -464,16 +462,13 @@ export function VisitorTable({
           </div>
         </TableCell>
         <TableCell className="py-2">
-          <span className="text-[13px] font-mono text-foreground">{format(row.checkInTime, "hh:mm a")}</span>
+          <span className="text-sm tabular-nums text-foreground">{format(row.checkInTime, "hh:mm a")}</span>
         </TableCell>
         <TableCell className="py-2">
           {row.checkOutTime ? (
-            <span className="text-[13px] font-mono text-foreground">{format(row.checkOutTime, "hh:mm a")}</span>
+            <span className="text-sm tabular-nums text-foreground">{format(row.checkOutTime, "hh:mm a")}</span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-success">
-              <span className="h-1.5 w-1.5 rounded-full bg-success" />
-              On site
-            </span>
+            <StatusBadge status="on-site" />
           )}
         </TableCell>
         <TableCell className="py-2" />
@@ -483,8 +478,8 @@ export function VisitorTable({
             <Button
               variant="outline"
               size="sm"
-              className="h-8 text-[12px] gap-1.5"
-              onClick={() => onCheckOutParty(row.partyId!)}
+              className="min-h-touch text-sm gap-1.5"
+              onClick={() => { if (row.partyId) onCheckOutParty(row.partyId); }}
             >
               <LogOut className="h-3.5 w-3.5" aria-hidden />
               Sign out
@@ -495,7 +490,7 @@ export function VisitorTable({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 text-[12px] gap-1.5"
+            className="min-h-touch text-sm gap-1.5"
             onClick={() => printCompanionBadge(row, visitor)}
           >
             <Printer className="h-3.5 w-3.5" aria-hidden />
@@ -513,18 +508,18 @@ export function VisitorTable({
     return (
       <div
         key={visitor.id}
-        className={`p-4 space-y-3 ${onSite ? "border-l-[3px] border-l-primary bg-primary/[0.03]" : ""}`}
+        className={`p-4 space-y-3 ${onSite ? "border-l-[3px] border-l-primary bg-card" : ""}`}
         onClick={() => navigate(`/visitors/${visitor.id}`)}
       >
         <div className="flex items-start justify-between gap-2">
           {nameBlock(visitor)}
           <div onClick={(e) => e.stopPropagation()}>{overflowMenu(visitor)}</div>
         </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
           <span>
             In {format(visitor.checkInTime, "hh:mm a")}
             {!isToday(visitor.checkInTime) && (
-              <span className="ml-1 font-medium text-warning">since {format(visitor.checkInTime, "dd MMM")}</span>
+              <span className="ml-1 font-medium text-warning-strong">since {format(visitor.checkInTime, "dd MMM")}</span>
             )}
           </span>
           <span>
@@ -540,8 +535,8 @@ export function VisitorTable({
             </span>
           )}
         </div>
-        <div className="text-[12px]">{destinationBlock(visitor)}</div>
-        <div onClick={(e) => e.stopPropagation()}>{primaryAction(visitor)}</div>
+        <div className="text-sm">{destinationBlock(visitor)}</div>
+        <div className="flex flex-wrap items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}><StatusBadge status={onSite ? overstayed ? "overdue" : "on-site" : "checked-out"} />{primaryAction(visitor)}</div>
       </div>
     );
   };
@@ -554,8 +549,8 @@ export function VisitorTable({
             <div className="flex items-start gap-2">
               <UsersRound className="h-4 w-4 text-muted-foreground mt-0.5" aria-hidden />
               <div>
-                <p className="text-[14px] font-medium text-foreground">{row.name}</p>
-                <p className="text-[12px] text-muted-foreground">
+                <p className="text-base font-medium text-foreground">{row.name}</p>
+                <p className="text-sm text-muted-foreground">
                   With {row.withPrimaryName}
                   {row.relationship ? ` · ${row.relationship}` : ""}
                   {row.source === "legacy" ? " · older record" : ""}
@@ -563,22 +558,20 @@ export function VisitorTable({
               </div>
             </div>
             {row.checkOutTime ? (
-              <span className="text-[12px] text-muted-foreground">
+              <span className="text-sm text-muted-foreground">
                 Out {format(row.checkOutTime, "hh:mm a")}
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-success">
-                <span className="h-1.5 w-1.5 rounded-full bg-success" /> On site
-              </span>
+              <StatusBadge status="on-site" />
             )}
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-[12px] text-muted-foreground">In {format(row.checkInTime, "hh:mm a")}</span>
+            <span className="text-sm text-muted-foreground">In {format(row.checkInTime, "hh:mm a")}</span>
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-9 text-[12px] gap-1.5"
+                className="min-h-touch text-sm gap-1.5"
                 onClick={() => printCompanionBadge(row, visitor)}
               >
                 <Printer className="h-3.5 w-3.5" aria-hidden /> Print badge
@@ -587,8 +580,8 @@ export function VisitorTable({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-9 text-[12px] gap-1.5"
-                  onClick={() => onCheckOutParty(row.partyId!)}
+                  className="min-h-touch text-sm gap-1.5"
+                  onClick={() => { if (row.partyId) onCheckOutParty(row.partyId); }}
                 >
                   <LogOut className="h-3.5 w-3.5" aria-hidden /> Sign out
                 </Button>
@@ -600,19 +593,19 @@ export function VisitorTable({
       ));
 
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
+    <div className="border-y border-border bg-card min-w-0">
       {visibleSelected.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-primary/5 border-b border-border">
-          <p className="text-[13px] font-medium text-foreground">
+          <p className="text-sm font-medium text-foreground">
             {visibleSelected.length} selected
           </p>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => setSelectedIds([])}>
+            <Button variant="ghost" size="sm" className="min-h-touch text-sm" onClick={() => setSelectedIds([])}>
               Clear
             </Button>
             <Button
               size="sm"
-              className="h-9 text-xs gap-1.5"
+              className="min-h-touch text-sm gap-1.5"
               onClick={() => { onCheckOutMany?.(visibleSelected); setSelectedIds([]); }}
             >
               <LogOut className="h-3.5 w-3.5" aria-hidden /> Check out selected
@@ -622,15 +615,15 @@ export function VisitorTable({
       )}
 
       {visitors.length === 0 ? (
-        <div className="px-6 py-14 text-center space-y-1">
+        <div className="px-6 py-8 text-center space-y-1">
           <p className="text-sm font-medium text-foreground">{emptyTitle}</p>
-          <p className="text-[13px] text-muted-foreground max-w-md mx-auto">{emptyDescription}</p>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">{emptyDescription}</p>
         </div>
       ) : (
         <>
           {/* Table for tablet landscape and up */}
-          <div className="hidden md:block overflow-x-auto">
-            <Table>
+          <div className="hidden 2xl:block">
+            <Table className="visitor-table">
               <TableHeader>
                 <TableRow className="hover:bg-transparent bg-muted/50">
                   <TableHead className="w-9">
@@ -645,7 +638,7 @@ export function VisitorTable({
                     )}
                   </TableHead>
                   {columns.map((col) => (
-                    <TableHead key={col.key} className="text-xs uppercase tracking-wider font-semibold text-muted-foreground h-[44px]">
+                    <TableHead key={col.key} className="text-sm font-semibold text-muted-foreground h-[44px]">
                       {col.label}
                     </TableHead>
                   ))}
@@ -664,7 +657,7 @@ export function VisitorTable({
           </div>
 
           {/* Stacked cards on phones and narrow tablets */}
-          <div className="md:hidden divide-y divide-border">
+          <div className="2xl:hidden divide-y divide-border">
             {visitors.map((visitor) => (
               <div key={visitor.id} className="divide-y divide-border">
                 {renderCard(visitor)}
