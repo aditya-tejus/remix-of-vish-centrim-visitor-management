@@ -3,11 +3,13 @@ import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, UserPlus, ShieldAlert, ShieldCheck, UtensilsCrossed, Printer } from "lucide-react";
+import { CheckCircle2, UserPlus, ShieldAlert, ShieldCheck, UtensilsCrossed, Printer } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { Visitor } from "@/types/visitor";
-import { useCheckInFlow } from "./useCheckInFlow";
+import { ReviewAction } from "./ReviewAction";
+import { VisitPurpose } from "./VisitPurpose";
+import { type StaffCheckInPrefill, useCheckInFlow } from "./useCheckInFlow";
 import { StepIdentify } from "./StepIdentify";
 import { StepDetails } from "./StepDetails";
 import { StepScreening } from "./StepScreening";
@@ -24,19 +26,13 @@ interface CheckInSheetProps {
   onOpenChange: (open: boolean) => void;
   /** Resolves only once the check-in is safely stored. */
   onAdd: (visitor: Omit<Visitor, "id">) => Promise<Visitor>;
+  initialType?: Visitor["type"];
+  prefill?: StaffCheckInPrefill;
 
 }
 
-const stepLabels: Record<string, string> = {
-  identify: "Identify",
-  details: "Details",
-  food: "Food",
-  screening: "Screening",
-  confirm: "Confirm",
-};
-
-export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
-  const flow = useCheckInFlow(open);
+export function CheckInSheet({ open, onOpenChange, onAdd, initialType, prefill }: CheckInSheetProps) {
+  const flow = useCheckInFlow(open, initialType, prefill);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successName, setSuccessName] = useState("");
   const [successBadge, setSuccessBadge] = useState<BadgeData | null>(null);
@@ -47,25 +43,30 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
   const [overrideError, setOverrideError] = useState<string | null>(null);
   // A ref, not state, so a fast second tap cannot slip through before a re-render.
   const submittingRef = useRef(false);
+  const attemptedPayloadRef = useRef<Omit<Visitor, "id"> | null>(null);
   const { currentSite, currentSiteId } = useSite();
 
   const handleClose = () => {
     if (submittingRef.current) return;
     flow.resetForm();
+    attemptedPayloadRef.current = null;
     setShowSuccess(false);
     setSaveFailed(false);
+    setOverrideError(null);
     onOpenChange(false);
   };
 
   const handleSubmit = async () => {
-    if (submittingRef.current) return;
+    if (submittingRef.current || !flow.canSubmit) return;
     submittingRef.current = true;
     setSaving(true);
     setSaveFailed(false);
 
-    const visitor = flow.buildVisitor();
+    let visitor: Omit<Visitor, "id">;
     let created: Visitor;
     try {
+      visitor = attemptedPayloadRef.current || flow.buildVisitor();
+      attemptedPayloadRef.current = visitor;
       // Wait for the server before saying anyone is checked in.
       created = await onAdd(visitor);
     } catch {
@@ -104,8 +105,8 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
       });
     }
 
-    // Flagged (not blocked) sign-ins are recorded server-side, so the entry
-    // cannot be skipped from the browser.
+    // Follow-up audit remains separate from arrival persistence; delivery is
+    // not guaranteed by this browser request (see staff check-in review).
     if (flow.screeningFlagged && !flow.screeningBlocked && flow.overrideReason.trim()) {
       const name = `${flow.formData.firstName} ${flow.formData.surname}`.trim();
       supabase.rpc("log_audit", {
@@ -121,6 +122,10 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
       }).then(() => undefined);
     }
 
+    if (flow.keyPolicy.enforcement === "block" && flow.overdueKeys.length > 0 && flow.keyOverrideReason.trim()) {
+      void supabase.rpc("log_audit", { _action: "key_overdue_override", _records: 1,
+        _reason: flow.keyOverrideReason.trim(), _details: { visitor: fullName, visitor_type: flow.selectedType, outstanding_items: flow.overdueKeys.map(item => item.keyLabel) } as any });
+    }
     setSuccessName(fullName);
     setSuccessBadge({
       name: fullName,
@@ -135,6 +140,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
     setShowSuccess(true);
     if (!flow.badgePrintingEnabled) {
       setTimeout(() => {
+        attemptedPayloadRef.current = null;
         flow.resetForm();
         setShowSuccess(false);
         onOpenChange(false);
@@ -146,67 +152,22 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
     <Sheet open={open} onOpenChange={handleClose}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-[50vw] min-w-[480px] p-0 gap-0 flex flex-col overflow-hidden"
+        className="inset-y-0 right-0 h-dvh w-full max-w-full border-border bg-card p-0 gap-0 flex flex-col overflow-hidden sm:inset-y-auto sm:top-1/2 sm:left-1/2 sm:right-auto sm:h-[min(900px,92dvh)] sm:w-[calc(100%-32px)] sm:max-w-2xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl [&_input]:text-base [&_textarea]:text-base [&_[role=combobox]]:text-base"
       >
         {/* Header */}
         <SheetHeader className="px-6 pt-5 pb-4 shrink-0 border-b border-border bg-card">
-          <div className="flex items-center justify-between mb-3">
-            <SheetTitle className="flex items-center gap-2.5 text-[18px] font-bold text-foreground">
-              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                <UserPlus className="h-4 w-4 text-primary" />
-              </div>
-              Check In
-            </SheetTitle>
-            <span className="text-[12px] text-muted-foreground font-medium bg-muted px-2.5 py-1 rounded-lg">
-              Step {flow.currentStepIndex + 1} of {flow.totalSteps}
-            </span>
-          </div>
-          <SheetDescription className="sr-only">Check in a visitor</SheetDescription>
-
-          {/* Progress stepper */}
-          <div className="flex items-center gap-1">
-            {flow.steps.map((s, i) => {
-              const isActive = i === flow.currentStepIndex;
-              const isComplete = i < flow.currentStepIndex;
-              const cfg = { label: stepLabels[s] || s, icon: `${i + 1}` };
-              return (
-                <div key={s} className="flex items-center flex-1 gap-1">
-                  <div className="flex items-center gap-2 flex-1">
-                    {/* Step indicator */}
-                    <div className={`h-7 w-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 transition-all duration-300 ${
-                      isComplete ? "bg-success text-success-foreground"
-                        : isActive ? "bg-primary text-primary-foreground shadow-sm"
-                        : "bg-muted text-muted-foreground"
-                    }`}>
-                      {isComplete ? <Check className="h-3.5 w-3.5" /> : cfg.icon}
-                    </div>
-                    {/* Label */}
-                    <span className={`text-[12px] font-medium transition-colors hidden sm:inline ${
-                      isActive ? "text-primary" : isComplete ? "text-success" : "text-muted-foreground/60"
-                    }`}>
-                      {cfg.label}
-                    </span>
-                  </div>
-                  {/* Connector line */}
-                  {i < flow.steps.length - 1 && (
-                    <div className={`h-[2px] flex-1 min-w-[16px] rounded-full transition-all duration-300 ${
-                      isComplete ? "bg-success" : "bg-border"
-                    }`} />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <SheetTitle className="flex items-center gap-2 pr-8 text-xl font-semibold"><UserPlus aria-hidden="true" className="h-5 w-5 text-primary" /> Check In</SheetTitle>
+          <SheetDescription className="text-sm text-muted-foreground">{currentSite?.name || "Current site"}</SheetDescription>
         </SheetHeader>
 
         {/* Step content */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto">
           {showSuccess ? (
             <div className="flex flex-col items-center justify-center h-full gap-4 px-6 py-16">
               <div className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center">
                 <CheckCircle2 className="h-8 w-8 text-success" />
               </div>
-              <div className="text-center space-y-1">
+              <div className="text-center space-y-1" role="status">
                 <p className="text-[18px] font-bold text-foreground">{successName} checked in!</p>
                 <p className="text-[14px] text-muted-foreground">Welcome to the facility.</p>
               </div>
@@ -220,8 +181,8 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
               )}
             </div>
           ) : (
-            <div className="px-6 py-6">
-              {flow.step === "identify" && (
+            <fieldset disabled={saving || saveFailed} className="min-w-0 space-y-5 px-4 py-4 sm:px-6">
+              {(
                 <StepIdentify
                   selectedType={flow.selectedType}
                   onTypeChange={flow.setSelectedType}
@@ -231,13 +192,13 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
                   selectedProfile={flow.selectedProfile}
                   onSelectProfile={(profile) => {
                     flow.selectProfile(profile);
-                    flow.goNext();
+                    document.getElementById("staff-detail-core-first-name")?.focus();
                   }}
-                  onNewPerson={flow.goNext}
+                  onNewPerson={() => document.getElementById("staff-detail-core-first-name")?.focus()}
                 />
               )}
 
-              {flow.step === "details" && (
+              {(
                 <StepDetails
                   formData={flow.formData}
                   updateField={flow.updateField}
@@ -252,11 +213,12 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
                   activeFields={flow.activeFields}
                   photo={flow.photo}
                   setPhoto={flow.setPhoto}
-                  onChangeProfile={() => flow.setStep("identify")}
+                  onChangeProfile={() => { flow.setSelectedProfile(null); flow.setIsReturning(false); flow.setSearchQuery(""); }}
                 />
               )}
 
-              {flow.step === "food" && (
+              <VisitPurpose flow={flow} />
+              {flow.foodStepApplies && (
                 <div className="space-y-5">
                   <div className="space-y-1">
                     <h3 className="text-[16px] font-bold text-foreground flex items-center gap-2">
@@ -271,7 +233,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
                     <Label className="text-[12px] font-medium">Are you bringing food into the home?</Label>
                     <div className="flex gap-3">
                       {[true, false].map((val) => (
-                        <button
+                        <Button variant="outline"
                           key={String(val)}
                           type="button"
                           onClick={() => flow.setBringingFood(val)}
@@ -282,7 +244,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
                           }`}
                         >
                           {val ? "Yes" : "No"}
-                        </button>
+                        </Button>
                       ))}
                     </div>
                   </div>
@@ -298,7 +260,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
                 </div>
               )}
 
-              {flow.step === "screening" && (
+              {flow.steps.includes("screening") && (
                 <StepScreening
                   selectedType={flow.selectedType}
                   healthQuestions={flow.healthQuestions}
@@ -320,7 +282,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
                 />
               )}
 
-              {flow.step === "confirm" && (
+              {(
                 <StepConfirm
                   formData={flow.formData}
                   selectedType={flow.selectedType}
@@ -334,10 +296,17 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
                   tcContent={flow.tcContent}
                   checkInTimeOverride={flow.checkInTimeOverride}
                   setCheckInTimeOverride={flow.setCheckInTimeOverride}
+                  privacyRequired={flow.policy.privacyRequired}
+                  evaluation={flow.policy.screeningEnabled ? flow.screeningEvaluation : undefined}
                 />
               )}
 
-              {flow.step === "confirm" && flow.screeningFlagged && (
+              {flow.overdueKeys.length > 0 && flow.keyPolicy.enforcement !== "off" && <section className="border-l-2 border-warning px-3 py-2 space-y-2">
+                <h3 className="text-base font-semibold text-warning-strong">Outstanding keys / fobs</h3>
+                <ul className="text-sm">{flow.overdueKeys.map(item => <li key={item.id}>{item.keyLabel}</li>)}</ul>
+                {flow.keyPolicy.enforcement === "block" && <><Label htmlFor="staff-key-reason">Reason for allowing check-in (at least 3 characters)</Label><Textarea id="staff-key-reason" value={flow.keyOverrideReason} onChange={e => flow.setKeyOverrideReason(e.target.value)} /></>}
+              </section>}
+              {flow.screeningFlagged && (
                 <div
                   className={`mt-4 rounded-xl border p-4 space-y-3 ${
                     flow.screeningBlocked ? "border-destructive/40 bg-destructive/5" : "border-warning/40 bg-warning/5"
@@ -365,7 +334,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
                           ? `Approved by ${flow.overrideApprovedBy} and recorded in the audit trail.`
                           : flow.screeningBlocked
                             ? "A supervisor with the right permission must approve this, with a reason of at least 10 characters."
-                            : "A staff reason of at least 10 characters is required to continue, and it is recorded in the audit trail."}
+                            : "A staff reason of at least 10 characters is required to continue."}
                       </p>
                     </div>
                   </div>
@@ -402,48 +371,11 @@ export function CheckInSheet({ open, onOpenChange, onAdd }: CheckInSheetProps) {
                 </div>
               )}
 
-            </div>
+            </fieldset>
           )}
         </div>
 
-        {/* Footer */}
-        {!showSuccess && (
-          <div className="shrink-0 border-t border-border bg-card px-6 py-4">
-            {saveFailed && (
-              <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-[13px] text-destructive">
-                This check-in was not saved. The details below are still here — check the connection and press Complete Check In again.
-              </div>
-            )}
-            <div className="flex items-center justify-between">
-              <Button variant="ghost" size="sm" onClick={handleClose} disabled={saving} className="text-muted-foreground text-[13px] h-10">
-                Cancel
-              </Button>
-              <div className="flex gap-2.5">
-                {!flow.isFirstStep && (
-                  <Button variant="outline" onClick={flow.goBack} disabled={saving} className="gap-2 rounded-xl text-[13px] h-10 px-5">
-                    <ArrowLeft className="h-3.5 w-3.5" /> Back
-                  </Button>
-                )}
-                {!flow.isLastStep ? (
-                  <Button onClick={flow.goNext} className="gap-2 rounded-xl text-[13px] h-10 px-6"
-                    disabled={!flow.canProceed}>
-                    Next <ArrowRight className="h-3.5 w-3.5" />
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleSubmit}
-                    className="gap-2 rounded-xl text-[14px] h-12 px-8 bg-success hover:bg-success/90 text-success-foreground font-semibold shadow-sm"
-                    disabled={!flow.canProceed || saving}
-                  >
-                    <Check className="h-4.5 w-4.5" />
-                    {saving ? "Saving..." : saveFailed ? "Try again" : "Complete Check In"}
-                  </Button>
-                )}
-
-              </div>
-            </div>
-          </div>
-        )}
+        {!showSuccess && <ReviewAction issues={flow.validationIssues} failed={saveFailed} saving={saving} onCancel={handleClose} onSubmit={handleSubmit} />}
       </SheetContent>
     </Sheet>
   );

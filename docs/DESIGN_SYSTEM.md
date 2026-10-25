@@ -1,4 +1,4 @@
-# Centrim Life Design System (Phase 9D / first 9F slice)
+# Centrim Life Design System (Phase 9D / bounded 9F slices)
 
 Scope of this document: how screens should look, read and behave. It records the
 tokens and shared building blocks. Phase 9D applies the foundation and the first
@@ -230,3 +230,26 @@ success 4.82 / 8.70, warning 4.77 / 7.20, error 4.69 / 4.67, emergency 4.71 /
   one main/h1 and no document overflow or page errors. Staff surfaces and bound
   kiosk views could not be live-tested without a matching authorised session;
   first-viewport, dark-mode, full action and assistive-technology UAT remain open.
+
+## 14. Staff-assisted check-in — Phase 9E-A / 9F-2a
+
+- Ordinary reception arrivals use one `CheckInSheet` from Today, Visit List,
+  profile repeat arrival and the person-type preset page. Group arrival and
+  resident movement remain separate workflows, not disguised as the same form.
+- White, maximum 672px centred sheet on tablet/desktop; full-height, full-width
+  at phone sizes. Input text is 16px. No oversized kiosk-style type tiles or
+  mandatory multi-page wizard for a simple arrival.
+- Lookup, compact type controls, configured details and destination are in one
+  keyboard-reachable panel. Photo controls are folded away but retained;
+  companions add their own fields only on request. Food, questions, contractor
+  checks, volunteer extras and terms follow existing settings.
+- Destination, details and additional people are small presentational pieces.
+  `ConfiguredDetails` takes resolver specifications, not a second field policy.
+  `ReviewAction` shows one deep-blue Check In command and concise missing-item
+  summary. It announces failure and leaves answers available for retry.
+- Terms checkbox uses a real label, not nested click handlers; screening answers
+  have accessible names. Focus trap/Escape/return retain the existing Sheet
+  primitive. A successful save is announced, never shown before confirmation.
+- Mocked browser rendering inspected at 390/768/1024/1440, one main/h1,
+  no sheet horizontal overflow and working Escape. This is not authenticated
+  reception UAT or live contractor credential verification; no arrival submitted.

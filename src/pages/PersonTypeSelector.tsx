@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppShell } from "@/components/AppShell";
-import { AddVisitDialog } from "@/components/AddVisitDialog";
+import { CheckInSheet } from "@/components/checkin/CheckInSheet";
 import { useVisitors } from "@/hooks/useVisitors";
 import { User, Truck, Heart, Users, UserSquare2, QrCode, ArrowRight, UsersRound } from "lucide-react";
 import { useKioskFastLane } from "@/hooks/useKioskFastLane";
@@ -18,7 +18,7 @@ const ALL_PERSON_TYPES = [
 export default function PersonTypeSelector() {
   const { fastLaneEnabled } = useKioskFastLane();
   const navigate = useNavigate();
-  const { addVisitor } = useVisitors();
+  const { addVisitorAsync } = useVisitors();
   const { deskTypes, singleDeskType, loading } = usePersonTypes();
   const labels = new Map(deskTypes.map((t) => [t.type as string, t.label]));
   const enabledDesk = new Set(deskTypes.map((t) => t.type as string));
@@ -101,7 +101,7 @@ export default function PersonTypeSelector() {
               </button>
             </div>
       </AppShell>
-      <AddVisitDialog open={dialogOpen} onOpenChange={setDialogOpen} onAdd={addVisitor} initialType={selectedType as any} />
+      <CheckInSheet open={dialogOpen} onOpenChange={setDialogOpen} onAdd={addVisitorAsync} initialType={selectedType as any} />
     </>
   );
 }

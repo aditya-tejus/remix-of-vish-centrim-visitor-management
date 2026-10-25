@@ -592,3 +592,12 @@ Known limits after Phase 7E:
 - Verification: 182 tests pass (178 existing + 4 command-wiring tests); harness typecheck/build reports build OK. Playwright checked 390/768/1024/1440 widths: staff routes redirect to sign-in and kiosk routes show device setup only, all with one main/h1, no document overflow and no page errors. Screenshots inspected; these checks do NOT verify authenticated reception or bound kiosk rendering/interactions.
 - [ ] Visual UAT: signed-in Today/Visit List, bound welcome/home, all row actions, dark-mode and first-viewport layout require an available authorised session/device. Self-session mint has no matching requesting-user account; no other user selected and no device provisioned.
 - Remaining scope: resident/profile/register/report/settings/check-in screen redesigns and Phase 9E decomposition. Stop here for review. No publication, operational writes, schema/RPC/RLS/route/emergency-policy changes.
+
+### Phase 9E-A / 9F-2a — staff-assisted check-in bounded package
+- [x] Map Today, Visit List, profile and type-preset entry paths, configuration, payload and guards (`docs/STAFF_CHECKIN_REVIEW.md`).
+- [x] Characterise existing staff validation/payload with mocked tests before refactoring (182 baseline).
+- [x] Extract reversible staff presentation/rules; align staff entry points without merging group or resident movement workflows.
+- [x] Apply reception-density layout, labelled controls, preserved conditional fields and honest save/retry.
+- [x] Run full tests and inspect preview/compiler signals: 222 passing; harness build OK. Browser with all service requests mocked: 390/768/1024/1440, opened sheet, names/terms/Escape, one main/h1, no sheet overflow or page errors. No live arrival submissions or operational writes.
+- [ ] Assisted operational UAT requires an authorised environment/user: Today/Visit List/profile, configured contractor UI, dark mode and assistive technology. No live check-in submitted by design.
+- Known gaps and exact files: `docs/STAFF_CHECKIN_REVIEW.md`. Group parity, same-name destination IDs, configuration site scope, existing unmapped custom/photo/file/dedicated vaccination-date persistence and non-atomic food/audit remain outside this package. Stop for review; no publication or schema/RPC/RLS/permissions/emergency/kiosk changes.

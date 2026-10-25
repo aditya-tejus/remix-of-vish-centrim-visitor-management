@@ -40,6 +40,7 @@ import { exportVisitorsToCSV, exportVisitorToPDF } from "@/lib/exportVisitors";
 import { EditVisitorDialog } from "@/components/EditVisitorDialog";
 import { FeedbackDialog } from "@/components/FeedbackDialog";
 import { AddVisitDialog } from "@/components/AddVisitDialog";
+import { CheckInSheet } from "@/components/checkin/CheckInSheet";
 import { VisitorBadge } from "@/components/VisitorBadge";
 import { issueBadge } from "@/lib/badgeIssue";
 import { useSite } from "@/contexts/SiteContext";
@@ -85,7 +86,7 @@ function SectionCard({
 export default function VisitorProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { visitors, deleteVisitor, addVisitor, checkOutVisitor } = useVisitors();
+  const { visitors, deleteVisitor, addVisitor, addVisitorAsync, checkOutVisitor } = useVisitors();
   const { toast } = useToast();
   const { role } = useAuth();
   const { can } = usePermissions();
@@ -784,7 +785,7 @@ export default function VisitorProfilePage() {
         )}
       </div>
 
-      <AddVisitDialog
+      {visitor.type === "resident" ? <AddVisitDialog
         open={quickCheckInOpen}
         onOpenChange={setQuickCheckInOpen}
         onAdd={addVisitor}
@@ -796,7 +797,12 @@ export default function VisitorProfilePage() {
           address: visitor.address,
           type: visitor.type,
         }}
-      />
+      /> : <CheckInSheet
+        open={quickCheckInOpen}
+        onOpenChange={setQuickCheckInOpen}
+        onAdd={addVisitorAsync}
+        prefill={{ firstName: visitor.firstName, surname: visitor.surname, mobile: visitor.mobile, email: visitor.email, address: visitor.address, type: visitor.type, personQr: visitor.personQr }}
+      />}
 
       <CheckOutSheet
         open={checkOutOpen}

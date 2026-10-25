@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppShell } from "@/components/AppShell";
 import { useVisitors } from "@/hooks/useVisitors";
-import { AddVisitDialog } from "@/components/AddVisitDialog";
+import { CheckInSheet } from "@/components/checkin/CheckInSheet";
 import { CheckOutSheet } from "@/components/CheckOutSheet";
 import { ResidentOutingDialog } from "@/components/ResidentOutingDialog";
 
@@ -20,7 +20,7 @@ import { Visitor } from "@/types/visitor";
 
 export default function HomeWorkbench() {
   const navigate = useNavigate();
-  const { visitors, addVisitor, checkOutVisitor, checkInReturn, overstayedCount, markResidentAway } = useVisitors();
+  const { visitors, addVisitorAsync, checkOutVisitor, checkInReturn, overstayedCount, markResidentAway } = useVisitors();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [checkOutDialogOpen, setCheckOutDialogOpen] = useState(false);
   const [residentLeaveOpen, setResidentLeaveOpen] = useState(false);
@@ -199,7 +199,7 @@ export default function HomeWorkbench() {
             </div>
     </AppShell>
 
-      <AddVisitDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onAdd={addVisitor} />
+      <CheckInSheet open={addDialogOpen} onOpenChange={setAddDialogOpen} onAdd={addVisitorAsync} />
       <CheckOutSheet open={checkOutDialogOpen} onOpenChange={setCheckOutDialogOpen} visitors={visitors} onCheckOut={checkOutVisitor} />
       <ResidentOutingDialog open={residentLeaveOpen} onOpenChange={setResidentLeaveOpen} onMarkAway={markResidentAway} />
     </>
