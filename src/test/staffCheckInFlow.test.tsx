@@ -7,9 +7,10 @@ import { CheckInSheet } from "@/components/checkin/CheckInSheet";
 const fixtures = vi.hoisted(() => ({
   settings: [] as { key: string; value: string }[],
   fields: [] as any[], questions: [] as any[], companions: [] as any[],
-  people: [] as any[], queryCalls: [] as any[], types: [] as any[],
+  people: [] as any[], queryCalls: [] as any[], types: [] as any[], site: "site-a" as string | null,
+  pending: false, configError: false,
 }));
-vi.mock("@/contexts/SiteContext", () => ({ useSite: () => ({ currentSiteId: "site-a", currentSite: { name: "Test site" }, isLegacySite: false }) }));
+vi.mock("@/contexts/SiteContext", () => ({ useSite: () => ({ currentSiteId: fixtures.site, currentSite: { name: "Test site" }, isLegacySite: false }) }));
 vi.mock("@/hooks/usePeopleLookup", () => ({ usePeopleLookup: () => ({ matches: [], searching: false }) }));
 vi.mock("@/components/ContractorScreening", () => ({ ContractorScreening: () => <div>Contractor requirements</div> }));
 vi.mock("@/contexts/OperatingContext", () => ({
@@ -29,7 +30,7 @@ vi.mock("@/hooks/useHealthQuestions", () => ({
   useActiveVaccinationFields: () => ({ data: [] }),
 }));
 vi.mock("@/hooks/useFormFields", () => ({
-  useFormFields: () => ({ data: fixtures.fields }),
+  useFormFields: () => ({ data: fixtures.fields, isPending: fixtures.pending, isError: fixtures.configError }),
   useCompanionFields: () => ({ data: fixtures.companions }),
 }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: {
@@ -47,6 +48,7 @@ afterEach(cleanup);
 beforeEach(() => {
   fixtures.settings = []; fixtures.fields = []; fixtures.questions = []; fixtures.companions = [];
   fixtures.people = []; fixtures.queryCalls = []; fixtures.types = buildPersonTypeConfig({}, "site-a");
+  fixtures.site = "site-a"; fixtures.pending = false; fixtures.configError = false;
 });
 
 describe("staff check-in baseline payload and guards", () => {
@@ -140,6 +142,37 @@ describe("staff check-in baseline payload and guards", () => {
     expect(payload).toMatchObject({ volunteerRole: "Gardening", volunteerSupervisor: "Sam" });
     expect(payload.volunteerExpectedEnd?.getHours()).toBe(14);
     expect(payload.volunteerExpectedEnd?.getMinutes()).toBe(30);
+  });
+  it("blocks when requirements are loading or failed", () => {
+    fixtures.pending = true;
+    const { result, rerender } = renderHook(() => useCheckInFlow(true));
+    expect(result.current.canSubmit).toBe(false);
+    fixtures.pending = false; fixtures.configError = true; rerender();
+    expect(result.current.configurationError).toBe(true);
+    expect(result.current.canSubmit).toBe(false);
+  });
+  it("refuses to silently save a draft at a different site", () => {
+    const { result, rerender } = renderHook(() => useCheckInFlow(true));
+    fixtures.site = "site-b"; rerender();
+    expect(result.current.validationIssues).toContain("The site changed. Close and reopen check-in for the selected site.");
+    expect(result.current.canSubmit).toBe(false);
+  });
+  it("does not search other sites when no site is selected", async () => {
+    fixtures.site = null;
+    const { result } = renderHook(() => useCheckInFlow(true));
+    await act(async () => result.current.setSearchQuery("Ann"));
+    expect(fixtures.queryCalls.filter(call => call[0] === "visitors")).toEqual([]);
+    expect(result.current.canSubmit).toBe(false);
+  });
+  it("invalidates supervisor approval when answers change", async () => {
+    fixtures.types = buildPersonTypeConfig({ person_type_screening_visitor: "true" }, "site-a");
+    fixtures.questions = [{ id: "q", question: "Symptoms?", type: "yesno", warning_answers: ["yes"], outcome_action: "block" }];
+    const { result } = renderHook(() => useCheckInFlow(true));
+    act(() => { result.current.setHealthAnswers({ q: true }); result.current.setOverrideReason("Reviewed by supervisor"); });
+    await act(async () => { await result.current.approveBlockedScreening(); });
+    expect(result.current.overrideApprovedBy).toBe("operator@example.test");
+    act(() => result.current.setHealthAnswers({ q: false }));
+    expect(result.current.overrideApprovedBy).toBeNull();
   });
 });
 

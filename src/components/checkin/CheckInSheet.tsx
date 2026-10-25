@@ -163,7 +163,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd, initialType, prefill }
               <div className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center">
                 <CheckCircle2 className="h-8 w-8 text-success" />
               </div>
-              <div className="text-center space-y-1">
+              <div className="text-center space-y-1" role="status">
                 <p className="text-[18px] font-bold text-foreground">{successName} checked in!</p>
                 <p className="text-[14px] text-muted-foreground">Welcome to the facility.</p>
               </div>
