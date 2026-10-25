@@ -5,7 +5,7 @@ export function ReviewAction({ issues, failed, saving, onCancel, onSubmit }: {
   issues: string[]; failed: boolean; saving: boolean; onCancel: () => void; onSubmit: () => void;
 }) {
   return <div className="shrink-0 border-t border-border bg-card px-4 py-3 sm:px-6">
-    {failed && <p role="alert" className="mb-2 text-sm text-destructive-strong">Check-in was not saved. Your answers are still here. Check the connection and try again.</p>}
+    {failed && <p role="alert" className="mb-2 text-sm text-destructive-strong">Check-in could not be confirmed. Your answers are kept unchanged for a safe retry. Check the connection and try again.</p>}
     {issues.length > 0 && <div aria-live="polite" className="mb-2 max-h-24 overflow-y-auto text-sm text-muted-foreground"><ul className="list-disc pl-4">{issues.map(issue => <li key={issue}>{issue}</li>)}</ul></div>}
     <div className="flex items-center justify-between gap-2">
       <Button variant="ghost" className="min-h-touch" onClick={onCancel} disabled={saving}>Cancel</Button>

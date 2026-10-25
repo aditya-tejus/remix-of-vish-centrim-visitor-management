@@ -43,11 +43,13 @@ export function CheckInSheet({ open, onOpenChange, onAdd, initialType, prefill }
   const [overrideError, setOverrideError] = useState<string | null>(null);
   // A ref, not state, so a fast second tap cannot slip through before a re-render.
   const submittingRef = useRef(false);
+  const attemptedPayloadRef = useRef<Omit<Visitor, "id"> | null>(null);
   const { currentSite, currentSiteId } = useSite();
 
   const handleClose = () => {
     if (submittingRef.current) return;
     flow.resetForm();
+    attemptedPayloadRef.current = null;
     setShowSuccess(false);
     setSaveFailed(false);
     setOverrideError(null);
@@ -63,7 +65,8 @@ export function CheckInSheet({ open, onOpenChange, onAdd, initialType, prefill }
     let visitor: Omit<Visitor, "id">;
     let created: Visitor;
     try {
-      visitor = flow.buildVisitor();
+      visitor = attemptedPayloadRef.current || flow.buildVisitor();
+      attemptedPayloadRef.current = visitor;
       // Wait for the server before saying anyone is checked in.
       created = await onAdd(visitor);
     } catch {
@@ -177,7 +180,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd, initialType, prefill }
               )}
             </div>
           ) : (
-            <div className="space-y-5 px-4 py-4 sm:px-6">
+            <fieldset disabled={saving || saveFailed} className="min-w-0 space-y-5 px-4 py-4 sm:px-6">
               {(
                 <StepIdentify
                   selectedType={flow.selectedType}
@@ -367,7 +370,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd, initialType, prefill }
                 </div>
               )}
 
-            </div>
+            </fieldset>
           )}
         </div>
 

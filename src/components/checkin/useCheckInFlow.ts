@@ -54,6 +54,7 @@ export interface CheckInFormData {
 
 export interface StaffCheckInPrefill {
   firstName?: string; surname?: string; mobile?: string; email?: string; address?: string; type?: VisitorType;
+  personQr?: string;
 }
 
 export function useCheckInFlow(open: boolean, initialType?: VisitorType, prefill?: StaffCheckInPrefill) {
@@ -79,6 +80,9 @@ export function useCheckInFlow(open: boolean, initialType?: VisitorType, prefill
   const [healthAnswers, setHealthAnswers] = useState<Record<string, any>>({});
   const [overrideReason, setOverrideReason] = useState("");
   const [overrideApprovedBy, setOverrideApprovedBy] = useState<string | null>(null);
+  const screeningRevision = JSON.stringify([healthAnswers, selectedType, formData.bodyTemperature]);
+  const screeningRevisionRef = useRef(screeningRevision);
+  screeningRevisionRef.current = screeningRevision;
   // Approval belongs to these answers, not a later edited screening.
   useEffect(() => { setOverrideApprovedBy(null); }, [healthAnswers, selectedType, formData.bodyTemperature]);
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
@@ -121,6 +125,7 @@ export function useCheckInFlow(open: boolean, initialType?: VisitorType, prefill
     if (prefill) {
       setFormData(prev => ({ ...prev, firstName: prefill.firstName || "", surname: prefill.surname || "", mobile: prefill.mobile || "", email: prefill.email || "", address: prefill.address || "" }));
       setIsReturning(true);
+      if (prefill.personQr) setSelectedProfile({ id: "prefilled", firstName: prefill.firstName || "", surname: prefill.surname || "", mobile: prefill.mobile || "", email: prefill.email || "", address: prefill.address || "", personQr: prefill.personQr });
     }
   }, [open, initialType, prefill, currentSiteId]);
   const personConfig = personTypes.find(p => p.type === selectedType);
@@ -376,6 +381,7 @@ export function useCheckInFlow(open: boolean, initialType?: VisitorType, prefill
   /** Records the supervisor approval server-side; returns an error message on refusal. */
   const approveBlockedScreening = useCallback(async (): Promise<string | null> => {
     if (!overrideValid) return "Enter a reason of at least 10 characters.";
+    const approvedRevision = screeningRevisionRef.current;
     const { error } = await supabase.rpc("override_screening_block" as any, {
       p_reason: overrideReason.trim(),
       p_context: {
@@ -386,6 +392,7 @@ export function useCheckInFlow(open: boolean, initialType?: VisitorType, prefill
     });
     if (error) return error.message || "You do not have permission to approve this check-in.";
     const { data } = await supabase.auth.getUser();
+    if (screeningRevisionRef.current !== approvedRevision) return "Answers changed during approval. Review them and request approval again.";
     setOverrideApprovedBy(data.user?.email || "Supervisor");
     return null;
   }, [overrideValid, overrideReason, selectedType, evaluation]);
@@ -472,8 +479,8 @@ export function useCheckInFlow(open: boolean, initialType?: VisitorType, prefill
       covidDose2Date: policy.vaccinationEnabled ? formData.covidDose2Date || undefined : undefined,
       retentionExpiry: new Date(Date.now() + 86400000 * 60),
       acknowledgedPrivacy: policy.privacyRequired ? privacyAcknowledged : false,
-      healthAnswers: policy.screeningEnabled
-        ? { ...healthAnswers, ...contractorScreeningAnswers }
+      healthAnswers: policy.screeningEnabled || policy.vaccinationEnabled
+        ? { ...Object.fromEntries(Object.entries(healthAnswers).filter(([key]) => key.startsWith("vacc_") ? policy.vaccinationEnabled : policy.screeningEnabled)), ...contractorScreeningAnswers }
         : (Object.keys(contractorScreeningAnswers).length ? { ...contractorScreeningAnswers } : undefined),
       // The outcome only — never a second copy of the answers themselves.
       screeningOutcome: policy.screeningEnabled ? evaluation.outcome : undefined,

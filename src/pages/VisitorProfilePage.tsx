@@ -801,7 +801,7 @@ export default function VisitorProfilePage() {
         open={quickCheckInOpen}
         onOpenChange={setQuickCheckInOpen}
         onAdd={addVisitorAsync}
-        prefill={{ firstName: visitor.firstName, surname: visitor.surname, mobile: visitor.mobile, email: visitor.email, address: visitor.address, type: visitor.type }}
+        prefill={{ firstName: visitor.firstName, surname: visitor.surname, mobile: visitor.mobile, email: visitor.email, address: visitor.address, type: visitor.type, personQr: visitor.personQr }}
       />}
 
       <CheckOutSheet
