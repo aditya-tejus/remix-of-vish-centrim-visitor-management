@@ -102,8 +102,8 @@ export function CheckInSheet({ open, onOpenChange, onAdd, initialType, prefill }
       });
     }
 
-    // Flagged (not blocked) sign-ins are recorded server-side, so the entry
-    // cannot be skipped from the browser.
+    // Follow-up audit remains separate from arrival persistence; delivery is
+    // not guaranteed by this browser request (see staff check-in review).
     if (flow.screeningFlagged && !flow.screeningBlocked && flow.overrideReason.trim()) {
       const name = `${flow.formData.firstName} ${flow.formData.surname}`.trim();
       supabase.rpc("log_audit", {
@@ -330,7 +330,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd, initialType, prefill }
                           ? `Approved by ${flow.overrideApprovedBy} and recorded in the audit trail.`
                           : flow.screeningBlocked
                             ? "A supervisor with the right permission must approve this, with a reason of at least 10 characters."
-                            : "A staff reason of at least 10 characters is required to continue, and it is recorded in the audit trail."}
+                            : "A staff reason of at least 10 characters is required to continue."}
                       </p>
                     </div>
                   </div>

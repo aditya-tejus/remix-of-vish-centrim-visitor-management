@@ -133,9 +133,9 @@ export function StepScreening({
               <div className="ml-10">
                 {q.type === "yesno" && (
                   <div className="flex gap-2.5">
-                    <Button type="button" variant="outline" onClick={() => setHealthAnswers((prev) => ({ ...prev, [q.id]: false }))}
+                    <Button type="button" variant="outline" aria-label={`${q.question}: No`} aria-pressed={answer === false} onClick={() => setHealthAnswers((prev) => ({ ...prev, [q.id]: false }))}
                       className={`flex-1 py-3 rounded-xl text-base font-bold transition-all ${answer === false ? "bg-success text-success-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-success/20"}`}>No</Button>
-                    <Button type="button" variant="outline" onClick={() => setHealthAnswers((prev) => ({ ...prev, [q.id]: true }))}
+                    <Button type="button" variant="outline" aria-label={`${q.question}: Yes`} aria-pressed={answer === true} onClick={() => setHealthAnswers((prev) => ({ ...prev, [q.id]: true }))}
                       className={`flex-1 py-3 rounded-xl text-base font-bold transition-all ${answer === true ? "bg-destructive text-destructive-foreground shadow-sm" : "bg-muted text-muted-foreground hover:bg-destructive/20"}`}>Yes</Button>
                   </div>
                 )}
@@ -254,7 +254,7 @@ export function StepScreening({
             </div>
             <div>
               <h4 className="text-base font-bold text-foreground">Vaccination Records</h4>
-              <p className="text-sm text-muted-foreground">Optional — enter if available</p>
+              <p className="text-sm text-muted-foreground">Complete any required records marked below</p>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

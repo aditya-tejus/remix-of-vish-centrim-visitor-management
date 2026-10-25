@@ -594,8 +594,10 @@ Known limits after Phase 7E:
 - Remaining scope: resident/profile/register/report/settings/check-in screen redesigns and Phase 9E decomposition. Stop here for review. No publication, operational writes, schema/RPC/RLS/route/emergency-policy changes.
 
 ### Phase 9E-A / 9F-2a — staff-assisted check-in bounded package
-- [ ] Map Today, Visit List, profile and type-preset entry paths, configuration, payload and guards.
-- [ ] Characterise existing staff validation/payload with mocked tests before refactoring.
-- [ ] Extract reversible staff presentation/rules; align staff entry points without merging group or resident movement workflows.
-- [ ] Apply reception-density layout, labelled controls, preserved conditional fields and honest save/retry.
-- [ ] Run full tests and inspect preview/compiler signals; record evidence and remaining gaps. No live arrival submissions or operational writes.
+- [x] Map Today, Visit List, profile and type-preset entry paths, configuration, payload and guards (`docs/STAFF_CHECKIN_REVIEW.md`).
+- [x] Characterise existing staff validation/payload with mocked tests before refactoring (182 baseline).
+- [x] Extract reversible staff presentation/rules; align staff entry points without merging group or resident movement workflows.
+- [x] Apply reception-density layout, labelled controls, preserved conditional fields and honest save/retry.
+- [x] Run full tests and inspect preview/compiler signals: 219 passing; harness build OK. Browser with all service requests mocked: 390/768/1024/1440, opened sheet, names/terms/Escape, one main/h1, no sheet overflow or page errors. No live arrival submissions or operational writes.
+- [ ] Assisted operational UAT requires an authorised environment/user: Today/Visit List/profile, configured contractor UI, dark mode and assistive technology. No live check-in submitted by design.
+- Known gaps and exact files: `docs/STAFF_CHECKIN_REVIEW.md`. Group parity, same-name destination IDs, configuration site scope, existing unmapped custom/photo/file/vaccination-only persistence and non-atomic food/audit remain outside this package. Stop for review; no publication or schema/RPC/RLS/permissions/emergency/kiosk changes.
