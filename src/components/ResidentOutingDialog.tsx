@@ -184,7 +184,7 @@ export function ResidentOutingDialog({
         const dayParts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {timeZone,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(recorded).map(p => [p.type,p.value]));
         details.recordedTime = residentLocalInstant(`${dayParts.year}-${dayParts.month}-${dayParts.day}T${timeOverride}`,timeZone);
       }
-      if (details.expectedReturnDate && details.expectedReturnDate <= (details.recordedTime ?? recorded)) throw new Error("Expected return must follow departure.");
+      if (!attemptedDetails.current && details.expectedReturnDate && details.expectedReturnDate <= (details.recordedTime ?? recorded)) throw new Error("Expected return must follow departure.");
       if (!attemptedDetails.current) attemptedDetails.current = details;
       await onMarkAway(selectedResident.id, attemptedDetails.current);
       if (siteRef.current !== openedSite.current) throw new Error("The site changed. Refresh to check the original site.");
@@ -277,7 +277,7 @@ export function ResidentOutingDialog({
                 }`}
               >
                 <DoorOpen className="h-3.5 w-3.5" />
-                Short Outing
+                {packId === "au_rv" ? "Reported absence" : "Short outing"}
               </Button>
               <Button variant="outline"
                 disabled={saving || !!attemptedDetails.current} onClick={() => { setMode("planned"); setStep(1); }}
@@ -288,7 +288,7 @@ export function ResidentOutingDialog({
                 }`}
               >
                 <CalendarDays className="h-3.5 w-3.5" />
-                Leave
+                Supported leave
               </Button>
             </div>
           )}
@@ -299,7 +299,7 @@ export function ResidentOutingDialog({
               {plannedSteps.map((s, i) => (
                 <div key={s} className="flex items-center flex-1">
                   <Button variant="outline"
-                    onClick={() => { if (i + 1 < step) setStep(i + 1); }}
+                    disabled={saving || !!attemptedDetails.current} onClick={() => { if (i + 1 < step) setStep(i + 1); }}
                     className={`h-7 rounded-full flex items-center gap-1 px-2.5 text-sm font-semibold transition-all ${
                       i + 1 < step ? "bg-success/15 text-success cursor-pointer"
                         : i + 1 === step ? "bg-primary text-primary-foreground shadow-sm"

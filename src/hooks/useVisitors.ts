@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Visitor, CompanionDetail } from "@/types/visitor";
 import { toast } from "@/hooks/use-toast";
-import { assertSavedMovement } from "@/lib/residentMovement";
+import { assertSavedMovement, movementTimeZone, residentLocalInstant } from "@/lib/residentMovement";
 import { useSite } from "@/contexts/SiteContext";
 import { kioskRpc } from "@/lib/kioskRpc";
 
@@ -110,7 +110,7 @@ interface UseVisitorsOptions {
 
 export function useVisitors(options: UseVisitorsOptions = {}) {
   const { publicMode = false, residentMovement = false, siteId: kioskSiteId = null, onSaveError } = options;
-  const { currentSiteId, isLegacySite } = useSite();
+  const { currentSiteId, currentSite, isLegacySite } = useSite();
   const residentSaveLock = useRef(false);
   const residentAttempt = useRef<{ fingerprint: string; request: string } | null>(null);
   const siteRef = useRef(currentSiteId); siteRef.current = currentSiteId;
@@ -416,7 +416,11 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
 
   const checkInReturn = async (id: string, returnComment?: string, timeOverride?: string) => {
     let recorded: string | undefined;
-    if(timeOverride){const date=new Date();const [h,m]=timeOverride.split(":").map(Number);date.setHours(h,m,0,0);recorded=date.toISOString();}
+    if(timeOverride){
+      const zone=movementTimeZone(currentSite?.timezone,currentSite?.jurisdiction ?? "AU");
+      const parts=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:zone,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date()).map(p=>[p.type,p.value]));
+      recorded=residentLocalInstant(`${parts.year}-${parts.month}-${parts.day}T${timeOverride}`,zone)?.toISOString();
+    }
     await saveResident(id,"return",{comments:returnComment ?? null,...(recorded ? {recorded_time:recorded} : {})});
   };
 

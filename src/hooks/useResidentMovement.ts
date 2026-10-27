@@ -17,7 +17,7 @@ export function useResidentMovement(onSaved: () => void | Promise<void>) {
     if (busy.current) throw new Error("A movement is already being saved.");
     const site = currentSiteId;
     if (!site || loading || !can(action === "leave" ? "checkout.perform" : "checkin.create")) throw new Error("Select a site and ask an authorised staff member.");
-    const fingerprint = JSON.stringify([site, resident.visitorId, action, resident.savedStatus, details]);
+    const fingerprint = JSON.stringify([site, resident.visitorId, action, details]);
     if (attempt.current && attempt.current.fingerprint !== fingerprint) throw new Error("An earlier save is unconfirmed. Retry the unchanged form or refresh before starting another movement.");
     if (!attempt.current) attempt.current = { fingerprint, request: crypto.randomUUID() };
     busy.current = true; setSaving(true);
