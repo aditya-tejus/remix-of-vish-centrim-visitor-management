@@ -253,3 +253,16 @@ success 4.82 / 8.70, warning 4.77 / 7.20, error 4.69 / 4.67, emergency 4.71 /
 - Mocked browser rendering inspected at 390/768/1024/1440, one main/h1,
   no sheet horizontal overflow and working Escape. This is not authenticated
   reception UAT or live contractor credential verification; no arrival submitted.
+
+## Public visitor sign-out — Phase 9F-2b
+
+- Plain Sign out title, existing white/pale-blue/deep-blue tokens, 20px input text
+  including the desktop input override, and at least 56px labelled controls.
+- Search is private assistance, not a visitor directory. Card confirmation displays
+  no names, hosts, rooms, visit times or reusable QR. Companions have neutral labels.
+- Only I am leaving / Everyone leaving controls precede explicit party checkboxes;
+  staying count is announced. Key reminder remains separate from departure authority.
+- Shared confirmation has one primary action; failed save preserves choices and
+  never advances to feedback. Existing configured feedback follows saved departure.
+- Mocked portrait/mobile screenshots inspected; no horizontal document overflow.
+  WCAG 2.2 AA remains a design target, not certification. Hardware/assistive UAT open.

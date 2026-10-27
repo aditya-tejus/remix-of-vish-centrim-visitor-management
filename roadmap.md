@@ -594,6 +594,7 @@ Known limits after Phase 7E:
 - Remaining scope: resident/profile/register/report/settings/check-in screen redesigns and Phase 9E decomposition. Stop here for review. No publication, operational writes, schema/RPC/RLS/route/emergency-policy changes.
 
 ### Phase 9E-A / 9F-2a — staff-assisted check-in bounded package
+ 
 - [x] Map Today, Visit List, profile and type-preset entry paths, configuration, payload and guards (`docs/STAFF_CHECKIN_REVIEW.md`).
 - [x] Characterise existing staff validation/payload with mocked tests before refactoring (182 baseline).
 - [x] Extract reversible staff presentation/rules; align staff entry points without merging group or resident movement workflows.
@@ -601,3 +602,12 @@ Known limits after Phase 7E:
 - [x] Run full tests and inspect preview/compiler signals: 222 passing; harness build OK. Browser with all service requests mocked: 390/768/1024/1440, opened sheet, names/terms/Escape, one main/h1, no sheet overflow or page errors. No live arrival submissions or operational writes.
 - [ ] Assisted operational UAT requires an authorised environment/user: Today/Visit List/profile, configured contractor UI, dark mode and assistive technology. No live check-in submitted by design.
 - Known gaps and exact files: `docs/STAFF_CHECKIN_REVIEW.md`. Group parity, same-name destination IDs, configuration site scope, existing unmapped custom/photo/file/dedicated vaccination-date persistence and non-atomic food/audit remain outside this package. Stop for review; no publication or schema/RPC/RLS/permissions/emergency/kiosk changes.
+
+### Phase 9E-B / 9F-2b — public kiosk visitor departures
+- [x] Inventory all four public attendance callers and live function/grants; detailed evidence in `docs/KIOSK_CHECKOUT_REVIEW.md`.
+- [x] Applied/verified purpose RPCs: no name candidates, code-scoped canonical departures, atomic audit/mirror, visitor UUID-only refusal; resident movement compatibility preserved separately.
+- [x] Private name assistance, shared code/party confirmation, key reminder, honest retry and post-save feedback; public check-in hook is write-only by default.
+- [x] 252 tests pass (222 baseline + 30); actual migration SQL tested in isolated PostgreSQL with stub existing device guard. Harness build/typecheck OK. Mocked Playwright 390×844, 768×1024, 1024×1366: selected self, failure, retry, saved read-back; no directory calls, page errors or document overflow. Screenshots inspected; no live checkout or test visit created.
+- [ ] Durable code-endpoint rate limiting: standard backend primitive unavailable; ad-hoc alternative needs explicit user agreement. No throttle falsely claimed.
+- [ ] Full resident directory privacy, live device/cross-site/race/audit/camera/assistive-technology UAT: outside this bounded visitor slice; no live mutations authorised.
+- Stop for review. Exact files, grant verification, preserved behaviors and residual risks: `docs/KIOSK_CHECKOUT_REVIEW.md`. No publication, clinical/settings/staff/group/emergency changes or operational test writes.

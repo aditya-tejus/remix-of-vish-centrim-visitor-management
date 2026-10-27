@@ -29,6 +29,20 @@
       "when": 1792968081806,
       "tag": "0003_emergency_progress_and_provenance",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793067596303,
+      "tag": "0004_private_kiosk_visitor_departures",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793067793401,
+      "tag": "0005_resident_qr_compatibility_lookup",
+      "breakpoints": true
     }
   ]
 }

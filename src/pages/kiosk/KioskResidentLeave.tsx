@@ -20,7 +20,7 @@ export default function KioskResidentLeave() {
   const navigate = useNavigate();
   const { siteId: kioskSiteId } = useOperatingContext();
   const { residents } = useResidents({ publicMode: true, siteId: kioskSiteId });
-  const { visitors, checkOutVisitor, checkInReturn } = useVisitors({ publicMode: true, siteId: kioskSiteId });
+  const { visitors, checkOutVisitor, checkInReturn } = useVisitors({ publicMode: true, residentMovement: true, siteId: kioskSiteId });
   const { data: leaveTypes = [] } = useActiveLeaveTypes();
   const { toast } = useToast();
 

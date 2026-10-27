@@ -345,3 +345,21 @@ that all non-unaccounted statuses are accounted for, or that device validation a
 - Report regulatory wording now references Aged Care Act 2024 / strengthened Standards effective 1 November 2025 for AU RAC; AU village and other UK nation caveats are separate. Reports do not assert legal compliance.
 - Schema application verified; 141 historical attendance outcomes remain NULL. 178 unit tests passed; harness build/typecheck passed. Public unbound kiosk gate checked on desktop/mobile, not the bound PIN workflow.
 - Authenticated mutation, multi-site denial, correction audit and close/replay read-back remain unverified: session mint found no matching requesting-user account. No emergency was created for verification. Activation/snapshot and closure/general-audit are still non-atomic multi-request workflows; later arrivals require explicit recording.
+
+## Phase 9E-B / 9F-2b — visitor checkout privacy (27 October 2026)
+
+This supersedes earlier claims that client-side search-first masking protects a
+downloaded visitor directory. The applied device-bound checkout functions return
+no candidate identities for names; code verification alone permits scoped canonical
+party selection. UUID-only visitor sign-out is disabled. Resident-only compatibility
+remains deliberately separate; overall public kiosk resident privacy is **not** resolved.
+
+Audit, compatibility mirror and selected canonical departures are atomic, including
+idempotent retries. No existing records were changed for verification. Grants,
+contracts, caller inventory, exact files and independent limits are in
+[`KIOSK_CHECKOUT_REVIEW.md`](./KIOSK_CHECKOUT_REVIEW.md).
+
+No standard backend rate limiting is available; no ad-hoc limiter was introduced
+without confirmation. Uniform name responses prevent name enumeration, not code
+brute-force or bearer-credential abuse. Actual SQL tests use isolated PostgreSQL
+and a stub device guard; mocked browser success is not live device/UAT evidence.

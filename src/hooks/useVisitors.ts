@@ -99,8 +99,9 @@ function dbToVisitor(row: DbVisitor): Visitor {
 }
 
 interface UseVisitorsOptions {
-  /** Kiosk / unauthenticated context: request only non-sensitive columns. */
+  /** Kiosk writes; resident presence reads require explicit opt-in. */
   publicMode?: boolean;
+  residentMovement?: boolean;
   /** Kiosk: the site this kiosk belongs to, so arrivals are recorded at the right place. */
   siteId?: string | null;
   /** Called when a check-in could not be saved, so the screen can stay honest. */
@@ -108,7 +109,7 @@ interface UseVisitorsOptions {
 }
 
 export function useVisitors(options: UseVisitorsOptions = {}) {
-  const { publicMode = false, siteId: kioskSiteId = null, onSaveError } = options;
+  const { publicMode = false, residentMovement = false, siteId: kioskSiteId = null, onSaveError } = options;
   const { currentSiteId, isLegacySite } = useSite();
   const [visitors, setVisitors] = useState<Visitor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,6 +121,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     // Kiosk (unauthenticated) reads go through a narrow server function that returns
     // presence only — never visit history or personal details.
     if (publicMode) {
+      if (!residentMovement) { setVisitors([]); setLoading(false); return; }
       // Scoped to the kiosk's own site so one building never lists another's people.
       const { data, error } = await kioskRpc<any[]>("kioskd_presence_list");
       if (error) {
@@ -158,7 +160,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     }
     setLoading(false);
 
-  }, [publicMode, currentSiteId, isLegacySite, kioskSiteId]);
+  }, [publicMode, residentMovement, currentSiteId, isLegacySite, kioskSiteId]);
 
 
 
@@ -170,6 +172,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
 
     // The kiosk has no read access to the visitors table, so it cannot use realtime.
     if (publicMode) {
+      if (!residentMovement) return;
       const poll = setInterval(fetchVisitors, 20000);
       return () => clearInterval(poll);
     }

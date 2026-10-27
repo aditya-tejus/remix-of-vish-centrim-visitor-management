@@ -23,7 +23,7 @@ const EMOJI_SCALE = [
 
 export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onComplete }: KioskFeedbackScreenProps) {
   const { toast } = useToast();
-  const { data: surveys = [] } = useFeedbackSurveys(true);
+  const { data: surveys = [], isLoading: surveysLoading, isError: surveysError } = useFeedbackSurveys(true);
   const activeSurvey = useMemo(
     () => surveys.find((s) => s.is_active && s.trigger_point === "checkout" && s.assigned_types.includes(visitorType)),
     [surveys, visitorType]
@@ -33,10 +33,13 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
   const [ratings, setRatings] = useState<Record<string, number>>({});
   const [comments, setComments] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   const handleSubmit = useCallback(async () => {
     if (!activeSurvey) return;
     setSubmitting(true);
+    setFailed(false);
+    try {
     const responses = questions
       .filter((q) => ratings[q.id])
       .map((q) => ({
@@ -53,14 +56,19 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
       toast({ title: "Thank you!", description: "Your feedback has been submitted." });
     }
     onComplete();
+    } catch { setFailed(true); }
+    finally { setSubmitting(false); }
   }, [activeSurvey, questions, ratings, comments, visitorId, visitorName, visitorType, submitFeedback, onComplete, toast]);
 
   // No active survey — skip immediately
   useEffect(() => {
-    if (!activeSurvey && surveys.length >= 0) {
+    if (!surveysLoading && !surveysError && !activeSurvey) {
       onComplete();
     }
-  }, [activeSurvey, onComplete, surveys.length]);
+  }, [activeSurvey, onComplete, surveysLoading, surveysError]);
+
+  if (surveysLoading) return <p role="status" className="text-xl">Your departure is saved. Loading feedback…</p>;
+  if (surveysError) return <div className="space-y-4"><p role="alert" className="text-xl">Your departure is saved. Feedback is unavailable.</p><Button onClick={onComplete} className="min-h-kiosk text-xl">Done</Button></div>;
 
   // External survey — show link card
   if (activeSurvey?.source === "centrim_compliance" && activeSurvey.external_url) {
@@ -129,6 +137,7 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
       </div>
 
       <div className="flex gap-3">
+        {failed && <p role="alert" className="text-destructive-strong">Your departure is saved. Feedback was not sent; please try again or skip.</p>}
         <Button variant="secondary" onClick={onComplete} className="flex-1 h-14 text-base gap-2 border border-border">
           <SkipForward className="h-5 w-5" /> Skip
         </Button>

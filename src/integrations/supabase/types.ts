@@ -3739,6 +3739,16 @@ export type Database = {
         Args: { p_time?: string; p_visitor_id: string }
         Returns: boolean
       }
+      kiosk_checkout_target: {
+        Args: { p_branch: string; p_code: string; p_visit?: string }
+        Returns: {
+          party_id: string
+          primary_authority: boolean
+          visit_id: string
+          visitor_id: string
+          visitor_type: string
+        }[]
+      }
       kiosk_contractor_lookup: {
         Args: {
           p_branch_id?: string
@@ -3994,6 +4004,23 @@ export type Database = {
         Args: { p_time: string; p_token: string; p_visitor_id: string }
         Returns: boolean
       }
+      kioskd_checkout_lookup: {
+        Args: { p_code: string; p_token: string }
+        Returns: Json
+      }
+      kioskd_checkout_name: {
+        Args: { p_query: string; p_token: string }
+        Returns: Json
+      }
+      kioskd_checkout_submit: {
+        Args: {
+          p_code: string
+          p_party_ids: string[]
+          p_token: string
+          p_visit_id: string
+        }
+        Returns: Json
+      }
       kioskd_contractor_compliance: {
         Args: {
           p_category?: string
@@ -4139,6 +4166,10 @@ export type Database = {
           type: string
           whom_to_visit: string
         }[]
+      }
+      kioskd_resident_code: {
+        Args: { p_code: string; p_token: string }
+        Returns: Json
       }
       kioskd_resident_directory: {
         Args: { p_search?: string; p_token: string }
