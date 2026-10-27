@@ -4326,6 +4326,10 @@ export type Database = {
         Returns: Json
       }
       user_can_access_site: { Args: { _branch_id: string }; Returns: boolean }
+      validate_resident_movement_input: {
+        Args: { p_details: Json }
+        Returns: undefined
+      }
       verify_kiosk_pin: { Args: { p_pin: string }; Returns: boolean }
       visit_integrity_report: {
         Args: { p_branch_id?: string }

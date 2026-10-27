@@ -50,6 +50,13 @@
       "when": 1793068725333,
       "tag": "0006_resident_movement_staff_boundary",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793069051146,
+      "tag": "0007_validate_resident_movement_inputs",
+      "breakpoints": true
     }
   ]
 }
