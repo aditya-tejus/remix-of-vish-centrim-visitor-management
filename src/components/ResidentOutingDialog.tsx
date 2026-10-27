@@ -180,7 +180,7 @@ export function ResidentOutingDialog({
     saveLock.current = true; setSaving(true); setSaveError("");
     try {
       const recorded = new Date();
-      if (timeOverride) {
+      if (timeOverride && !attemptedDetails.current) {
         const dayParts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {timeZone,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(recorded).map(p => [p.type,p.value]));
         details.recordedTime = residentLocalInstant(`${dayParts.year}-${dayParts.month}-${dayParts.day}T${timeOverride}`,timeZone);
       }
@@ -269,7 +269,7 @@ export function ResidentOutingDialog({
           {residentSelected && (
             <div className="flex rounded-xl bg-muted p-1 gap-1 mt-2">
               <Button variant="outline"
-                onClick={() => { setMode("short"); setStep(1); }}
+                disabled={saving || !!attemptedDetails.current} onClick={() => { setMode("short"); setStep(1); }}
                 className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold transition-all ${
                   mode === "short"
                     ? "bg-card text-foreground shadow-sm"
@@ -280,7 +280,7 @@ export function ResidentOutingDialog({
                 Short Outing
               </Button>
               <Button variant="outline"
-                onClick={() => { setMode("planned"); setStep(1); }}
+                disabled={saving || !!attemptedDetails.current} onClick={() => { setMode("planned"); setStep(1); }}
                 className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold transition-all ${
                   mode === "planned"
                     ? "bg-card text-foreground shadow-sm"
@@ -782,7 +782,7 @@ export function ResidentOutingDialog({
           )}
         </fieldset>
         {saveError && <p role="alert" className="px-6 py-2 text-base text-destructive-strong">{saveError}</p>}
-        <div className="px-6 py-2"><TimeOverride value={timeOverride} onChange={setTimeOverride} label="Adjust departure time" /></div>
+        <fieldset disabled={saving || !!attemptedDetails.current} className="px-6 py-2"><TimeOverride value={timeOverride} onChange={setTimeOverride} label="Adjust departure time" /></fieldset>
 
         {/* ── Footer ── */}
         <div className="shrink-0 flex items-center justify-between px-6 py-3 border-t border-border bg-card/80 backdrop-blur-sm">
@@ -797,7 +797,7 @@ export function ResidentOutingDialog({
           {residentSelected && mode === "planned" && (
             <div className="flex gap-2">
               {step > 1 && (
-                <Button variant="outline" size="sm" onClick={() => setStep(step - 1)} className="gap-1 rounded-xl">
+                <Button variant="outline" size="sm" disabled={saving || !!attemptedDetails.current} onClick={() => setStep(step - 1)} className="gap-1 rounded-xl">
                   <ArrowLeft className="h-3.5 w-3.5" /> Back
                 </Button>
               )}
