@@ -6,7 +6,6 @@ import { useKioskCheckout } from "@/hooks/useKioskCheckout";
 import { returningVisitorDetails } from "@/lib/kioskPrivacy";
 import { KioskDepartureConfirmation } from "@/components/kiosk/KioskDepartureConfirmation";
 import type { CheckoutLookup } from "@/lib/kioskCheckoutPolicy";
-import { supabase } from "@/integrations/supabase/client";
 import { useOperatingContext } from "@/contexts/OperatingContext";
 import { QrCode, Camera, CameraOff, Keyboard, ArrowLeft, LogOut, AlertTriangle, UserRoundPlus, UserRoundCheck, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -40,8 +39,6 @@ type Prefill = {
 
 type ScanResult =
   | { type: "recognised"; prefill: Prefill }
-  | { type: "on-site"; visitor: any }
-  | { type: "checked-out"; visitor: any }
   | { type: "notfound" }
   | { type: "error" };
 
@@ -57,7 +54,6 @@ export default function KioskQRScan() {
   const [manualCode, setManualCode] = useState("");
   const [result, setResult] = useState<ScanResult | null>(null);
   const [busy, setBusy] = useState(false);
-  const [checkoutError, setCheckoutError] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState(false);
   const [inputMode, setInputMode] = useState<"camera" | "manual">("camera");
@@ -70,7 +66,6 @@ export default function KioskQRScan() {
       if (!trimmed || lookupLock.current) return;
       lookupLock.current = true;
       setBusy(true);
-      setCheckoutError(false);
 
       try {
         const active = await lookup(trimmed);
@@ -160,7 +155,6 @@ export default function KioskQRScan() {
   const handleReset = () => {
     setResult(null);
     setManualCode("");
-    setCheckoutError(false);
   };
 
   const continueToCheckIn = (prefill?: Prefill) => {
@@ -209,7 +203,7 @@ export default function KioskQRScan() {
               <AlertTriangle className="h-12 w-12" />
             </div>
             <h2 className="text-2xl font-bold text-foreground">Something went wrong</h2>
-            <p className="text-lg text-muted-foreground">Please try again, or check in by typing your details.</p>
+            <p className="text-xl text-muted-foreground">Your departure has not been confirmed. Please try again or ask reception.</p>
           </>
         )}
 
@@ -238,22 +232,22 @@ export default function KioskQRScan() {
 
       {/* Mode toggle */}
       <div className="flex gap-3 justify-center">
-        <button
+        <Button variant={inputMode === "camera" ? "default" : "secondary"}
           onClick={() => setInputMode("camera")}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-kiosk ${
             inputMode === "camera" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground border border-border active:bg-accent"
           }`}
         >
           <Camera className="h-5 w-5" /> Camera
-        </button>
-        <button
+        </Button>
+        <Button variant={inputMode === "manual" ? "default" : "secondary"}
           onClick={() => { setInputMode("manual"); safeStop(scannerRef.current); }}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-kiosk ${
             inputMode === "manual" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground border border-border active:bg-accent"
           }`}
         >
           <Keyboard className="h-5 w-5" /> Type Code
-        </button>
+        </Button>
       </div>
 
       {inputMode === "camera" && (
