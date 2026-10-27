@@ -31,11 +31,11 @@ export function useKioskCheckout() {
     if (error || !data) throw new Error("lookup_failed");
     return data;
   };
-  const depart = async (code: string, ids: string[]) => {
+  const depart = async (code: string, visitId: string, ids: string[]) => {
     if (lock.current) return false;
     lock.current = true; setSaving(true);
     try {
-      const { data, error } = await kioskRpc<{ saved: boolean }>("kioskd_checkout_submit", { p_code: normalizeCheckoutCode(code), p_party_ids: ids });
+      const { data, error } = await kioskRpc<{ saved: boolean }>("kioskd_checkout_submit", { p_code: normalizeCheckoutCode(code), p_visit_id: visitId, p_party_ids: ids });
       if (error || data?.saved !== true) throw new Error("departure_not_saved");
       return true;
     } finally { lock.current = false; setSaving(false); }

@@ -15,6 +15,7 @@ export interface CheckoutParty { id: string; label: string; primary: boolean }
 export interface CheckoutLookup {
   state: "ready" | "staff_required" | "no_match" | "invalid_input";
   visitor_id?: string;
+  visit_id?: string;
   visitor_type?: string;
   parties?: CheckoutParty[];
   open_keys?: number;
