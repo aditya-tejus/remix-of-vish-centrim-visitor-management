@@ -4167,6 +4167,10 @@ export type Database = {
           whom_to_visit: string
         }[]
       }
+      kioskd_resident_code: {
+        Args: { p_code: string; p_token: string }
+        Returns: Json
+      }
       kioskd_resident_directory: {
         Args: { p_search?: string; p_token: string }
         Returns: {
