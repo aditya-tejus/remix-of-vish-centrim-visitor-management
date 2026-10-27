@@ -33,6 +33,7 @@ beforeAll(async()=>{
  INSERT INTO branches VALUES('${S}',true);
  SELECT set_config('test.actor','${U}',false);`);
  await db.exec(readFileSync("drizzle/migrations/0006_resident_movement_staff_boundary.sql","utf8"));
+ await db.exec(readFileSync("drizzle/migrations/0007_validate_resident_movement_inputs.sql","utf8"));
 },30000);
 afterAll(async()=>{await db?.close();});
 describe("applied resident movement SQL in isolated PostgreSQL",()=>{
@@ -79,6 +80,10 @@ describe("applied resident movement SQL in isolated PostgreSQL",()=>{
  });
  it("legacy unassigned records stay in their legacy site only",async()=>{
   await db.exec(`UPDATE visitors SET branch_id=NULL WHERE id='${R}'`);expect((await move("leave")).saved).toBe(true);await move("return");await db.exec(`UPDATE visitors SET branch_id='${S}' WHERE id='${R}'`);
+ });
+ it("rejects arbitrary fields, malformed companions and oversized audit content",async()=>{
+  for(const details of [{clinical_notes:"unexpected"},{companion_details:"wrong"},{return_notification_opt_in:"yes"},{reason:"x".repeat(4001)}]) await expect(move("leave",request(),details)).rejects.toThrow();
+  expect(await result(`select status result from visitors where id='${R}'`)).toBe("checked-in");
  });
  it("audit failure rolls back a movement instead of showing unaudited success",async()=>{
   await db.exec(`CREATE FUNCTION fail_audit() RETURNS trigger LANGUAGE plpgsql AS $$BEGIN RAISE EXCEPTION 'audit_failed';END$$;CREATE TRIGGER audit_failure BEFORE INSERT ON audit_log FOR EACH ROW EXECUTE FUNCTION fail_audit();`);
