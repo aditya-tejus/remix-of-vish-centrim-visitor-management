@@ -79,13 +79,14 @@ export function ResidentOutingDialog({
   const { packId, jurisdiction } = useOperatingContext();
   const { currentSiteId, currentSite } = useSite();
   const { can, loading: permissionsLoading } = usePermissions();
-  const { residents: dbResidents } = useResidents();
+  const { residents: dbResidents } = useResidents({ enabled: !permissionsLoading && can("presence.view") });
   const timeZone = movementTimeZone(currentSite?.timezone, jurisdiction);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [optionalReturn, setOptionalReturn] = useState("");
   const [timeOverride, setTimeOverride] = useState<string | null>(null);
   const saveLock = useRef(false);
+  const attemptedDetails = useRef<Parameters<typeof onMarkAway>[1] | null>(null);
   const openedSite = useRef(currentSiteId);
   const siteRef = useRef(currentSiteId); siteRef.current = currentSiteId;
 
@@ -145,6 +146,7 @@ export function ResidentOutingDialog({
   };
 
   const resetForm = () => {
+    attemptedDetails.current = null;
     setOptionalReturn(""); setTimeOverride(null); setSaveError("");
     setSearchQuery("");
     setSelectedResident(preselectedResident);
@@ -183,7 +185,8 @@ export function ResidentOutingDialog({
         details.recordedTime = residentLocalInstant(`${dayParts.year}-${dayParts.month}-${dayParts.day}T${timeOverride}`,timeZone);
       }
       if (details.expectedReturnDate && details.expectedReturnDate <= (details.recordedTime ?? recorded)) throw new Error("Expected return must follow departure.");
-      await onMarkAway(selectedResident.id, details);
+      if (!attemptedDetails.current) attemptedDetails.current = details;
+      await onMarkAway(selectedResident.id, attemptedDetails.current);
       if (siteRef.current !== openedSite.current) throw new Error("The site changed. Refresh to check the original site.");
       resetForm(); onOpenChange(false);
     } catch (error) { setSaveError(error instanceof Error ? error.message : "Departure was not confirmed. Please retry."); }
@@ -193,6 +196,7 @@ export function ResidentOutingDialog({
   // ── Short outing submit ──
   const handleShortSubmit = async () => {
     if (!selectedResident) return;
+    if (attemptedDetails.current) { await persist(attemptedDetails.current); return; }
     let returnDate: Date | undefined;
     try { returnDate = independent ? residentLocalInstant(optionalReturn, timeZone) : new Date(Date.now() + Number(returnHours) * 3600000); }
     catch (error) { setSaveError(error instanceof Error ? error.message : "Check the return time."); return; }
@@ -214,6 +218,7 @@ export function ResidentOutingDialog({
   // ── Planned leave submit ──
   const handlePlannedSubmit = async () => {
     if (!selectedResident) return;
+    if (attemptedDetails.current) { await persist(attemptedDetails.current); return; }
     let combinedReturnDate: Date | undefined;
     if (expectedReturnDate) {
       try { combinedReturnDate = residentLocalInstant(`${format(expectedReturnDate, "yyyy-MM-dd")}T${expectedReturnTime}`, timeZone); }
@@ -312,7 +317,7 @@ export function ResidentOutingDialog({
           )}
         </SheetHeader>
 
-        <fieldset disabled={saving} className="flex-1 min-h-0 overflow-y-auto px-6 py-4 text-base">
+        <fieldset disabled={saving || !!attemptedDetails.current} className="flex-1 min-h-0 overflow-y-auto px-6 py-4 text-base">
           {/* ── Resident Selection ── */}
           {!residentSelected ? (
             <div className="space-y-4">

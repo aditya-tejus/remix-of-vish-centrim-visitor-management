@@ -312,12 +312,13 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     if (publicMode || !currentSiteId) throw new Error("Ask authorised reception staff to record this movement.");
     if (residentSaveLock.current) throw new Error("A resident movement is already saving.");
     const site = currentSiteId;
+    residentSaveLock.current=true;
     const resident = visitors.find(v => v.id === id && v.type === "resident");
     // A directory resident may not be in today's visit subset; read its current status explicitly.
     const { data: row, error: readError } = await supabase.from("visitors").select("status").eq("id",id).eq("type","resident").maybeSingle();
-    if (readError || !row || siteRef.current !== site) throw new Error("Refresh resident records before saving.");
+    if (readError || !row || siteRef.current !== site) {residentSaveLock.current=false; throw new Error("Refresh resident records before saving.");}
     const fingerprint=JSON.stringify([site,id,action,details]);
-    if (residentAttempt.current && residentAttempt.current.fingerprint!==fingerprint) throw new Error("Retry the unchanged form or refresh the page before another movement.");
+    if (residentAttempt.current && residentAttempt.current.fingerprint!==fingerprint) {residentSaveLock.current=false; throw new Error("Retry the unchanged form or refresh the page before another movement.");}
     if (!residentAttempt.current) residentAttempt.current={fingerprint,request:crypto.randomUUID()};
     residentSaveLock.current=true;
     try {
