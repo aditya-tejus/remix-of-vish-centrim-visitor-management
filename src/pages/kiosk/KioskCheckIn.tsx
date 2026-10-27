@@ -696,9 +696,11 @@ export default function KioskCheckIn() {
 
             {visitingMode && (
               <>
-                {visitingMode === "staff" && flow.staffLookupMode === "free_text" ? (
+                {visitingMode === "resident" || (visitingMode === "staff" && flow.staffLookupMode === "free_text") ? (
                   <div className="space-y-3">
+                    {visitingMode === "resident" && <p className="text-base text-muted-foreground">Enter the resident’s name yourself, or ask reception for help. Resident names and rooms are not listed here.</p>}
                     <Input
+                      aria-label="Person you are visiting"
                       value={staffFreeText}
                       onChange={(e) => setStaffFreeText(e.target.value)}
                       placeholder="Type the name of the person you're visiting..."

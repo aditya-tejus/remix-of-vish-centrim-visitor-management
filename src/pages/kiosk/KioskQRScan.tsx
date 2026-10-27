@@ -76,12 +76,6 @@ export default function KioskQRScan() {
           setBusy(false); lookupLock.current = false;
           return;
         }
-        // Restricted resident compatibility never reveals identity or permits movement.
-        const resident = await kioskRpc<{ state: string; id?: string }>("kioskd_resident_code", { p_code: trimmed });
-        if (resident.error) throw new Error("lookup_failed");
-        if (resident.data?.state === "staff_required") {
-          setResult({ type: "notfound" }); setBusy(false); lookupLock.current = false; return;
-        }
         if (mode === "checkout" || active.state === "staff_required") {
           setResult({ type: "notfound" }); setBusy(false); lookupLock.current = false; return;
         }
