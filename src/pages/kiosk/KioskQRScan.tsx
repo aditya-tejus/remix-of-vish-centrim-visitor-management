@@ -2,7 +2,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useVisitors } from "@/hooks/useVisitors";
+import { useKioskCheckout } from "@/hooks/useKioskCheckout";
+import { returningVisitorDetails } from "@/lib/kioskPrivacy";
+import { KioskDepartureConfirmation } from "@/components/kiosk/KioskDepartureConfirmation";
+import type { CheckoutLookup } from "@/lib/kioskCheckoutPolicy";
 import { supabase } from "@/integrations/supabase/client";
 import { useOperatingContext } from "@/contexts/OperatingContext";
 import { QrCode, Camera, CameraOff, Keyboard, ArrowLeft, LogOut, AlertTriangle, UserRoundPlus, UserRoundCheck, Loader2 } from "lucide-react";
@@ -47,7 +50,9 @@ export default function KioskQRScan() {
   const [searchParams] = useSearchParams();
   const mode = searchParams.get("mode");
   const { siteId: kioskSiteId } = useOperatingContext();
-  const { visitors, checkOutVisitor } = useVisitors({ publicMode: true, siteId: kioskSiteId });
+  const { lookup } = useKioskCheckout();
+  const [checkout, setCheckout] = useState<{ code: string; match: CheckoutLookup } | null>(null);
+  const lookupLock = useRef(false);
 
   const [manualCode, setManualCode] = useState("");
   const [result, setResult] = useState<ScanResult | null>(null);
@@ -62,27 +67,32 @@ export default function KioskQRScan() {
   const lookupCode = useCallback(
     async (code: string) => {
       const trimmed = code.trim().toUpperCase();
-      if (!trimmed || busy) return;
+      if (!trimmed || lookupLock.current) return;
+      lookupLock.current = true;
       setBusy(true);
       setCheckoutError(false);
 
-      // Someone already on site at this kiosk's site is offered check out.
-      const active = visitors.find((v) => v.qrCode === trimmed && v.status === "checked-in");
-      if (active) {
-        setResult({ type: "on-site", visitor: active });
-        setBusy(false);
-        return;
-      }
+      try {
+        const active = await lookup(trimmed);
+        if (active.state === "ready") {
+          setCheckout({ code: trimmed, match: active });
+          setBusy(false); lookupLock.current = false;
+          return;
+        }
+        if (mode === "checkout" || active.state === "staff_required") {
+          setResult({ type: "notfound" }); setBusy(false); lookupLock.current = false; return;
+        }
+      } catch { setResult({ type: "error" }); setBusy(false); lookupLock.current = false; return; }
 
       // Otherwise ask the restricted lookup to recognise the code. It returns at
       // most one person's own saved details, scoped to this kiosk's site.
-      const { data, error } = await kioskRpc<any[]>("kioskd_returning_lookup", {
+      const { data, error } = await kioskRpc<any[]>("kioskd_returning_lookup_v2", {
         p_first: null,
         p_last: null,
         p_mobile: null,
         p_qr: trimmed,
       });
-      setBusy(false);
+      setBusy(false); lookupLock.current = false;
       if (error) {
         setResult({ type: "error" });
         return;
@@ -92,23 +102,24 @@ export default function KioskQRScan() {
         setResult({ type: "notfound" });
         return;
       }
+      const verified = returningVisitorDetails(prev);
       setResult({
         type: "recognised",
         prefill: {
           firstName: prev.first_name || "",
           surname: prev.surname || "",
-          email: prev.email || "",
-          mobile: prev.mobile || "",
-          address: prev.address || "",
-          personQr: prev.person_qr || null,
+          email: verified.email,
+          mobile: verified.mobile,
+          address: verified.address,
+          personQr: verified.personQr,
         },
       });
     },
-    [visitors, busy, kioskSiteId]
+    [mode, kioskSiteId]
   );
 
   useEffect(() => {
-    if (inputMode !== "camera" || result) return;
+    if (inputMode !== "camera" || result || checkout) return;
 
     let scanner: Html5Qrcode | null = null;
     const startScanner = async () => {
@@ -140,11 +151,10 @@ export default function KioskQRScan() {
       scannerRef.current = null;
       setCameraActive(false);
     };
-  }, [inputMode, result, lookupCode]);
+  }, [inputMode, result, checkout, lookupCode]);
 
   const handleManualSubmit = () => {
     void lookupCode(manualCode);
-    setManualCode("");
   };
 
   const handleReset = () => {
@@ -157,18 +167,7 @@ export default function KioskQRScan() {
     navigate("/kiosk/checkin", { state: prefill ? { fastLane: prefill } : undefined });
   };
 
-  const handleCheckOut = async (visitorId: string) => {
-    setBusy(true);
-    setCheckoutError(false);
-    try {
-      await checkOutVisitor(visitorId);
-      setResult({ type: "checked-out", visitor: (result as any).visitor });
-    } catch {
-      setCheckoutError(true);
-    } finally {
-      setBusy(false);
-    }
-  };
+  if (checkout) return <KioskDepartureConfirmation code={checkout.code} match={checkout.match} onBack={() => setCheckout(null)} onComplete={() => navigate("/kiosk/home")} />;
 
   // Result screen
   if (result) {
@@ -183,38 +182,9 @@ export default function KioskQRScan() {
             <p className="text-lg text-muted-foreground">
               We have your details ready. There are still a few questions to confirm before you are checked in.
             </p>
-            <Button onClick={() => continueToCheckIn(result.prefill)} className="w-full h-14 text-base gap-2">
+            <Button onClick={() => continueToCheckIn(result.prefill)} className="w-full h-14 text-xl gap-2">
               <UserRoundPlus className="h-5 w-5" /> Continue Check In
             </Button>
-          </>
-        )}
-
-        {result.type === "on-site" && (
-          <>
-            <div className="h-20 w-20 rounded-full bg-info/10 text-info flex items-center justify-center mx-auto">
-              <LogOut className="h-12 w-12" />
-            </div>
-            <h2 className="text-2xl font-bold text-foreground">You are already checked in</h2>
-            <p className="text-lg text-muted-foreground">Would you like to check out now?</p>
-            {checkoutError && (
-              <p className="text-base text-destructive font-medium">
-                We could not save that. Please try again.
-              </p>
-            )}
-            <Button onClick={() => handleCheckOut(result.visitor.id)} disabled={busy} className="w-full h-14 text-base gap-2">
-              {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogOut className="h-5 w-5" />}
-              {checkoutError ? "Try Again" : "Check Out"}
-            </Button>
-          </>
-        )}
-
-        {result.type === "checked-out" && (
-          <>
-            <div className="h-20 w-20 rounded-full bg-success/10 text-success flex items-center justify-center mx-auto">
-              <LogOut className="h-12 w-12" />
-            </div>
-            <h2 className="text-2xl font-bold text-foreground">Thank you, you are checked out</h2>
-            <p className="text-lg text-muted-foreground">Have a safe trip home.</p>
           </>
         )}
 
@@ -225,11 +195,11 @@ export default function KioskQRScan() {
             </div>
             <h2 className="text-2xl font-bold text-foreground">We could not read that code</h2>
             <p className="text-lg text-muted-foreground">
-              The code may have expired or belong to another site. You can still check in by typing your details.
+              Please check the code or ask reception for help.
             </p>
-            <Button onClick={() => continueToCheckIn()} className="w-full h-14 text-base gap-2">
+            {mode !== "checkout" && <Button onClick={() => continueToCheckIn()} className="w-full h-14 text-xl gap-2">
               <UserRoundPlus className="h-5 w-5" /> Check In Manually
-            </Button>
+            </Button>}
           </>
         )}
 
@@ -244,10 +214,10 @@ export default function KioskQRScan() {
         )}
 
         <div className="flex gap-3 pt-2">
-          <Button variant="secondary" onClick={handleReset} className="flex-1 h-14 text-base gap-2 border border-border">
+          <Button variant="secondary" onClick={handleReset} className="flex-1 h-14 text-xl gap-2 border border-border">
             <QrCode className="h-5 w-5" /> Try Another Code
           </Button>
-          <Button variant="secondary" onClick={() => navigate("/kiosk/home")} className="flex-1 h-14 text-base gap-2 border border-border">
+          <Button variant="secondary" onClick={() => navigate("/kiosk/home")} className="flex-1 h-14 text-xl gap-2 border border-border">
             Done
           </Button>
         </div>
@@ -258,7 +228,7 @@ export default function KioskQRScan() {
   return (
     <div className="w-full space-y-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-foreground">Scan Your Code</h2>
+        <h1 className="text-3xl font-semibold text-foreground">Scan visitor card</h1>
         <p className="text-lg text-muted-foreground mt-1">
           {mode === "checkout"
             ? "Scan your visitor card to check out"
@@ -270,7 +240,7 @@ export default function KioskQRScan() {
       <div className="flex gap-3 justify-center">
         <button
           onClick={() => setInputMode("camera")}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-[48px] ${
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-kiosk ${
             inputMode === "camera" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground border border-border active:bg-accent"
           }`}
         >
@@ -278,7 +248,7 @@ export default function KioskQRScan() {
         </button>
         <button
           onClick={() => { setInputMode("manual"); safeStop(scannerRef.current); }}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-[48px] ${
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-kiosk ${
             inputMode === "manual" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground border border-border active:bg-accent"
           }`}
         >
@@ -318,20 +288,22 @@ export default function KioskQRScan() {
               onChange={(e) => setManualCode(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
               placeholder="Your visitor code"
-              className="h-14 text-lg text-center"
+              aria-label="Visitor card code"
+              maxLength={12}
+              className="min-h-kiosk text-xl text-center"
               autoFocus
             />
-            <Button onClick={handleManualSubmit} disabled={!manualCode.trim() || busy} className="w-full h-14 text-base gap-2">
+            <Button onClick={handleManualSubmit} disabled={!manualCode.trim() || busy} className="w-full h-14 text-xl gap-2">
               {busy && <Loader2 className="h-5 w-5 animate-spin" />} Look Up
             </Button>
           </div>
         </div>
       )}
 
-      <Button variant="secondary" onClick={() => continueToCheckIn()} className="w-full h-14 text-base gap-2 border border-border">
+      {mode !== "checkout" && <Button variant="secondary" onClick={() => continueToCheckIn()} className="w-full h-14 text-xl gap-2 border border-border">
         <UserRoundPlus className="h-5 w-5" /> No code? Check in here
-      </Button>
-      <Button variant="secondary" onClick={() => navigate("/kiosk/home")} className="w-full h-14 text-base gap-2 border border-border">
+      </Button>}
+      <Button variant="secondary" onClick={() => navigate("/kiosk/home")} className="w-full h-14 text-xl gap-2 border border-border">
         <ArrowLeft className="h-5 w-5" /> Back to Home
       </Button>
     </div>
