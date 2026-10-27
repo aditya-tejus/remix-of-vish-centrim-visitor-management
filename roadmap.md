@@ -604,7 +604,10 @@ Known limits after Phase 7E:
 - Known gaps and exact files: `docs/STAFF_CHECKIN_REVIEW.md`. Group parity, same-name destination IDs, configuration site scope, existing unmapped custom/photo/file/dedicated vaccination-date persistence and non-atomic food/audit remain outside this package. Stop for review; no publication or schema/RPC/RLS/permissions/emergency/kiosk changes.
 
 ### Phase 9E-B / 9F-2b — public kiosk visitor departures
-- [ ] Inventory every public attendance caller and deployed function/grant.
-- [ ] Replace visitor directories and UUID-only sign-out with device-bound code verification; preserve resident movement separately.
-- [ ] Refine private name assistance, code confirmation, explicit party selection, honest retry and feedback.
-- [ ] Verify server boundary, mocked departures, full suite and portrait/mobile rendering; document residual limits.
+- [x] Inventory all four public attendance callers and live function/grants; detailed evidence in `docs/KIOSK_CHECKOUT_REVIEW.md`.
+- [x] Applied/verified purpose RPCs: no name candidates, code-scoped canonical departures, atomic audit/mirror, visitor UUID-only refusal; resident movement compatibility preserved separately.
+- [x] Private name assistance, shared code/party confirmation, key reminder, honest retry and post-save feedback; public check-in hook is write-only by default.
+- [x] 251 tests pass (222 baseline + 29); actual migration SQL tested in isolated PostgreSQL with stub existing device guard. Harness build/typecheck OK. Mocked Playwright 390×844, 768×1024, 1024×1366: selected self, failure, retry, saved read-back; no directory calls, page errors or document overflow. Screenshots inspected; no live checkout or test visit created.
+- [ ] Durable code-endpoint rate limiting: standard backend primitive unavailable; ad-hoc alternative needs explicit user agreement. No throttle falsely claimed.
+- [ ] Full resident directory privacy, live device/cross-site/race/audit/camera/assistive-technology UAT: outside this bounded visitor slice; no live mutations authorised.
+- Stop for review. Exact files, grant verification, preserved behaviors and residual risks: `docs/KIOSK_CHECKOUT_REVIEW.md`. No publication, clinical/settings/staff/group/emergency changes or operational test writes.
