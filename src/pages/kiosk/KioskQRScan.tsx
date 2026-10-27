@@ -200,7 +200,7 @@ export default function KioskQRScan() {
             <p className="text-lg text-muted-foreground">
               We have your details ready. There are still a few questions to confirm before you are checked in.
             </p>
-            <Button onClick={() => continueToCheckIn(result.prefill)} className="w-full h-14 text-xl gap-2">
+            <Button onClick={() => continueToCheckIn(result.prefill)} className="w-full min-h-kiosk h-auto whitespace-normal py-3 text-xl gap-2">
               <UserRoundPlus className="h-5 w-5" /> Continue Check In
             </Button>
           </>
@@ -215,7 +215,7 @@ export default function KioskQRScan() {
             <p className="text-lg text-muted-foreground">
               Please check the code or ask reception for help.
             </p>
-            {mode !== "checkout" && <Button onClick={() => continueToCheckIn()} className="w-full h-14 text-xl gap-2">
+            {mode !== "checkout" && <Button onClick={() => continueToCheckIn()} className="w-full min-h-kiosk h-auto whitespace-normal py-3 text-xl gap-2">
               <UserRoundPlus className="h-5 w-5" /> Check In Manually
             </Button>}
           </>
@@ -231,11 +231,11 @@ export default function KioskQRScan() {
           </>
         )}
 
-        <div className="flex gap-3 pt-2">
-          <Button variant="secondary" onClick={handleReset} className="flex-1 h-14 text-xl gap-2 border border-border">
+        <div className="grid gap-3 pt-2 sm:grid-cols-2">
+          <Button variant="secondary" onClick={handleReset} className="flex-1 min-h-kiosk h-auto whitespace-normal py-3 text-xl gap-2 border border-border">
             <QrCode className="h-5 w-5" /> Try Another Code
           </Button>
-          <Button variant="secondary" onClick={() => navigate("/kiosk/home")} className="flex-1 h-14 text-xl gap-2 border border-border">
+          <Button variant="secondary" onClick={() => navigate("/kiosk/home")} className="flex-1 min-h-kiosk h-auto whitespace-normal py-3 text-xl gap-2 border border-border">
             Done
           </Button>
         </div>
@@ -258,7 +258,7 @@ export default function KioskQRScan() {
       <div className="flex gap-3 justify-center">
         <Button variant={inputMode === "camera" ? "default" : "secondary"}
           onClick={() => setInputMode("camera")}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-kiosk ${
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xl font-semibold transition-all min-h-kiosk ${
             inputMode === "camera" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground border border-border active:bg-accent"
           }`}
         >
@@ -266,7 +266,7 @@ export default function KioskQRScan() {
         </Button>
         <Button variant={inputMode === "manual" ? "default" : "secondary"}
           onClick={() => { setInputMode("manual"); safeStop(scannerRef.current); }}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-base font-semibold transition-all min-h-kiosk ${
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xl font-semibold transition-all min-h-kiosk ${
             inputMode === "manual" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground border border-border active:bg-accent"
           }`}
         >
@@ -308,20 +308,20 @@ export default function KioskQRScan() {
               placeholder="Your visitor code"
               aria-label="Visitor card code"
               maxLength={12}
-              className="min-h-kiosk text-xl text-center"
+              className="min-h-kiosk text-xl md:text-xl text-center"
               autoFocus
             />
-            <Button onClick={handleManualSubmit} disabled={!manualCode.trim() || busy} className="w-full h-14 text-xl gap-2">
+            <Button onClick={handleManualSubmit} disabled={!manualCode.trim() || busy} className="w-full min-h-kiosk h-auto whitespace-normal py-3 text-xl gap-2">
               {busy && <Loader2 className="h-5 w-5 animate-spin" />} Look Up
             </Button>
           </div>
         </div>
       )}
 
-      {mode !== "checkout" && <Button variant="secondary" onClick={() => continueToCheckIn()} className="w-full h-14 text-xl gap-2 border border-border">
+      {mode !== "checkout" && <Button variant="secondary" onClick={() => continueToCheckIn()} className="w-full min-h-kiosk h-auto whitespace-normal py-3 text-xl gap-2 border border-border">
         <UserRoundPlus className="h-5 w-5" /> No code? Check in here
       </Button>}
-      <Button variant="secondary" onClick={() => navigate("/kiosk/home")} className="w-full h-14 text-xl gap-2 border border-border">
+      <Button variant="secondary" onClick={() => navigate("/kiosk/home")} className="w-full min-h-kiosk h-auto whitespace-normal py-3 text-xl gap-2 border border-border">
         <ArrowLeft className="h-5 w-5" /> Back to Home
       </Button>
     </div>
