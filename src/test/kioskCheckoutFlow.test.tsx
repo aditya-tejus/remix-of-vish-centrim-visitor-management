@@ -6,7 +6,7 @@ const rpc = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/kioskRpc", () => ({ kioskRpc: rpc }));
 vi.mock("@/components/kiosk/KioskFeedbackScreen", () => ({ KioskFeedbackScreen: () => <p>Feedback after saved departure</p> }));
 afterEach(() => { cleanup(); vi.useRealTimers(); });
-beforeEach(() => rpc.mockReset());
+beforeEach(() => { rpc.mockReset(); });
 describe("private kiosk departure interactions", () => {
   it("never requests a name directory below minimum length", async () => {
     vi.useFakeTimers(); renderHook(() => useKioskCheckoutName("An")); await act(async () => { vi.advanceTimersByTime(500); }); expect(rpc).not.toHaveBeenCalled();
