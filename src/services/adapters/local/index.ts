@@ -85,20 +85,9 @@ export const LocalPrototypeResidentDirectory: ResidentDirectoryService = {
     });
   },
   async searchResidentsPublic(search, siteId) {
-    const { data } = await supabase.rpc("kiosk_resident_directory" as any, {
-      p_search: search || null,
-      p_branch_id: siteId ?? null,
-    });
-    return ((data as any[]) || []).map(
-      (r): ResidentRef => ({
-        id: r.visitor_id,
-        firstName: r.first_name,
-        surname: r.surname,
-        room: r.room ?? null,
-        areaName: r.area_name ?? null,
-        siteId: null,
-      })
-    );
+    // Public destination selection must not enumerate the resident directory.
+    // Staff can record the destination through the authenticated workflow.
+    return [];
   },
   async getSupportInfo(residentIds) {
     if (!residentIds.length) return [];

@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSite } from "@/contexts/SiteContext";
-import { kioskRpc } from "@/lib/kioskRpc";
+
 
 export interface Resident {
   id: string;
@@ -25,62 +25,44 @@ export interface Resident {
   notes: string | null;
   email: string;
   mobile: string;
+  savedStatus?: string;
+  checkOutTime?: Date | null;
+  expectedReturnDate?: Date;
+  checkoutReason?: string;
+  leaveType?: string;
+  accompaniedByName?: string;
+  comments?: string;
 }
 
 interface UseResidentsOptions {
   /** Kiosk / unauthenticated context: never request contact details. */
   publicMode?: boolean;
+  enabled?: boolean;
   /** Kiosk context: the site this device belongs to. Results never cross sites. */
   siteId?: string | null;
 }
 
 export function useResidents(options: UseResidentsOptions = {}) {
-  const { publicMode = false, siteId = null } = options;
+  const { publicMode = false, enabled = true, siteId = null } = options;
   const { currentSiteId, isLegacySite } = useSite();
   const [residents, setResidents] = useState<Resident[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const revision = useRef(0);
 
   const fetchResidents = useCallback(async () => {
-    // Kiosk: name, room and area only — no contact, care, clinical or risk information.
-    if (publicMode) {
-      const { data, error } = await kioskRpc<any[]>("kioskd_resident_directory", { p_search: null });
-      if (!error && data) {
-        setResidents(
-          (data as any[]).map((r) => ({
-            id: r.visitor_id,
-            visitorId: r.visitor_id,
-            firstName: r.first_name,
-            surname: r.surname,
-            name: `${r.first_name} ${r.surname}`,
-            room: r.room ? `Room ${r.room}` : "",
-            wing: r.area_name || "",
-            wingId: null,
-            careLevel: "standard",
-            keyWorker: null,
-            photoUrl: null,
-            emergencyContactName: null,
-            emergencyContactPhone: null,
-            mobilityLevel: "",
-            dolsLpsFlag: false,
-            riskAssessmentLevel: "standard",
-            medicationNotes: null,
-            mobilityAids: [],
-            notes: null,
-            email: "",
-            mobile: "",
-          }))
-        );
-      }
-      setLoading(false);
-      return;
-    }
+    const request = ++revision.current;
+    setResidents([]);
+    // Public devices cannot discover residents, even behind a search box.
+    if (publicMode || !enabled || !currentSiteId) { setLoading(false); return; }
+    setLoading(true); setError(null);
 
     const contactCols = "email, mobile,";
 
     let query = supabase
       .from("visitors")
       .select(`
-        id, first_name, surname, ${contactCols}
+        id, first_name, surname, status, check_out_time, expected_return_date, checkout_reason, leave_type, accompanied_by_name, comments, ${contactCols}
         resident_details (
           id, room, wing_id, care_level, key_worker, photo_url,
           emergency_contact_name, emergency_contact_phone,
@@ -102,6 +84,8 @@ export function useResidents(options: UseResidentsOptions = {}) {
     const { data, error } = await query.order("first_name");
 
 
+    if (request !== revision.current) return;
+    if (error) setError("Resident records could not be loaded. Please try again.");
     if (!error && data) {
       const mapped: Resident[] = data.map((v: any) => {
         const rd = v.resident_details;
@@ -128,16 +112,24 @@ export function useResidents(options: UseResidentsOptions = {}) {
           notes: rd?.notes || null,
           email: v.email || "",
           mobile: v.mobile || "",
+          savedStatus: v.status,
+          checkOutTime: v.check_out_time ? new Date(v.check_out_time) : null,
+          expectedReturnDate: v.expected_return_date ? new Date(v.expected_return_date) : undefined,
+          checkoutReason: v.checkout_reason ?? undefined,
+          leaveType: v.leave_type ?? undefined,
+          accompaniedByName: v.accompanied_by_name ?? undefined,
+          comments: v.comments ?? "",
         };
       });
       setResidents(mapped);
     }
     setLoading(false);
-  }, [publicMode, siteId, currentSiteId, isLegacySite]);
+  }, [publicMode, enabled, siteId, currentSiteId, isLegacySite]);
 
   useEffect(() => {
-    fetchResidents();
+    void fetchResidents();
+    return () => { revision.current++; };
   }, [fetchResidents]);
 
-  return { residents, loading, refetch: fetchResidents };
+  return { residents, loading, error, refetch: fetchResidents };
 }
