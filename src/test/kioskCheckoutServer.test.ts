@@ -89,4 +89,19 @@ describe("actual kiosk SQL in isolated PostgreSQL", () => {
     expect(await value("select companion_details->0->>'checkedOutAt' is not null result from visitors where id=$1", [V])).toBe(true);
   });
   it("resident compatibility list returns no ordinary visitors", async () => expect((await db.query("select * from kioskd_presence_list('active')")).rows).toEqual([]));
+  it("ambiguous duplicate codes require staff without identifying either person", async () => {
+    await db.exec(`UPDATE visits SET status='checked-in'; INSERT INTO visit_parties VALUES('${FOREIGN}','${VISIT}',NULL,true,0,NULL,'checked-in',now());`);
+    expect(await value("select kioskd_checkout_lookup('active',$1) result", [CODE])).toEqual({ state: "staff_required" });
+    await db.exec(`DELETE FROM visit_parties WHERE id='${FOREIGN}';`);
+  });
+  it("caps lookup at 50 without returning oversized parties", async () => {
+    await db.exec(`UPDATE visit_parties SET check_out_time=NULL; INSERT INTO visit_parties SELECT ('77777777-7777-7777-7777-'||lpad(i::text,12,'0'))::uuid,'${VISIT}',NULL,false,i,NULL,'checked-in',now() FROM generate_series(2,51) i;`);
+    expect(await value("select kioskd_checkout_lookup('active',$1) result", [CODE])).toEqual({ state: "staff_required" });
+    await db.exec("DELETE FROM visit_parties WHERE companion_index>=2");
+  });
+  it("audit failure rolls back all selected departures", async () => {
+    await db.exec(`CREATE FUNCTION fail_audit() RETURNS trigger LANGUAGE plpgsql AS $$BEGIN RAISE EXCEPTION 'audit_unavailable'; END$$; CREATE TRIGGER fail_audit BEFORE INSERT ON audit_log FOR EACH ROW EXECUTE FUNCTION fail_audit();`);
+    await expect(value("select kioskd_checkout_submit('active',$1,$2,$3::uuid[]) result", [CODE, VISIT, [SELF, OTHER]])).rejects.toThrow("audit_unavailable");
+    expect(await value("select count(*)::int result from visit_parties where check_out_time is null")).toBe(2);
+  });
 });
