@@ -611,3 +611,11 @@ Known limits after Phase 7E:
 - [ ] Durable code-endpoint rate limiting: standard backend primitive unavailable; ad-hoc alternative needs explicit user agreement. No throttle falsely claimed.
 - [ ] Full resident directory privacy, live device/cross-site/race/audit/camera/assistive-technology UAT: outside this bounded visitor slice; no live mutations authorised.
 - Stop for review. Exact files, grant verification, preserved behaviors and residual risks: `docs/KIOSK_CHECKOUT_REVIEW.md`. No publication, clinical/settings/staff/group/emergency changes or operational test writes.
+
+### Phase 9E-C / 9F-3 — resident movement bounded package
+- [x] Map resident/destination/QR/presence callers and inspect live schema/grants.
+- [x] Restrict unsafe public resident self-service and directories; preserve visitor departures and emergency contracts. Runtime migrations 0006/0007 applied and ACLs verified.
+- [x] Truthful resident location model; canonical Residents tabs and optional independent absence sheet; robust saved staff movements with atomic audit.
+- [x] 285 tests (252 existing + 33 resident), harness typecheck/build OK; mocked 390/768 portrait/1440 leave/failure/retry/return read-back and kiosk assistance checks, no page errors/overflow.
+- [ ] Live authorised resident operational UAT and verified public identity/safeguards remain unavailable; no real movement authorised. Public self-service stays restricted. Full residual list: docs/RESIDENT_MOVEMENT_REVIEW.md.
+- No publication, live departures/returns, resident edits/deletes, emergency changes or external notifications.

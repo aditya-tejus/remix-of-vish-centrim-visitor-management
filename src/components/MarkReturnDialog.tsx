@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ interface MarkReturnDialogProps {
 }
 
 export function MarkReturnDialog({ open, onOpenChange, awayResidents, onReturn }: MarkReturnDialogProps) {
+  const lock = useRef(false);
+  const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [returningId, setReturningId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -47,20 +49,23 @@ export function MarkReturnDialog({ open, onOpenChange, awayResidents, onReturn }
   }, [filtered]);
 
   const handleReturn = async (id: string) => {
-    setLoading(true);
+    if (lock.current) return;
+    lock.current = true; setError(""); setLoading(true);
     setReturningId(id);
     try {
       await onReturn(id, comment.trim() || undefined, timeOverride || undefined);
       setComment("");
       setTimeOverride(null);
       setExpandedId(null);
-    } finally {
+    } catch (e) { setError(e instanceof Error ? e.message : "Return was not confirmed. Please retry."); } finally {
+      lock.current = false;
       setLoading(false);
       setReturningId(null);
     }
   };
 
   const handleOpenChange = (o: boolean) => {
+    if (lock.current) return;
     if (!o) {
       setSearch("");
       setExpandedId(null);
@@ -97,11 +102,12 @@ export function MarkReturnDialog({ open, onOpenChange, awayResidents, onReturn }
           </div>
         )}
 
+        {error && <p role="alert" className="px-6 py-2 text-destructive-strong">{error}</p>}
         <div className="flex-1 overflow-y-auto px-6 py-3 space-y-1.5">
           {sorted.length === 0 ? (
             <div className="text-center py-10">
               <p className="text-sm text-muted-foreground">
-                {awayResidents.length === 0 ? "All residents are in the building" : "No matching residents"}
+                {awayResidents.length === 0 ? "No recorded absences. Locations are not physically confirmed." : "No matching residents"}
               </p>
             </div>
           ) : (
@@ -154,6 +160,8 @@ export function MarkReturnDialog({ open, onOpenChange, awayResidents, onReturn }
 
                     <div className="flex items-center gap-1 shrink-0">
                       <Button
+                        aria-label={`Return notes for ${resident.firstName} ${resident.surname}`}
+                        disabled={loading}
                         variant="ghost"
                         size="sm"
                         className="h-7 w-7 p-0"
@@ -168,7 +176,7 @@ export function MarkReturnDialog({ open, onOpenChange, awayResidents, onReturn }
                       <Button
                         size="sm"
                         className="h-8 text-xs gap-1.5"
-                        disabled={loading && returningId === resident.id}
+                        disabled={loading}
                         onClick={() => handleReturn(resident.id)}
                       >
                         {loading && returningId === resident.id ? (

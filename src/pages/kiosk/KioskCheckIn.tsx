@@ -696,9 +696,11 @@ export default function KioskCheckIn() {
 
             {visitingMode && (
               <>
-                {visitingMode === "staff" && flow.staffLookupMode === "free_text" ? (
+                {visitingMode === "resident" || (visitingMode === "staff" && flow.staffLookupMode === "free_text") ? (
                   <div className="space-y-3">
+                    {visitingMode === "resident" && <p className="text-base text-muted-foreground">Enter the resident’s name yourself, or ask reception for help. Resident names and rooms are not listed here.</p>}
                     <Input
+                      aria-label="Person you are visiting"
                       value={staffFreeText}
                       onChange={(e) => setStaffFreeText(e.target.value)}
                       placeholder="Type the name of the person you're visiting..."
@@ -725,21 +727,11 @@ export default function KioskCheckIn() {
                       <Input
                         value={visitingSearch}
                         onChange={(e) => setVisitingSearch(e.target.value)}
-                        placeholder={
-                          visitingMode === "resident"
-                            ? flow.residentLookupMode === "search_first"
-                              ? "Type at least 3 characters (name or room)..."
-                              : "Search by name or room..."
-                            : "Search by name or department..."
-                        }
+                        placeholder="Search by name or department..."
                         className="pl-12 h-14 text-lg"
                         autoFocus
                       />
                     </div>
-
-                    {visitingMode === "resident" && flow.residentLookupMode === "search_first" && visitingSearch.length > 0 && visitingSearch.length < 3 && (
-                      <p className="text-center text-sm text-muted-foreground">Type at least 3 characters to search</p>
-                    )}
 
                     {visitingMode === "staff" && flow.staffLookupMode === "by_department" && !visitingSearch ? (
                       <div className="space-y-4 max-h-[40vh] overflow-y-auto">
@@ -758,8 +750,8 @@ export default function KioskCheckIn() {
                                 <KioskPersonCard
                                   key={person.id}
                                   name={person.name}
-                                  subtitle={person.role}
-                                  accentColor="primary"
+                                  subtitle={`${person.role} ${person.department ? `· ${person.department}` : ""}`}
+                              accentColor="primary"
                                   onClick={() => {
                                     flow.updateField("whomToVisit", person.name);
                                     flow.setVisitedResidentId(null);
@@ -775,36 +767,19 @@ export default function KioskCheckIn() {
                       <div className="space-y-2 max-h-[40vh] overflow-y-auto">
                         {filteredVisiting.length === 0 ? (
                           <p className="text-center py-8 text-muted-foreground">
-                            {visitingMode === "resident" && flow.residentLookupMode === "search_first" && visitingSearch.length < 3
-                              ? "Start typing to search for a resident"
-                              : `No ${visitingMode}s found`}
+                            No staff found
                           </p>
                         ) : (
                           filteredVisiting.map((person: any) => (
                             <KioskPersonCard
                               key={person.id}
                               name={person.name}
-                              subtitle={
-                                visitingMode === "resident"
-                                  ? // Room numbers are shown only when the person has searched for
-                                    // someone specific; a browsable list never displays them.
-                                    flow.residentLookupMode === "search_first"
-                                    ? `${person.room || "—"} ${person.wing ? `• ${person.wing}` : ""}`
-                                    : person.wing || ""
-                                  : `${person.role} ${person.department ? `• ${person.department}` : ""}`
-                              }
+                              subtitle={`${person.role} ${person.department ? `· ${person.department}` : ""}`}
                               accentColor="primary"
                               onClick={() => {
-                                const isResident = visitingMode === "resident";
-                                const residentId = isResident ? person.visitorId || person.id : null;
                                 flow.updateField("whomToVisit", person.name);
-                                flow.setVisitedResidentId(residentId);
-                                // Selecting a resident inserts the Food step next, so navigate explicitly
-                                if (residentId && (flow.selectedType === "visitor" || flow.selectedType === "volunteer")) {
-                                  setStep("food");
-                                } else {
-                                  goNext();
-                                }
+                                flow.setVisitedResidentId(null);
+                                goNext();
                               }}
                             />
                           ))

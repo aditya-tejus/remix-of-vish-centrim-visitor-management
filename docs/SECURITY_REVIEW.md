@@ -363,3 +363,9 @@ No standard backend rate limiting is available; no ad-hoc limiter was introduced
 without confirmation. Uniform name responses prevent name enumeration, not code
 brute-force or bearer-credential abuse. Actual SQL tests use isolated PostgreSQL
 and a stub device guard; mocked browser success is not live device/UAT evidence.
+
+## Phase 9E-C / 9F-3 — resident movement privacy (27 October 2026)
+
+Supersedes prior acceptance of public resident search-first lists and resident UUID/QR departures. Public resident directory/presence/UUID movement grants, including old non-device signatures, are now revoked. Resident code compatibility returns uniform staff assistance, never identities. Public destination selection uses a manually stated destination or reception; no resident directory downloads. Visitor verified departures and emergency/PIN contracts are unchanged.
+
+New authenticated resident movement RPC checks existing action permissions and site, locks resident/request, validates payload and dates, returns saved outcome, supports exact retries and atomically audits real actor/site/time without safety or delivery claims. 285 tests and mocked responsive workflow checks pass; live grants verified. Broader permissive resident/visitor RLS, granular clinical read access, direct authenticated legacy writes, verified public resident identity/safeguards and live operational UAT remain unresolved. Full caller inventory, exact files, evidence and limitations: [Resident movement review](./RESIDENT_MOVEMENT_REVIEW.md).

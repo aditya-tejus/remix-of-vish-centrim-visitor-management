@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,21 +20,24 @@ interface CheckInReturnDialogProps {
 }
 
 export function CheckInReturnDialog({ open, onOpenChange, visitorName, onConfirm }: CheckInReturnDialogProps) {
+  const lock = useRef(false);
+  const [error, setError] = useState("");
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
   const [timeOverride, setTimeOverride] = useState<string | null>(null);
 
   const handleConfirm = async () => {
-    setLoading(true);
-    await onConfirm(comment.trim(), timeOverride || undefined);
-    setLoading(false);
-    setComment("");
-    setTimeOverride(null);
-    onOpenChange(false);
+    if (lock.current) return;
+    lock.current = true; setLoading(true); setError("");
+    try {
+      await onConfirm(comment.trim(), timeOverride || undefined);
+      setComment(""); setTimeOverride(null); onOpenChange(false);
+    } catch (e) { setError(e instanceof Error ? e.message : "Return was not confirmed. Please retry."); }
+    finally { lock.current = false; setLoading(false); }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) { setComment(""); setTimeOverride(null); } onOpenChange(o); }}>
+    <Dialog open={open} onOpenChange={(o) => { if (lock.current) return; if (!o) { setError(""); setComment(""); setTimeOverride(null); } onOpenChange(o); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -45,7 +48,8 @@ export function CheckInReturnDialog({ open, onOpenChange, visitorName, onConfirm
             Confirm return for <span className="font-semibold text-foreground">{visitorName}</span>
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 pt-2">
+        <fieldset disabled={loading} className="space-y-4 pt-2">
+          {error && <p role="alert" className="text-destructive-strong">{error}</p>}
           <div className="space-y-2">
             <Label htmlFor="return-comment">Return Notes (optional)</Label>
             <Textarea
@@ -70,7 +74,7 @@ export function CheckInReturnDialog({ open, onOpenChange, visitorName, onConfirm
               Confirm Return
             </Button>
           </div>
-        </div>
+        </fieldset>
       </DialogContent>
     </Dialog>
   );

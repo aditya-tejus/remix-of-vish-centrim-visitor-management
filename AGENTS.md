@@ -10,3 +10,4 @@
 - Self-host font weights through package CSS imports so reception and kiosk typography works without a remote font request.
 - Ordinary staff arrivals use `checkin/CheckInSheet` and `useCheckInFlow` with staff-only readiness rules; keep group organiser consent and resident movement separate until parity is established, so one reception entry cannot bypass another entry's requirements.
 - Public visitor departures use code-verified, device-bound purpose RPCs; names return only a uniform staff-assistance response, and resident movement keeps its separate existing semantics to avoid exposing a visitor directory or bypassing identity verification.
+- Resident movement uses a dedicated staff-only atomic audit RPC and pure location/time rules; public resident discovery/movement is restricted to staff assistance because device binding does not establish resident identity or individual safeguards.
