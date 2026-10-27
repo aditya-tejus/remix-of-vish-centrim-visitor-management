@@ -4,13 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Phone, Footprints, ShieldAlert, DoorOpen } from "lucide-react";
+import { Phone, Footprints, ShieldAlert, DoorOpen, Users } from "lucide-react";
 import { Wing } from "@/hooks/useWings";
 
 interface ResidentDirectoryTableProps {
   residents: Resident[];
   wingMap: Map<string, Wing>;
-  presenceMap?: Map<string, "on-site" | "away" | "on-leave" | "overdue">;
+  presenceMap?: Map<string, "no-absence" | "away" | "on-leave" | "overdue">;
   onQuickAway?: (resident: Resident) => void;
 }
 
@@ -30,7 +30,7 @@ const mobilityColors: Record<string, string> = {
 };
 
 const presenceDot: Record<string, string> = {
-  "on-site": "bg-success",
+  "no-absence": "bg-muted-foreground",
   "away": "bg-warning",
   "on-leave": "bg-info",
   "overdue": "bg-destructive animate-pulse",
@@ -43,7 +43,7 @@ export function ResidentDirectoryTable({ residents, wingMap, presenceMap, onQuic
     return (
       <div className="text-center py-16">
         <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center mx-auto">
-          <span className="text-muted-foreground text-lg">👥</span>
+          <Users aria-hidden="true" className="h-6 w-6 text-muted-foreground" />
         </div>
         <p className="text-sm text-muted-foreground mt-2">No residents found</p>
       </div>
@@ -51,7 +51,7 @@ export function ResidentDirectoryTable({ residents, wingMap, presenceMap, onQuic
   }
 
   return (
-    <Table>
+    <div className="max-w-full overflow-x-auto"><Table>
       <TableHeader>
         <TableRow className="hover:bg-transparent bg-muted/50">
           <TableHead className="text-xs uppercase tracking-wider font-semibold text-muted-foreground h-[48px] pl-5">Resident</TableHead>
@@ -68,13 +68,13 @@ export function ResidentDirectoryTable({ residents, wingMap, presenceMap, onQuic
       <TableBody>
         {residents.map(resident => {
           const wing = resident.wingId ? wingMap.get(resident.wingId) : null;
-          const presence = presenceMap?.get(resident.visitorId) || "on-site";
+          const presence = presenceMap?.get(resident.visitorId) || "no-absence";
 
           return (
             <TableRow
               key={resident.id}
               className="group transition-colors cursor-pointer hover:bg-muted/50 min-h-[64px]"
-              onClick={() => navigate(`/visitors/${resident.visitorId}`)}
+              
             >
               <TableCell className="pl-5 py-3">
                 <div className="flex items-center gap-3">
@@ -90,15 +90,16 @@ export function ResidentDirectoryTable({ residents, wingMap, presenceMap, onQuic
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-[15px]">{resident.firstName} {resident.surname}</span>
+                      <Button variant="link" className="p-0 h-auto text-base whitespace-normal text-left" onClick={() => navigate(`/visitors/${resident.visitorId}`)}>{resident.firstName} {resident.surname}</Button>
                       {resident.dolsLpsFlag && (
                         <span title="DoLS/LPS"><ShieldAlert className="h-3.5 w-3.5 text-destructive" /></span>
                       )}
                     </div>
+                    <p className="text-sm text-muted-foreground">{presence === "no-absence" ? "No absence reported · Location not confirmed" : "Recorded absence"}</p>
                     {resident.mobile && (
                       <a
                         href={`tel:${resident.mobile}`}
-                        className="text-[11px] text-primary hover:underline"
+                        className="text-sm text-primary hover:underline"
                         onClick={e => e.stopPropagation()}
                       >
                         {resident.mobile}
@@ -107,34 +108,34 @@ export function ResidentDirectoryTable({ residents, wingMap, presenceMap, onQuic
                   </div>
                 </div>
               </TableCell>
-              <TableCell className="text-[13px] font-mono py-3">{resident.room || "—"}</TableCell>
+              <TableCell className="text-sm font-mono py-3">{resident.room || "—"}</TableCell>
               <TableCell className="py-3">
                 {wing ? (
-                  <Badge variant="outline" className="text-[10px]" style={{ borderColor: wing.color, color: wing.color }}>
+                  <Badge variant="outline" className="text-sm" >
                     {wing.name}
                   </Badge>
                 ) : (
-                  <span className="text-xs text-muted-foreground">—</span>
+                  <span className="text-sm text-muted-foreground">{resident.wing || "—"}</span>
                 )}
               </TableCell>
               <TableCell className="py-3">
-                <Badge variant="outline" className={`text-[10px] ${careLevelColors[resident.careLevel] || careLevelColors.standard}`}>
+                <Badge variant="outline" className={`text-sm ${careLevelColors[resident.careLevel] || careLevelColors.standard}`}>
                   {resident.careLevel.charAt(0).toUpperCase() + resident.careLevel.slice(1)}
                 </Badge>
               </TableCell>
-              <TableCell className="text-[13px] py-3">{resident.keyWorker || "—"}</TableCell>
+              <TableCell className="text-sm py-3">{resident.keyWorker || "—"}</TableCell>
               <TableCell className="py-3">
                 <div className="flex items-center gap-1.5">
                   <Footprints className={`h-3.5 w-3.5 ${mobilityColors[resident.mobilityLevel] || "text-muted-foreground"}`} />
-                  <span className="text-[13px] capitalize">{resident.mobilityLevel || "Not recorded"}</span>
+                  <span className="text-sm capitalize">{resident.mobilityLevel || "Not recorded"}</span>
                 </div>
                 {resident.mobilityAids.length > 0 && (
-                  <p className="text-[11px] text-muted-foreground">{resident.mobilityAids.join(", ")}</p>
+                  <p className="text-sm text-muted-foreground">{resident.mobilityAids.join(", ")}</p>
                 )}
               </TableCell>
               <TableCell className="py-3">
                 {resident.emergencyContactName ? (
-                  <div className="text-[13px]">
+                  <div className="text-sm">
                     <span className="font-medium">{resident.emergencyContactName}</span>
                     {resident.emergencyContactPhone && (
                       <a
@@ -153,10 +154,10 @@ export function ResidentDirectoryTable({ residents, wingMap, presenceMap, onQuic
               <TableCell className="py-3">
                 <div className="flex items-center gap-1">
                   {resident.dolsLpsFlag && (
-                    <Badge variant="outline" className="text-[9px] bg-destructive/10 text-destructive border-destructive/30">DoLS</Badge>
+                    <Badge variant="outline" className="text-sm bg-destructive/10 text-destructive border-destructive/30">DoLS</Badge>
                   )}
                   {resident.riskAssessmentLevel !== "standard" && (
-                    <Badge variant="outline" className="text-[9px] bg-warning/10 text-warning border-warning/30">
+                    <Badge variant="outline" className="text-sm bg-warning/10 text-warning border-warning/30">
                       Risk: {resident.riskAssessmentLevel}
                     </Badge>
                   )}
@@ -164,11 +165,11 @@ export function ResidentDirectoryTable({ residents, wingMap, presenceMap, onQuic
               </TableCell>
               {onQuickAway && (
                 <TableCell onClick={e => e.stopPropagation()} className="py-3">
-                  {presence === "on-site" && (
+                  {presence === "no-absence" && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 text-xs gap-1 opacity-0 group-hover:opacity-100 transition-opacity text-warning hover:text-warning"
+                      className="min-h-touch text-sm gap-1  transition-opacity text-warning hover:text-warning"
                       onClick={() => onQuickAway(resident)}
                     >
                       <DoorOpen className="h-3 w-3" /> Away
@@ -180,6 +181,6 @@ export function ResidentDirectoryTable({ residents, wingMap, presenceMap, onQuic
           );
         })}
       </TableBody>
-    </Table>
+    </Table></div>
   );
 }
