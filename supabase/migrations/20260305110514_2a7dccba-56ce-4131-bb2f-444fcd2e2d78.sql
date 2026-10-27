@@ -1,1 +1,0 @@
-ALTER TABLE public.visitors ADD COLUMN leave_type text DEFAULT NULL;

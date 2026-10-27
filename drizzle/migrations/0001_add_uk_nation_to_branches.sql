@@ -1,2 +1,0 @@
-ALTER TABLE public.branches ADD COLUMN IF NOT EXISTS uk_nation text;
-COMMENT ON COLUMN public.branches.uk_nation IS 'UK nation for jurisdiction packs: England, Scotland, Wales or Northern Ireland. NULL/England uses the England pack; other nations resolve to the not-configured guard pack.';

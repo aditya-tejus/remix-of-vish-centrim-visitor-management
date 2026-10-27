@@ -1,1 +1,0 @@
-ALTER TABLE public.visitors ADD COLUMN return_notification_opt_in boolean DEFAULT false;
