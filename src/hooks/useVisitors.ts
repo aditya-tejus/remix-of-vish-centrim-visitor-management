@@ -1,9 +1,9 @@
 import { fetchOverstayHours, isOverstayedSync } from "@/hooks/useOverstayPolicy";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Visitor, CompanionDetail } from "@/types/visitor";
 import { toast } from "@/hooks/use-toast";
-import { policyFromRow } from "@/hooks/useReturnNotificationPolicy";
+import { assertSavedMovement } from "@/lib/residentMovement";
 import { useSite } from "@/contexts/SiteContext";
 import { kioskRpc } from "@/lib/kioskRpc";
 
@@ -111,6 +111,9 @@ interface UseVisitorsOptions {
 export function useVisitors(options: UseVisitorsOptions = {}) {
   const { publicMode = false, residentMovement = false, siteId: kioskSiteId = null, onSaveError } = options;
   const { currentSiteId, isLegacySite } = useSite();
+  const residentSaveLock = useRef(false);
+  const residentAttempt = useRef<{ fingerprint: string; request: string } | null>(null);
+  const siteRef = useRef(currentSiteId); siteRef.current = currentSiteId;
   const [visitors, setVisitors] = useState<Visitor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -121,17 +124,7 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
     // Kiosk (unauthenticated) reads go through a narrow server function that returns
     // presence only — never visit history or personal details.
     if (publicMode) {
-      if (!residentMovement) { setVisitors([]); setLoading(false); return; }
-      // Scoped to the kiosk's own site so one building never lists another's people.
-      const { data, error } = await kioskRpc<any[]>("kioskd_presence_list");
-      if (error) {
-        setError("We could not reach the system. Please try again.");
-      } else if (data) {
-        setError(null);
-        setVisitors((data as unknown as DbVisitor[]).map(dbToVisitor));
-      }
-      setLoading(false);
-      return;
+      setVisitors([]); setLoading(false); return;
     }
 
     // Fetch today's visitors + any still checked-in + any checked-out residents (for away/leave tracking)
@@ -315,70 +308,39 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
   };
 
 
-  const markResidentAway = async (visitorId: string, details: {
-    expectedReturnDate?: Date;
-    checkoutReason?: string;
-    leaveType?: string;
-    accompaniedBy?: string;
-    accompaniedByName?: string;
-    comments?: string;
-    returnNotificationOptIn?: boolean;
-    companionDetails?: CompanionDetail[];
-  }) => {
-    const now = new Date();
-    // Optimistic update
-    setVisitors((prev) =>
-      prev.map((v) =>
-        v.id === visitorId
-          ? {
-              ...v,
-              checkOutTime: now,
-              status: "checked-out" as const,
-              expectedReturnDate: details.expectedReturnDate,
-              checkoutReason: details.checkoutReason ?? null,
-              leaveType: details.leaveType,
-              accompaniedBy: details.accompaniedBy,
-              accompaniedByName: details.accompaniedByName,
-              comments: details.comments || v.comments,
-              returnNotificationOptIn: details.returnNotificationOptIn ?? false,
-              companionDetails: details.companionDetails || v.companionDetails,
-              additionalVisitors: details.companionDetails?.length || 0,
-            }
-          : v
-      )
-    );
-
-    const updateData: Record<string, unknown> = {
-      check_out_time: now.toISOString(),
-      status: "checked-out",
-      expected_return_date: details.expectedReturnDate?.toISOString() ?? null,
-      checkout_reason: details.checkoutReason ?? null,
-      leave_type: details.leaveType ?? null,
-      accompanied_by: details.accompaniedBy ?? null,
-      accompanied_by_name: details.accompaniedByName ?? null,
-      return_notification_opt_in: details.returnNotificationOptIn ?? false,
-    };
-    if (details.comments) updateData.comments = details.comments;
-    if (details.companionDetails) {
-      updateData.companion_details = details.companionDetails;
-      updateData.additional_visitors = details.companionDetails.length;
-    }
-
-    if (publicMode) {
-      // Kiosk: narrow server function, no direct table write.
-      await kioskRpc("kioskd_resident_leave", {
-        p_visitor_id: visitorId,
-        p_time: now.toISOString(),
-        p_leave_type: details.leaveType ?? null,
-        p_expected_return: details.expectedReturnDate?.toISOString() ?? null,
-        p_accompanied_by_name: details.accompaniedByName ?? null,
-        p_reason: details.checkoutReason ?? null,
-      });
-      return;
-    }
-    await supabase.from("visitors").update(updateData).eq("id", visitorId);
-
+  const saveResident = async (id: string, action: "leave" | "return", details: Record<string, unknown>) => {
+    if (publicMode || !currentSiteId) throw new Error("Ask authorised reception staff to record this movement.");
+    if (residentSaveLock.current) throw new Error("A resident movement is already saving.");
+    const site = currentSiteId;
+    const resident = visitors.find(v => v.id === id && v.type === "resident");
+    // A directory resident may not be in today's visit subset; read its current status explicitly.
+    const { data: row, error: readError } = await supabase.from("visitors").select("status").eq("id",id).eq("type","resident").maybeSingle();
+    if (readError || !row || siteRef.current !== site) throw new Error("Refresh resident records before saving.");
+    const fingerprint=JSON.stringify([site,id,action,details]);
+    if (residentAttempt.current && residentAttempt.current.fingerprint!==fingerprint) throw new Error("Retry the unchanged form or refresh the page before another movement.");
+    if (!residentAttempt.current) residentAttempt.current={fingerprint,request:crypto.randomUUID()};
+    residentSaveLock.current=true;
+    try {
+      const {data,error}=await supabase.rpc("staff_resident_movement",{p_site:site,p_resident:id,p_request:residentAttempt.current.request,p_action:action,p_expected_status:resident?.status ?? row.status,p_details:details as never});
+      if(error) throw new Error("Movement was not confirmed. Retry the unchanged form or refresh.");
+      assertSavedMovement(data,id,site,action);
+      if(siteRef.current!==site) throw new Error("Site changed. Refresh the original site to check the result.");
+      residentAttempt.current=null;
+      await fetchVisitors();
+    } finally {residentSaveLock.current=false;}
   };
+  const markResidentAway = async (visitorId: string, details: {
+    recordedTime?: Date; expectedReturnDate?: Date; checkoutReason?: string; leaveType?: string;
+    accompaniedBy?: string; accompaniedByName?: string; comments?: string;
+    returnNotificationOptIn?: boolean; companionDetails?: CompanionDetail[];
+  }) => saveResident(visitorId,"leave",{
+    expected_return:details.expectedReturnDate?.toISOString() ?? null,reason:details.checkoutReason ?? null,
+    leave_type:details.leaveType ?? "Away",accompanied_by:details.accompaniedBy ?? null,
+    accompanied_by_name:details.accompaniedByName ?? null,comments:details.comments ?? null,
+    return_notification_opt_in:details.returnNotificationOptIn ?? false,
+    ...(details.companionDetails ? {companion_details:details.companionDetails} : {}),
+    ...(details.recordedTime ? {recorded_time:details.recordedTime.toISOString()} : {})
+  });
 
   const checkOutVisitor = async (
     id: string,
@@ -452,59 +414,9 @@ export function useVisitors(options: UseVisitorsOptions = {}) {
   };
 
   const checkInReturn = async (id: string, returnComment?: string, timeOverride?: string) => {
-    const checkInTime = timeOverride ? (() => { const now = new Date(); const [h, m] = timeOverride.split(":").map(Number); now.setHours(h, m, 0, 0); return now; })() : new Date();
-    setVisitors((prev) =>
-      prev.map((v) =>
-        v.id === id ? { ...v, checkInTime, status: "checked-in" as const, comments: returnComment ? `${v.comments ? v.comments + "\n" : ""}Return: ${returnComment}` : v.comments } : v
-      )
-    );
-    const updateData: Record<string, unknown> = { check_in_time: checkInTime.toISOString(), status: "checked-in" };
-    if (returnComment) {
-      if (publicMode) {
-        // Kiosk cannot read existing comments — append-only note
-        updateData.comments = `Return: ${returnComment}`;
-      } else {
-        const { data: current } = await supabase.from("visitors").select("comments").eq("id", id).single();
-        const existing = (current?.comments as string) || "";
-        updateData.comments = existing ? `${existing}\nReturn: ${returnComment}` : `Return: ${returnComment}`;
-      }
-
-    }
-    if (publicMode) {
-      await kioskRpc("kioskd_resident_return", {
-        p_visitor_id: id,
-        p_time: checkInTime.toISOString(),
-      });
-    } else {
-      await supabase.from("visitors").update(updateData).eq("id", id);
-    }
-
-
-    // Record the safe-return confirmation for the audit trail when configured.
-    if (!publicMode) {
-      try {
-        const { data: rows } = await supabase.from("branch_notification_settings").select("*");
-        const policies = (rows || []).map(policyFromRow);
-        const policy = policies.find((p) => p.branchId === null) || policies[0];
-        if (policy?.safeReturnEnabled) {
-          const person = visitors.find((v) => v.id === id);
-          const named = [
-            ...policy.safeReturnStaff.map((s) => s.name),
-            ...policy.safeReturnEmails,
-            ...(policy.notifyNokOnReturn ? ["next-of-kin"] : []),
-          ];
-          await supabase.from("audit_log").insert({
-            action: "return_confirmation_recorded",
-            performed_by: "System",
-            records_affected: 1,
-            change_reason: `Safe return confirmed${person ? ` for ${person.firstName} ${person.surname}` : ""}${named.length ? ` — planned contacts: ${named.join(", ")}` : ""}. No message sent.`,
-            details: { visitor_id: id, intended_recipients: named, delivery_state: "not_configured", message_sent: false } as any,
-          });
-        }
-      } catch {
-        // Audit logging must never block a resident return being recorded.
-      }
-    }
+    let recorded: string | undefined;
+    if(timeOverride){const date=new Date();const [h,m]=timeOverride.split(":").map(Number);date.setHours(h,m,0,0);recorded=date.toISOString();}
+    await saveResident(id,"return",{comments:returnComment ?? null,...(recorded ? {recorded_time:recorded} : {})});
   };
 
   const deleteVisitor = async (id: string) => {

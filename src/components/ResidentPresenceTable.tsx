@@ -21,7 +21,7 @@ interface ResidentPresenceTableProps {
   totalResidentCount?: number;
 }
 
-type PresenceStatus = "on-site" | "away" | "on-leave" | "overdue";
+type PresenceStatus = "no-absence" | "away" | "on-leave" | "overdue";
 
 const careLevelColors: Record<string, string> = {
   standard: "bg-muted text-muted-foreground",
@@ -57,14 +57,14 @@ export function ResidentPresenceTable({
 
   const getPresence = (resident: Resident): { status: PresenceStatus; visitor: Visitor | null } => {
     const visitor = visitorMap.get(resident.visitorId);
-    if (!visitor) return { status: "on-site", visitor: null };
+    if (!visitor) return { status: "no-absence", visitor: null };
     if (visitor.status === "checked-out") {
       const isOverdue = visitor.expectedReturnDate && isPast(visitor.expectedReturnDate);
       if (isOverdue) return { status: "overdue", visitor };
       const isAway = visitor.leaveType === "Away" || !visitor.leaveType;
       return { status: isAway ? "away" : "on-leave", visitor };
     }
-    return { status: "on-site", visitor };
+    return { status: "no-absence", visitor };
   };
 
   // Urgency sort order: overdue → due-back-today → away → on-leave
@@ -72,7 +72,7 @@ export function ResidentPresenceTable({
     overdue: 0,
     away: 1,
     "on-leave": 2,
-    "on-site": 3,
+    "no-absence": 3,
   };
 
   // Get only exception residents (not on-site) unless a specific filter is applied
@@ -85,11 +85,11 @@ export function ResidentPresenceTable({
         const { visitor } = getPresence(r);
         return visitor?.status === "checked-out" && visitor.expectedReturnDate && isToday(visitor.expectedReturnDate);
       });
-    } else if (statusFilter && statusFilter !== "on-site") {
+    } else if (statusFilter && statusFilter !== "no-absence") {
       filtered = residents.filter(r => getPresence(r).status === statusFilter);
     } else {
       // Default: show only exceptions (not on-site)
-      filtered = residents.filter(r => getPresence(r).status !== "on-site");
+      filtered = residents.filter(r => getPresence(r).status !== "no-absence");
     }
 
     // Sort by urgency, then by nearest return time
@@ -115,10 +115,10 @@ export function ResidentPresenceTable({
           <CheckCircle2 className="h-7 w-7 text-success" />
         </div>
         <p className="text-base font-semibold text-foreground mt-3">
-          All {total} residents on site
+          No recorded absences
         </p>
         <p className="text-sm text-muted-foreground mt-1">
-          No one is currently away, on leave, or overdue
+          Resident locations are not physically confirmed by this list.
         </p>
       </div>
     );
@@ -127,7 +127,7 @@ export function ResidentPresenceTable({
   // Render expanded row for away/leave/overdue
   const renderExceptionRow = (resident: Resident) => {
     const { status, visitor } = getPresence(resident);
-    if (status === "on-site") return null;
+    if (status === "no-absence") return null;
 
     const borderClass = {
       away: "border-l-warning bg-warning/[0.03]",
@@ -177,7 +177,7 @@ export function ResidentPresenceTable({
             {visitor?.checkOutTime ? (
               <div>
                 <span className="block font-medium text-foreground">{format(visitor.checkOutTime, "dd MMM")}</span>
-                <span className="text-[11px]">{format(visitor.checkOutTime, "HH:mm")}</span>
+                <span className="text-[11px]">{format(visitor.checkOutTime, "hh:mm a")}</span>
               </div>
             ) : (
               <span>—</span>
@@ -227,7 +227,7 @@ export function ResidentPresenceTable({
                 <Clock className="h-3 w-3" />
                 {status === "overdue"
                   ? formatDistanceToNow(visitor.expectedReturnDate, { addSuffix: false }) + " overdue"
-                  : format(visitor.expectedReturnDate, "HH:mm")
+                  : format(visitor.expectedReturnDate, "hh:mm a")
                 }
               </span>
             ) : (
@@ -239,10 +239,11 @@ export function ResidentPresenceTable({
           <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
             {statusBadge}
             <Button
+              disabled={!onCheckInReturn}
               variant="outline"
               size="sm"
               className="h-7 text-xs gap-1"
-              onClick={() => setReturnResident({ id: visitor!.id, name: `${resident.firstName} ${resident.surname}` })}
+              onClick={() => setReturnResident({ id: visitor?.id ?? resident.visitorId, name: `${resident.firstName} ${resident.surname}` })}
             >
               <LogIn className="h-3 w-3" /> Return
             </Button>
