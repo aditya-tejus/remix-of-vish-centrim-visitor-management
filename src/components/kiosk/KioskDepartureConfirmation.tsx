@@ -21,8 +21,8 @@ export function KioskDepartureConfirmation({ code, match, onBack, onComplete }: 
     try { if (await depart(code, match.visit_id, ids)) setPhase("feedback"); }
     catch { setError(true); }
   }
-  if (phase === "done") return <KioskSuccessScreen title="You are signed out" subtitle="Your selected departures have been recorded." accentColor="success" onComplete={onComplete} />;
-  if (phase === "feedback") return <KioskFeedbackScreen visitorId={match.visitor_id} visitorName="" visitorType={match.visitor_type || "visitor"} onComplete={() => setPhase("done")} />;
+  if (phase === "done") return <section><h1 className="sr-only">Departure recorded</h1><KioskSuccessScreen title="You are signed out" subtitle="Your selected departures have been recorded." accentColor="success" onComplete={onComplete} /></section>;
+  if (phase === "feedback") return <section><h1 className="sr-only">Departure feedback</h1><KioskFeedbackScreen visitorId={match.visitor_id} visitorName="" visitorType={match.visitor_type || "visitor"} onComplete={() => setPhase("done")} /></section>;
   return <section className="space-y-6 text-xl" aria-labelledby="departure-title">
     <div className="space-y-2 text-center"><h1 id="departure-title" className="text-3xl font-semibold text-foreground">Sign out</h1><p className="text-muted-foreground">Confirm who is leaving now.</p></div>
     {parties.length > 1 && <>

@@ -189,6 +189,7 @@ export default function KioskQRScan() {
   if (result) {
     return (
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full space-y-6 text-center">
+        {result.type !== "resident" && result.type !== "resident-departed" && <h1 className="sr-only">Visitor card result</h1>}
         {result.type === "resident" && <><h1 className="text-3xl font-semibold text-foreground">Confirm departure</h1><p className="text-xl text-muted-foreground">Would you like to record your departure now?</p>{departureError && <p role="alert" className="text-xl text-destructive-strong">Departure was not confirmed. Please try again or ask reception.</p>}<Button disabled={busy} onClick={() => residentDeparture(result.id)} className="w-full min-h-kiosk text-xl">{busy ? "Saving…" : "Confirm departure"}</Button></>}
         {result.type === "resident-departed" && <h1 className="text-3xl font-semibold text-foreground">Your departure is recorded</h1>}
         {result.type === "recognised" && (

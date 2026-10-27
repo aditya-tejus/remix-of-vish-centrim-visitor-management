@@ -35,6 +35,7 @@ beforeAll(async () => {
     INSERT INTO visit_parties VALUES('${SELF}','${VISIT}',NULL,true,0,NULL,'checked-in',now()),('${OTHER}','${VISIT}',NULL,false,1,NULL,'checked-in',now());
     INSERT INTO kiosk_devices VALUES('${B}','active');`);
   await db.exec(readFileSync("drizzle/migrations/0004_private_kiosk_visitor_departures.sql", "utf8"));
+  await db.exec(readFileSync("drizzle/migrations/0005_resident_qr_compatibility_lookup.sql", "utf8"));
 }, 30000);
 afterAll(async () => { await db?.close(); });
 
@@ -89,6 +90,12 @@ describe("actual kiosk SQL in isolated PostgreSQL", () => {
     expect(await value("select companion_details->0->>'checkedOutAt' is not null result from visitors where id=$1", [V])).toBe(true);
   });
   it("resident compatibility list returns no ordinary visitors", async () => expect((await db.query("select * from kioskd_presence_list('active')")).rows).toEqual([]));
+  it("resident QR compatibility reveals only its verified reference and no cross-site identity", async () => {
+    await db.exec(`INSERT INTO visitors(id,branch_id,type,status,first_name,surname,qr_code,check_in_time) VALUES('${FOREIGN}','${B}','resident','checked-in','Private','Resident','RESIDENT1234',now());`);
+    expect(await value("select kioskd_resident_code('active','RESIDENT1234') result")).toEqual({ state: "resident", id: FOREIGN });
+    expect(await value("select kioskd_resident_code('other-site','RESIDENT1234') result")).toEqual({ state: "no_match" });
+    await db.exec(`DELETE FROM visitors WHERE id='${FOREIGN}'`);
+  });
   it("ambiguous duplicate codes require staff without identifying either person", async () => {
     await db.exec(`UPDATE visits SET status='checked-in'; INSERT INTO visit_parties VALUES('${FOREIGN}','${VISIT}',NULL,true,0,NULL,'checked-in',now());`);
     expect(await value("select kioskd_checkout_lookup('active',$1) result", [CODE])).toEqual({ state: "staff_required" });
