@@ -39,6 +39,8 @@ type Prefill = {
 
 type ScanResult =
   | { type: "recognised"; prefill: Prefill }
+  | { type: "resident"; id: string }
+  | { type: "resident-departed" }
   | { type: "notfound" }
   | { type: "error" };
 
@@ -54,6 +56,7 @@ export default function KioskQRScan() {
   const [manualCode, setManualCode] = useState("");
   const [result, setResult] = useState<ScanResult | null>(null);
   const [busy, setBusy] = useState(false);
+  const [departureError, setDepartureError] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState(false);
   const [inputMode, setInputMode] = useState<"camera" | "manual">("camera");
@@ -66,6 +69,7 @@ export default function KioskQRScan() {
       if (!trimmed || lookupLock.current) return;
       lookupLock.current = true;
       setBusy(true);
+      setDepartureError(false);
 
       try {
         const active = await lookup(trimmed);
@@ -73,6 +77,12 @@ export default function KioskQRScan() {
           setCheckout({ code: trimmed, match: active });
           setBusy(false); lookupLock.current = false;
           return;
+        }
+        // Preserve the existing resident QR departure rule without a directory read.
+        const resident = await kioskRpc<{ state: string; id?: string }>("kioskd_resident_code", { p_code: trimmed });
+        if (resident.error) throw new Error("lookup_failed");
+        if (resident.data?.state === "resident" && resident.data.id) {
+          setResult({ type: "resident", id: resident.data.id }); setBusy(false); lookupLock.current = false; return;
         }
         if (mode === "checkout" || active.state === "staff_required") {
           setResult({ type: "notfound" }); setBusy(false); lookupLock.current = false; return;
@@ -155,11 +165,23 @@ export default function KioskQRScan() {
   const handleReset = () => {
     setResult(null);
     setManualCode("");
+    setDepartureError(false);
   };
 
   const continueToCheckIn = (prefill?: Prefill) => {
     navigate("/kiosk/checkin", { state: prefill ? { fastLane: prefill } : undefined });
   };
+
+  async function residentDeparture(id: string) {
+    if (lookupLock.current) return;
+    lookupLock.current = true; setBusy(true); setDepartureError(false);
+    try {
+      const { data, error } = await kioskRpc<boolean>("kioskd_check_out", { p_visitor_id: id, p_time: new Date().toISOString() });
+      if (error || data !== true) throw new Error("not_saved");
+      setResult({ type: "resident-departed" });
+    } catch { setDepartureError(true); }
+    finally { lookupLock.current = false; setBusy(false); }
+  }
 
   if (checkout) return <KioskDepartureConfirmation code={checkout.code} match={checkout.match} onBack={() => setCheckout(null)} onComplete={() => navigate("/kiosk/home")} />;
 
@@ -167,6 +189,8 @@ export default function KioskQRScan() {
   if (result) {
     return (
       <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full space-y-6 text-center">
+        {result.type === "resident" && <><h1 className="text-3xl font-semibold text-foreground">Confirm departure</h1><p className="text-xl text-muted-foreground">Would you like to record your departure now?</p>{departureError && <p role="alert" className="text-xl text-destructive-strong">Departure was not confirmed. Please try again or ask reception.</p>}<Button disabled={busy} onClick={() => residentDeparture(result.id)} className="w-full min-h-kiosk text-xl">{busy ? "Saving…" : "Confirm departure"}</Button></>}
+        {result.type === "resident-departed" && <h1 className="text-3xl font-semibold text-foreground">Your departure is recorded</h1>}
         {result.type === "recognised" && (
           <>
             <div className="h-20 w-20 rounded-full bg-success/10 text-success flex items-center justify-center mx-auto">
