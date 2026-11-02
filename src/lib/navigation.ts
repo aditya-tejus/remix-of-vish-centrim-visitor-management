@@ -1,5 +1,10 @@
 /**
- * Phase 8F — the one description of the left-hand menu.
+ * The one description of the left-hand menu.
+ *
+ * Four sections only. A section's own pages appear beneath it while you are in
+ * that section, so the menu never shows more than the place you are working.
+ * Emergency roll call is an action, not a section, and stays visible on its own.
+ * Settings and kiosk mode are utilities and sit with the site name in the footer.
  *
  * Pure data so the order, the labels and the routes can be tested without
  * rendering the sidebar. Presentation lives in AppSidebar.
@@ -14,15 +19,18 @@ export interface NavEntry {
   external?: boolean;
 }
 
-export interface NavGroupModel {
-  label: string;
-  items: NavEntry[];
+export interface NavSection extends NavEntry {
+  key: "today" | "visitors" | "residents" | "records";
+  /** Pages shown beneath the section while it is current. Empty for single-page sections. */
+  children: NavEntry[];
+  /** Path prefixes that also belong to this section (e.g. every /reports/… screen). */
+  prefixes?: string[];
 }
 
 export interface NavModel {
-  primary: NavEntry[];
-  groups: NavGroupModel[];
-  footer: NavEntry[];
+  sections: NavSection[];
+  emergency: NavEntry;
+  utilities: NavEntry[];
 }
 
 export interface NavModules {
@@ -30,57 +38,72 @@ export interface NavModules {
   keysRegister: boolean;
 }
 
-export const REPORTS_ITEMS: NavEntry[] = [
-  { title: "Visitor Report", path: "/reports/visitor-report" },
-  { title: "Feedback Responses", path: "/reports/feedback-responses" },
-  { title: "Feedback Reports", path: "/reports/feedback-reports" },
-  { title: "Safety & Compliance", path: "/gdpr" },
-  { title: "Presence Log", path: "/reports/presence" },
-  { title: "Audit Log", path: "/audit-log" },
-];
-
-/** Screens that stay reachable by address, card or profile link but are not in the menu. */
-export const OFF_MENU_ROUTES = [
-  "/reports",
-  "/reports/analytics",
-  "/reports/evacuation",
-  "/reports/on-site",
-  "/reports/trends",
-  "/contractor-documents",
-  "/calendar",
-  "/visit-list",
-];
+export const MAX_SECTIONS = 4;
 
 export function buildNavigation(modules: NavModules, residentLabel = "Residents"): NavModel {
   const registers: NavEntry[] = [
-    ...(modules.foodRegister ? [{ title: "Food Register", path: "/food-register" }] : []),
-    ...(modules.keysRegister ? [{ title: "Keys & Fob Register", path: "/keys" }] : []),
+    ...(modules.foodRegister ? [{ title: "Food register", path: "/food-register" }] : []),
+    ...(modules.keysRegister ? [{ title: "Keys and fobs", path: "/keys" }] : []),
   ];
 
   return {
-    primary: [
-      { title: "Today", path: "/today", match: ["/today", "/"] },
-      { title: "Visitor List", path: "/visit-list", match: ["/visit-list"] },
-      { title: residentLabel, path: "/residents", match: ["/residents"] },
-      { title: "Visitor Profiles", path: "/visitors", match: ["/visitors"] },
+    sections: [
+      { key: "today", title: "Today", path: "/today", match: ["/today", "/"], children: [] },
+      {
+        key: "visitors",
+        title: "Visitors",
+        path: "/visit-list",
+        children: [
+          { title: "On site and today", path: "/visit-list" },
+          { title: "Visitor profiles", path: "/visitors", match: ["/visitors"] },
+          { title: "Calendar", path: "/calendar" },
+        ],
+        prefixes: ["/visitors/"],
+      },
+      { key: "residents", title: residentLabel, path: "/residents", children: [] },
+      {
+        key: "records",
+        title: "Records",
+        path: "/reports",
+        children: [
+          ...registers,
+          { title: "Reports", path: "/reports" },
+          { title: "Contractor documents", path: "/contractor-documents" },
+          { title: "Privacy and compliance", path: "/gdpr" },
+          { title: "Audit log", path: "/audit-log" },
+        ],
+        prefixes: ["/reports/"],
+      },
     ],
-    groups: [
-      ...(registers.length ? [{ label: "Registers", items: registers }] : []),
-      { label: "Reports", items: REPORTS_ITEMS },
-    ],
-    footer: [
+    emergency: { title: "Emergency roll call", path: "/evacuation" },
+    utilities: [
       { title: "Settings", path: "/settings" },
-      { title: "Emergency Roll Call", path: "/evacuation" },
-      { title: "Kiosk Mode", path: "/kiosk", external: true },
+      { title: "Kiosk mode", path: "/kiosk", external: true },
     ],
   };
 }
 
-/** A group opens by itself while one of its screens is the current page. */
-export function isGroupOpen(group: NavGroupModel, pathname: string): boolean {
-  return group.items.some((item) => item.path === pathname);
-}
-
 export function isEntryActive(entry: NavEntry, pathname: string): boolean {
   return (entry.match ?? [entry.path]).includes(pathname);
+}
+
+/** The section that owns the current page, if any. */
+export function activeSection(model: NavModel, pathname: string): NavSection | null {
+  return (
+    model.sections.find(
+      (s) =>
+        isEntryActive(s, pathname) ||
+        s.children.some((c) => isEntryActive(c, pathname)) ||
+        (s.prefixes ?? []).some((p) => pathname.startsWith(p))
+    ) ?? null
+  );
+}
+
+/** The child page to highlight; profile detail pages highlight "Visitor profiles". */
+export function activeChild(section: NavSection, pathname: string): NavEntry | null {
+  return (
+    section.children.find((c) => isEntryActive(c, pathname)) ??
+    section.children.find((c) => c.path !== "/" && pathname.startsWith(`${c.path}/`)) ??
+    null
+  );
 }

@@ -1,89 +1,71 @@
 import { describe, it, expect } from "vitest";
-import { buildNavigation, isGroupOpen, isEntryActive, OFF_MENU_ROUTES } from "@/lib/navigation";
+import { buildNavigation, activeSection, activeChild, isEntryActive, MAX_SECTIONS } from "@/lib/navigation";
 
 const bothOn = { foodRegister: true, keysRegister: true };
 
 describe("left navigation", () => {
-  it("lists the primary screens in the required order", () => {
+  it("has four sections at most, in the required order", () => {
     const nav = buildNavigation(bothOn);
-    expect(nav.primary.map((i) => i.title)).toEqual([
-      "Today", "Visitor List", "Residents", "Visitor Profiles",
+    expect(nav.sections.length).toBeLessThanOrEqual(MAX_SECTIONS);
+    expect(nav.sections.map((s) => s.title)).toEqual(["Today", "Visitors", "Residents", "Records"]);
+  });
+
+  it("puts visit pages under Visitors and registers, reports and logs under Records", () => {
+    const nav = buildNavigation(bothOn);
+    expect(nav.sections[1].children.map((c) => c.title)).toEqual(["On site and today", "Visitor profiles", "Calendar"]);
+    expect(nav.sections[3].children.map((c) => c.title)).toEqual([
+      "Food register", "Keys and fobs", "Reports", "Contractor documents", "Privacy and compliance", "Audit log",
     ]);
   });
 
-  it("groups Registers then Reports, in that order", () => {
+  it("keeps emergency roll call as its own action, and settings and kiosk as utilities", () => {
     const nav = buildNavigation(bothOn);
-    expect(nav.groups.map((g) => g.label)).toEqual(["Registers", "Reports"]);
-    expect(nav.groups[0].items.map((i) => i.title)).toEqual([
-      "Food Register", "Keys & Fob Register",
-    ]);
-    expect(nav.groups[1].items.map((i) => i.title)).toEqual([
-      "Visitor Report", "Feedback Responses", "Feedback Reports",
-      "Safety & Compliance", "Presence Log", "Audit Log",
-    ]);
-  });
-
-  it("ends with Settings, Emergency Roll Call and Kiosk Mode", () => {
-    const nav = buildNavigation(bothOn);
-    expect(nav.footer.map((i) => i.title)).toEqual([
-      "Settings", "Emergency Roll Call", "Kiosk Mode",
-    ]);
-    expect(nav.footer.find((i) => i.title === "Kiosk Mode")?.external).toBe(true);
+    expect(nav.emergency.path).toBe("/evacuation");
+    expect(nav.utilities.map((u) => u.title)).toEqual(["Settings", "Kiosk mode"]);
+    expect(nav.utilities.find((u) => u.title === "Kiosk mode")?.external).toBe(true);
   });
 
   it("honours the site's operating pack for registers", () => {
-    expect(buildNavigation({ foodRegister: false, keysRegister: true }).groups[0].items.map((i) => i.title))
-      .toEqual(["Keys & Fob Register"]);
+    const keysOnly = buildNavigation({ foodRegister: false, keysRegister: true });
+    expect(keysOnly.sections[3].children.map((c) => c.title)).not.toContain("Food register");
+    expect(keysOnly.sections[3].children.map((c) => c.title)).toContain("Keys and fobs");
     const none = buildNavigation({ foodRegister: false, keysRegister: false });
-    expect(none.groups.map((g) => g.label)).toEqual(["Reports"]);
+    expect(none.sections[3].children[0].title).toBe("Reports");
   });
 
   it("uses the site's own word for residents", () => {
-    expect(buildNavigation(bothOn, "Homeowners").primary[2].title).toBe("Homeowners");
+    expect(buildNavigation(bothOn, "Homeowners").sections[2].title).toBe("Homeowners");
   });
 
   it("marks Today as current at the root address too", () => {
     const nav = buildNavigation(bothOn);
-    expect(isEntryActive(nav.primary[0], "/")).toBe(true);
-    expect(isEntryActive(nav.primary[0], "/today")).toBe(true);
-    expect(isEntryActive(nav.primary[1], "/today")).toBe(false);
+    expect(isEntryActive(nav.sections[0], "/")).toBe(true);
+    expect(activeSection(nav, "/today")?.key).toBe("today");
   });
 
-  it("opens the group holding the current page", () => {
+  it("finds the owning section for every page, including detail and report screens", () => {
     const nav = buildNavigation(bothOn);
-    expect(isGroupOpen(nav.groups[1], "/audit-log")).toBe(true);
-    expect(isGroupOpen(nav.groups[0], "/audit-log")).toBe(false);
+    expect(activeSection(nav, "/visitors/abc")?.key).toBe("visitors");
+    expect(activeSection(nav, "/calendar")?.key).toBe("visitors");
+    expect(activeSection(nav, "/reports/presence")?.key).toBe("records");
+    expect(activeSection(nav, "/keys")?.key).toBe("records");
+    expect(activeSection(nav, "/evacuation")).toBeNull();
+    expect(activeChild(nav.sections[1], "/visitors/abc")?.title).toBe("Visitor profiles");
   });
 
   it("has no duplicate destinations in the menu", () => {
     const nav = buildNavigation(bothOn);
     const paths = [
-      ...nav.primary.map((i) => i.path),
-      ...nav.groups.flatMap((g) => g.items.map((i) => i.path)),
-      ...nav.footer.map((i) => i.path),
+      ...nav.sections.flatMap((s) => (s.children.length ? s.children.map((c) => c.path) : [s.path])),
+      nav.emergency.path,
+      ...nav.utilities.map((u) => u.path),
     ];
     expect(new Set(paths).size).toBe(paths.length);
   });
 
-  it("keeps consolidated screens off the menu but still recorded as reachable", () => {
+  it("uses plain sentence-case labels with no decorative symbols", () => {
     const nav = buildNavigation(bothOn);
-    const menuPaths = new Set([
-      ...nav.primary.map((i) => i.path),
-      ...nav.groups.flatMap((g) => g.items.map((i) => i.path)),
-      ...nav.footer.map((i) => i.path),
-    ]);
-    for (const path of OFF_MENU_ROUTES.filter((p) => p !== "/visit-list")) {
-      expect(menuPaths.has(path)).toBe(false);
-    }
-  });
-
-  it("uses plain text labels only, with no decorative symbols", () => {
-    const nav = buildNavigation(bothOn);
-    const titles = [
-      ...nav.primary, ...nav.groups.flatMap((g) => g.items), ...nav.footer,
-    ].map((i) => i.title);
-    for (const title of titles) {
-      expect(title).toMatch(/^[A-Za-z0-9 &]+$/);
-    }
+    const titles = [...nav.sections, ...nav.sections.flatMap((s) => s.children), nav.emergency, ...nav.utilities].map((i) => i.title);
+    for (const title of titles) expect(title).toMatch(/^[A-Z][a-z0-9 ]*( [A-Za-z0-9 ]+)*$/);
   });
 });

@@ -47,7 +47,6 @@ import KioskCheckOut from "./pages/kiosk/KioskCheckOut";
 import KioskResidentLeave from "./pages/kiosk/KioskResidentLeave";
 import KioskQRScan from "./pages/kiosk/KioskQRScan";
 import KioskEvacuation from "./pages/kiosk/KioskEvacuation";
-import GroupCheckIn from "./pages/GroupCheckIn";
 import PersonTypeSelector from "./pages/PersonTypeSelector";
 
 
@@ -84,7 +83,7 @@ const App = () => (
             <Route path="/visitors/:id" element={<Staff><VisitorProfilePage /></Staff>} />
             <Route path="/check-in" element={<Navigate to="/" replace />} />
             <Route path="/person-type" element={<PersonTypeSelector />} />
-            <Route path="/group-checkin" element={<GroupCheckIn />} />
+            <Route path="/group-checkin" element={<Navigate to="/today" replace />} />
             <Route path="/qr-fast-lane" element={<Navigate to="/" replace />} />
             <Route path="/residents" element={<Staff><Residents /></Staff>} />
             <Route path="/food-register" element={<Staff><Module name="foodRegister"><FoodRegister /></Module></Staff>} />

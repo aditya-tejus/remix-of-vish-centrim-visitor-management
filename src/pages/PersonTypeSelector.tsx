@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { AppShell } from "@/components/AppShell";
 import { CheckInSheet } from "@/components/checkin/CheckInSheet";
 import { useVisitors } from "@/hooks/useVisitors";
-import { User, Truck, Heart, Users, UserSquare2, QrCode, ArrowRight, UsersRound } from "lucide-react";
+import { User, Truck, Heart, Users, UserSquare2, QrCode, ArrowRight } from "lucide-react";
 import { useKioskFastLane } from "@/hooks/useKioskFastLane";
 import { usePersonTypes } from "@/hooks/usePersonTypes";
 
@@ -84,21 +84,6 @@ export default function PersonTypeSelector() {
                 <ArrowRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
               )}
-
-              {/* Group arrival */}
-              <button
-                onClick={() => navigate("/group-checkin")}
-                className="group relative flex items-center gap-4 rounded-xl border-2 border-dashed border-border bg-card/50 p-6 transition-all duration-200 hover:border-primary hover:shadow-md active:scale-[0.98] text-left sm:col-span-2"
-              >
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                  <UsersRound className="h-6 w-6" />
-                </div>
-                <div className="flex-1">
-                  <span className="text-lg font-semibold text-foreground">Group arrival</span>
-                  <p className="text-[13px] text-muted-foreground mt-0.5">Sign in several people at once, each with their own record</p>
-                </div>
-                <ArrowRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-              </button>
             </div>
       </AppShell>
       <CheckInSheet open={dialogOpen} onOpenChange={setDialogOpen} onAdd={addVisitorAsync} initialType={selectedType as any} />

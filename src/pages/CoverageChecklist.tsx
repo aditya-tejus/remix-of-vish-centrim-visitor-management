@@ -16,7 +16,6 @@ const SCREENS: ScreenItem[] = [
   { id: 1, name: "Home Workbench", path: "/", phase: 1, status: "done" },
   { id: 2, name: "Person Type Selector", path: "/person-type", phase: 7, status: "done" },
   { id: 3, name: "Visitor Check-In", path: "/check-in", phase: 6, status: "done" },
-  { id: 4, name: "Group Check-In", path: "/group-checkin", phase: 7, status: "done" },
   { id: 5, name: "QR Fast Lane", path: "/kiosk/qr-scan", phase: 7, status: "done" },
   { id: 6, name: "Contractor Check-In", path: "/check-in", phase: 6, status: "done" },
   { id: 7, name: "Volunteer Check-In", path: "/check-in", phase: 7, status: "done" },

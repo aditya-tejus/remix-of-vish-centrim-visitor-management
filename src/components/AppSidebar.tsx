@@ -1,36 +1,33 @@
 import { isOverstayedSync } from "@/hooks/useOverstayPolicy";
 import centrimLogo from "@/assets/centrim-life-logo.png";
 import {
-  Settings, BarChart3, ChevronDown, Home, KeyRound, UtensilsCrossed, IdCard,
-  ListChecks, Siren, MonitorSmartphone, LayoutDashboard,
+  Settings, Home, Users, FolderOpen, Siren, MonitorSmartphone, LayoutDashboard,
   type LucideIcon,
 } from "lucide-react";
-import { buildNavigation } from "@/lib/navigation";
+import { buildNavigation, activeSection, activeChild, type NavSection } from "@/lib/navigation";
 
 import {
-  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
-  SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
+  Sidebar, SidebarContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
+  SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton,
   SidebarHeader, SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { NavLink, useLocation } from "react-router-dom";
 import { useVisitors } from "@/hooks/useVisitors";
 import { useSite } from "@/contexts/SiteContext";
 import { useOperatingContext } from "@/contexts/OperatingContext";
 
-interface NavItem {
-  title: string;
-  icon?: LucideIcon;
-  path: string;
-  badge?: number | null;
-  badgeVariant?: "blue" | "red" | "amber" | "green";
-}
+const SECTION_ICONS: Record<NavSection["key"], LucideIcon> = {
+  today: LayoutDashboard,
+  visitors: Users,
+  residents: Home,
+  records: FolderOpen,
+};
 
-interface NavGroup {
-  label: string;
-  icon: LucideIcon;
-  items: NavItem[];
-}
+const badgeClasses = {
+  blue: "bg-sidebar-primary text-sidebar-primary-foreground",
+  red: "bg-destructive text-destructive-foreground",
+  amber: "bg-warning text-warning-foreground",
+} as const;
 
 export function AppSidebar() {
   const location = useLocation();
@@ -40,67 +37,27 @@ export function AppSidebar() {
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
-
-  const todayNonResidents = visitors.filter(
-    (v) => v.type !== "resident" && v.checkInTime >= todayStart
-  );
+  const todayNonResidents = visitors.filter((v) => v.type !== "resident" && v.checkInTime >= todayStart);
   const activeVisitorCount = todayNonResidents.filter((v) => v.status === "checked-in").length;
   const todayOverstayed = todayNonResidents.filter(isOverstayedSync).length;
-  const residentsAwayCount = visitors.filter(
-    (v) => v.type === "resident" && v.status !== "checked-in"
-  ).length;
+  const residentsAwayCount = visitors.filter((v) => v.type === "resident" && v.status !== "checked-in").length;
 
   const model = buildNavigation(
     { foodRegister: !!modules.foodRegister, keysRegister: !!modules.keysRegister },
     terms.residentPlural
   );
+  const current = activeSection(model, location.pathname);
+  const currentChild = current ? activeChild(current, location.pathname) : null;
 
-  const ICONS: Record<string, LucideIcon> = {
-    Today: LayoutDashboard,
-    "Visitor List": ListChecks,
-    [terms.residentPlural]: Home,
-    "Visitor Profiles": IdCard,
-    "Food Register": UtensilsCrossed,
-    "Keys & Fob Register": KeyRound,
-    Registers: KeyRound,
-    Reports: BarChart3,
+  const BADGES: Partial<Record<NavSection["key"], { count: number; variant: keyof typeof badgeClasses; label: string }>> = {
+    visitors: todayOverstayed > 0
+      ? { count: todayOverstayed, variant: "red", label: `${todayOverstayed} past their expected time` }
+      : { count: activeVisitorCount, variant: "blue", label: `${activeVisitorCount} on site` },
+    residents: { count: residentsAwayCount, variant: "amber", label: `${residentsAwayCount} away` },
   };
 
-  const BADGES: Record<string, { count: number; variant: NavItem["badgeVariant"] }> = {
-    "Visitor List": {
-      count: todayOverstayed || activeVisitorCount,
-      variant: todayOverstayed > 0 ? "red" : "blue",
-    },
-    [terms.residentPlural]: { count: residentsAwayCount, variant: "amber" },
-  };
-
-  const navGroups: NavGroup[] = model.groups.map((group) => ({
-    label: group.label,
-    icon: ICONS[group.label] ?? BarChart3,
-    items: group.items.map((item) => ({ title: item.title, path: item.path })),
-  }));
-
-  const badgeClasses: Record<string, string> = {
-    blue: "bg-sidebar-primary text-sidebar-primary-foreground",
-    red: "bg-destructive text-destructive-foreground",
-    amber: "bg-warning text-warning-foreground",
-    green: "bg-success text-success-foreground",
-  };
-
-  const isGroupActive = (group: NavGroup) =>
-    group.items.some((item) => location.pathname === item.path);
-
-  const primaryItems: (NavItem & { match: string[] })[] = model.primary.map((entry) => ({
-    title: entry.title,
-    path: entry.path,
-    icon: ICONS[entry.title],
-    match: entry.match ?? [entry.path],
-    badge: BADGES[entry.title]?.count || null,
-    badgeVariant: BADGES[entry.title]?.variant,
-  }));
-
-
-
+  const onEmergency = location.pathname === "/evacuation";
+  const onSettings = location.pathname === "/settings";
 
   return (
     <Sidebar className="border-r border-sidebar-border">
@@ -116,146 +73,84 @@ export function AppSidebar() {
       <div className="mx-4 h-px bg-sidebar-border" />
 
       <SidebarContent className="px-2 pt-3">
-        <nav aria-label="Main">
-        {/* Primary surfaces */}
-        <SidebarMenu className="space-y-0.5 px-1 pb-2">
-          {primaryItems.map((item) => {
-            const active = item.match.includes(location.pathname);
-            const Icon = item.icon ?? Home;
-            return (
-              <SidebarMenuItem key={item.title}>
+        <nav aria-label="Main" className="flex flex-1 flex-col">
+          <SidebarMenu className="space-y-0.5 px-1">
+            {model.sections.map((section) => {
+              const isCurrent = current?.key === section.key;
+              const Icon = SECTION_ICONS[section.key];
+              const badge = BADGES[section.key];
+              return (
+                <SidebarMenuItem key={section.key}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isCurrent}
+                    tooltip={section.title}
+                    className={`min-h-touch h-11 gap-2.5 rounded-lg px-3 text-sm font-semibold ${
+                      isCurrent
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground border-l-2 border-l-sidebar-primary"
+                        : "text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    }`}
+                  >
+                    <NavLink to={section.path} aria-current={isCurrent && !section.children.length ? "page" : undefined}>
+                      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span className="flex-1 text-left">{section.title}</span>
+                      {badge && badge.count > 0 && (
+                        <span
+                          className={`${badgeClasses[badge.variant]} flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-xs font-bold`}
+                          aria-label={badge.label}
+                        >
+                          {badge.count}
+                        </span>
+                      )}
+                    </NavLink>
+                  </SidebarMenuButton>
+
+                  {/* Only the current section shows its pages */}
+                  {isCurrent && section.children.length > 0 && (
+                    <SidebarMenuSub className="mb-1 mt-0.5">
+                      {section.children.map((child) => {
+                        const on = currentChild?.path === child.path;
+                        return (
+                          <SidebarMenuSubItem key={child.path}>
+                            <SidebarMenuSubButton
+                              asChild
+                              isActive={on}
+                              className={`min-h-touch h-10 rounded-md px-3 text-sm ${
+                                on ? "font-semibold text-sidebar-foreground" : "font-medium text-sidebar-muted hover:text-sidebar-foreground"
+                              }`}
+                            >
+                              <NavLink to={child.path} aria-current={on ? "page" : undefined}>{child.title}</NavLink>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        );
+                      })}
+                    </SidebarMenuSub>
+                  )}
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+
+          {/* Emergency is an action, kept visible and apart from everyday navigation */}
+          <div className="mt-auto px-1 pb-2 pt-4">
+            <SidebarMenu>
+              <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
-                  isActive={active}
-                  tooltip={item.title}
-                  className={`min-h-touch h-11 gap-2.5 rounded-lg px-3 text-sm font-semibold ${
-                    active
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground border-l-2 border-l-sidebar-primary"
-                      : "text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                  }`}
+                  isActive={onEmergency}
+                  tooltip={model.emergency.title}
+                  className={`min-h-touch h-11 gap-2.5 rounded-lg border border-destructive/40 px-3 text-sm font-semibold text-destructive-strong hover:bg-destructive/20 ${onEmergency ? "bg-destructive/15" : ""}`}
                 >
-                  <NavLink to={item.path} aria-current={active ? "page" : undefined}>
-                    <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-
-                    <span className="flex-1 text-left">{item.title}</span>
-                    {item.badge != null && item.badge > 0 && (
-                      <span className={`${badgeClasses[item.badgeVariant || "blue"]} flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-xs font-bold`}>
-                        {item.badge}
-                      </span>
-                    )}
-
+                  <NavLink to={model.emergency.path} aria-current={onEmergency ? "page" : undefined}>
+                    <Siren className="h-4 w-4 shrink-0 text-destructive-strong" aria-hidden="true" />
+                    <span>{model.emergency.title}</span>
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            );
-          })}
-        </SidebarMenu>
-
-
-        {navGroups.map((group) => (
-          <Collapsible
-            key={group.label}
-            defaultOpen={isGroupActive(group)}
-            className="group/nav-group"
-          >
-            <SidebarGroup>
-              <SidebarGroupLabel asChild>
-                <CollapsibleTrigger className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 min-h-touch text-sm font-semibold text-sidebar-foreground transition-colors hover:bg-sidebar-accent">
-                  <group.icon className="h-4 w-4 text-sidebar-muted" aria-hidden="true" />
-                  <span className="flex-1 text-left">{group.label}</span>
-                  <ChevronDown
-                    className="h-3.5 w-3.5 text-sidebar-muted transition-transform duration-200 group-data-[state=open]/nav-group:rotate-180"
-                    aria-hidden="true"
-                  />
-                </CollapsibleTrigger>
-              </SidebarGroupLabel>
-              <CollapsibleContent>
-                <SidebarGroupContent>
-                  <SidebarMenu className="mt-1 space-y-0.5">
-                    {group.items.map((item) => {
-                      const active = location.pathname === item.path;
-                      return (
-                        <SidebarMenuItem key={item.title}>
-                          <SidebarMenuButton
-                            asChild
-                            isActive={active}
-                            tooltip={item.title}
-                            className={`min-h-touch h-11 gap-2 rounded-lg pl-9 text-sm font-medium transition-all duration-150
-                              ${active
-                                ? "bg-sidebar-accent text-sidebar-accent-foreground border-l-2 border-l-sidebar-primary"
-                                : "text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                              }`}
-                          >
-                            <NavLink to={item.path} aria-current={active ? "page" : undefined}>
-                              <span className="flex-1">{item.title}</span>
-                              {item.badge != null && item.badge > 0 && (
-                                <span className={`${badgeClasses[item.badgeVariant || "blue"]} flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-xs font-bold`}>
-                                  {item.badge}
-                                </span>
-                              )}
-                            </NavLink>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      );
-                    })}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </CollapsibleContent>
-            </SidebarGroup>
-          </Collapsible>
-        ))}
-
-        {/* Settings, emergency and kiosk — always visible */}
-        <div className="mt-2 px-1">
-          <SidebarMenu className="space-y-0.5">
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={location.pathname === "/settings"}
-                tooltip="Settings"
-                className={`min-h-touch h-11 gap-2.5 rounded-lg px-3 text-sm font-semibold ${
-                  location.pathname === "/settings"
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground border-l-2 border-l-sidebar-primary"
-                    : "text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                }`}
-              >
-                <NavLink to="/settings" aria-current={location.pathname === "/settings" ? "page" : undefined}>
-                  <Settings className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  <span className="flex-1 text-left">Settings</span>
-                </NavLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={location.pathname === "/evacuation"}
-                tooltip="Emergency Roll Call"
-                className="min-h-touch h-11 gap-2.5 rounded-lg border border-destructive/40 px-3 text-sm font-semibold text-destructive-strong hover:bg-destructive/20"
-              >
-                <NavLink to="/evacuation" aria-current={location.pathname === "/evacuation" ? "page" : undefined}>
-                  <Siren className="h-4 w-4 shrink-0 text-destructive-strong" aria-hidden="true" />
-                  <span>Emergency Roll Call</span>
-                </NavLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                tooltip="Kiosk Mode opens in a new tab"
-                className="min-h-touch h-11 gap-2.5 rounded-lg px-3 text-sm font-medium text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground"
-              >
-                <a href="/kiosk" target="_blank" rel="noopener noreferrer">
-                  <MonitorSmartphone className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  <span>Kiosk Mode (new tab)</span>
-                </a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </div>
+            </SidebarMenu>
+          </div>
         </nav>
       </SidebarContent>
-
-
 
       <SidebarFooter className="px-3 pb-4">
         <div className="border-t border-sidebar-border pt-3">
@@ -263,6 +158,26 @@ export function AppSidebar() {
           <p className="truncate text-sm font-semibold text-sidebar-foreground">
             {currentSite?.name ?? "No site selected"}
           </p>
+          <div className="mt-2 flex gap-1" aria-label="Utilities">
+            <NavLink
+              to="/settings"
+              aria-current={onSettings ? "page" : undefined}
+              className={`flex min-h-touch flex-1 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground ${
+                onSettings ? "bg-sidebar-accent text-sidebar-foreground" : "text-sidebar-muted"
+              }`}
+            >
+              <Settings className="h-3.5 w-3.5" aria-hidden="true" /> Settings
+            </NavLink>
+            <a
+              href="/kiosk"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Opens the visitor kiosk in a new tab"
+              className="flex min-h-touch flex-1 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-medium text-sidebar-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            >
+              <MonitorSmartphone className="h-3.5 w-3.5" aria-hidden="true" /> Kiosk
+            </a>
+          </div>
         </div>
       </SidebarFooter>
     </Sidebar>
