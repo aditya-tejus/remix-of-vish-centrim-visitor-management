@@ -3,14 +3,16 @@ import {
   addDays, addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, isSameMonth,
   isToday, startOfMonth, startOfWeek, subMonths,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Home, LogIn, LogOut, RotateCw } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Clock, Home, LogIn, LogOut, RotateCw, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { VisitorProfile } from "@/components/VisitorProfile";
 import { useVisitors } from "@/hooks/useVisitors";
+import { useResidents } from "@/hooks/useResidents";
 import { useVisitsInRange } from "@/hooks/useVisitsInRange";
 import {
-  busyLevel, dayKey, durationLabel, indexByDay, summariseMonth, type CalendarTypeFilter,
+  busyLevel, dayKey, durationLabel, hourLabel, indexByDay, monthInsights, summariseMonth,
+  type CalendarTypeFilter, type MonthInsights,
 } from "@/lib/visitCalendar";
 import type { Visitor } from "@/types/visitor";
 import { cn } from "@/lib/utils";
@@ -45,6 +47,11 @@ export default function CalendarPage() {
 
   const index = useMemo(() => indexByDay(visits, filter), [visits, filter]);
   const summary = useMemo(() => summariseMonth(index, month), [index, month]);
+  const { residents } = useResidents();
+  const residentNames = useMemo(() => residents.map((r) => r.name), [residents]);
+  // Resident visit counts always use the full list: only "Visitors" are social visits.
+  const insights = useMemo(() => monthInsights(index, month, residentNames), [index, month, residentNames]);
+  const social = useMemo(() => monthInsights(indexByDay(visits, "visitor"), month, residentNames), [visits, month, residentNames]);
   const days = eachDayOfInterval({ start: gridStart, end: gridEnd });
 
   const dueBack = useMemo(() => {
@@ -68,7 +75,8 @@ export default function CalendarPage() {
   return (
     <AppShell title="Visitors" mainClassName="p-4 sm:p-6 space-y-6">
       {/* Page header card (design system pattern): eyebrow, title, description, filters */}
-      <section aria-labelledby="calendar-title" className="rounded-[20px] border border-border bg-card p-4 shadow-sm sm:p-6">
+      <section aria-labelledby="calendar-title" className="grid gap-6 rounded-[20px] border border-border bg-card p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,520px)] lg:items-center">
+        <div className="min-w-0">
         <p className="text-[11px] font-extrabold uppercase leading-4 tracking-[0.06em] text-primary">Visitors</p>
         <h2 id="calendar-title" className="mt-1 text-[28px] font-extrabold leading-9 text-foreground">Visit calendar</h2>
         <p className="mt-1 text-sm text-muted-foreground">See who visited on any day, and which residents are due back.</p>
@@ -91,11 +99,28 @@ export default function CalendarPage() {
             );
           })}
         </div>
+        </div>
+
+        {/* Month at a glance — fills the header's spare width on large screens */}
+        <div aria-live="polite">
+          <p className="mb-2 text-xs font-bold text-muted-foreground">{format(month, "MMMM yyyy")} at a glance</p>
+          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Stat label="Visits" value={loading ? "–" : String(summary.total)} />
+            <Stat label="A day on average" value={loading ? "–" : String(insights.dailyAverage)} />
+            <Stat
+              label="Busiest day"
+              value={loading || !summary.busiest ? "–" : format(summary.busiest.date, "EEE d")}
+              note={summary.busiest && !loading ? `${summary.busiest.count} visits` : undefined}
+            />
+            <Stat label="Different people" value={loading ? "–" : String(insights.uniquePeople)} />
+          </dl>
+        </div>
       </section>
 
-      <div className="flex flex-col gap-6 xl:flex-row xl:items-start">
+      {/* Phone order: month, chosen day, insights. Wide screens: day panel runs down the right. */}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-start">
         {/* Month */}
-        <section aria-label={format(month, "MMMM yyyy")} className="min-w-0 flex-1 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
+        <section aria-label={format(month, "MMMM yyyy")} className="min-w-0 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-1">
               <Button variant="outline" size="icon" aria-label="Previous month" onClick={() => setMonth((m) => subMonths(m, 1))} className="h-11 w-11 rounded-lg border-input">
@@ -109,13 +134,8 @@ export default function CalendarPage() {
             {!(isSameMonth(month, new Date()) && isToday(selected)) && (
               <Button variant="outline" onClick={() => goTo(new Date())} className="h-11 rounded-lg border-input font-bold">Today</Button>
             )}
-            <p aria-live="polite" className="w-full text-[13px] leading-[18px] text-muted-foreground sm:ml-auto sm:w-auto">
-              {loading ? "Loading visits…" : summary.total === 0 ? "No visits recorded this month" : (
-                <>
-                  <span className="font-bold text-foreground">{summary.total}</span> visit{summary.total === 1 ? "" : "s"}
-                  {summary.busiest && <> · busiest {format(summary.busiest.date, "EEE d MMM")} ({summary.busiest.count})</>}
-                </>
-              )}
+            <p className="w-full text-[13px] leading-[18px] text-muted-foreground sm:ml-auto sm:w-auto">
+              {loading ? "Loading visits…" : summary.total === 0 ? "No visits recorded this month" : "Choose a day to see who came"}
             </p>
           </div>
 
@@ -145,7 +165,7 @@ export default function CalendarPage() {
                       aria-pressed={isSel}
                       onClick={() => { setSelected(d); if (!inMonth) setMonth(startOfMonth(d)); }}
                       className={cn(
-                        "relative flex min-h-[64px] flex-col items-start justify-between rounded-lg border p-2 text-left transition-colors sm:min-h-[84px]",
+                        "relative flex min-h-[60px] flex-col items-start justify-between rounded-lg border p-2 text-left transition-colors sm:min-h-[76px]",
                         BUSY_BG[level],
                         inMonth ? "border-border" : "border-transparent bg-secondary text-muted-foreground",
                         isSel && "border-primary ring-2 ring-primary",
@@ -160,8 +180,9 @@ export default function CalendarPage() {
                       </span>
                       <span className="flex w-full flex-wrap items-end justify-between gap-1">
                         {count > 0 && (
-                          <span className="text-xs font-bold text-foreground">
-                            {count}<span className="hidden font-semibold text-muted-foreground sm:inline"> visit{count === 1 ? "" : "s"}</span>
+                          <span className="flex items-baseline gap-1 leading-none">
+                            <span className={cn("text-sm font-extrabold tabular-nums sm:text-lg", inMonth ? "text-foreground" : "text-muted-foreground")}>{count}</span>
+                            <span className="hidden text-[11px] font-semibold text-muted-foreground md:inline">visit{count === 1 ? "" : "s"}</span>
                           </span>
                         )}
                         {due > 0 && (
@@ -187,7 +208,7 @@ export default function CalendarPage() {
         </section>
 
         {/* Selected day */}
-        <section aria-labelledby="day-title" className="w-full shrink-0 rounded-2xl border border-border bg-card shadow-sm xl:sticky xl:top-6 xl:w-[400px]">
+        <section aria-labelledby="day-title" className="w-full rounded-2xl border border-border bg-card shadow-sm xl:sticky xl:top-6 xl:col-start-2 xl:row-span-2 xl:row-start-1">
           <div className="border-b border-border p-4 sm:p-5">
             <h3 id="day-title" className="text-lg font-extrabold leading-[26px] text-foreground">
               {isToday(selected) ? "Today, " : ""}{format(selected, isToday(selected) ? "d MMMM" : "EEEE d MMMM")}
@@ -198,7 +219,7 @@ export default function CalendarPage() {
             </p>
           </div>
 
-          <div className="max-h-[70vh] overflow-y-auto">
+          <div className="max-h-[70vh] overflow-y-auto xl:max-h-[calc(100vh-11rem)]">
             {dayDueBack.length > 0 && (
               <DayGroup title="Residents due back">
                 {dayDueBack.map((r) => (
@@ -228,10 +249,133 @@ export default function CalendarPage() {
             )}
           </div>
         </section>
+
+        {!error && (
+          <div className="grid min-w-0 gap-6 md:grid-cols-2 xl:col-start-1">
+            <ArrivalsByHour insights={insights} loading={loading} month={month} />
+            <ResidentsVisits social={social} loading={loading} month={month} />
+          </div>
+        )}
       </div>
 
       <VisitorProfile visitor={profile} allVisitors={visits} open={!!profile} onOpenChange={(o) => { if (!o) setProfile(null); }} />
     </AppShell>
+  );
+}
+
+function Stat({ label, value, note }: { label: string; value: string; note?: string }) {
+  return (
+    <div className="rounded-xl bg-secondary px-3 py-2.5">
+      <dt className="text-xs font-semibold text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 text-2xl font-extrabold leading-8 tabular-nums text-foreground">
+        {value}
+        {note && <span className="block text-xs font-semibold leading-4 text-muted-foreground">{note}</span>}
+      </dd>
+    </div>
+  );
+}
+
+function InsightCard({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+      <h3 className="text-base font-extrabold leading-6 text-foreground">{title}</h3>
+      <p className="text-[13px] leading-[18px] text-muted-foreground">{description}</p>
+      <div className="mt-4">{children}</div>
+    </section>
+  );
+}
+
+/** Single-series bar chart: arrivals per hour across the month, peak hour named in text. */
+function ArrivalsByHour({ insights, loading, month }: { insights: MonthInsights; loading: boolean; month: Date }) {
+  const { byHour, peakHour } = insights;
+  const used = byHour.map((n, h) => (n > 0 ? h : -1)).filter((h) => h >= 0);
+  const first = Math.min(7, ...(used.length ? used : [7]));
+  const last = Math.max(20, ...(used.length ? used : [20]));
+  const hours = Array.from({ length: last - first + 1 }, (_, i) => first + i);
+  const max = Math.max(1, ...byHour);
+  return (
+    <InsightCard title="When people arrive" description={`Sign-ins by hour, ${format(month, "MMMM")}`}>
+      {loading ? <p className="text-sm text-muted-foreground">Loading…</p> : peakHour === null ? (
+        <p className="text-sm text-muted-foreground">No arrivals recorded this month.</p>
+      ) : (
+        <>
+          <p className="flex items-center gap-2 text-sm text-foreground">
+            <Clock aria-hidden className="h-4 w-4 text-primary" />
+            Busiest from <span className="font-bold">{hourLabel(peakHour)} to {hourLabel((peakHour + 1) % 24)}</span>
+          </p>
+          <div role="img" aria-label={`Arrivals by hour. Busiest ${hourLabel(peakHour)} with ${byHour[peakHour]} arrivals.`} className="mt-4">
+            <div className="flex h-28 items-end gap-[2px] border-b border-border">
+              {hours.map((h) => (
+                <div key={h} className="group relative flex h-full flex-1 items-end">
+                  <div
+                    className={cn("w-full rounded-t-[4px]", h === peakHour ? "bg-primary" : "bg-primary/45")}
+                    style={{ height: `${(byHour[h] / max) * 100}%`, minHeight: byHour[h] ? 2 : 0 }}
+                  />
+                  <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-2 py-1 text-xs font-semibold text-background shadow group-hover:block">
+                    {hourLabel(h)}: {byHour[h]}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div aria-hidden className="mt-1 flex gap-[2px] text-[11px] text-muted-foreground">
+              {hours.map((h) => <span key={h} className="flex-1 text-center">{(h - first) % 3 === 0 ? hourLabel(h).replace(" ", "") : ""}</span>)}
+            </div>
+          </div>
+          <ul className="sr-only">{hours.map((h) => <li key={h}>{hourLabel(h)}: {byHour[h]} arrivals</li>)}</ul>
+        </>
+      )}
+    </InsightCard>
+  );
+}
+
+/** Who is getting visitors, and who is not — a wellbeing prompt for care staff. */
+function ResidentsVisits({ social, loading, month }: { social: MonthInsights; loading: boolean; month: Date }) {
+  const [showAll, setShowAll] = useState(false);
+  const top = social.topResidents;
+  const none = social.residentsWithoutVisits;
+  const max = Math.max(1, ...top.map((r) => r.count));
+  const shown = showAll ? none : none.slice(0, 6);
+  return (
+    <InsightCard title="Residents and their visitors" description={`Social visits in ${format(month, "MMMM")} (visitors only)`}>
+      {loading ? <p className="text-sm text-muted-foreground">Loading…</p> : (
+        <div className="space-y-4">
+          {top.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No social visits recorded this month.</p>
+          ) : (
+            <ol className="space-y-2.5">
+              {top.map((r) => (
+                <li key={r.name} className="grid grid-cols-[minmax(0,9rem)_1fr_auto] items-center gap-3 text-sm">
+                  <span className="truncate font-semibold text-foreground">{r.name}</span>
+                  <span aria-hidden className="h-2 rounded-full bg-secondary">
+                    <span className="block h-2 rounded-full bg-primary/70" style={{ width: `${(r.count / max) * 100}%` }} />
+                  </span>
+                  <span className="text-xs font-bold tabular-nums text-muted-foreground">{r.count}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+          {none.length > 0 && (
+            <div className="rounded-xl border border-[hsl(var(--warning)/0.35)] bg-[hsl(var(--warning)/0.08)] p-3">
+              <p className="flex items-center gap-2 text-sm font-bold text-warning-strong">
+                <AlertTriangle aria-hidden className="h-4 w-4 shrink-0" />
+                {none.length} resident{none.length === 1 ? " has" : "s have"} had no visitors this month
+              </p>
+              <p className="mt-1 text-[13px] leading-5 text-foreground">
+                {shown.join(", ")}
+                {none.length > 6 && (
+                  <button onClick={() => setShowAll((s) => !s)} className="ml-1 font-bold text-primary underline-offset-4 hover:underline">
+                    {showAll ? "Show fewer" : `and ${none.length - 6} more`}
+                  </button>
+                )}
+              </p>
+            </div>
+          )}
+          {top.length > 0 && none.length === 0 && (
+            <p className="flex items-center gap-2 text-[13px] text-muted-foreground"><Users aria-hidden className="h-4 w-4" />Every resident has had at least one visitor.</p>
+          )}
+        </div>
+      )}
+    </InsightCard>
   );
 }
 

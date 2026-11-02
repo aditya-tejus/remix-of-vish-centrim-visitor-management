@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { indexByDay, summariseMonth, busyLevel, durationLabel, dayKey } from "@/lib/visitCalendar";
+import { indexByDay, summariseMonth, busyLevel, durationLabel, dayKey, monthInsights, hourLabel } from "@/lib/visitCalendar";
 import type { Visitor } from "@/types/visitor";
 
 let n = 0;
@@ -42,6 +42,25 @@ describe("visit calendar", () => {
     expect(busyLevel(7, 10)).toBe(3);
     expect(busyLevel(10, 10)).toBe(4);
     expect(busyLevel(3, 0)).toBe(0);
+  });
+
+  it("summarises arrivals, people and residents' visitors for the month", () => {
+    const withHosts = [
+      { ...v("2026-11-02T14:10:00"), whomToVisit: "Leslie Hall", email: "a@x" },
+      { ...v("2026-11-03T14:40:00"), whomToVisit: "leslie hall ", email: "a@x" },
+      { ...v("2026-11-03T09:00:00", "contractor"), whomToVisit: "Leslie Hall", email: "c@x" },
+      { ...v("2026-10-30T14:00:00"), whomToVisit: "Ruth Ng", email: "b@x" },
+    ] as Visitor[];
+    const ins = monthInsights(indexByDay(withHosts), new Date("2026-11-15"), ["Leslie Hall", "Ruth Ng"], new Date("2026-11-04T12:00:00"));
+    expect(ins.byHour[14]).toBe(2);
+    expect(ins.peakHour).toBe(14);
+    expect(ins.uniquePeople).toBe(2);
+    expect(ins.dailyAverage).toBe(0.8); // 3 visits over 4 elapsed days
+    expect(ins.topResidents).toEqual([{ name: "Leslie Hall", count: 2 }]); // contractors are not social visits
+    expect(ins.residentsWithoutVisits).toEqual(["Ruth Ng"]); // October visit does not count
+    expect(monthInsights(indexByDay(withHosts), new Date("2026-12-01"), ["Ruth Ng"], new Date("2026-11-04")).residentsWithoutVisits).toEqual([]);
+    expect(hourLabel(0)).toBe("12 AM");
+    expect(hourLabel(14)).toBe("2 PM");
   });
 
   it("describes visit length plainly", () => {
