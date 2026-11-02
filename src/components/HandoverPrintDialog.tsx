@@ -266,7 +266,7 @@ function Row({ children, attention, muted }: { children: ReactNode; attention?: 
   return (
     <li className={cn(
       "flex items-start gap-3 px-4 py-3 text-sm sm:px-5",
-      attention && "border-l-4 border-l-[hsl(var(--warning))] bg-[hsl(var(--warning)/0.06)] pl-3 sm:pl-4",
+      attention && "bg-warning-subtle/50",
       muted && "py-2.5",
     )}>
       {children}

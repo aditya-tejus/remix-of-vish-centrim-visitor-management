@@ -59,7 +59,7 @@ export function AlertCards({
       icon: <Clock className="h-5 w-5 text-destructive" />,
       title: `${overstayed.length} visitor${overstayed.length > 1 ? "s" : ""} overstayed`,
       subtitle: longestOverstay ? `Longest: ${longestOverstay} over` : "",
-      cta: "View All",
+      cta: "View all",
       onAction: onFilterOverstayed,
     },
     {

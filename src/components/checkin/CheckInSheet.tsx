@@ -156,7 +156,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd, initialType, prefill }
       >
         {/* Header */}
         <SheetHeader className="px-6 pt-5 pb-4 shrink-0 border-b border-border bg-card">
-          <SheetTitle className="flex items-center gap-2 pr-8 text-xl font-semibold"><UserPlus aria-hidden="true" className="h-5 w-5 text-primary" /> Check In</SheetTitle>
+          <SheetTitle className="flex items-center gap-2 pr-8 text-xl font-semibold"><UserPlus aria-hidden="true" className="h-5 w-5 text-primary" /> Check in</SheetTitle>
           <SheetDescription className="text-sm text-muted-foreground">{currentSite?.name || "Current site"}</SheetDescription>
         </SheetHeader>
 
@@ -174,7 +174,7 @@ export function CheckInSheet({ open, onOpenChange, onAdd, initialType, prefill }
               {flow.badgePrintingEnabled && successBadge && (
                 <div className="flex gap-2.5 pt-2">
                   <Button variant="outline" className="gap-2 rounded-xl" onClick={() => issueBadge(successBadge, { visitorId: createdVisitorId, siteId: currentSiteId, siteName: currentSite?.name })}>
-                    <Printer className="h-4 w-4" /> Print Badge
+                    <Printer className="h-4 w-4" /> Print badge
                   </Button>
                   <Button className="rounded-xl" onClick={handleClose}>Done</Button>
                 </div>

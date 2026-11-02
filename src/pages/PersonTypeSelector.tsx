@@ -46,8 +46,8 @@ export default function PersonTypeSelector() {
   return (
     <>
       <AppShell
-        title="New Check-In"
-        subtitle="Select the type of person checking in"
+        title="Check in"
+        subtitle="Choose who is arriving."
         mainClassName="p-6"
       >
             <div className="max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -61,7 +61,7 @@ export default function PersonTypeSelector() {
                     <pt.icon className="h-6 w-6" />
                   </div>
                   <div className="flex-1">
-                    <span className="text-lg font-semibold text-foreground">{pt.label}</span>
+                    <span className="text-lg font-extrabold text-foreground">{pt.label}</span>
                     <p className="text-[13px] text-muted-foreground mt-0.5">{pt.description}</p>
                   </div>
                   <ArrowRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -78,7 +78,7 @@ export default function PersonTypeSelector() {
                   <QrCode className="h-6 w-6" />
                 </div>
                 <div className="flex-1">
-                  <span className="text-lg font-semibold text-foreground">QR Fast Lane</span>
+                  <span className="text-lg font-extrabold text-foreground">QR Fast Lane</span>
                   <p className="text-[13px] text-muted-foreground mt-0.5">Scan a returning visitor's QR code for quick check-in</p>
                 </div>
                 <ArrowRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />

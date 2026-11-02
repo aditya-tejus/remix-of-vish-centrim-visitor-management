@@ -398,7 +398,7 @@ export default function KioskCheckIn() {
                 })
               }
             >
-              Print Badge
+              Print badge
             </Button>
           ) : undefined
         }
@@ -1303,14 +1303,14 @@ export default function KioskCheckIn() {
                 disabled={(flow.privacyApplies && !flow.privacyAcknowledged) || submitted}
                 className="flex-1 h-14 text-base gap-2 bg-success hover:bg-success/90 text-success-foreground"
               >
-                ✓ Complete Check In
+                ✓ Complete Check in
               </Button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Start Over button removed — available in sticky header */}
+      {/* Start over button removed — available in sticky header */}
 
       {watchlistEntry && (
         <WatchlistAlertDialog

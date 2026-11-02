@@ -262,7 +262,7 @@ export function ResidentOutingDialog({
     <Sheet open={open} onOpenChange={handleClose}>
       <SheetContent side="right" className="sm:max-w-none sm:w-[50vw] w-full p-0 gap-0 flex flex-col overflow-hidden">
         <SheetHeader className="px-6 pt-5 pb-3 shrink-0 border-b border-border">
-          <SheetTitle className="text-lg font-semibold text-foreground">{independent ? "Record reported absence" : "Record outing"}</SheetTitle>
+          <SheetTitle className="text-lg font-extrabold text-foreground">{independent ? "Record reported absence" : "Record outing"}</SheetTitle>
           <SheetDescription>{independent ? "Optional information shared by the resident. Location is not physically confirmed." : "Record departure details under the resident’s individual support arrangements."} Times: {timeZone}.</SheetDescription>
 
           {/* Mode toggle - only show after resident selected */}

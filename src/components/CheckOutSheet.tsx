@@ -259,7 +259,7 @@ export function CheckOutSheet({
             <div className="flex items-center justify-between">
               <SheetTitle className="flex items-center gap-2 text-[16px]">
                 <LogOut className="h-4.5 w-4.5 text-checkout" />
-                Check Out
+                Check out
               </SheetTitle>
               <span className="text-[12px] text-muted-foreground font-medium">
                 {checkedInVisitors.length} on-site
@@ -318,7 +318,7 @@ export function CheckOutSheet({
                           {v.firstName} {v.surname}
                         </p>
                         <p className="text-[12px] text-muted-foreground">
-                          In {format(v.checkInTime, "hh:mm a")} · {getDuration(v.checkInTime)}
+                          In {format(v.checkInTime, "h:mm a")} · {getDuration(v.checkInTime)}
                           {keysFor(v.id).length > 0 ? " · key still out" : ""}
                         </p>
                       </div>
@@ -622,7 +622,7 @@ export function CheckOutSheet({
                           <div key={i} className="px-3.5 py-2.5 flex items-center justify-between opacity-60">
                             <p className="text-[13px] text-foreground">{c.name || `Person ${i + 1}`}</p>
                             <span className="text-[11px] text-muted-foreground">
-                              Left {format(new Date(c.checkedOutAt), "hh:mm a")}
+                              Left {format(new Date(c.checkedOutAt), "h:mm a")}
                             </span>
                           </div>
                         ) : (
@@ -675,7 +675,7 @@ export function CheckOutSheet({
                 ) : (
                   <LogOut className="h-4 w-4" />
                 )}
-                Check Out {selectedVisitor.firstName}
+                Check out {selectedVisitor.firstName}
               </Button>
             </div>
           )}

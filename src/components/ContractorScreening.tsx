@@ -493,13 +493,13 @@ export function ContractorScreening({
       )}
 
       {reason && (
-        <div className={`rounded-xl border-2 p-3 flex items-start gap-2 ${blocked ? "border-destructive/40 bg-destructive/5" : "border-amber-500/40 bg-amber-500/5"}`}>
-          <ShieldAlert className={`h-4 w-4 shrink-0 mt-0.5 ${blocked ? "text-destructive" : "text-amber-600"}`} />
+        <div className={`rounded-xl border-2 p-3 flex items-start gap-2 ${blocked ? "border-destructive/40 bg-destructive/5" : "border-warning/40 bg-warning-subtle"}`}>
+          <ShieldAlert className={`h-4 w-4 shrink-0 mt-0.5 ${blocked ? "text-destructive" : "text-warning-strong"}`} />
           <div>
-            <p className={`text-[12px] font-bold ${blocked ? "text-destructive" : "text-amber-700"}`}>
+            <p className={`text-[12px] font-bold ${blocked ? "text-destructive" : "text-warning-strong"}`}>
               {blocked ? "Please see a staff member" : "Staff review"}
             </p>
-            <p className={`text-[11px] ${blocked ? "text-destructive/80" : "text-amber-700/80"}`}>{reason}</p>
+            <p className={`text-[11px] ${blocked ? "text-destructive/80" : "text-warning-strong"}`}>{reason}</p>
           </div>
         </div>
       )}

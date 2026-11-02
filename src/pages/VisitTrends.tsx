@@ -1,6 +1,5 @@
 import { useMemo } from "react";
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppShell } from "@/components/AppShell";
 import { Card, CardContent } from "@/components/ui/card";
 import { useVisitors } from "@/hooks/useVisitors";
 import { format, subDays, isSameDay, eachDayOfInterval, startOfWeek, endOfWeek } from "date-fns";
@@ -53,23 +52,11 @@ export default function VisitTrends() {
   };
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <header className="sticky top-0 z-10 bg-card border-b border-border">
-            <div className="flex items-center gap-4 px-6 h-14">
-              <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-              <div>
-                <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-primary" /> Visit Trends
-                </h1>
-                <p className="text-[13px] text-muted-foreground">Daily and weekly visit patterns by person type</p>
-              </div>
-            </div>
-          </header>
-
-          <main className="p-6 space-y-6">
+    <AppShell
+      title="Visit trends"
+      subtitle="Daily and weekly visits by person type."
+      mainClassName="p-6 space-y-6"
+    >
             {loading ? (
               <div className="space-y-6">
                 <Skeleton className="h-[350px] w-full" />
@@ -123,9 +110,6 @@ export default function VisitTrends() {
                 </Card>
               </>
             )}
-          </main>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+          </AppShell>
   );
 }

@@ -210,7 +210,7 @@ export default function VisitorAnalytics() {
               <div className="flex items-center gap-4">
                 <SidebarTrigger />
                 <div>
-                  <h1 className="text-lg font-semibold text-foreground">Visitor Analytics</h1>
+                  <h1 className="text-lg font-extrabold text-foreground">Visitor Analytics</h1>
                   <p className="text-xs text-muted-foreground">
                     Resident social engagement & visitor insights
                   </p>

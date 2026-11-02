@@ -181,7 +181,7 @@ export default function KioskQRScan() {
               We have your details ready. There are still a few questions to confirm before you are checked in.
             </p>
             <Button onClick={() => continueToCheckIn(result.prefill)} className="w-full min-h-kiosk h-auto whitespace-normal py-3 text-xl gap-2">
-              <UserRoundPlus className="h-5 w-5" /> Continue Check In
+              <UserRoundPlus className="h-5 w-5" /> Continue Check in
             </Button>
           </>
         )}
@@ -196,7 +196,7 @@ export default function KioskQRScan() {
               Please check the code or ask reception for help.
             </p>
             {mode !== "checkout" && <Button onClick={() => continueToCheckIn()} className="w-full min-h-kiosk h-auto whitespace-normal py-3 text-xl gap-2">
-              <UserRoundPlus className="h-5 w-5" /> Check In Manually
+              <UserRoundPlus className="h-5 w-5" /> Check in Manually
             </Button>}
           </>
         )}

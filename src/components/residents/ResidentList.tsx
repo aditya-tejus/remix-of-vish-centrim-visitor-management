@@ -66,10 +66,9 @@ export function ResidentList(p: Props) {
           const loc = residentLocation(r, p.now);
           const overdue = loc === "overdue";
           return (
-            <li key={r.visitorId} className={cn(overdue && "bg-[hsl(var(--warning)/0.05)]")}>
+            <li key={r.visitorId} className={cn(overdue && "bg-warning-subtle/50")}>
               <div className={cn(
                 "grid grid-cols-1 gap-3 px-4 py-3.5 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_236px] xl:items-center xl:gap-x-4",
-                overdue && "border-l-4 border-l-[hsl(var(--warning))] pl-3",
               )}>
                 <Person r={r} loc={loc} p={p} />
                 <div className="grid grid-cols-2 gap-3 pl-[52px] xl:contents">

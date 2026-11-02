@@ -120,11 +120,11 @@ export function LockGovernanceTab() {
             <div className="space-y-1.5">
               {lockableSections.map((section) => (
                 <div key={section.key} className={`rounded-lg border p-3 flex items-center justify-between transition-colors ${
-                  locks[section.key] ? "border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20" : "border-border"
+                  locks[section.key] ? "border-warning/40 dark:border-warning/40 bg-warning-subtle dark:bg-warning-subtle" : "border-border"
                 }`}>
                   <div className="flex items-center gap-2.5">
                     {locks[section.key] ? (
-                      <Lock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                      <Lock className="h-3.5 w-3.5 text-warning-strong dark:text-warning-strong" />
                     ) : (
                       <div className="h-3.5 w-3.5" />
                     )}
@@ -140,11 +140,11 @@ export function LockGovernanceTab() {
           </div>
 
           {lockedCount > 0 && (
-            <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 flex items-start gap-2.5">
-              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="rounded-lg bg-warning-subtle dark:bg-warning-subtle border border-warning/40 dark:border-warning/40 p-3 flex items-start gap-2.5">
+              <AlertTriangle className="h-4 w-4 text-warning-strong dark:text-warning-strong shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">Locked sections require admin override</p>
-                <p className="text-[10px] text-amber-600 dark:text-amber-500 mt-0.5">Changes to locked sections will require an admin to provide an override reason before saving.</p>
+                <p className="text-xs font-semibold text-warning-strong dark:text-warning-strong">Locked sections require admin override</p>
+                <p className="text-[10px] text-warning-strong dark:text-warning-strong mt-0.5">Changes to locked sections will require an admin to provide an override reason before saving.</p>
               </div>
             </div>
           )}

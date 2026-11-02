@@ -240,11 +240,11 @@ export function PresenceList(p: Props) {
         In {format(row.checkInTime, "h:mm a")}{row.checkOutTime ? ` · out ${format(row.checkOutTime, "h:mm a")}` : ""}
       </p>
       <div className="col-start-2 flex flex-wrap gap-2 xl:col-start-auto xl:w-[264px] xl:justify-end">
-        <Button variant="ghost" onClick={() => printBadge({ name: row.name, type: v.type, visiting: v.whomToVisit || undefined, date: row.checkInTime, companionOf: row.withPrimaryName || undefined }, v.id)} className="h-11 gap-2 rounded-lg font-bold">
+        <Button variant="ghost" onClick={() => printBadge({ name: row.name, type: v.type, visiting: v.whomToVisit || undefined, date: row.checkInTime, companionOf: row.withPrimaryName || undefined }, v.id)} className="h-11 gap-2 rounded-lg px-3 font-bold">
           <Printer aria-hidden className="h-4 w-4" />Print badge
         </Button>
         {!row.checkOutTime && p.canCheckOut && row.partyId && (
-          <Button variant="outline" onClick={() => p.onCheckOutParty(row.partyId!)} className="h-11 gap-2 rounded-lg border-input font-bold">
+          <Button variant="outline" onClick={() => p.onCheckOutParty(row.partyId!)} className="h-11 gap-2 rounded-lg border-input px-3 font-bold">
             <LogOut aria-hidden className="h-4 w-4" />Check out
           </Button>
         )}
@@ -298,11 +298,10 @@ export function PresenceList(p: Props) {
           const initials = `${v.firstName?.[0] ?? ""}${v.surname?.[0] ?? ""}`.toUpperCase();
           const companions = v.type === "resident" ? [] : companionRowsForVisitor(v, p.companionParties);
           return (
-            <li key={v.id} className={cn(attention && "bg-[hsl(var(--warning)/0.05)]")}>
+            <li key={v.id} className={cn(attention && "bg-warning-subtle/50")}>
               <div className={cn(
                 "grid grid-cols-[44px_minmax(0,1fr)] items-start gap-x-3 gap-y-3 px-3 py-3.5 sm:px-4",
                 "xl:grid-cols-[44px_minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_auto] xl:items-center xl:gap-x-4",
-                attention && "border-l-4 border-l-[hsl(var(--warning))] pl-2 sm:pl-3",
               )}>
                 <span className="flex h-10 items-center justify-center">
                   {selectable && here ? (

@@ -10,7 +10,7 @@ import { ActiveNowList } from "@/components/workbench/ActiveNowList";
 import { PracticeDataNotice } from "@/components/PracticeDataNotice";
 import { DayGroupedHistory } from "@/components/workbench/DayGroupedHistory";
 import { Button } from "@/components/ui/button";
-import { QuickAction, MetricStrip, AttentionRow } from "@/components/ui/reception-primitives";
+import { AttentionRow, StatTile } from "@/components/ui/reception-primitives";
 import { UserPlus, LogOut, DoorOpen, Clock, Users, AlertTriangle, ShieldAlert } from "lucide-react";
 import { useOccupancy } from "@/hooks/useOccupancy";
 import { useOutbreakMode } from "@/hooks/useOutbreakMode";
@@ -48,12 +48,13 @@ export default function HomeWorkbench() {
   }, []);
 
   const activeVisitors = useMemo(
-    () => visitors.filter((v) => v.status === "checked-in"),
+    // Residents live here: a resident at home is not "on site" as a visitor.
+    () => visitors.filter((v) => v.type !== "resident" && v.status === "checked-in"),
     [visitors]
   );
 
   const checkedOutVisitors = useMemo(
-    () => visitors.filter((v) => v.status === "checked-out"),
+    () => visitors.filter((v) => v.type !== "resident" && v.status === "checked-out"),
     [visitors]
   );
 
@@ -71,7 +72,21 @@ export default function HomeWorkbench() {
     <>
     <AppShell
             title="Today"
-            subtitle={format(currentTime, "EEEE, dd MMMM yyyy")}
+            eyebrow={format(currentTime, "EEEE d MMMM yyyy")}
+            subtitle="What needs doing at reception right now."
+            actions={<>
+              <Button onClick={() => setAddDialogOpen(true)} className="gap-2"><UserPlus aria-hidden className="h-4 w-4" />Check in</Button>
+              <Button variant="outline" onClick={() => setCheckOutDialogOpen(true)} className="gap-2"><LogOut aria-hidden className="h-4 w-4" />Check out</Button>
+              <Button variant="outline" onClick={() => setResidentLeaveOpen(true)} className="gap-2"><DoorOpen aria-hidden className="h-4 w-4" />Record outing</Button>
+            </>}
+            headerContent={
+              <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
+                <StatTile label="On site now" value={activeVisitors.length} icon={Users} className="bg-secondary/60 shadow-none" />
+                <StatTile label="Checked out" value={checkedOutVisitors.length} icon={LogOut} className="bg-secondary/60 shadow-none" />
+                <StatTile label="Residents out" value={residentsOnLeave} icon={DoorOpen} className="bg-secondary/60 shadow-none" />
+                <StatTile label="Past expected time" value={overstayedCount} icon={Clock} tone={overstayedCount > 0 ? "attention" : "neutral"} className={overstayedCount > 0 ? "shadow-none" : "bg-secondary/60 shadow-none"} />
+              </div>
+            }
             overstayedCount={overstayedCount}
             overdueCount={overdueResidents}
             draftCount={draftCount}
@@ -140,34 +155,19 @@ export default function HomeWorkbench() {
               </div>
             )}
 
-            <section aria-label="Reception actions" className="flex flex-wrap items-center gap-2">
-              <QuickAction icon={UserPlus} onClick={() => setAddDialogOpen(true)}>Check In</QuickAction>
-              <QuickAction icon={LogOut} variant="outline" onClick={() => setCheckOutDialogOpen(true)}>Check Out</QuickAction>
-              <QuickAction icon={DoorOpen} variant="outline" onClick={() => setResidentLeaveOpen(true)}>Resident Leave{residentsOnLeave > 0 ? ` (${residentsOnLeave})` : ""}</QuickAction>
-            </section>
-            <MetricStrip items={[
-              { label: "On site now", value: activeVisitors.length, icon: Users },
-              { label: "Signed out", value: checkedOutVisitors.length, icon: LogOut },
-              { label: "Residents away", value: residentsOnLeave, icon: DoorOpen },
-              { label: "Overdue visits", value: overstayedCount, icon: Clock, attention: overstayedCount > 0 },
-            ]} />
-
             {/* Needs attention */}
-            <section className="border-b border-border pb-3">
-              <div className="flex items-center justify-between py-2">
-                <h2 className="text-lg font-semibold text-foreground">Needs attention</h2>
-                <Button variant="outline"
-                  onClick={() => navigate("/evacuation")}
-                  className="inline-flex min-h-touch items-center gap-2 rounded-lg border border-destructive/30 px-3 text-[13px] font-medium text-destructive-strong hover:bg-destructive/10"
-                >
+            <section aria-labelledby="attention-title" className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 id="attention-title" className="text-lg font-extrabold text-foreground">Needs attention</h2>
+                <Button variant="destructive-outline" onClick={() => navigate("/evacuation")} className="gap-2">
                   <ShieldAlert className="h-4 w-4" aria-hidden="true" /> Emergency roll call
                 </Button>
               </div>
-              <ul className="divide-y divide-border">
+              <ul className="mt-2 divide-y divide-border">
                 {[
-                  { label: "Visitors still on site past their expected time", count: overstayedCount, path: "/visit-list", tone: "text-destructive-strong" },
-                  { label: "Residents overdue back from leave", count: overdueResidents, path: "/residents", tone: "text-warning-strong" },
-                  { label: "Leave requests waiting for approval", count: pendingApprovals, path: "/residents", tone: "text-warning-strong" },
+                  { label: "Visitors still on site past their expected time", count: overstayedCount, path: "/visit-list" },
+                  { label: "Residents overdue back from an outing", count: overdueResidents, path: "/residents?view=expected" },
+                  { label: "Leave requests waiting for approval", count: pendingApprovals, path: "/residents" },
                 ].map((row) => (
                   <li key={row.label}>
                     <AttentionRow label={row.label} count={row.count} onClick={() => navigate(row.path)} />
@@ -178,8 +178,6 @@ export default function HomeWorkbench() {
                 <p className="py-1 text-sm text-muted-foreground">Nothing outstanding right now.</p>
               )}
             </section>
-
-
 
             {/* Two-column layout: Active Now + History */}
             <div className="space-y-6">

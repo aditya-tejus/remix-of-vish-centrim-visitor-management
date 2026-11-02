@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -74,11 +73,12 @@ export function AppHeader({
 
   return (
     <header className="sticky top-0 z-10 bg-card border-b border-border">
-      <div className="flex items-center justify-between gap-3 px-4 sm:px-6 min-h-20 py-3 flex-wrap">
+      <div className="flex items-center justify-between gap-3 px-4 sm:px-6 min-h-16 py-2.5 flex-wrap">
         {/* Left: sidebar trigger + page title */}
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <SidebarTrigger aria-label="Toggle navigation" className="min-h-touch min-w-touch text-muted-foreground hover:text-foreground shrink-0" />
-          {title && <PageHeader title={title} description={subtitle} icon={TitleIcon} iconClassName={titleIconClassName} className="pb-0" />}
+          {/* The page names itself in the body (PageHeader); the bar shows where you are. */}
+          {title && <p className="truncate text-base font-bold text-foreground">{title}</p>}
 
         </div>
 
@@ -88,7 +88,7 @@ export function AppHeader({
           <div className="hidden xl:flex items-center gap-1.5 mr-1">
             <Clock className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
             <span className="text-sm font-mono font-medium text-muted-foreground tabular-nums">
-              {format(now, "hh:mm a")}
+              {format(now, "h:mm a")}
             </span>
           </div>
 

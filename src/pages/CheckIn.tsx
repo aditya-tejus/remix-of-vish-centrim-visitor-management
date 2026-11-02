@@ -29,7 +29,7 @@ export default function CheckIn() {
             <div className="flex items-center gap-4 px-6 py-4">
               <SidebarTrigger />
               <div className="flex-1">
-                <h1 className="text-lg font-semibold text-foreground">Check-In</h1>
+                <h1 className="text-lg font-extrabold text-foreground">Check-In</h1>
                 <p className="text-xs text-muted-foreground">Quick visitor check-in</p>
               </div>
               <Button onClick={() => setAddDialogOpen(true)} className="gap-1.5">
@@ -40,7 +40,7 @@ export default function CheckIn() {
           <main className="p-6 flex items-center justify-center min-h-[60vh]">
             <div className="text-center space-y-4">
               <UserPlus className="h-12 w-12 mx-auto text-primary" aria-hidden />
-              <h2 className="text-xl font-semibold text-foreground">Ready to Check In</h2>
+              <h2 className="text-xl font-semibold text-foreground">Ready to Check in</h2>
               <p className="text-sm text-muted-foreground max-w-md">
                 Register a new visitor, contractor, or staff member. You can also scan a returning visitor's QR code for instant check-in.
               </p>

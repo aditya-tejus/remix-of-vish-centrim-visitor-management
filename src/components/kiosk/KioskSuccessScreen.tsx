@@ -12,7 +12,7 @@ interface KioskSuccessScreenProps {
   accentColor?: "success" | "warning" | "info" | "primary";
   qrCode?: string;
   companionCount?: number;
-  /** Optional extra action rendered above the return button (e.g. Print Badge) */
+  /** Optional extra action rendered above the return button (e.g. Print badge) */
   extraAction?: React.ReactNode;
 }
 

@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
-import { AppSidebar } from "@/components/AppSidebar";
-import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppShell } from "@/components/AppShell";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -121,28 +120,12 @@ export default function PresenceLog() {
   };
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset className="flex-1 min-w-0">
-          <header className="sticky top-0 z-10 bg-card border-b border-border">
-            <div className="flex items-center justify-between px-6 h-14">
-              <div className="flex items-center gap-4">
-                <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-                <div>
-                  <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-                    <ClipboardList className="h-5 w-5 text-primary" /> Presence Log
-                  </h1>
-                  <p className="text-[13px] text-muted-foreground">Complete record of all check-ins and check-outs</p>
-                </div>
-              </div>
-              <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5">
-                <Download className="h-3.5 w-3.5" /> Export CSV
-              </Button>
-            </div>
-          </header>
-
-          <main className="p-6 space-y-4">
+    <AppShell
+      title="Presence log"
+      subtitle="Every check-in and check-out at this site."
+      actions={<Button variant="outline" onClick={exportCSV} className="gap-2"><Download className="h-4 w-4" aria-hidden />Export CSV</Button>}
+      mainClassName="p-6 space-y-4"
+    >
             <div className="flex flex-wrap items-center gap-3">
               <div className="relative flex-1 min-w-[200px] max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -212,9 +195,6 @@ export default function PresenceLog() {
                 </Table>
               </div>
             )}
-          </main>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+          </AppShell>
   );
 }

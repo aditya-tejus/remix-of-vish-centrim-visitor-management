@@ -62,7 +62,7 @@ export default function AuthPage() {
             <Shield className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-foreground">Staff sign in</h1>
+            <h1 className="text-lg font-extrabold text-foreground">Staff sign in</h1>
             <p className="text-xs text-muted-foreground">Visitor and resident records are restricted</p>
           </div>
         </div>

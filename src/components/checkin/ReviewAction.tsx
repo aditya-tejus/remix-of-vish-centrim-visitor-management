@@ -11,7 +11,7 @@ export function ReviewAction({ issues, failed, saving, onCancel, onSubmit }: {
       <Button variant="ghost" className="min-h-touch" onClick={onCancel} disabled={saving}>Cancel</Button>
       <Button className="min-h-touch gap-2 text-base" onClick={onSubmit} disabled={saving || issues.length > 0}>
         {saving ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : <Check aria-hidden="true" className="h-4 w-4" />}
-        {saving ? "Saving…" : failed ? "Try again" : "Check In"}
+        {saving ? "Saving…" : failed ? "Try again" : "Check in"}
       </Button>
     </div>
   </div>;

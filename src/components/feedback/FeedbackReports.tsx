@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { StatTile } from "@/components/ui/reception-primitives";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -96,25 +97,10 @@ export function FeedbackReports() {
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-border bg-card p-4 border-l-4 border-l-primary">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Overall Rating</p>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-2xl font-bold text-foreground">{overallAvg}</span>
-            <span className="text-xl">{emojis[Math.round(overallAvg) - 1] || "—"}</span>
-          </div>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4 border-l-4 border-l-success">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total Responses</p>
-          <p className="text-2xl font-bold text-foreground mt-1">{filtered.length}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4 border-l-4 border-l-warning">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Unique People</p>
-          <p className="text-2xl font-bold text-foreground mt-1">{uniqueVisitors}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-card p-4 border-l-4 border-l-destructive">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Active Surveys</p>
-          <p className="text-2xl font-bold text-foreground mt-1">{surveys.filter((s) => s.is_active).length}</p>
-        </div>
+        <StatTile label="Overall rating" value={<span className="inline-flex items-center gap-2">{overallAvg}<span className="text-xl" aria-hidden>{emojis[Math.round(overallAvg) - 1] || ""}</span></span>} note="Out of 5" />
+        <StatTile label="Responses" value={filtered.length} />
+        <StatTile label="Different people" value={uniqueVisitors} />
+        <StatTile label="Surveys switched on" value={surveys.filter((s) => s.is_active).length} />
       </div>
 
       {/* Charts */}

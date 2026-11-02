@@ -45,10 +45,10 @@ interface SectionConfig {
 
 const personTypeConfigs: Record<string, Omit<PersonTypeConfig, "sections">> = {
   visitor: { id: "visitor", label: "Visitor Settings", description: "Configure check-in fields, screening, and automation for visitor check-ins.", icon: Users, color: "text-primary", dotColor: "bg-primary/10", visitorType: "visitor" },
-  contractor: { id: "contractor", label: "Contractor Settings", description: "Configure contractor check-in, supplier management, and screening.", icon: HardHat, color: "text-amber-500", dotColor: "bg-amber-500/10", visitorType: "contractor" },
-  resident: { id: "resident", label: "Resident Settings", description: "Configure directory display, leave management, and resident notifications.", icon: Home, color: "text-emerald-500", dotColor: "bg-emerald-500/10", visitorType: "resident" },
-  staff: { id: "staff", label: "Staff Settings", description: "Configure staff check-in fields and badge settings.", icon: UserCog, color: "text-violet-500", dotColor: "bg-violet-500/10", visitorType: "staff" },
-  volunteer: { id: "volunteer", label: "Volunteer Settings", description: "Configure volunteer check-in, screening, and compliance.", icon: Heart, color: "text-rose-500", dotColor: "bg-rose-500/10", visitorType: "volunteer" },
+  contractor: { id: "contractor", label: "Contractor Settings", description: "Configure contractor check-in, supplier management, and screening.", icon: HardHat, color: "text-warning-strong", dotColor: "bg-warning-subtle", visitorType: "contractor" },
+  resident: { id: "resident", label: "Resident Settings", description: "Configure directory display, leave management, and resident notifications.", icon: Home, color: "text-success-strong", dotColor: "bg-success-subtle", visitorType: "resident" },
+  staff: { id: "staff", label: "Staff Settings", description: "Configure staff check-in fields and badge settings.", icon: UserCog, color: "text-info-strong", dotColor: "bg-info-subtle", visitorType: "staff" },
+  volunteer: { id: "volunteer", label: "Volunteer Settings", description: "Configure volunteer check-in, screening, and compliance.", icon: Heart, color: "text-destructive-strong", dotColor: "bg-error-subtle", visitorType: "volunteer" },
 };
 
 function getSections(type: string): SectionConfig[] {
@@ -152,7 +152,7 @@ export function PersonTypeSettings({ type, readOnly = false }: Props) {
           <Icon className={cn("h-5 w-5", config.color)} />
         </div>
         <div>
-          <h2 className="text-lg font-semibold text-foreground">{config.label}</h2>
+          <h2 className="text-lg font-extrabold text-foreground">{config.label}</h2>
           <p className="text-xs text-muted-foreground">{config.description}</p>
         </div>
       </div>

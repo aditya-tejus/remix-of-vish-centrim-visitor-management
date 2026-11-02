@@ -67,7 +67,7 @@ export default function CoverageChecklist() {
 
   return (
     <AppShell
-      title="Coverage Checklist"
+      title="Coverage checklist"
       subtitle="All 36 screens — implementation status"
       mainClassName="p-6 space-y-6"
     >

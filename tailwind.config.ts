@@ -22,8 +22,16 @@ export default {
         foreground: 'hsl(var(--foreground))',
         primary: {
           DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))'
+          foreground: 'hsl(var(--primary-foreground))',
+          hover: 'hsl(var(--primary-hover))',
+          active: 'hsl(var(--primary-active))'
         },
+        ink: 'hsl(var(--ink))',
+        tertiary: 'hsl(var(--text-tertiary))',
+        'success-subtle': 'hsl(var(--success-subtle))',
+        'warning-subtle': 'hsl(var(--warning-subtle))',
+        'info-subtle': 'hsl(var(--info-subtle))',
+        'error-subtle': 'hsl(var(--error-subtle))',
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',
           foreground: 'hsl(var(--secondary-foreground))'
@@ -95,9 +103,10 @@ export default {
         }
       },
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        /* Centrim Life radius scale: sm 4, md 8 (inputs), lg 12 (buttons). */
+        lg: '0.75rem',
+        md: '8px',
+        sm: '4px',
         control: 'var(--radius-control)',
         card: 'var(--radius-card)',
         pill: 'var(--radius-pill)'

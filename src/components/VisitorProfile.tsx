@@ -77,7 +77,7 @@ export function VisitorProfile({
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <SheetTitle className="text-lg font-semibold text-foreground">{fullName}</SheetTitle>
+              <SheetTitle className="text-lg font-extrabold text-foreground">{fullName}</SheetTitle>
               <SheetDescription className="mt-0.5 flex items-center gap-2">
                 <Badge variant="secondary" className="text-[10px] font-semibold uppercase tracking-wider">
                   {visitor.type}
@@ -90,7 +90,7 @@ export function VisitorProfile({
                 ) : (
                   <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
                     <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
-                    Left {visitor.checkOutTime ? format(visitor.checkOutTime, "hh:mm a") : ""}
+                    Left {visitor.checkOutTime ? format(visitor.checkOutTime, "h:mm a") : ""}
                   </span>
                 )}
               </SheetDescription>
@@ -223,8 +223,8 @@ export function VisitorProfile({
                 {recentVisits.map((v) => (
                   <div key={v.id} className="flex items-center justify-between gap-3 px-3 py-2">
                     <span className="text-[12px] text-foreground">
-                      {format(v.checkInTime, "dd MMM")} · {format(v.checkInTime, "hh:mm a")}
-                      {v.checkOutTime ? ` – ${format(v.checkOutTime, "hh:mm a")}` : " – on site"}
+                      {format(v.checkInTime, "dd MMM")} · {format(v.checkInTime, "h:mm a")}
+                      {v.checkOutTime ? ` – ${format(v.checkOutTime, "h:mm a")}` : " – on site"}
                     </span>
                     <span className="text-[11px] text-muted-foreground truncate max-w-[40%]">
                       {v.whomToVisit || ""}

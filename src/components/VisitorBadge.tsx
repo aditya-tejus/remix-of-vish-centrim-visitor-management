@@ -62,7 +62,7 @@ export function VisitorBadge({ visitor, variant = "digital", onPrint }: VisitorB
     return (
       <Button variant="outline" size="sm" className="gap-1.5" onClick={handlePrint}>
         <Download className="h-3.5 w-3.5" />
-        Print Badge
+        Print badge
       </Button>
     );
   }

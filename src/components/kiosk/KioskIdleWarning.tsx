@@ -64,7 +64,7 @@ export function KioskIdleWarning({
 
             <Button
               onClick={onContinue}
-              className="w-full h-14 text-lg font-semibold"
+              className="w-full h-14 text-lg font-extrabold"
             >
               Yes, I'm still here
             </Button>

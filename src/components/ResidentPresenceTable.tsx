@@ -177,7 +177,7 @@ export function ResidentPresenceTable({
             {visitor?.checkOutTime ? (
               <div>
                 <span className="block font-medium text-foreground">{format(visitor.checkOutTime, "dd MMM")}</span>
-                <span className="text-[11px]">{format(visitor.checkOutTime, "hh:mm a")}</span>
+                <span className="text-[11px]">{format(visitor.checkOutTime, "h:mm a")}</span>
               </div>
             ) : (
               <span>—</span>
@@ -227,7 +227,7 @@ export function ResidentPresenceTable({
                 <Clock className="h-3 w-3" />
                 {status === "overdue"
                   ? formatDistanceToNow(visitor.expectedReturnDate, { addSuffix: false }) + " overdue"
-                  : format(visitor.expectedReturnDate, "hh:mm a")
+                  : format(visitor.expectedReturnDate, "h:mm a")
                 }
               </span>
             ) : (

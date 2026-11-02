@@ -37,7 +37,7 @@ const TABS: { id: DirectoryTab; label: string }[] = [
  * tabs with count pills, sentence-case labels, 13px minimum for meta text and no
  * contact details in the list (they stay on the profile).
  *
- * "Check in again" opens the normal Check In form with the person's details filled
+ * "Check in again" opens the normal Check in form with the person's details filled
  * in, so screening, terms, privacy and the watchlist step still apply. The old
  * one-tap Quick Check-In skipped all of them and has been removed.
  */

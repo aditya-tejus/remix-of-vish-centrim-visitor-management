@@ -12,7 +12,7 @@ export default function LeaveRequests() {
             <div className="flex items-center gap-4 px-6 py-4">
               <SidebarTrigger />
               <div className="flex-1">
-                <h1 className="text-lg font-semibold text-foreground">Checkout Requests</h1>
+                <h1 className="text-lg font-extrabold text-foreground">Checkout Requests</h1>
                 <p className="text-xs text-muted-foreground">Review and manage resident checkout requests</p>
               </div>
             </div>

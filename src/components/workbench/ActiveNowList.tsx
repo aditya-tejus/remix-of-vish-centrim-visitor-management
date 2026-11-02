@@ -24,15 +24,15 @@ export function ActiveNowList({ visitors, onCheckOut, onViewAll }: ActiveNowList
   const displayed = sorted.slice(0, 15);
 
   return (
-    <div className="border-y border-border bg-card">
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
         <div className="flex items-center gap-2">
           <Users className="h-5 w-5 text-primary" aria-hidden />
-          <h2 className="text-lg font-semibold text-foreground">On site now</h2>
+          <h2 className="text-lg font-extrabold text-foreground">On site now</h2>
           <span className="text-sm text-muted-foreground">({visitors.length})</span>
         </div>
         <Button variant="ghost" size="sm" className="text-sm gap-1 text-muted-foreground hover:text-foreground" onClick={onViewAll}>
-          View All <ArrowRight className="h-3.5 w-3.5" />
+          View all <ArrowRight className="h-3.5 w-3.5" />
         </Button>
       </div>
 
@@ -62,7 +62,7 @@ export function ActiveNowList({ visitors, onCheckOut, onViewAll }: ActiveNowList
                   <div className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
                     <span>{cfg.label}</span>
                     <span>·</span>
-                    <span>In {format(v.checkInTime, "hh:mm a")}</span>
+                    <span>In {format(v.checkInTime, "h:mm a")}</span>
                     {v.whomToVisit && (
                       <>
                         <span>·</span>
@@ -83,7 +83,7 @@ export function ActiveNowList({ visitors, onCheckOut, onViewAll }: ActiveNowList
                     onClick={() => onCheckOut(v.id)}
                   >
                     <LogOut className="h-3.5 w-3.5" />
-                    Check Out
+                    Check out
                   </Button>
                 </div>
               </div>

@@ -50,7 +50,7 @@ export function KioskPreview({ personType }: { personType: string }) {
     <div className="space-y-3">
       <div className="rounded-xl border border-border bg-card p-4">
         <p className="text-[12px] uppercase tracking-wide text-muted-foreground">Kiosk welcome</p>
-        <p className="text-lg font-semibold text-foreground">
+        <p className="text-lg font-extrabold text-foreground">
           Welcome to {siteName || "this site"}
         </p>
         <p className="text-[13px] text-muted-foreground">

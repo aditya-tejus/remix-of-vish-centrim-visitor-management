@@ -13,8 +13,8 @@ import { KioskActivation, KioskDeviceBlocked } from "@/pages/kiosk/KioskActivati
 import { Loader2, Building2 } from "lucide-react";
 
 const ROUTE_LABELS: Record<string, string> = {
-  "/kiosk/checkin": "Check In",
-  "/kiosk/checkout": "Check Out",
+  "/kiosk/checkin": "Check in",
+  "/kiosk/checkout": "Check out",
   "/kiosk/resident-leave": "Resident Leave",
   "/kiosk/qr-scan": "Scan QR Code",
   "/kiosk/evacuation": "Emergency Roll Call",
@@ -98,7 +98,7 @@ function KioskShell({ siteName, deviceName }: { siteName: string | null; deviceN
             onClick={() => navigate("/kiosk/home")}
             className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground transition-colors text-lg font-medium min-h-kiosk active:bg-primary/80"
           >
-            <RotateCcw className="h-5 w-5" /> Start Over
+            <RotateCcw className="h-5 w-5" /> Start over
           </Button>
         </div>
       </header>

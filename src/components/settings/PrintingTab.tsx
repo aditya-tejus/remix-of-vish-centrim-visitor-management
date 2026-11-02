@@ -100,7 +100,7 @@ export function PrintingTab() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-foreground">Enable badge printing</p>
-                <p className="text-xs text-muted-foreground">Show a "Print Badge" action after a successful check-in</p>
+                <p className="text-xs text-muted-foreground">Show a "Print badge" action after a successful check-in</p>
               </div>
               <Switch checked={badgePrintingEnabled} onCheckedChange={setBadgePrintingEnabled} />
             </div>

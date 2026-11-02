@@ -52,7 +52,16 @@
     --info-foreground: 0 0% 100%;
 
     --border: 218 17% 91%;
-    --input: 218 21% 90%;
+    --input: 217 24% 90%;
+    /* Design system extras: hover/pressed blue, subtle status grounds, text roles */
+    --primary-hover: 211 100% 37%;
+    --primary-active: 211 100% 29%;
+    --text-tertiary: 221 13% 46%;
+    --ink: 195 32% 7%;
+    --success-subtle: 142 52% 94%;
+    --warning-subtle: 44 100% 92%;
+    --info-subtle: 195 67% 95%;
+    --error-subtle: 0 80% 96%;
     --ring: 212 100% 46%;
 
     --radius: 0.75rem;
@@ -202,8 +211,8 @@
     --focus-ring-offset: 2px;
 
     /* Radii roles (values derived from the existing --radius, nothing renamed). */
-    --radius-control: var(--radius);
-    --radius-card: var(--radius);
+    --radius-control: 0.75rem;
+    --radius-card: 1rem;
     --radius-pill: 9999px;
 
     /* Density: row heights used by lists, tables and registers. */
@@ -232,6 +241,9 @@
   * {
     @apply border-border;
   }
+  /* Design system: headings and important labels use 700–800. */
+  h1, h2 { font-weight: 800; }
+  h3, h4, h5, h6, th { font-weight: 700; }
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-sans);

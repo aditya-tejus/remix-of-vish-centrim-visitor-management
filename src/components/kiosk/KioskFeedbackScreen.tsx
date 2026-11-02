@@ -106,7 +106,7 @@ export function KioskFeedbackScreen({ visitorId, visitorName, visitorType, onCom
       <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1 kiosk-scroll-fade">
         {questions.map((q) => (
           <div key={q.id} className="rounded-2xl border-2 border-border bg-card p-5 space-y-3">
-            <p className="text-lg font-semibold text-foreground">{q.question}</p>
+            <p className="text-lg font-extrabold text-foreground">{q.question}</p>
             <div className="flex justify-between gap-2">
               {EMOJI_SCALE.map((e) => (
                 <button

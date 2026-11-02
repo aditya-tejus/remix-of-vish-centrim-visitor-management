@@ -73,12 +73,12 @@ export default function CalendarPage() {
   const goTo = (d: Date) => { setMonth(startOfMonth(d)); setSelected(d); };
 
   return (
-    <AppShell title="Visitors" mainClassName="p-4 sm:p-6 space-y-6">
+    <AppShell title="Visit calendar" pageHeader={false} mainClassName="p-4 sm:p-6 space-y-6">
       {/* Page header card (design system pattern): eyebrow, title, description, filters */}
       <section aria-labelledby="calendar-title" className="grid gap-6 rounded-[20px] border border-border bg-card p-4 shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,520px)] lg:items-center">
         <div className="min-w-0">
         <p className="text-[11px] font-extrabold uppercase leading-4 tracking-[0.06em] text-primary">Visitors</p>
-        <h2 id="calendar-title" className="mt-1 text-[28px] font-extrabold leading-9 text-foreground">Visit calendar</h2>
+        <h1 id="calendar-title" className="mt-1 text-[28px] font-extrabold leading-9 text-foreground">Visit calendar</h1>
         <p className="mt-1 text-sm text-muted-foreground">See who visited on any day, and which residents are due back.</p>
 
         <div role="group" aria-label="Show" className="mt-4 flex flex-wrap gap-2">

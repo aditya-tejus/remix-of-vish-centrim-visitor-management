@@ -140,9 +140,9 @@ export default function VisitorProfilePage() {
 
   if (!visitor) {
     return (
-      <AppShell title="Visitor Profile" subtitle="This record could not be found" mainClassName="p-6">
+      <AppShell title="Record not found" eyebrow="Visitor profile" mainClassName="p-6">
         <div className="mx-auto max-w-md space-y-3 py-16 text-center">
-          <h2 className="text-lg font-semibold text-foreground">Visitor not found</h2>
+          <h2 className="text-lg font-extrabold text-foreground">Visitor not found</h2>
           <p className="text-sm text-muted-foreground">
             This visitor record no longer exists, or it belongs to another site.
           </p>
@@ -346,7 +346,7 @@ export default function VisitorProfilePage() {
   );
 
   return (
-    <AppShell title="Visitor Profile" subtitle={fullName} actions={headerActions} mainClassName="p-6">
+    <AppShell title={fullName} eyebrow={visitor.type === "resident" ? "Resident record" : "Visitor profile"} actions={headerActions} mainClassName="p-6">
       <div className="mx-auto max-w-5xl space-y-5">
 
         {/* 1 — IDENTITY AND CURRENT STATE */}
@@ -375,7 +375,7 @@ export default function VisitorProfilePage() {
                   <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
                     <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
                     {isResident ? "Away" : "Signed out"}
-                    {visitor.checkOutTime ? ` · ${format(visitor.checkOutTime, "hh:mm a")}` : ""}
+                    {visitor.checkOutTime ? ` · ${format(visitor.checkOutTime, "h:mm a")}` : ""}
                   </span>
                 )}
                 {relationship && (
@@ -430,13 +430,13 @@ export default function VisitorProfilePage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="rounded-lg bg-muted/40 p-3">
               <p className="text-[10px] text-muted-foreground font-medium">{isResident ? "Left" : "Arrived"}</p>
-              <p className="text-sm font-semibold text-foreground mt-0.5">{format(visitor.checkInTime, "hh:mm a")}</p>
+              <p className="text-sm font-semibold text-foreground mt-0.5">{format(visitor.checkInTime, "h:mm a")}</p>
               <p className="text-[10px] text-muted-foreground">{format(visitor.checkInTime, "dd MMM yyyy")}</p>
             </div>
             <div className="rounded-lg bg-muted/40 p-3">
               <p className="text-[10px] text-muted-foreground font-medium">{isResident ? "Returned" : "Left"}</p>
               <p className="text-sm font-semibold text-foreground mt-0.5">
-                {visitor.checkOutTime ? format(visitor.checkOutTime, "hh:mm a") : "—"}
+                {visitor.checkOutTime ? format(visitor.checkOutTime, "h:mm a") : "—"}
               </p>
               {visitor.checkOutTime && (
                 <p className="text-[10px] text-muted-foreground">{format(visitor.checkOutTime, "dd MMM yyyy")}</p>
@@ -546,8 +546,8 @@ export default function VisitorProfilePage() {
                         {c.relationship ? <span className="text-muted-foreground"> ({c.relationship})</span> : null}
                       </p>
                       <p className="text-[11px] text-muted-foreground">
-                        {format(c.checkInTime, "hh:mm a")}
-                        {c.checkOutTime ? ` – ${format(c.checkOutTime, "hh:mm a")}` : " · still on site"}
+                        {format(c.checkInTime, "h:mm a")}
+                        {c.checkOutTime ? ` – ${format(c.checkOutTime, "h:mm a")}` : " · still on site"}
                         {c.source === "legacy" ? " · older record" : ""}
                       </p>
                     </div>
@@ -693,7 +693,7 @@ export default function VisitorProfilePage() {
                   <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap mt-1">
                     <span className="flex items-center gap-1">
                       <Clock className="h-3 w-3" aria-hidden="true" />
-                      {format(v.checkInTime, "hh:mm a")}{v.checkOutTime ? ` – ${format(v.checkOutTime, "hh:mm a")}` : ""}
+                      {format(v.checkInTime, "h:mm a")}{v.checkOutTime ? ` – ${format(v.checkOutTime, "h:mm a")}` : ""}
                     </span>
                     <span className="flex items-center gap-1">
                       <Timer className="h-3 w-3" aria-hidden="true" />
@@ -745,7 +745,7 @@ export default function VisitorProfilePage() {
                         </div>
                         <p className="text-[11px] text-muted-foreground mt-0.5">
                           {format(new Date(rv.check_in_time), "dd MMM yyyy · hh:mm a")}
-                          {rv.check_out_time ? ` – ${format(new Date(rv.check_out_time), "hh:mm a")}` : ""}
+                          {rv.check_out_time ? ` – ${format(new Date(rv.check_out_time), "h:mm a")}` : ""}
                         </p>
                       </button>
                     ))

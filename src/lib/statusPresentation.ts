@@ -167,27 +167,27 @@ export function getStatusPresentation(key: string | null | undefined): StatusPre
 /** Token class pairs for each tone. Subtle = badges/pills, solid = high-emphasis totals. */
 export const STATUS_TONE_CLASSES: Record<StatusTone, { subtle: string; solid: string; text: string }> = {
   neutral: {
-    subtle: "border-border bg-muted text-muted-foreground",
+    subtle: "border-transparent bg-muted text-secondary-foreground",
     solid: "border-transparent bg-secondary text-secondary-foreground",
     text: "text-muted-foreground",
   },
   info: {
-    subtle: "border-info/30 bg-info/10 text-info-strong",
+    subtle: "border-transparent bg-info-subtle text-info-strong",
     solid: "border-transparent bg-info-solid text-info-foreground",
     text: "text-info-strong",
   },
   success: {
-    subtle: "border-success/30 bg-success/10 text-success-strong",
+    subtle: "border-transparent bg-success-subtle text-success-strong",
     solid: "border-transparent bg-success-solid text-success-foreground",
     text: "text-success-strong",
   },
   warning: {
-    subtle: "border-warning/40 bg-warning/10 text-warning-strong",
+    subtle: "border-transparent bg-warning-subtle text-warning-strong",
     solid: "border-transparent bg-warning-solid text-warning-foreground",
     text: "text-warning-strong",
   },
   danger: {
-    subtle: "border-destructive/30 bg-destructive/10 text-destructive-strong",
+    subtle: "border-transparent bg-error-subtle text-destructive-strong",
     solid: "border-transparent bg-destructive-solid text-destructive-foreground",
     text: "text-destructive-strong",
   },

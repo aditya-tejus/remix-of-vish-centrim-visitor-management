@@ -215,13 +215,13 @@ export default function VisitList() {
 
   return (
     <>
-    <AppShell title="Visitors" overstayedCount={overstayedCount} mainClassName="space-y-4 p-4 pb-20 sm:space-y-6 sm:p-6">
+    <AppShell title="On site and today" pageHeader={false} overstayedCount={overstayedCount} mainClassName="space-y-4 p-4 pb-20 sm:space-y-6 sm:p-6">
       {/* Page header: the app's own top bar does not carry the page name. */}
       <section aria-labelledby="onsite-title" className="rounded-[20px] border border-border bg-card p-4 shadow-sm sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <p className="text-[11px] font-extrabold uppercase leading-4 tracking-[0.06em] text-primary">Visitors</p>
-            <h2 id="onsite-title" className="mt-1 text-[28px] font-extrabold leading-9 text-foreground">On site and today</h2>
+            <h1 id="onsite-title" className="mt-1 text-[28px] font-extrabold leading-9 text-foreground">On site and today</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Who is in the building right now, and everyone who came and went.
               {currentSite?.name ? <span className="font-semibold text-foreground"> {currentSite.name}.</span> : null}

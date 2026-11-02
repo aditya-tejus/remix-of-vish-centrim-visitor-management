@@ -1,6 +1,7 @@
 import { isOverstayedSync } from "@/hooks/useOverstayPolicy";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { StatTile } from "@/components/ui/reception-primitives";
 import { useVisitors } from "@/hooks/useVisitors";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -48,10 +49,11 @@ export default function ReportsPage() {
   );
 
   // ── Stats cards ──
-  const checkedInNow = visitors.filter((v) => v.status === "checked-in").length;
+  // Residents live here, so they are not visits: leave them out of visit figures.
+  const checkedInNow = visitors.filter((v) => v.type !== "resident" && v.status === "checked-in").length;
   const todayTotal = todayVisitors.length;
   const avgDuration = useMemo(() => {
-    const completed = last30.filter((v) => v.checkOutTime);
+    const completed = last30.filter((v) => v.type !== "resident" && v.checkOutTime);
     if (completed.length === 0) return 0;
     const total = completed.reduce(
       (acc, v) => acc + differenceInMinutes(v.checkOutTime!, v.checkInTime),
@@ -170,30 +172,16 @@ export default function ReportsPage() {
 
   return (
     <AppShell
-      title="Reports & Analytics"
-      subtitle="Visitor insights and compliance metrics"
+      title="Reports and analytics"
+      subtitle="Visits, busy times and who is visited most."
       mainClassName="p-6 space-y-6"
     >
             {/* Summary Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { label: "On-Site Now", value: checkedInNow, icon: UserCheck, color: "border-l-primary", iconCls: "bg-primary/10 text-primary" },
-                { label: "Today's Visits", value: todayTotal, icon: Users, color: "border-l-warning", iconCls: "bg-warning/10 text-warning" },
-                { label: "Avg Duration", value: formatDuration(avgDuration), icon: Clock, color: "border-l-success", iconCls: "bg-success/10 text-success" },
-                { label: "Overstayed", value: overstayedCount, icon: AlertTriangle, color: "border-l-destructive", iconCls: "bg-destructive/10 text-destructive" },
-              ].map((s) => (
-                <div key={s.label} className={`rounded-xl border border-border bg-card p-5 border-l-4 ${s.color}`}>
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{s.label}</p>
-                      <p className="text-3xl font-bold tracking-tight text-foreground">{s.value}</p>
-                    </div>
-                    <div className={`rounded-xl p-2.5 ${s.iconCls}`}>
-                      <s.icon className="h-5 w-5" />
-                    </div>
-                  </div>
-                </div>
-              ))}
+              <StatTile label="On site now" value={checkedInNow} icon={UserCheck} />
+              <StatTile label="Today's visits" value={todayTotal} icon={Users} />
+              <StatTile label="Average visit" value={formatDuration(avgDuration)} icon={Clock} />
+              <StatTile label="Past expected time" value={overstayedCount} icon={AlertTriangle} tone={overstayedCount > 0 ? "attention" : "neutral"} />
             </div>
 
             {/* Charts Tabs */}

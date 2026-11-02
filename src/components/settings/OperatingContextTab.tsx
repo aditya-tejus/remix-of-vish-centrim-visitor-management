@@ -90,9 +90,9 @@ export function OperatingContextTab() {
       )}
 
       {pack.id === "uk_unconfigured" && (
-        <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/40">
-          <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-600 shrink-0" />
-          <p className="text-[13px] text-amber-900 dark:text-amber-200">
+        <div className="flex items-start gap-2 rounded-xl border border-warning/40 bg-warning-subtle p-3 dark:border-warning/40 dark:bg-warning-subtle">
+          <AlertTriangle className="h-4 w-4 mt-0.5 text-warning-strong shrink-0" />
+          <p className="text-[13px] text-warning-strong dark:text-warning-subtle">
             This site is recorded as <span className="font-medium">{ukNation || "a UK nation outside England"}</span>.
             No jurisdiction pack is configured for that nation, so generic wording is shown and no regulation is
             implied. Scotland, Wales and Northern Ireland each have their own care regulator and visiting guidance.

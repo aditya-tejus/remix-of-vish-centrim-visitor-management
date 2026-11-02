@@ -51,7 +51,7 @@ export function UrgentActions({ visitors, onCheckOut, onCheckOutAllOverstayed }:
         severity: "red",
         icon: Ban,
         actions: [
-          { label: "Check Out", variant: "default", onClick: () => onCheckOut(v.id) },
+          { label: "Check out", variant: "default", onClick: () => onCheckOut(v.id) },
         ],
       });
     });
@@ -74,7 +74,7 @@ export function UrgentActions({ visitors, onCheckOut, onCheckOutAllOverstayed }:
         severity: "amber",
         icon: Clock,
         actions: [
-          { label: "Check Out", variant: "outline", onClick: () => onCheckOut(v.id) },
+          { label: "Check out", variant: "outline", onClick: () => onCheckOut(v.id) },
         ],
       });
     });
@@ -141,7 +141,7 @@ export function UrgentActions({ visitors, onCheckOut, onCheckOutAllOverstayed }:
         severity: "green",
         icon: Bell,
         actions: [
-          { label: "Check Out", variant: "outline", onClick: () => onCheckOut(v.id) },
+          { label: "Check out", variant: "outline", onClick: () => onCheckOut(v.id) },
         ],
       });
     });
@@ -190,11 +190,11 @@ export function UrgentActions({ visitors, onCheckOut, onCheckOutAllOverstayed }:
               onClick={onCheckOutAllOverstayed}
             >
               <LogOut className="h-3 w-3" />
-              Check Out All Overstayed ({overstayedActions.length})
+              Check out All Overstayed ({overstayedActions.length})
             </Button>
           )}
           <button className="flex items-center gap-1 text-sm font-medium text-primary hover:underline">
-            View All ({actions.length})
+            View all ({actions.length})
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>

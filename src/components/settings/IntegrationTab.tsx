@@ -120,7 +120,7 @@ export function IntegrationTab() {
                   <RadioGroupItem value="auto" id="auto" className="mt-0.5" />
                   <div className="space-y-0.5">
                     <Label htmlFor="auto" className="text-sm font-medium cursor-pointer flex items-center gap-2">
-                      <Zap className="h-3.5 w-3.5 text-amber-500" />
+                      <Zap className="h-3.5 w-3.5 text-warning-strong" />
                       Auto-accept
                     </Label>
                     <p className="text-xs text-muted-foreground">Imports become records automatically — no review required.</p>

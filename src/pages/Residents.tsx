@@ -77,14 +77,14 @@ export default function Residents() {
       : view === "no-absence" ? { title: "Every resident is recorded as out", description: "Record their returns as they come back." }
       : { title: "No residents at this site", description: "Resident records are added in the resident management system." };
 
-  return <AppShell title={terms.residentPlural} mainClassName="space-y-4 p-4 pb-16 sm:space-y-6 sm:p-6">
+  return <AppShell title={terms.residentPlural} pageHeader={false} mainClassName="space-y-4 p-4 pb-16 sm:space-y-6 sm:p-6">
     {permissionLoading ? <p role="status">Checking access…</p> : !can("presence.view") ? <p role="alert">You do not have access to resident movements.</p> : !currentSiteId ? <p role="status">Select a site to view residents.</p> : <>
       {/* Page header: the app's own top bar does not carry the page name. */}
       <section aria-labelledby="residents-title" className="rounded-[20px] border border-border bg-card p-4 shadow-sm sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <p className="text-[11px] font-extrabold uppercase leading-4 tracking-[0.06em] text-primary">{terms.residentPlural}</p>
-            <h2 id="residents-title" className="mt-1 text-[28px] font-extrabold leading-9 text-foreground">{modules.selfReportedAway ? "Time away" : "Outings and returns"}</h2>
+            <h1 id="residents-title" className="mt-1 text-[28px] font-extrabold leading-9 text-foreground">{modules.selfReportedAway ? "Time away" : "Outings and returns"}</h1>
             <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
               {modules.selfReportedAway ? "Optional, resident-reported time away. Location is not confirmed." : "Who is recorded as out, who is due back, and how to reach their contacts."}
               {currentSite?.name ? <span className="font-semibold text-foreground"> {currentSite.name}.</span> : null}

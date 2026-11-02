@@ -34,8 +34,8 @@ export default function GDPRPage() {
 
   return (
     <AppShell
-      title={isUK ? "GDPR & Privacy" : "Privacy & Compliance"}
-      subtitle="Data protection compliance tools"
+      title={isUK ? "GDPR and privacy" : "Privacy and compliance"}
+      subtitle="Access requests, erasure, retention and data exports."
       mainClassName="p-6"
     >
             <Tabs defaultValue="tools" className="space-y-6">
@@ -70,7 +70,7 @@ export default function GDPRPage() {
                       { icon: FileText, label: "Subject Access Requests", desc: "Export visitor data on request", action: "Process SAR", tab: "sar" },
                       { icon: Trash2, label: "Right to Erasure", desc: "Delete visitor records", action: "Manage", tab: "erasure" },
                       { icon: Clock, label: "Data Retention", desc: "Auto-delete after retention period", action: "Configure", tab: "retention" as const },
-                      { icon: Download, label: "Data Portability", desc: "Export data in machine-readable format", action: "Export All", tab: "portability" },
+                      { icon: Download, label: "Data Portability", desc: "Export data in machine-readable format", action: "Export all", tab: "portability" },
                     ].map(({ icon: Icon, label, desc, action, tab }) => (
                       <Card key={label}>
                         <CardContent className="p-4 space-y-3">
@@ -195,7 +195,7 @@ export default function GDPRPage() {
                         }}
                       >
                         <Download className="h-4 w-4" />
-                        Export All Records (CSV)
+                        Export all Records (CSV)
                       </Button>
                     </CardContent>
                   </Card>
@@ -212,7 +212,7 @@ export default function GDPRPage() {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <Download className="h-5 w-5 text-primary" />
-              Export All Visitor Data
+              Export all Visitor Data
             </AlertDialogTitle>
             <AlertDialogDescription>
               You are about to export <span className="font-semibold text-foreground">{visitors.length}</span> visitor record(s) as a CSV file. This file will contain personal information — handle it in accordance with the {regimeShort}.

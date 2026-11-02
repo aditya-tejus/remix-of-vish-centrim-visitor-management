@@ -646,7 +646,7 @@ export default function Evacuation() {
 
           <div className="flex shrink-0 flex-col gap-2 max-w-[180px]">
             <span className="text-xs text-foreground">{emergencyPolicy(evidenceOf(p)).label}</span>
-            <span className="text-xs text-muted-foreground">{emergencyPolicy(evidenceOf(p)).methodLabel}{evidenceOf(p).confirmed_at ? ` · ${format(new Date(evidenceOf(p).confirmed_at as string), "hh:mm a")}` : ""}</span>
+            <span className="text-xs text-muted-foreground">{emergencyPolicy(evidenceOf(p)).methodLabel}{evidenceOf(p).confirmed_at ? ` · ${format(new Date(evidenceOf(p).confirmed_at as string), "h:mm a")}` : ""}</span>
             <Button disabled={busy || !canMark || !activeDrill} variant="outline" className="h-14" aria-label={`Record outcome for ${escapeHtml(p.name)}`} onClick={() => togglePerson(p)}>Record outcome</Button>
           </div>
 
@@ -697,7 +697,8 @@ export default function Evacuation() {
 
   return (
     <AppShell
-      title="Emergency Roll Call"
+      title="Emergency roll call"
+      tone="emergency"
       subtitle="Presence records, individual verification and outstanding actions"
       titleIcon={Shield}
       titleIconClassName="h-5 w-5 shrink-0 text-destructive"

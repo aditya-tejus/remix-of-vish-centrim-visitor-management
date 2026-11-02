@@ -52,7 +52,7 @@ export function KioskPersonCard({
         </div>
       )}
       <div className="flex-1 min-w-0">
-        <p className="text-lg font-semibold text-foreground truncate">{name}</p>
+        <p className="text-lg font-extrabold text-foreground truncate">{name}</p>
         {subtitle && <p className="text-sm text-muted-foreground truncate">{subtitle}</p>}
       </div>
       {rightIcon || <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />}

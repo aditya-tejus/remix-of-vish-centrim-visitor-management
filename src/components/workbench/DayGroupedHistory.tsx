@@ -55,7 +55,7 @@ export function DayGroupedHistory({ visitors }: DayGroupedHistoryProps) {
     <div className="border-t border-border">
       <div className="flex items-center gap-2 px-5 py-3.5 border-b border-border">
         <Clock className="h-4 w-4 text-muted-foreground" />
-        <h2 className="text-lg font-semibold text-foreground">Recent Activity</h2>
+        <h2 className="text-lg font-extrabold text-foreground">Recent Activity</h2>
       </div>
 
       {grouped.length === 0 ? (
@@ -83,7 +83,7 @@ export function DayGroupedHistory({ visitors }: DayGroupedHistoryProps) {
                         {event.visitor.firstName} {event.visitor.surname}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {event.type === "check-in" ? "Checked in" : "Checked out"} · {format(event.time, "hh:mm a")}
+                        {event.type === "check-in" ? "Checked in" : "Checked out"} · {format(event.time, "h:mm a")}
                       </p>
                     </div>
                   </div>

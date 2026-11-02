@@ -822,7 +822,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType, prefill
     <Sheet open={open} onOpenChange={handleClose}>
       <SheetContent side="right" className="sm:max-w-[520px] w-full p-0 gap-0 flex flex-col overflow-hidden">
         <SheetHeader className="px-6 pt-5 pb-3 shrink-0">
-          <SheetTitle className="text-lg font-semibold text-foreground">
+          <SheetTitle className="text-lg font-extrabold text-foreground">
             {isResident ? "Resident Check-Out" : "Quick Check-In"}
           </SheetTitle>
           {/* Step indicator */}
@@ -1089,11 +1089,11 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType, prefill
                 )}
 
                 {selected?.showWarning && (
-                  <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 flex items-start gap-2.5">
+                  <div className="rounded-xl bg-warning-subtle dark:bg-warning-subtle border border-warning/40 dark:border-warning/40 p-3 flex items-start gap-2.5">
                     <span className="text-lg">⚠️</span>
                     <div>
-                      <p className="text-xs font-bold text-amber-700 dark:text-amber-400">Independent Outing</p>
-                      <p className="text-[11px] text-amber-600 dark:text-amber-500 mt-0.5">Please confirm this resident has been assessed and approved for independent outings.</p>
+                      <p className="text-xs font-bold text-warning-strong dark:text-warning-strong">Independent Outing</p>
+                      <p className="text-[11px] text-warning-strong dark:text-warning-strong mt-0.5">Please confirm this resident has been assessed and approved for independent outings.</p>
                     </div>
                   </div>
                 )}
@@ -1426,7 +1426,7 @@ export function AddVisitDialog({ open, onOpenChange, onAdd, initialType, prefill
             ) : (
               <Button size="sm" onClick={handleSubmit} className="gap-1 rounded-xl" disabled={!canSubmit}>
                 <Check className="h-3.5 w-3.5" />
-                {isResident ? "Confirm Check-Out" : "Check In"}
+                {isResident ? "Confirm Check-Out" : "Check in"}
               </Button>
             )}
           </div>

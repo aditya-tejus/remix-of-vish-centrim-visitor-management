@@ -55,7 +55,7 @@ export function LeaveApprovalTab() {
           <div className="flex items-center justify-between rounded-lg bg-muted/30 p-3">
             <div className="flex items-center gap-2">
               {mode === "auto" ? (
-                <Zap className="h-4 w-4 text-amber-500" />
+                <Zap className="h-4 w-4 text-warning-strong" />
               ) : (
                 <ShieldCheck className="h-4 w-4 text-primary" />
               )}

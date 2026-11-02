@@ -133,7 +133,7 @@ export default function VisitorReport() {
 
   return (
     <AppShell
-      title="Visitor Report"
+      title="Visitor report"
       subtitle="Every person recorded at this site for the chosen period"
       mainClassName="p-6 space-y-4"
     >

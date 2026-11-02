@@ -49,7 +49,7 @@ export function SettingsPageHeading({
   return (
     <div className="mb-5 space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+        <h2 className="text-lg font-extrabold text-foreground">{title}</h2>
         {scopes.map((s) => (
           <SettingsScopeBadge key={s} scope={s} />
         ))}

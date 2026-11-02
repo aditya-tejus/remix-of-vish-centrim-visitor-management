@@ -79,7 +79,7 @@ export function AddFoodDialog({ open, onOpenChange, onSaved }: AddFoodDialogProp
       <DialogContent className="max-w-lg rounded-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-[17px]">
-            <UtensilsCrossed className="h-4 w-4 text-primary" /> Add Food Record
+            <UtensilsCrossed className="h-4 w-4 text-primary" /> Add food Record
           </DialogTitle>
           <DialogDescription className="text-[13px]">
             Record food brought in at reception, or on behalf of someone who did not register at check-in.

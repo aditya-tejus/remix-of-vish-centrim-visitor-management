@@ -16,7 +16,7 @@ export default function Feedback() {
             <div className="flex items-center gap-4 px-6 py-4">
               <SidebarTrigger />
               <div>
-                <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <h1 className="text-lg font-extrabold text-foreground flex items-center gap-2">
                   <MessageSquare className="h-5 w-5 text-primary" /> Feedback Management
                 </h1>
                 <p className="text-xs text-muted-foreground">Create surveys, view responses, and generate reports</p>

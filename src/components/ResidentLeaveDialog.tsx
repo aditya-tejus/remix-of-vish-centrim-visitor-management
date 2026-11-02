@@ -141,7 +141,7 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
     <Sheet open={open} onOpenChange={handleClose}>
       <SheetContent side="right" className="sm:max-w-[520px] w-full p-0 gap-0 flex flex-col overflow-hidden">
         <SheetHeader className="px-6 pt-5 pb-3 shrink-0">
-          <SheetTitle className="text-lg font-semibold text-foreground">Resident Leave</SheetTitle>
+          <SheetTitle className="text-lg font-extrabold text-foreground">Resident Leave</SheetTitle>
           <div className="flex items-center gap-1 pt-2">
             {steps.map((s, i) => (
               <div key={s} className="flex items-center flex-1">
@@ -350,11 +350,11 @@ export function ResidentLeaveDialog({ open, onOpenChange, onSubmit }: ResidentLe
               )}
 
               {selectedEscort?.showWarning && (
-                <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 flex items-start gap-2.5">
+                <div className="rounded-xl bg-warning-subtle dark:bg-warning-subtle border border-warning/40 dark:border-warning/40 p-3 flex items-start gap-2.5">
                   <span className="text-lg">⚠️</span>
                   <div>
-                    <p className="text-xs font-bold text-amber-700 dark:text-amber-400">Independent Outing</p>
-                    <p className="text-[11px] text-amber-600 dark:text-amber-500 mt-0.5">Please confirm this resident has been assessed and approved for independent outings.</p>
+                    <p className="text-xs font-bold text-warning-strong dark:text-warning-strong">Independent Outing</p>
+                    <p className="text-[11px] text-warning-strong dark:text-warning-strong mt-0.5">Please confirm this resident has been assessed and approved for independent outings.</p>
                   </div>
                 </div>
               )}

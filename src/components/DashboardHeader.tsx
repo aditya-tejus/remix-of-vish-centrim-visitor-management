@@ -38,7 +38,7 @@ export function DashboardHeader({ onAddVisit, onCheckOut }: DashboardHeaderProps
           </div>
           <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5 font-semibold" onClick={onCheckOut}>
             <LogOut className="h-3.5 w-3.5" />
-            Check Out
+            Check out
           </Button>
           <Button size="sm" className="h-9 text-xs gap-1.5 font-semibold shadow-lg shadow-primary/25" onClick={onAddVisit}>
             <Plus className="h-3.5 w-3.5" />

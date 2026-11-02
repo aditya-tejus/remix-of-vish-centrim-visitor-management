@@ -37,8 +37,8 @@ export default function KioskHome() {
         <p className="text-lg text-muted-foreground tabular-nums">{format(currentTime, "EEEE, d MMMM yyyy · h:mm a")}</p>
       </div>
       <div className="grid gap-4">
-        <KioskActionTile primary icon={UserRoundPlus} onClick={() => navigate("/kiosk/checkin")}>Sign In</KioskActionTile>
-        <KioskActionTile icon={LogOut} onClick={() => navigate("/kiosk/checkout")}>Sign Out</KioskActionTile>
+        <KioskActionTile primary icon={UserRoundPlus} onClick={() => navigate("/kiosk/checkin")}>Sign in</KioskActionTile>
+        <KioskActionTile icon={LogOut} onClick={() => navigate("/kiosk/checkout")}>Sign out</KioskActionTile>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {residentKioskEnabled && <KioskActionTile icon={DoorOpen} onClick={() => navigate("/kiosk/resident-leave")}>Leaving or returning</KioskActionTile>}

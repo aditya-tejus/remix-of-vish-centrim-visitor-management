@@ -23,20 +23,20 @@ interface AuditEntry {
 }
 
 const ACTION_META: Record<string, { label: string; icon: typeof Clock; color: string }> = {
-  visitor_checked_in: { label: "Visitor Checked In", icon: LogIn, color: "bg-emerald-500/10 text-emerald-600" },
-  visitor_checked_out: { label: "Visitor Checked Out", icon: UserCheck, color: "bg-blue-500/10 text-blue-600" },
-  visitor_data_edited: { label: "Visitor Data Edited", icon: Edit, color: "bg-amber-500/10 text-amber-600" },
-  right_to_erasure_full: { label: "Full Erasure", icon: Trash2, color: "bg-destructive/10 text-destructive" },
-  right_to_erasure_partial: { label: "Partial Erasure", icon: Shield, color: "bg-orange-500/10 text-orange-600" },
-  right_to_erasure_visit_delete: { label: "Visit Record Deleted", icon: Trash2, color: "bg-destructive/10 text-destructive" },
-  visitor_profile_deleted: { label: "Profile Deleted", icon: Trash2, color: "bg-destructive/10 text-destructive" },
-  visitor_visit_deleted: { label: "Visit Deleted", icon: Trash2, color: "bg-destructive/10 text-destructive" },
-  sar_export: { label: "SAR Export", icon: Download, color: "bg-purple-500/10 text-purple-600" },
-  automated_retention_cleanup: { label: "Auto Cleanup", icon: RefreshCw, color: "bg-muted text-muted-foreground" },
-  bulk_checkout_overstayed: { label: "Bulk Checkout", icon: AlertTriangle, color: "bg-amber-500/10 text-amber-600" },
+  visitor_checked_in: { label: "Visitor checked in", icon: LogIn, color: "bg-success-subtle text-success-strong" },
+  visitor_checked_out: { label: "Visitor checked out", icon: UserCheck, color: "bg-accent text-accent-foreground" },
+  visitor_data_edited: { label: "Visitor data edited", icon: Edit, color: "bg-warning-subtle text-warning-strong" },
+  right_to_erasure_full: { label: "Full erasure", icon: Trash2, color: "bg-destructive/10 text-destructive" },
+  right_to_erasure_partial: { label: "Partial erasure", icon: Shield, color: "bg-warning-subtle text-warning-strong" },
+  right_to_erasure_visit_delete: { label: "Visit record deleted", icon: Trash2, color: "bg-destructive/10 text-destructive" },
+  visitor_profile_deleted: { label: "Profile deleted", icon: Trash2, color: "bg-destructive/10 text-destructive" },
+  visitor_visit_deleted: { label: "Visit deleted", icon: Trash2, color: "bg-destructive/10 text-destructive" },
+  sar_export: { label: "SAR export", icon: Download, color: "bg-info-subtle text-info-strong" },
+  automated_retention_cleanup: { label: "Auto cleanup", icon: RefreshCw, color: "bg-muted text-muted-foreground" },
+  bulk_checkout_overstayed: { label: "Bulk checkout", icon: AlertTriangle, color: "bg-warning-subtle text-warning-strong" },
 };
 
-const DEFAULT_META = { label: "System Action", icon: FileText, color: "bg-muted text-muted-foreground" };
+const DEFAULT_META = { label: "System action", icon: FileText, color: "bg-muted text-muted-foreground" };
 
 function getActionMeta(action: string) {
   return ACTION_META[action] || DEFAULT_META;
@@ -81,11 +81,11 @@ export default function AuditLogPage() {
 
   return (
     <AppShell
-      title="Audit Log"
-      subtitle="GDPR Article 30 — Processing activity records"
+      title="Audit log"
+      subtitle="Every action staff and the kiosk took at this site, newest first."
       mainClassName="p-6 space-y-4"
       actions={
-        <Badge variant="secondary" className="font-mono text-xs">
+        <Badge variant="secondary" className="text-xs tabular-nums">
           {filtered.length} entries
         </Badge>
       }
@@ -173,7 +173,7 @@ export default function AuditLogPage() {
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                               <div className="text-right hidden sm:block">
-                                <p className="text-xs text-muted-foreground font-mono">
+                                <p className="text-xs tabular-nums text-muted-foreground">
                                   {format(new Date(log.created_at), "HH:mm")}
                                 </p>
                                 <p className="text-[10px] text-muted-foreground">

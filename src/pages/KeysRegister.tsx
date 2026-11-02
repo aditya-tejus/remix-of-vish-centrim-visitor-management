@@ -341,7 +341,7 @@ export default function KeysRegister() {
 
   return (
     <AppShell
-      title="Keys Register"
+      title="Keys register"
       subtitle="Every property key, who has it right now, and when it is due back."
       actions={
         canView && canExport ? (
@@ -404,7 +404,7 @@ export default function KeysRegister() {
                           Out since {format(k.currentIssue!.issuedAt, "hh:mm a dd MMM")}
                           {k.currentIssue!.expectedReturn ? ` · due ${format(k.currentIssue!.expectedReturn, "hh:mm a dd MMM")}` : ""}
                         </span>
-                        {canReturn && <Button size="sm" onClick={() => setReturnFor(k)}>Return</Button>}
+                        {canReturn && <Button size="sm" variant="outline" onClick={() => setReturnFor(k)}>Return</Button>}
                       </div>
                     ))}
                     {out.length > 8 && (
@@ -516,7 +516,7 @@ export default function KeysRegister() {
                                 )}
                               </div>
                               <Badge variant="outline" className={style.className}>{style.label}</Badge>
-                              <div className="flex gap-2">
+                              <div className="flex flex-wrap gap-2">
                                 {k.currentIssue ? (
                                   <>
                                     {canReturn && (
@@ -783,7 +783,7 @@ export default function KeysRegister() {
                           {k.currentIssue!.expectedReturn ? ` · due ${format(k.currentIssue!.expectedReturn, "hh:mm a dd MMM")}` : ""}
                         </p>
                       </div>
-                      <Button size="sm" onClick={() => { setStaffView(null); setReturnFor(k); }}>Return</Button>
+                      <Button size="sm" variant="outline" onClick={() => { setStaffView(null); setReturnFor(k); }}>Return</Button>
                     </div>
                   ))}
                 </div>
