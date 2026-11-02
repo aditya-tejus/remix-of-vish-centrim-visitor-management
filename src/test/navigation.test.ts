@@ -14,7 +14,7 @@ describe("left navigation", () => {
     const nav = buildNavigation(bothOn);
     expect(nav.sections[1].children.map((c) => c.title)).toEqual(["On site and today", "Visitor profiles", "Calendar"]);
     expect(nav.sections[3].children.map((c) => c.title)).toEqual([
-      "Food register", "Keys and fobs", "Reports", "Contractor documents", "Privacy and compliance", "Audit log",
+      "Food register", "Keys and fobs", "Reports", "Contractor documents", "Watchlist", "Privacy and compliance", "Audit log",
     ]);
   });
 
@@ -49,6 +49,7 @@ describe("left navigation", () => {
     expect(activeSection(nav, "/calendar")?.key).toBe("visitors");
     expect(activeSection(nav, "/reports/presence")?.key).toBe("records");
     expect(activeSection(nav, "/keys")?.key).toBe("records");
+    expect(activeSection(nav, "/watchlist")?.key).toBe("records");
     expect(activeSection(nav, "/evacuation")).toBeNull();
     expect(activeChild(nav.sections[1], "/visitors/abc")?.title).toBe("Visitor profiles");
   });

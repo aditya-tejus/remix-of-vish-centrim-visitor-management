@@ -69,6 +69,7 @@ export function buildNavigation(modules: NavModules, residentLabel = "Residents"
           ...registers,
           { title: "Reports", path: "/reports" },
           { title: "Contractor documents", path: "/contractor-documents" },
+          { title: "Watchlist", path: "/watchlist" },
           { title: "Privacy and compliance", path: "/gdpr" },
           { title: "Audit log", path: "/audit-log" },
         ],

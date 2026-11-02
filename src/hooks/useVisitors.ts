@@ -8,7 +8,7 @@ import { useSite } from "@/contexts/SiteContext";
 import { kioskRpc } from "@/lib/kioskRpc";
 
 
-interface DbVisitor {
+export interface DbVisitor {
   id: string;
   first_name: string;
   surname: string;
@@ -52,7 +52,7 @@ interface DbVisitor {
   visited_resident_ids: string[] | null;
 }
 
-function dbToVisitor(row: DbVisitor): Visitor {
+export function dbToVisitor(row: DbVisitor): Visitor {
   return {
     id: row.id,
     firstName: row.first_name,

@@ -1,312 +1,309 @@
-import { useVisitors } from "@/hooks/useVisitors";
-import { AppShell } from "@/components/AppShell";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Search, Phone, Mail, MapPin, LogIn, ShieldAlert, Plus, AlertTriangle, Users, User, Truck, Home } from "lucide-react";
-import { useState, useMemo } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useWatchlist } from "@/hooks/useWatchlist";
-import { AddWatchlistDialog } from "@/components/AddWatchlistDialog";
-import { VisitorProfile } from "@/components/VisitorProfile";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
-import { Visitor } from "@/types/visitor";
+import { AlertTriangle, KeyRound, LogIn, RotateCw, Search, ShieldAlert, UserPlus, X } from "lucide-react";
+import { AppShell } from "@/components/AppShell";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CheckInSheet } from "@/components/checkin/CheckInSheet";
+import type { StaffCheckInPrefill } from "@/components/checkin/useCheckInFlow";
+import { VisitorProfile } from "@/components/VisitorProfile";
+import { useVisitors } from "@/hooks/useVisitors";
+import { useVisitorDirectory } from "@/hooks/useVisitorDirectory";
+import { useWatchlist } from "@/hooks/useWatchlist";
+import { useOpenKeyIssues } from "@/hooks/useOpenKeyIssues";
+import { isOverstayedSync } from "@/hooks/useOverstayPolicy";
+import {
+  inTab, lastVisitLabel, matchesSearch, sortEntries,
+  type DirectoryEntry, type DirectoryFlags, type DirectorySort, type DirectoryTab,
+} from "@/lib/visitorDirectory";
+import type { Visitor } from "@/types/visitor";
+import { cn } from "@/lib/utils";
 
+const PAGE = 50;
+const TYPE_LABEL: Record<string, string> = {
+  visitor: "Visitor", contractor: "Contractor", volunteer: "Volunteer", staff: "Staff", other: "Other",
+};
+const TABS: { id: DirectoryTab; label: string }[] = [
+  { id: "all", label: "Everyone" },
+  { id: "on_site", label: "On site now" },
+  { id: "recent", label: "Last 30 days" },
+  { id: "attention", label: "Needs attention" },
+];
+
+/**
+ * Visitor profiles — everyone who has visited this site, one row per person.
+ * Built to the Centrim Life design system: one primary action per area, underline
+ * tabs with count pills, sentence-case labels, 13px minimum for meta text and no
+ * contact details in the list (they stay on the profile).
+ *
+ * "Check in again" opens the normal Check In form with the person's details filled
+ * in, so screening, terms, privacy and the watchlist step still apply. The old
+ * one-tap Quick Check-In skipped all of them and has been removed.
+ */
 export default function Visitors() {
-  const { visitors, addVisitor } = useVisitors();
+  const { entries, history, loading, error, truncated, refetch } = useVisitorDirectory();
+  const { addVisitorAsync, checkOutVisitor } = useVisitors();
+  const { checkVisitor } = useWatchlist();
+  const { issuesForVisitor } = useOpenKeyIssues();
+
+  const [tab, setTab] = useState<DirectoryTab>("all");
   const [search, setSearch] = useState("");
-  const [addWatchlistOpen, setAddWatchlistOpen] = useState(false);
-  const [selectedVisitor, setSelectedVisitor] = useState<Visitor | null>(null);
-  const [profileOpen, setProfileOpen] = useState(false);
-  const { toast } = useToast();
-  const { data: watchlist = [], addEntry, removeEntry, entriesDueReview } = useWatchlist();
+  const [type, setType] = useState<string>("all");
+  const [sort, setSort] = useState<DirectorySort>("last_visit");
+  const [shown, setShown] = useState(PAGE);
+  const [profile, setProfile] = useState<Visitor | null>(null);
+  const [checkIn, setCheckIn] = useState<{ open: boolean; prefill?: StaffCheckInPrefill; type?: Visitor["type"] }>({ open: false });
 
-  const handleVisitorClick = (visitor: Visitor) => {
-    setSelectedVisitor(visitor);
-    setProfileOpen(true);
-  };
+  const flagsFor = useMemo(() => {
+    const cache = new Map<string, DirectoryFlags>();
+    return (e: DirectoryEntry): DirectoryFlags => {
+      const hit = cache.get(e.key);
+      if (hit) return hit;
+      const open = e.visits.find((v) => v.status === "checked-in");
+      const latest = e.latest;
+      const f: DirectoryFlags = {
+        watchlist: !!checkVisitor(latest.firstName, latest.surname),
+        overdue: !!open && isOverstayedSync(open),
+        screening: open && (open.screeningOutcome === "flagged" || open.screeningOutcome === "blocked") ? open.screeningOutcome : null,
+        keysHeld: e.visits.reduce((n, v) => n + issuesForVisitor(v.id).length, 0),
+      };
+      cache.set(e.key, f);
+      return f;
+    };
+  }, [checkVisitor, issuesForVisitor]);
 
-  const handleQuickCheckIn = (e: React.MouseEvent, v: typeof visitors[0]) => {
-    e.stopPropagation();
-    addVisitor({
-      firstName: v.firstName,
-      surname: v.surname,
-      email: v.email,
-      mobile: v.mobile,
+  const byType = useMemo(() => entries.filter((e) => type === "all" || e.latest.type === type), [entries, type]);
+  const counts = useMemo(() => {
+    const c: Record<DirectoryTab, number> = { all: 0, on_site: 0, recent: 0, attention: 0 };
+    for (const e of byType) for (const t of TABS) if (inTab(e, t.id, flagsFor(e))) c[t.id] += 1;
+    return c;
+  }, [byType, flagsFor]);
+  const visible = useMemo(
+    () => sortEntries(byType.filter((e) => inTab(e, tab, flagsFor(e)) && matchesSearch(e, search)), sort),
+    [byType, tab, search, sort, flagsFor],
+  );
+
+  const startCheckIn = (e?: DirectoryEntry) => {
+    if (!e) { setCheckIn({ open: true }); return; }
+    const v = e.latest;
+    setCheckIn({
+      open: true,
       type: v.type,
-      checkInTime: new Date(),
-      checkOutTime: null,
-      whomToVisit: v.whomToVisit || "",
-      address: v.address || "",
-      status: "checked-in",
-      healthDeclaration: false,
-      additionalVisitors: 0,
-      comments: "",
-      retentionExpiry: new Date(Date.now() + 86400000 * 60),
-      acknowledgedPrivacy: false,
+      prefill: { firstName: v.firstName, surname: v.surname, mobile: v.mobile, email: v.email, address: v.address, type: v.type, personQr: v.personQr },
     });
-    toast({ title: "Checked In", description: `${v.firstName} ${v.surname} has been checked in.` });
   };
 
-  // One row per person. People are only treated as the same person when they
-  // share a personal code or a real contact detail — never on a blank field,
-  // and never on name alone, so two different people called Jane Smith with no
-  // contact details stay separate.
-  const uniqueVisitors = useMemo(() => {
-    const seen = new Map<string, typeof visitors[0]>();
-    visitors.forEach((v) => {
-      const email = (v.email || "").trim().toLowerCase();
-      const mobile = (v.mobile || "").replace(/[^0-9]/g, "");
-      const identity =
-        (v.personQr && `qr:${v.personQr}`) ||
-        (email && `email:${email}`) ||
-        (mobile.length >= 6 && `mobile:${mobile}`) ||
-        `record:${v.id}`;
-      if (!seen.has(identity)) seen.set(identity, v);
-    });
-    return Array.from(seen.values());
-  }, [visitors]);
-
-  const byType = useMemo(() => ({
-    visitor: uniqueVisitors.filter(v => v.type === "visitor"),
-    staff: uniqueVisitors.filter(v => v.type === "staff"),
-    contractor: uniqueVisitors.filter(v => v.type === "contractor"),
-    resident: uniqueVisitors.filter(v => v.type === "resident"),
-  }), [uniqueVisitors]);
-
-  const filterList = (list: typeof visitors) => {
-    if (!search.trim()) return list;
-    const q = search.toLowerCase();
-    return list.filter(v =>
-      v.firstName.toLowerCase().includes(q) ||
-      v.surname.toLowerCase().includes(q) ||
-      v.email.toLowerCase().includes(q) ||
-      v.mobile.includes(q)
-    );
-  };
-
-  const VisitorCard = ({ visitor }: { visitor: typeof visitors[0] }) => (
-    <Card className="cursor-pointer hover:shadow-card-hover hover:border-primary/30 transition-all duration-150 hover:-translate-y-0.5" onClick={() => handleVisitorClick(visitor)}>
-      <CardContent className="p-4">
-        <div className="flex items-center gap-3 mb-3">
-          <Avatar className="h-10 w-10">
-            <AvatarFallback className="bg-primary/10 text-primary text-sm font-bold">{visitor.firstName[0]}{visitor.surname[0]}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-foreground truncate">{visitor.firstName} {visitor.surname}</p>
-            <Badge variant="secondary" className="text-[10px] uppercase tracking-wider">{visitor.type}</Badge>
-          </div>
-        </div>
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground"><Phone className="h-3 w-3 shrink-0" /><span>{visitor.mobile || "—"}</span></div>
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground"><Mail className="h-3 w-3 shrink-0" /><span className="truncate">{visitor.email}</span></div>
-        </div>
-        {visitor.type !== "resident" && (
-          <div className="pt-2 mt-2 border-t border-border">
-            <Button size="sm" className="w-full h-7 text-xs gap-1.5" onClick={(e) => handleQuickCheckIn(e, visitor)}>
-              <LogIn className="h-3.5 w-3.5" />Quick Check-In
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-
-  const EmptyState = ({ type }: { type: string }) => (
-    <div className="col-span-full text-center py-16">
-      <p className="text-sm text-muted-foreground">No {type} found</p>
-    </div>
-  );
+  const resetFilters = () => { setSearch(""); setType("all"); setTab("all"); };
+  const filtered = search.trim() !== "" || type !== "all" || tab !== "all";
 
   return (
     <AppShell
-      title="Visitor Profiles"
-      subtitle="All contacts by type and watchlist"
-      mainClassName="p-4 sm:p-6 space-y-4"
+      title="Visitor profiles"
+      subtitle="Everyone who has visited this site"
+      mainClassName="p-4 sm:p-6 space-y-6"
+      actions={
+        <Button onClick={() => startCheckIn()} className="h-11 gap-2 rounded-lg px-4 font-bold">
+          <UserPlus aria-hidden className="h-4 w-4" />Check in someone new
+        </Button>
+      }
     >
-            {/* Search */}
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, email, or phone..." className="pl-10 h-9 text-[13px]" />
-            </div>
-
-            <Tabs defaultValue="visitors">
-              <TabsList className="flex flex-wrap items-center justify-start bg-muted rounded-lg p-1 gap-0.5 h-auto">
-                <TabsTrigger value="visitors" className="rounded-md h-8 px-4 text-[13px] font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-1.5">
-                  <User className="h-3.5 w-3.5" />Visitors
-                  <span className="text-[10px] rounded-full px-1.5 py-0.5 font-semibold">{byType.visitor.length}</span>
-                </TabsTrigger>
-                <TabsTrigger value="staff" className="rounded-md h-8 px-4 text-[13px] font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-1.5">
-                  <Users className="h-3.5 w-3.5" />Staff
-                  <span className="text-[10px] rounded-full px-1.5 py-0.5 font-semibold">{byType.staff.length}</span>
-                </TabsTrigger>
-                <TabsTrigger value="contractors" className="rounded-md h-8 px-4 text-[13px] font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-1.5">
-                  <Truck className="h-3.5 w-3.5" />Contractors
-                  <span className="text-[10px] rounded-full px-1.5 py-0.5 font-semibold">{byType.contractor.length}</span>
-                </TabsTrigger>
-                <TabsTrigger value="residents" className="rounded-md h-8 px-4 text-[13px] font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-1.5">
-                  <Home className="h-3.5 w-3.5" />Residents
-                  <span className="text-[10px] rounded-full px-1.5 py-0.5 font-semibold">{byType.resident.length}</span>
-                </TabsTrigger>
-                <TabsTrigger value="watchlist" className="rounded-md h-8 px-4 text-[13px] font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm gap-1.5">
-                  <ShieldAlert className="h-3.5 w-3.5" />Watchlist
-                  {watchlist.length > 0 && (
-                    <span className="text-[10px] rounded-full px-1.5 py-0.5 font-semibold bg-destructive/10 text-destructive">{watchlist.length}</span>
-                  )}
-                </TabsTrigger>
-              </TabsList>
-
-              {/* Visitors Tab */}
-              <TabsContent value="visitors" className="mt-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filterList(byType.visitor).map(v => <VisitorCard key={v.id} visitor={v} />)}
-                  {filterList(byType.visitor).length === 0 && <EmptyState type="visitors" />}
-                </div>
-              </TabsContent>
-
-              {/* Staff Tab */}
-              <TabsContent value="staff" className="mt-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filterList(byType.staff).map(v => <VisitorCard key={v.id} visitor={v} />)}
-                  {filterList(byType.staff).length === 0 && <EmptyState type="staff" />}
-                </div>
-              </TabsContent>
-
-              {/* Contractors Tab */}
-              <TabsContent value="contractors" className="mt-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filterList(byType.contractor).map(v => <VisitorCard key={v.id} visitor={v} />)}
-                  {filterList(byType.contractor).length === 0 && <EmptyState type="contractors" />}
-                </div>
-              </TabsContent>
-
-              {/* Residents Tab */}
-              <TabsContent value="residents" className="mt-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filterList(byType.resident).map(v => <VisitorCard key={v.id} visitor={v} />)}
-                  {filterList(byType.resident).length === 0 && <EmptyState type="residents" />}
-                </div>
-              </TabsContent>
-
-              {/* Watchlist Tab */}
-              <TabsContent value="watchlist" className="mt-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-[13px] text-muted-foreground">Manage restricted visitors. Alerts are shown during check-in.</p>
-                  <Button size="sm" className="h-[34px] text-[13px] gap-1.5 bg-destructive hover:bg-destructive/90" onClick={() => setAddWatchlistOpen(true)}>
-                    <Plus className="h-4 w-4" />Add to Watchlist
-                  </Button>
-                </div>
-
-                {entriesDueReview.length > 0 && (
-                  <div className="rounded-[10px] border-2 border-warning/40 bg-warning/5 p-3 flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-[13px] font-semibold text-foreground">
-                        {entriesDueReview.length} entr{entriesDueReview.length === 1 ? "y is" : "ies are"} due for review
-                      </p>
-                      <p className="text-[12px] text-muted-foreground">
-                        {entriesDueReview.map((e) => `${e.first_name} ${e.surname}`).join(", ")} — renew, downgrade or remove{" "}
-                        {entriesDueReview.length === 1 ? "this restriction" : "these restrictions"}.
-                      </p>
-                    </div>
-                  </div>
+      {/* Header card: tabs with counts, then search and filters */}
+      <section aria-label="Find a person" className="rounded-[20px] border border-border bg-card px-4 pt-2 shadow-sm sm:px-6">
+        <div role="tablist" aria-label="Show" className="-mx-1 flex gap-1 overflow-x-auto border-b border-border">
+          {TABS.map((t) => {
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={active}
+                onClick={() => { setTab(t.id); setShown(PAGE); }}
+                className={cn(
+                  "relative flex min-h-11 shrink-0 items-center gap-2 px-3 text-sm font-bold transition-colors",
+                  active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
                 )}
+              >
+                {t.label}
+                <span className={cn(
+                  "rounded-full px-2 py-0.5 text-xs font-bold",
+                  active ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground",
+                  t.id === "attention" && counts.attention > 0 && !active && "bg-[hsl(var(--warning)/0.14)] text-warning-strong",
+                )}>
+                  {counts[t.id]}
+                </span>
+                {active && <span aria-hidden className="absolute inset-x-1 -bottom-px h-0.5 rounded-full bg-primary" />}
+              </button>
+            );
+          })}
+        </div>
 
-                <div className="rounded-[10px] border border-border bg-card overflow-hidden shadow-sm">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent bg-muted/50">
-                        <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Name</TableHead>
-                        <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Reason</TableHead>
-                        <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Review Due</TableHead>
-                        <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Alert Type</TableHead>
-                        <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Added By</TableHead>
-                        <TableHead className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Date Added</TableHead>
-                        <TableHead className="w-10"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {watchlist.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center py-16">
-                            <div className="flex flex-col items-center gap-2">
-                              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                                <ShieldAlert className="h-5 w-5 text-muted-foreground" />
-                              </div>
-                              <p className="text-sm text-muted-foreground">No watchlist entries</p>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        watchlist.map((entry) => (
-                          <TableRow key={entry.id} className="group">
-                            <TableCell>
-                              <div className="flex items-center gap-3">
-                                <Avatar className="h-8 w-8">
-                                  <AvatarFallback className="bg-destructive/10 text-destructive text-[11px] font-semibold">
-                                    {entry.first_name[0]}{entry.surname[0]}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="font-medium text-sm">{entry.first_name} {entry.surname}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-sm text-foreground max-w-[200px] truncate">{entry.reason}</TableCell>
-                            <TableCell className="text-sm">
-                              {entry.review_date ? (
-                                <span className={new Date(`${entry.review_date}T23:59:59`) < new Date() ? "text-warning font-semibold" : "text-muted-foreground"}>
-                                  {format(new Date(entry.review_date), "dd MMM yyyy")}
-                                </span>
-                              ) : (
-                                <span className="text-warning font-semibold">Not set</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={entry.alert_type === "hard" ? "destructive" : "outline"} className="text-[10px] gap-1">
-                                {entry.alert_type === "hard" ? (
-                                  <><ShieldAlert className="h-3 w-3" />Hard Block</>
-                                ) : (
-                                  <><AlertTriangle className="h-3 w-3" />Soft Alert</>
-                                )}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{entry.added_by}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{format(new Date(entry.created_at), "dd MMM yyyy")}</TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 text-xs text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() => removeEntry.mutate(entry.id)}
-                              >
-                                Remove
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </TabsContent>
-            </Tabs>
+        <div className="flex flex-col gap-3 py-4 md:flex-row md:items-center">
+          <div className="relative flex-1 md:max-w-md">
+            <Search aria-hidden className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setShown(PAGE); }}
+              placeholder="Search name, phone or who they visit"
+              aria-label="Search visitor profiles"
+              className="h-11 rounded-lg pl-10 pr-10 text-sm"
+            />
+            {search && (
+              <button aria-label="Clear search" onClick={() => setSearch("")} className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:text-foreground">
+                <X aria-hidden className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <div className="flex gap-3">
+            <Select value={type} onValueChange={(v) => { setType(v); setShown(PAGE); }}>
+              <SelectTrigger aria-label="Person type" className="h-11 w-full rounded-lg text-sm md:w-44"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All types</SelectItem>
+                {Object.entries(TYPE_LABEL).map(([k, l]) => <SelectItem key={k} value={k}>{l}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={sort} onValueChange={(v) => setSort(v as DirectorySort)}>
+              <SelectTrigger aria-label="Sort" className="h-11 w-full rounded-lg text-sm md:w-48"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="last_visit">On site, then last visit</SelectItem>
+                <SelectItem value="name">Surname A to Z</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </section>
 
-      {/* Visitor Profile Slide-over */}
+      {/* List */}
+      <section aria-label="Visitor profiles" aria-busy={loading} className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <div aria-hidden className="hidden grid-cols-[minmax(0,2.2fr)_minmax(0,1.5fr)_minmax(0,1.7fr)_minmax(0,1.5fr)_10rem] gap-4 border-b border-border bg-secondary px-6 py-3 text-xs font-bold text-muted-foreground lg:grid">
+          <span>Person</span><span>Status</span><span>Usually visits</span><span>Flags</span><span className="text-right">Action</span>
+        </div>
+
+        {error ? (
+          <div role="alert" className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+            <p className="text-sm font-bold">{error}</p>
+            <Button variant="outline" onClick={() => void refetch()} className="h-11 gap-2 rounded-lg border-input font-bold"><RotateCw aria-hidden className="h-4 w-4" />Try again</Button>
+          </div>
+        ) : loading && entries.length === 0 ? (
+          <ul aria-label="Loading">{Array.from({ length: 6 }).map((_, i) => (
+            <li key={i} className="flex items-center gap-4 border-b border-border px-6 py-4 last:border-0">
+              <span className="h-10 w-10 animate-pulse rounded-full bg-muted" /><span className="h-4 w-48 animate-pulse rounded bg-muted" />
+            </li>
+          ))}</ul>
+        ) : visible.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+            <p className="text-sm font-bold">
+              {search.trim() ? `No one matches "${search.trim()}".` : tab === "on_site" ? "No one is on site right now." : tab === "attention" ? "Nothing needs attention." : "No visitors recorded at this site yet."}
+            </p>
+            <p className="max-w-md text-[13px] leading-[18px] text-muted-foreground">
+              {search.trim() ? "Check the spelling, try a phone number, or check them in as someone new." : "People appear here after their first visit."}
+            </p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {filtered && <Button variant="outline" onClick={resetFilters} className="h-11 rounded-lg border-input font-bold">Clear filters</Button>}
+              <Button variant="outline" onClick={() => startCheckIn()} className="h-11 gap-2 rounded-lg border-input font-bold"><UserPlus aria-hidden className="h-4 w-4" />Check in someone new</Button>
+            </div>
+          </div>
+        ) : (
+          <ul>
+            {visible.slice(0, shown).map((e) => (
+              <Row key={e.key} entry={e} flags={flagsFor(e)} onOpen={() => setProfile(e.latest)} onCheckIn={() => startCheckIn(e)} />
+            ))}
+          </ul>
+        )}
+
+        {visible.length > shown && (
+          <div className="flex flex-col items-center gap-2 border-t border-border px-6 py-4">
+            <p className="text-[13px] text-muted-foreground">Showing {shown} of {visible.length}</p>
+            <Button variant="outline" onClick={() => setShown((s) => s + PAGE)} className="h-11 rounded-lg border-input font-bold">Show {Math.min(PAGE, visible.length - shown)} more</Button>
+          </div>
+        )}
+      </section>
+
+      {truncated && (
+        <p className="text-[13px] text-muted-foreground">Showing people from the most recent visits. For older history, use the Visitor report under Records.</p>
+      )}
+
       <VisitorProfile
-        visitor={selectedVisitor}
-        allVisitors={visitors}
-        open={profileOpen}
-        onOpenChange={setProfileOpen}
+        visitor={profile}
+        allVisitors={history}
+        open={!!profile}
+        onOpenChange={(o) => { if (!o) setProfile(null); }}
+        onCheckOut={async (id) => { await checkOutVisitor(id); setProfile(null); void refetch(); }}
       />
 
-      <AddWatchlistDialog
-        open={addWatchlistOpen}
-        onOpenChange={setAddWatchlistOpen}
-        onAdd={(entry) => addEntry.mutate(entry)}
+      <CheckInSheet
+        open={checkIn.open}
+        onOpenChange={(o) => { setCheckIn((c) => ({ ...c, open: o })); if (!o) void refetch(); }}
+        onAdd={addVisitorAsync}
+        initialType={checkIn.type}
+        prefill={checkIn.prefill}
       />
     </AppShell>
+  );
+}
+
+function Row({ entry, flags, onOpen, onCheckIn }: { entry: DirectoryEntry; flags: DirectoryFlags; onOpen: () => void; onCheckIn: () => void }) {
+  const v = entry.latest;
+  const name = `${v.firstName} ${v.surname}`.trim();
+  const initials = `${v.firstName?.[0] ?? ""}${v.surname?.[0] ?? ""}`.toUpperCase();
+  const chips: { label: string; icon: typeof ShieldAlert; tone: string }[] = [];
+  if (flags.watchlist) chips.push({ label: "Watchlist", icon: ShieldAlert, tone: "bg-emergency-muted text-destructive-strong" });
+  if (flags.overdue) chips.push({ label: "Overdue", icon: AlertTriangle, tone: "bg-[hsl(var(--warning)/0.14)] text-warning-strong" });
+  if (flags.screening === "blocked") chips.push({ label: "Screening blocked", icon: AlertTriangle, tone: "bg-emergency-muted text-destructive-strong" });
+  if (flags.screening === "flagged") chips.push({ label: "Screening flagged", icon: AlertTriangle, tone: "bg-[hsl(var(--warning)/0.14)] text-warning-strong" });
+  if (flags.keysHeld > 0) chips.push({ label: `${flags.keysHeld} key${flags.keysHeld === 1 ? "" : "s"} held`, icon: KeyRound, tone: "bg-accent text-accent-foreground" });
+
+  return (
+    <li className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 border-b border-border px-4 py-4 last:border-0 hover:bg-secondary sm:px-6 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1.5fr)_minmax(0,1.7fr)_minmax(0,1.5fr)_10rem]">
+      {/* Person */}
+      <div className="flex min-w-0 items-center gap-3">
+        <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-extrabold text-accent-foreground">{initials}</span>
+        <div className="min-w-0">
+          <button onClick={onOpen} className="block max-w-full truncate rounded text-left text-sm font-bold text-foreground underline-offset-4 hover:text-primary hover:underline">
+            {name}<span className="sr-only">, open profile</span>
+          </button>
+          <p className="text-xs text-muted-foreground">{TYPE_LABEL[v.type] ?? v.type} · {entry.visitCount} visit{entry.visitCount === 1 ? "" : "s"}</p>
+        </div>
+      </div>
+
+      {/* Action (top-right on small screens) */}
+      <div className="row-span-1 flex justify-end lg:order-last">
+        {entry.onSite ? (
+          <Button variant="outline" onClick={onOpen} className="h-11 rounded-lg border-input bg-card px-4 text-sm font-bold">Open profile</Button>
+        ) : (
+          <Button variant="outline" onClick={onCheckIn} className="h-11 gap-2 rounded-lg border-input bg-card px-4 text-sm font-bold">
+            <LogIn aria-hidden className="h-4 w-4" />Check in again
+          </Button>
+        )}
+      </div>
+
+      {/* Status */}
+      <div className="col-span-2 text-[13px] leading-[18px] lg:col-span-1">
+        {entry.onSite && entry.onSiteSince ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--success)/0.12)] px-2.5 py-0.5 text-xs font-bold text-success-strong">
+            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-success" />On site since {format(entry.onSiteSince, "h:mm a")}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">
+            Last visit <span className="font-semibold text-foreground">{lastVisitLabel(entry.lastVisit)}</span>
+            <span className="hidden sm:inline"> · {format(entry.lastVisit, "d MMM")}</span>
+          </span>
+        )}
+      </div>
+
+      {/* Usually visits */}
+      <p className="col-span-2 min-w-0 truncate text-[13px] leading-[18px] text-muted-foreground lg:col-span-1">
+        {entry.usuallyVisits ? <>Visits <span className="font-semibold text-foreground">{entry.usuallyVisits}</span></> : <span className="lg:sr-only">No usual destination</span>}
+      </p>
+
+      {/* Flags */}
+      <div className="col-span-2 flex flex-wrap gap-1.5 lg:col-span-1">
+        {chips.length === 0 ? <span className="sr-only">No flags</span> : chips.map((c) => (
+          <span key={c.label} className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold", c.tone)}>
+            <c.icon aria-hidden className="h-3.5 w-3.5" />{c.label}
+          </span>
+        ))}
+      </div>
+    </li>
   );
 }

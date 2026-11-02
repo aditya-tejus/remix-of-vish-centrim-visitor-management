@@ -13,6 +13,7 @@ import VisitList from "./pages/VisitList";
 import HomeWorkbench from "./pages/HomeWorkbench";
 import Settings from "./pages/Settings";
 import Visitors from "./pages/Visitors";
+import WatchlistPage from "./pages/Watchlist";
 import VisitorProfilePage from "./pages/VisitorProfilePage";
 
 import CalendarPage from "./pages/Calendar";
@@ -81,6 +82,7 @@ const App = () => (
             <Route path="/visit-list" element={<Staff><VisitList /></Staff>} />
             <Route path="/visitors" element={<Staff><Visitors /></Staff>} />
             <Route path="/visitors/:id" element={<Staff><VisitorProfilePage /></Staff>} />
+            <Route path="/watchlist" element={<Staff><WatchlistPage /></Staff>} />
             <Route path="/check-in" element={<Navigate to="/" replace />} />
             <Route path="/person-type" element={<PersonTypeSelector />} />
             <Route path="/group-checkin" element={<Navigate to="/today" replace />} />
