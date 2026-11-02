@@ -129,7 +129,7 @@ export default {
       },
       fontFamily: {
         sans: [
-          'Source Sans 3',
+          'Nunito',
           'ui-sans-serif',
           'system-ui',
           '-apple-system',

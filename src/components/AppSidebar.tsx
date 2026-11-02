@@ -63,8 +63,8 @@ export function AppSidebar() {
     <Sidebar className="border-r border-sidebar-border">
       <SidebarHeader className="px-5 py-5">
         <div className="flex min-w-0 items-center gap-2">
-          <img src={centrimLogo} alt="Centrim Life" className="h-8 min-w-0 flex-1 object-contain object-left" />
-          <span className="shrink-0 rounded bg-sidebar-primary/15 px-1.5 py-0.5 text-xs font-semibold tracking-wide text-sidebar-primary">
+          <img src={centrimLogo} alt="Centrim Life" className="h-8 min-w-0 flex-1 object-contain object-left brightness-0 invert" />
+          <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-xs font-bold text-sidebar-muted">
             Visitors
           </span>
         </div>
@@ -139,7 +139,7 @@ export function AppSidebar() {
                   asChild
                   isActive={onEmergency}
                   tooltip={model.emergency.title}
-                  className={`min-h-touch h-11 gap-2.5 rounded-lg border border-destructive/40 px-3 text-sm font-semibold text-destructive-strong hover:bg-destructive/20 ${onEmergency ? "bg-destructive/15" : ""}`}
+                  className={`min-h-touch h-11 gap-2.5 rounded-lg border border-destructive bg-emergency-muted px-3 text-sm font-bold text-destructive-strong hover:bg-emergency-muted hover:text-destructive-strong hover:ring-2 hover:ring-destructive/40 ${onEmergency ? "ring-2 ring-white/60" : ""}`}
                 >
                   <NavLink to={model.emergency.path} aria-current={onEmergency ? "page" : undefined}>
                     <Siren className="h-4 w-4 shrink-0 text-destructive-strong" aria-hidden="true" />
