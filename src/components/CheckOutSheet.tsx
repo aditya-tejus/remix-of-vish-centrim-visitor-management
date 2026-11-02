@@ -253,9 +253,9 @@ export function CheckOutSheet({
   return (
     <>
       <Sheet open={open && !feedbackVisitor} onOpenChange={handleClose}>
-        <SheetContent side="right" className="w-full sm:max-w-[50vw] min-w-[460px] p-0 flex flex-col">
+        <SheetContent side="right" className="w-full sm:max-w-[50vw] sm:min-w-[460px] p-0 flex flex-col">
           {/* Header */}
-          <SheetHeader className="px-5 py-4 border-b border-border shrink-0">
+          <SheetHeader className="px-5 py-4 pr-14 border-b border-border shrink-0">
             <div className="flex items-center justify-between">
               <SheetTitle className="flex items-center gap-2 text-[16px]">
                 <LogOut className="h-4.5 w-4.5 text-checkout" />

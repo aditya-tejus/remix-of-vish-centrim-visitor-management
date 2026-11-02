@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { isSameDay } from "date-fns";
+import { isToday } from "date-fns";
+import { residentsDue } from "@/lib/presence";
 import { Visitor } from "@/types/visitor";
 import { useOverstayPolicy } from "@/hooks/useOverstayPolicy";
 
@@ -68,22 +69,7 @@ export function useVisitViews({ dayVisitors, liveVisitors, allVisitors, selected
    * resident who is away with an expected return. There is no pre-registration
    * of visitors, so nothing else can honestly be listed here.
    */
-  const scheduled = useMemo(
-    () =>
-      allVisitors
-        .filter(
-          (v) =>
-            v.type === "resident" &&
-            v.status === "checked-out" &&
-            v.expectedReturnDate &&
-            isSameDay(v.expectedReturnDate, selectedDate)
-        )
-        .sort(
-          (a, b) =>
-            (a.expectedReturnDate?.getTime() ?? 0) - (b.expectedReturnDate?.getTime() ?? 0)
-        ),
-    [allVisitors, selectedDate]
-  );
+  const scheduled = useMemo(() => residentsDue(allVisitors, selectedDate), [allVisitors, selectedDate]);
 
   const views = useMemo<VisitViewDef[]>(() => {
     const list: VisitViewDef[] = [
@@ -99,28 +85,27 @@ export function useVisitViews({ dayVisitors, liveVisitors, allVisitors, selected
         label: "Overdue",
         count: overdue.length,
         emptyTitle: "Nobody is overdue",
-        emptyDescription: "Everyone on site is still within the expected time for their type.",
+        emptyDescription: "Everyone on site is within the expected time for their type.",
       },
       {
         key: "recent",
-        label: "Recent activity",
+        label: isToday(selectedDate) ? "Today's activity" : "Activity that day",
         count: recent.length,
         emptyTitle: "No movement recorded",
-        emptyDescription: "No arrivals or departures have been recorded for this day.",
+        emptyDescription: "No arrivals or departures were recorded on this day.",
       },
     ];
     if (scheduledAvailable) {
       list.push({
         key: "scheduled",
-        label: "Expected back",
+        label: "Residents due back",
         count: scheduled.length,
-        emptyTitle: "Nobody is expected back",
-        emptyDescription:
-          "This view only shows residents who are away with an expected return time. Visitor pre-registration is not configured, so expected arrivals cannot be listed.",
+        emptyTitle: "No residents due back",
+        emptyDescription: "Residents who are out with an expected return time appear here, overdue returns first.",
       });
     }
     return list;
-  }, [onSite.length, overdue.length, recent.length, scheduled.length, scheduledAvailable]);
+  }, [onSite.length, overdue.length, recent.length, scheduled.length, scheduledAvailable, selectedDate]);
 
   const rowsFor = (key: VisitViewKey): Visitor[] => {
     switch (key) {
