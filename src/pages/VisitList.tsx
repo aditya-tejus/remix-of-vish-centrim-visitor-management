@@ -343,7 +343,7 @@ export default function VisitList() {
         />
       )}
       <VisitListQRDialog open={qrOpen} onOpenChange={setQrOpen} />
-      <HandoverPrintDialog open={handoverOpen} onOpenChange={setHandoverOpen} visitors={dateVisitors} date={selectedDate} />
+      <HandoverPrintDialog open={handoverOpen} onOpenChange={setHandoverOpen} visitors={liveCandidates} date={selectedDate} />
     </>
   );
 }
