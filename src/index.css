@@ -78,11 +78,13 @@
     --sidebar-muted: 214 91% 82%;
 
     /* Chart */
+    /* Design system chart series, in fixed order (chart-1 … chart-6) */
     --chart-1: 212 100% 46%;
-    --chart-2: 193 82% 31%;
+    --chart-2: 192 82% 31%;
     --chart-3: 262 83% 58%;
     --chart-4: 26 90% 37%;
-    --chart-5: 335 78% 42%;
+    --chart-5: 330 78% 42%;
+    --chart-6: 221 13% 46%;
 
     /* Shadows */
     --shadow-soft: 0 1px 3px 0 hsl(225 41% 11% / 0.04), 0 1px 2px -1px hsl(225 41% 11% / 0.04);

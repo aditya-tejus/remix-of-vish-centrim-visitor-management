@@ -32,7 +32,7 @@ export function useVisitsInRange(from: Date, to: Date) {
       : query.eq("branch_id", currentSiteId);
     const { data, error } = await query.order("check_in_time", { ascending: true }).limit(5000);
     if (request !== revision.current) return;
-    if (error) setError("We could not load visits for this month. Check the connection and try again.");
+    if (error) setError("We could not load visits for these dates. Check the connection and try again.");
     else { setError(null); setVisits(((data || []) as unknown as DbVisitor[]).map(dbToVisitor)); }
     setLoading(false);
   }, [currentSiteId, isLegacySite, fromIso, toIso]);

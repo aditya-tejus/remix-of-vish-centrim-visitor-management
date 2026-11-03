@@ -1,534 +1,190 @@
-import { isOverstayedSync } from "@/hooks/useOverstayPolicy";
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { addDays, format, startOfDay, subDays } from "date-fns";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { CalendarDays, Clock, Download, HeartHandshake, RefreshCw, TrendingUp, Users } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { Button } from "@/components/ui/button";
 import { StatTile } from "@/components/ui/reception-primitives";
-import { useVisitors } from "@/hooks/useVisitors";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Users, TrendingUp, Clock, UserCheck, AlertTriangle,
-  BarChart3, PieChart as PieChartIcon, Activity, CalendarDays,
-} from "lucide-react";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line, Legend, Area, AreaChart,
-} from "recharts";
-import {
-  format, subDays, isSameDay, startOfWeek, endOfWeek,
-  eachDayOfInterval, differenceInMinutes, startOfDay,
-} from "date-fns";
+import { ChartCard, ChoiceChips, Legend, TYPE_COLOR, axisTick, tooltipStyle } from "@/components/reports/ReportParts";
+import { useVisitsInRange } from "@/hooks/useVisitsInRange";
+import { useResidents } from "@/hooks/useResidents";
+import { useSite } from "@/contexts/SiteContext";
+import { exportCsvAudited } from "@/lib/exportAudit";
+import { PATTERN_TYPE_LABEL, hourLabel, minutesLabel, visitPatterns } from "@/lib/visitPatterns";
 
-const CHART_COLORS = [
-  "hsl(var(--primary))",
-  "hsl(var(--success))",
-  "hsl(var(--warning))",
-  "hsl(var(--destructive))",
-  "hsl(var(--muted-foreground))",
+type Period = "7" | "30" | "90";
+const PERIODS: { id: Period; label: string }[] = [
+  { id: "7", label: "Last 7 days" },
+  { id: "30", label: "Last 30 days" },
+  { id: "90", label: "Last 90 days" },
 ];
 
+/**
+ * Visit patterns — when people come, who they come to see, and how long they
+ * stay. Answers the questions a manager asks when planning reception cover.
+ * Residents are never counted as visits.
+ */
 export default function ReportsPage() {
-  const { visitors } = useVisitors();
+  const [period, setPeriod] = useState<Period>("30");
+  const { currentSiteId, currentSite } = useSite();
+  const todayKey = format(new Date(), "yyyy-MM-dd");
+  // Stable dates (start of day) so the query does not refetch on every render.
+  const { from, to } = useMemo(() => {
+    const today = startOfDay(new Date(`${todayKey}T00:00:00`));
+    return { from: subDays(today, Number(period) - 1), to: addDays(today, 1) };
+  }, [todayKey, period]);
+  const { visits, loading, error, refetch } = useVisitsInRange(from, to);
+  const { residents } = useResidents();
+  const residentNames = useMemo(() => residents.map((r) => r.name), [residents]);
+  const p = useMemo(() => visitPatterns(visits, from, new Date(to.getTime() - 1), residentNames), [visits, from, to, residentNames]);
 
-  // ── Derived data ──
-  const today = new Date();
+  const periodLabel = PERIODS.find((x) => x.id === period)!.label.toLowerCase();
+  const typeSeries = p.typesPresent.map((t) => ({ key: t, label: PATTERN_TYPE_LABEL[t], color: TYPE_COLOR[t] }));
+  const busiestWeekday = [...p.byWeekday].sort((a, b) => b.average - a.average)[0];
+  const quietHours = p.byHour.filter((h) => h.hour >= 7 && h.hour <= 21);
 
-  const todayVisitors = useMemo(
-    () => visitors.filter((v) => isSameDay(v.checkInTime, today)),
-    [visitors]
+  const exportDaily = () => exportCsvAudited(
+    ["Date", "All visits", ...p.typesPresent.map((t) => PATTERN_TYPE_LABEL[t])],
+    p.byDay.map((d) => [format(d.date, "yyyy-MM-dd"), d.total, ...p.typesPresent.map((t) => d[t])]),
+    { filenamePrefix: "visit-patterns", auditAction: "visit_patterns_export", siteId: currentSiteId, siteName: currentSite?.name ?? null, scopeNote: `Daily counts, ${periodLabel}` },
   );
-
-  const last7 = useMemo(
-    () => visitors.filter((v) => v.checkInTime >= subDays(today, 7)),
-    [visitors]
-  );
-
-  const last30 = useMemo(
-    () => visitors.filter((v) => v.checkInTime >= subDays(today, 30)),
-    [visitors]
-  );
-
-  // ── Stats cards ──
-  // Residents live here, so they are not visits: leave them out of visit figures.
-  const checkedInNow = visitors.filter((v) => v.type !== "resident" && v.status === "checked-in").length;
-  const todayTotal = todayVisitors.length;
-  const avgDuration = useMemo(() => {
-    const completed = last30.filter((v) => v.type !== "resident" && v.checkOutTime);
-    if (completed.length === 0) return 0;
-    const total = completed.reduce(
-      (acc, v) => acc + differenceInMinutes(v.checkOutTime!, v.checkInTime),
-      0
-    );
-    return Math.round(total / completed.length);
-  }, [last30]);
-  const overstayedCount = visitors.filter(
-    isOverstayedSync
-  ).length;
-
-  // ── Daily visits chart (last 7 days) ──
-  const dailyData = useMemo(() => {
-    const days = eachDayOfInterval({ start: subDays(today, 6), end: today });
-    return days.map((day) => {
-      const dayVisitors = visitors.filter((v) => isSameDay(v.checkInTime, day));
-      return {
-        date: format(day, "EEE"),
-        fullDate: format(day, "dd MMM"),
-        visitors: dayVisitors.filter((v) => v.type === "visitor").length,
-        residents: dayVisitors.filter((v) => v.type === "resident").length,
-        contractors: dayVisitors.filter((v) => v.type === "contractor").length,
-        staff: dayVisitors.filter((v) => v.type === "staff").length,
-        total: dayVisitors.length,
-      };
-    });
-  }, [visitors]);
-
-  // ── Type breakdown (pie) ──
-  const typeBreakdown = useMemo(() => {
-    const counts: Record<string, number> = {};
-    last30.forEach((v) => {
-      counts[v.type] = (counts[v.type] || 0) + 1;
-    });
-    return Object.entries(counts).map(([name, value]) => ({ name, value }));
-  }, [last30]);
-
-  // ── Peak hours (last 30 days) ──
-  const peakHours = useMemo(() => {
-    const hourCounts = new Array(24).fill(0);
-    last30.forEach((v) => {
-      const hour = v.checkInTime.getHours();
-      hourCounts[hour]++;
-    });
-    return hourCounts.map((count, hour) => ({
-      hour: `${hour.toString().padStart(2, "0")}:00`,
-      visits: count,
-    }));
-  }, [last30]);
-
-  // ── Average duration by type ──
-  const durationByType = useMemo(() => {
-    const types = ["visitor", "resident", "contractor", "staff"];
-    return types.map((type) => {
-      const completed = last30.filter((v) => v.type === type && v.checkOutTime);
-      const avg =
-        completed.length > 0
-          ? Math.round(
-              completed.reduce(
-                (acc, v) => acc + differenceInMinutes(v.checkOutTime!, v.checkInTime),
-                0
-              ) / completed.length
-            )
-          : 0;
-      return { type: type.charAt(0).toUpperCase() + type.slice(1), avgMinutes: avg };
-    });
-  }, [last30]);
-
-  // ── Weekly trend (last 4 weeks) ──
-  const weeklyTrend = useMemo(() => {
-    const weeks: { week: string; total: number }[] = [];
-    for (let i = 3; i >= 0; i--) {
-      const weekStart = startOfWeek(subDays(today, i * 7), { weekStartsOn: 1 });
-      const weekEnd = endOfWeek(subDays(today, i * 7), { weekStartsOn: 1 });
-      const count = visitors.filter(
-        (v) => v.checkInTime >= weekStart && v.checkInTime <= weekEnd
-      ).length;
-      weeks.push({
-        week: `${format(weekStart, "dd MMM")} – ${format(weekEnd, "dd MMM")}`,
-        total: count,
-      });
-    }
-    return weeks;
-  }, [visitors]);
-
-  // ── Top visited people ──
-  const topVisited = useMemo(() => {
-    const counts: Record<string, number> = {};
-    last30
-      .filter((v) => v.whomToVisit)
-      .forEach((v) => {
-        counts[v.whomToVisit] = (counts[v.whomToVisit] || 0) + 1;
-      });
-    return Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([name, visits]) => ({ name, visits }));
-  }, [last30]);
-
-  // ── Health declaration compliance ──
-  const healthCompliance = useMemo(() => {
-    const declared = last30.filter((v) => v.healthDeclaration).length;
-    const notDeclared = last30.length - declared;
-    return [
-      { name: "Completed", value: declared },
-      { name: "Incomplete", value: notDeclared },
-    ];
-  }, [last30]);
-
-  const formatDuration = (mins: number) => {
-    if (mins < 60) return `${mins}m`;
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return m > 0 ? `${h}h ${m}m` : `${h}h`;
-  };
 
   return (
     <AppShell
-      title="Reports and analytics"
-      subtitle="Visits, busy times and who is visited most."
-      mainClassName="p-6 space-y-6"
+      title="Visit patterns"
+      mainClassName="p-4 sm:p-6"
+      subtitle="When people visit, who they come to see and how long they stay. Use it to plan reception cover and spot residents who may be lonely."
+      eyebrow="Reports"
+      actions={<Button variant="outline" onClick={exportDaily} disabled={loading || p.total === 0}><Download className="h-4 w-4" />Download daily counts</Button>}
+      headerContent={<ChoiceChips label="Period" options={PERIODS} value={period} onChange={(v) => setPeriod(v as Period)} />}
     >
-            {/* Summary Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatTile label="On site now" value={checkedInNow} icon={UserCheck} />
-              <StatTile label="Today's visits" value={todayTotal} icon={Users} />
-              <StatTile label="Average visit" value={formatDuration(avgDuration)} icon={Clock} />
-              <StatTile label="Past expected time" value={overstayedCount} icon={AlertTriangle} tone={overstayedCount > 0 ? "attention" : "neutral"} />
+      <div className="space-y-5">
+        {error && (
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[hsl(var(--destructive)/0.4)] bg-error-subtle p-4 text-sm font-semibold text-destructive">
+            {error}
+            <Button variant="outline" size="sm" onClick={() => void refetch()}><RefreshCw className="h-4 w-4" />Try again</Button>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatTile label="Visits" icon={TrendingUp} value={loading ? "…" : p.total} note={periodLabel} />
+          <StatTile label="Different people" icon={Users} value={loading ? "…" : p.people} note="Counted once each" />
+          <StatTile label="Average visit" icon={Clock} value={loading ? "…" : minutesLabel(p.averageMinutes)} note="Visits that signed out" />
+          <StatTile label="Busiest day" icon={CalendarDays}
+            value={loading ? "…" : p.busiestDay ? format(p.busiestDay.date, "EEE d MMM") : "—"}
+            note={p.busiestDay ? `${p.busiestDay.count} visits` : "No visits yet"} />
+        </div>
+
+        {!loading && p.total === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center">
+            <p className="text-base font-extrabold text-foreground">No visits in the {periodLabel}</p>
+            <p className="mt-1 text-sm text-muted-foreground">Try a longer period, or check the visitor report for older records.</p>
+            <Button asChild variant="outline" className="mt-4"><Link to="/reports/visitor-report">Open visitor report</Link></Button>
+          </div>
+        ) : (
+          <>
+            <ChartCard title="Visits each day" description="Stacked by who visited">
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={p.byDay} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                    <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
+                    <XAxis dataKey="label" tick={axisTick} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={16} />
+                    <YAxis allowDecimals={false} tick={axisTick} tickLine={false} axisLine={false} />
+                    <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "hsl(var(--muted))" }} />
+                    {typeSeries.map((s, i) => (
+                      <Bar isAnimationActive={false} key={s.key} dataKey={s.key} name={s.label} stackId="day" fill={s.color} maxBarSize={36}
+                        radius={i === typeSeries.length - 1 ? [4, 4, 0, 0] : 0} />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <Legend items={typeSeries} />
+            </ChartCard>
+
+            <div className="grid gap-5 lg:grid-cols-2">
+              <ChartCard title="Busiest times of day" description={p.peakHour !== null ? `Most arrivals around ${hourLabel(p.peakHour)}` : "Arrivals by hour"}>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={quietHours} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                      <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
+                      <XAxis dataKey="label" tick={axisTick} tickLine={false} axisLine={false} interval={1} />
+                      <YAxis allowDecimals={false} tick={axisTick} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "hsl(var(--muted))" }} />
+                      <Bar isAnimationActive={false} dataKey="count" name="Arrivals" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">Shows 7 AM to 9 PM.</p>
+              </ChartCard>
+
+              <ChartCard title="Average visits by weekday" description={busiestWeekday?.average ? `${busiestWeekday.day} is usually busiest` : "Per day of the week"}>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={p.byWeekday} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                      <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
+                      <XAxis dataKey="day" tick={axisTick} tickLine={false} axisLine={false} />
+                      <YAxis tick={axisTick} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "hsl(var(--muted))" }} />
+                      <Bar isAnimationActive={false} dataKey="average" name="Average visits" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </ChartCard>
             </div>
 
-            {/* Charts Tabs */}
-            <Tabs defaultValue="overview" className="space-y-4">
-              <TabsList className="bg-muted/50 p-1 rounded-xl h-auto flex-wrap">
-                <TabsTrigger value="overview" className="gap-1.5 rounded-lg text-xs data-[state=active]:shadow-sm">
-                  <BarChart3 className="h-3.5 w-3.5" />
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger value="trends" className="gap-1.5 rounded-lg text-xs data-[state=active]:shadow-sm">
-                  <TrendingUp className="h-3.5 w-3.5" />
-                  Trends
-                </TabsTrigger>
-                <TabsTrigger value="breakdown" className="gap-1.5 rounded-lg text-xs data-[state=active]:shadow-sm">
-                  <PieChartIcon className="h-3.5 w-3.5" />
-                  Breakdown
-                </TabsTrigger>
-                <TabsTrigger value="compliance" className="gap-1.5 rounded-lg text-xs data-[state=active]:shadow-sm">
-                  <Activity className="h-3.5 w-3.5" />
-                  Compliance
-                </TabsTrigger>
-              </TabsList>
+            <div className="grid gap-5 lg:grid-cols-2">
+              <ChartCard title="Residents with the most visitors" description="Family and friends only, not contractors or staff">
+                {p.topResidents.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No family or friend visits named a resident in this period.</p>
+                ) : (
+                  <ol className="space-y-2.5">
+                    {p.topResidents.map((r) => (
+                      <li key={r.name} className="grid grid-cols-[minmax(0,10rem)_1fr_auto] items-center gap-3 text-sm">
+                        <span className="truncate font-bold text-foreground">{r.name}</span>
+                        <span className="h-2.5 rounded-full bg-muted" aria-hidden>
+                          <span className="block h-full rounded-full bg-[hsl(var(--chart-1))]" style={{ width: `${(r.count / p.topResidents[0].count) * 100}%` }} />
+                        </span>
+                        <span className="tabular-nums font-semibold text-foreground">{r.count} {r.count === 1 ? "visit" : "visits"}</span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+                {p.residentsWithoutVisitors.length > 0 && (
+                  <div className="mt-5 rounded-xl border border-[hsl(var(--warning)/0.45)] bg-warning-subtle/50 p-4">
+                    <p className="flex items-center gap-2 text-sm font-extrabold text-warning-strong">
+                      <HeartHandshake className="h-4 w-4" aria-hidden />
+                      {p.residentsWithoutVisitors.length} {p.residentsWithoutVisitors.length === 1 ? "resident has" : "residents have"} had no visitors in the {periodLabel}
+                    </p>
+                    <p className="mt-1 text-sm text-foreground">{p.residentsWithoutVisitors.slice(0, 12).join(", ")}{p.residentsWithoutVisitors.length > 12 ? ` and ${p.residentsWithoutVisitors.length - 12} more` : ""}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Worth sharing with their key worker or the activities team.</p>
+                  </div>
+                )}
+              </ChartCard>
 
-              {/* Overview Tab */}
-              <TabsContent value="overview" className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Daily Visits */}
-                  <Card>
-                    <CardContent className="p-5">
-                      <h3 className="text-sm font-semibold text-foreground mb-4">Daily Visits (Last 7 Days)</h3>
-                      <div className="h-[280px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={dailyData}>
-                            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                            <XAxis dataKey="date" className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
-                            <YAxis className="text-xs" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} allowDecimals={false} />
-                            <Tooltip
-                              contentStyle={{
-                                backgroundColor: "hsl(var(--card))",
-                                border: "1px solid hsl(var(--border))",
-                                borderRadius: "8px",
-                                fontSize: "12px",
-                              }}
-                            />
-                            <Legend wrapperStyle={{ fontSize: "11px" }} />
-                            <Bar dataKey="visitors" name="Visitors" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="residents" name="Residents" fill={CHART_COLORS[1]} radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="contractors" name="Contractors" fill={CHART_COLORS[2]} radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="staff" name="Staff" fill={CHART_COLORS[4]} radius={[4, 4, 0, 0]} />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Peak Hours */}
-                  <Card>
-                    <CardContent className="p-5">
-                      <h3 className="text-sm font-semibold text-foreground mb-4">Peak Hours (Last 30 Days)</h3>
-                      <div className="h-[280px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={peakHours}>
-                            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                            <XAxis dataKey="hour" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} interval={2} />
-                            <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} allowDecimals={false} />
-                            <Tooltip
-                              contentStyle={{
-                                backgroundColor: "hsl(var(--card))",
-                                border: "1px solid hsl(var(--border))",
-                                borderRadius: "8px",
-                                fontSize: "12px",
-                              }}
-                            />
-                            <Area type="monotone" dataKey="visits" stroke={CHART_COLORS[0]} fill={CHART_COLORS[0]} fillOpacity={0.15} />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Top Visited & Duration */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <Card>
-                    <CardContent className="p-5">
-                      <h3 className="text-sm font-semibold text-foreground mb-4">Most Visited People</h3>
-                      {topVisited.length === 0 ? (
-                        <p className="text-xs text-muted-foreground py-8 text-center">No data available</p>
-                      ) : (
-                        <div className="space-y-3">
-                          {topVisited.map((item, i) => (
-                            <div key={item.name} className="flex items-center gap-3">
-                              <span className="text-xs font-bold text-muted-foreground w-5">{i + 1}</span>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
-                                <div className="h-1.5 w-full bg-muted rounded-full mt-1">
-                                  <div
-                                    className="h-1.5 bg-primary rounded-full"
-                                    style={{ width: `${(item.visits / topVisited[0].visits) * 100}%` }}
-                                  />
-                                </div>
-                              </div>
-                              <Badge variant="secondary" className="text-[10px]">{item.visits} visits</Badge>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardContent className="p-5">
-                      <h3 className="text-sm font-semibold text-foreground mb-4">Average Visit Duration by Type</h3>
-                      <div className="h-[200px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={durationByType} layout="vertical">
-                            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                            <XAxis type="number" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} unit="m" />
-                            <YAxis dataKey="type" type="category" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} width={80} />
-                            <Tooltip
-                              formatter={(value: number) => [`${formatDuration(value)}`, "Avg Duration"]}
-                              contentStyle={{
-                                backgroundColor: "hsl(var(--card))",
-                                border: "1px solid hsl(var(--border))",
-                                borderRadius: "8px",
-                                fontSize: "12px",
-                              }}
-                            />
-                            <Bar dataKey="avgMinutes" fill={CHART_COLORS[1]} radius={[0, 4, 4, 0]} />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-
-              {/* Trends Tab */}
-              <TabsContent value="trends" className="space-y-6">
-                <Card>
-                  <CardContent className="p-5">
-                    <h3 className="text-sm font-semibold text-foreground mb-4">Weekly Trend (Last 4 Weeks)</h3>
-                    <div className="h-[300px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={weeklyTrend}>
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                          <XAxis dataKey="week" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />
-                          <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} allowDecimals={false} />
-                          <Tooltip
-                            contentStyle={{
-                              backgroundColor: "hsl(var(--card))",
-                              border: "1px solid hsl(var(--border))",
-                              borderRadius: "8px",
-                              fontSize: "12px",
-                            }}
-                          />
-                          <Line type="monotone" dataKey="total" stroke={CHART_COLORS[0]} strokeWidth={2} dot={{ r: 4, fill: CHART_COLORS[0] }} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-5">
-                    <h3 className="text-sm font-semibold text-foreground mb-4">Daily Check-ins vs Check-outs (Last 7 Days)</h3>
-                    <div className="h-[280px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={dailyData}>
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                          <XAxis dataKey="date" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
-                          <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} allowDecimals={false} />
-                          <Tooltip
-                            contentStyle={{
-                              backgroundColor: "hsl(var(--card))",
-                              border: "1px solid hsl(var(--border))",
-                              borderRadius: "8px",
-                              fontSize: "12px",
-                            }}
-                          />
-                          <Legend wrapperStyle={{ fontSize: "11px" }} />
-                          <Bar dataKey="total" name="Total Visits" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Breakdown Tab */}
-              <TabsContent value="breakdown" className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <Card>
-                    <CardContent className="p-5">
-                      <h3 className="text-sm font-semibold text-foreground mb-4">Visitor Type Distribution (30 Days)</h3>
-                      <div className="h-[300px]">
-                        {typeBreakdown.length === 0 ? (
-                          <div className="flex items-center justify-center h-full">
-                            <p className="text-xs text-muted-foreground">No data available</p>
-                          </div>
-                        ) : (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={typeBreakdown}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={60}
-                                outerRadius={100}
-                                paddingAngle={4}
-                                dataKey="value"
-                                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                              >
-                                {typeBreakdown.map((_, i) => (
-                                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                                ))}
-                              </Pie>
-                              <Tooltip
-                                contentStyle={{
-                                  backgroundColor: "hsl(var(--card))",
-                                  border: "1px solid hsl(var(--border))",
-                                  borderRadius: "8px",
-                                  fontSize: "12px",
-                                }}
-                              />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardContent className="p-5">
-                      <h3 className="text-sm font-semibold text-foreground mb-4">Type Summary</h3>
-                      <div className="space-y-4">
-                        {typeBreakdown.map((item, i) => {
-                          const total = typeBreakdown.reduce((a, b) => a + b.value, 0);
-                          const pct = total > 0 ? Math.round((item.value / total) * 100) : 0;
-                          return (
-                            <div key={item.name}>
-                              <div className="flex items-center justify-between mb-1">
-                                <div className="flex items-center gap-2">
-                                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
-                                  <span className="text-sm font-medium text-foreground capitalize">{item.name}</span>
-                                </div>
-                                <span className="text-xs text-muted-foreground">{item.value} visits ({pct}%)</span>
-                              </div>
-                              <div className="h-2 w-full bg-muted rounded-full">
-                                <div
-                                  className="h-2 rounded-full transition-all"
-                                  style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
-                        {typeBreakdown.length === 0 && (
-                          <p className="text-xs text-muted-foreground text-center py-8">No data available</p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-
-              {/* Compliance Tab */}
-              <TabsContent value="compliance" className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <Card>
-                    <CardContent className="p-5">
-                      <h3 className="text-sm font-semibold text-foreground mb-4">Check-in Declaration Compliance (30 Days)</h3>
-                      <div className="h-[280px]">
-                        {last30.length === 0 ? (
-                          <div className="flex items-center justify-center h-full">
-                            <p className="text-xs text-muted-foreground">No data available</p>
-                          </div>
-                        ) : (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={healthCompliance}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={60}
-                                outerRadius={100}
-                                paddingAngle={4}
-                                dataKey="value"
-                                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                              >
-                                <Cell fill={CHART_COLORS[1]} />
-                                <Cell fill={CHART_COLORS[3]} />
-                              </Pie>
-                              <Tooltip
-                                contentStyle={{
-                                  backgroundColor: "hsl(var(--card))",
-                                  border: "1px solid hsl(var(--border))",
-                                  borderRadius: "8px",
-                                  fontSize: "12px",
-                                }}
-                              />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardContent className="p-5 space-y-4">
-                      <h3 className="text-sm font-semibold text-foreground">Compliance Summary</h3>
-                      <div className="space-y-3">
-                        {[
-                          {
-                            label: "Declaration Compliance Rate",
-                            value: last30.length > 0 ? `${Math.round((last30.filter((v) => v.healthDeclaration).length / last30.length) * 100)}%` : "N/A",
-                            status: last30.length > 0 && last30.filter((v) => v.healthDeclaration).length / last30.length >= 0.9 ? "good" : "warn",
-                          },
-                          {
-                            label: "Privacy Acknowledgement",
-                            value: last30.length > 0 ? `${Math.round((last30.filter((v) => v.acknowledgedPrivacy).length / last30.length) * 100)}%` : "N/A",
-                            status: last30.length > 0 && last30.filter((v) => v.acknowledgedPrivacy).length / last30.length >= 0.9 ? "good" : "warn",
-                          },
-                          {
-                            label: "Overstayed Visitors Today",
-                            value: `${overstayedCount}`,
-                            status: overstayedCount === 0 ? "good" : "warn",
-                          },
-                          {
-                            label: "Total Visits (30 Days)",
-                            value: `${last30.length}`,
-                            status: "good",
-                          },
-                        ].map((item) => (
-                          <div key={item.label} className="flex items-center justify-between rounded-lg border border-border p-3">
-                            <span className="text-sm text-foreground">{item.label}</span>
-                            <Badge variant={item.status === "good" ? "secondary" : "destructive"} className="text-xs">
-                              {item.value}
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-            </Tabs>
+              <ChartCard title="How long people stay" description="Average visit length by type">
+                {p.lengthByType.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No one has signed out yet in this period.</p>
+                ) : (
+                  <ul className="divide-y divide-border">
+                    {p.lengthByType.map((l) => (
+                      <li key={l.type} className="flex items-center justify-between gap-3 py-3 text-sm">
+                        <span className="flex items-center gap-2 font-bold text-foreground">
+                          <span aria-hidden className="h-2.5 w-2.5 rounded-sm" style={{ background: TYPE_COLOR[l.type] }} />{l.label}
+                        </span>
+                        <span className="text-right">
+                          <span className="font-extrabold tabular-nums text-foreground">{minutesLabel(l.minutes)}</span>
+                          <span className="block text-xs text-muted-foreground">{l.visits} {l.visits === 1 ? "visit" : "visits"}</span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </ChartCard>
+            </div>
+          </>
+        )}
+      </div>
     </AppShell>
   );
 }

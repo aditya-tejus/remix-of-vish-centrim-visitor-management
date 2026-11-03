@@ -318,3 +318,20 @@ export function reportToRows(rows: ReportRow[], timeZone: string, includeScreeni
 
   return [headers, ...body];
 }
+
+/** "Tuesday 3 November" in the site's time zone, for day headings in the report. */
+export function dayHeadingInZone(date: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-GB", { timeZone, weekday: "long", day: "numeric", month: "long" }).format(date).replace(/,/g, "");
+}
+
+/** Rows keep their order (newest first) and are split into one group per local day. */
+export function groupRowsByDay(rows: ReportRow[], timeZone: string): { day: string; rows: ReportRow[] }[] {
+  const groups: { day: string; rows: ReportRow[] }[] = [];
+  for (const r of rows) {
+    const day = dayHeadingInZone(r.arrived, timeZone);
+    const last = groups[groups.length - 1];
+    if (last && last.day === day) last.rows.push(r);
+    else groups.push({ day, rows: [r] });
+  }
+  return groups;
+}
