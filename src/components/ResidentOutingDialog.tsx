@@ -15,7 +15,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { CompanionDetail } from "@/types/visitor";
 import {
   Search, ArrowLeft, ArrowRight, Check, Clock, CalendarDays,
-  Users, Plus, Trash2, ScrollText, MapPin, DoorOpen, ShieldAlert, AlertTriangle,
+  Users, Plus, Trash2, ScrollText, DoorOpen, ShieldAlert, AlertTriangle,
 } from "lucide-react";
 import { useActiveLeaveTypes } from "@/hooks/useLeaveTypes";
 import { useCompanionFields } from "@/hooks/useFormFields";
@@ -27,7 +27,6 @@ import { useSite } from "@/contexts/SiteContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { independentAbsenceAllowed, absenceReady, residentLocalInstant, movementTimeZone } from "@/lib/residentMovement";
 import { TimeOverride } from "@/components/TimeOverride";
-import { Badge } from "@/components/ui/badge";
 
 type OutingMode = "short" | "planned";
 
@@ -52,23 +51,23 @@ interface ResidentOutingDialogProps {
 }
 
 const destinationCategories = [
-  { value: "garden", label: "Garden / Grounds", },
-  { value: "local-shops", label: "Local Shops", },
-  { value: "walk", label: "Walk / Fresh Air", },
-  { value: "cafe", label: "Café / Restaurant", },
-  { value: "appointment", label: "Appointment (nearby)", },
-  { value: "family-visit", label: "Family Visit (day)", },
+  { value: "garden", label: "Garden or grounds", },
+  { value: "local-shops", label: "Local shops", },
+  { value: "walk", label: "Walk or fresh air", },
+  { value: "cafe", label: "Café or restaurant", },
+  { value: "appointment", label: "Appointment nearby", },
+  { value: "family-visit", label: "Family visit (day)", },
   { value: "other", label: "Other", },
 ];
 
 const escortOptions = [
-  { value: "alone", label: "Going Alone", showWarning: true },
-  { value: "family", label: "Family Member", showContact: true },
+  { value: "alone", label: "Going alone", showWarning: true },
+  { value: "family", label: "Family member", showContact: true },
   { value: "friend", label: "Friend", showContact: true },
-  { value: "staff", label: "Staff Member", showStaff: true },
-  { value: "transport", label: "Transport / Driver", showContact: true },
-  { value: "medical-escort", label: "Medical Escort", showContact: true },
-  { value: "group", label: "Group Outing (Staff-led)", },
+  { value: "staff", label: "Staff member", showStaff: true },
+  { value: "transport", label: "Transport or driver", showContact: true },
+  { value: "medical-escort", label: "Medical escort", showContact: true },
+  { value: "group", label: "Group outing (staff-led)", },
 ];
 
 export function ResidentOutingDialog({
@@ -127,9 +126,9 @@ export function ResidentOutingDialog({
   const [returnNotificationOptIn, setReturnNotificationOptIn] = useState(false);
 
   const filteredResidents = useMemo(() => {
-    if (!searchQuery.trim()) return residentItems.slice(0, 10);
-    const q = searchQuery.toLowerCase();
-    return residentItems.filter(r => r.name.toLowerCase().includes(q) || r.room.toLowerCase().includes(q));
+    const q = searchQuery.trim().toLowerCase();
+    const list = q ? residentItems.filter(r => `${r.name} ${r.room} ${r.wing}`.toLowerCase().includes(q)) : residentItems;
+    return [...list].sort((a, b) => a.name.localeCompare(b.name));
   }, [searchQuery, residentItems]);
 
   const selectedEscort = escortOptions.find(o => o.value === (mode === "short" ? escortType : accompaniedBy));
@@ -251,569 +250,399 @@ export function ResidentOutingDialog({
   // ── Resident is selected? Show mode toggle + form ──
   const residentSelected = !!selectedResident;
 
-  const presenceBadge = (status: string) => {
-    if (status === "away") return <Badge variant="secondary" className="text-sm bg-warning/10 text-warning border-warning/30">Away</Badge>;
-    if (status === "on-leave") return <Badge variant="secondary" className="text-sm bg-info/10 text-info border-info/30">On Leave</Badge>;
-    if (status === "overdue") return <Badge variant="destructive" className="text-sm">Overdue</Badge>;
-    return null;
-  };
+  const backBy = new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", minute: "2-digit" }).format(new Date(Date.now() + Number(returnHours) * 3600000));
+  const outLabel = (status: string) => status === "overdue" ? "Overdue back" : status === "on-leave" ? "On leave" : "Out";
+  const availableResidents = filteredResidents.filter(r => !isAway(r.id));
+  const awayResidents = filteredResidents.filter(r => isAway(r.id));
+  const initials = (name: string) => name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+  const blockedBySite = !currentSiteId || openedSite.current !== currentSiteId || permissionsLoading || !can("checkout.perform");
+  const shortMissing = !residentSelected ? ["a resident"] : independent ? [] : [
+    !(destination === "other" ? customDestination.trim() : destination) ? "where they are going" : "",
+    !escortType ? "who is with them" : "",
+  ].filter(Boolean);
+  const plannedNeeds = ["a return date", "a reason", "who is with them", "the authorisation tick"][step - 1];
+  const chip = (on: boolean) => `min-h-11 rounded-lg border px-3 text-left text-sm font-bold transition-colors ${on ? "border-primary bg-accent text-accent-foreground" : "border-input bg-card text-foreground hover:border-primary/60"}`;
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="right" className="sm:max-w-none sm:w-[50vw] w-full p-0 gap-0 flex flex-col overflow-hidden">
-        <SheetHeader className="px-6 pt-5 pb-3 shrink-0 border-b border-border">
-          <SheetTitle className="text-lg font-extrabold text-foreground">{independent ? "Record reported absence" : "Record outing"}</SheetTitle>
-          <SheetDescription>{independent ? "Optional information shared by the resident. Location is not physically confirmed." : "Record departure details under the resident’s individual support arrangements."} Times: {timeZone}.</SheetDescription>
-
-          {/* Mode toggle - only show after resident selected */}
-          {residentSelected && (
-            <div className="flex rounded-xl bg-muted p-1 gap-1 mt-2">
-              <Button variant="outline"
-                disabled={saving || !!attemptedDetails.current} onClick={() => { setMode("short"); setStep(1); }}
-                className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold transition-all ${
-                  mode === "short"
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <DoorOpen className="h-3.5 w-3.5" />
-                {packId === "au_rv" ? "Reported absence" : "Short outing"}
-              </Button>
-              <Button variant="outline"
-                disabled={saving || !!attemptedDetails.current} onClick={() => { setMode("planned"); setStep(1); }}
-                className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold transition-all ${
-                  mode === "planned"
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <CalendarDays className="h-3.5 w-3.5" />
-                Supported leave
-              </Button>
-            </div>
-          )}
-
-          {/* Planned leave step indicator */}
-          {residentSelected && mode === "planned" && (
-            <div className="flex items-center gap-1 pt-2">
-              {plannedSteps.map((s, i) => (
-                <div key={s} className="flex items-center flex-1">
-                  <Button variant="outline"
-                    disabled={saving || !!attemptedDetails.current} onClick={() => { if (i + 1 < step) setStep(i + 1); }}
-                    className={`h-7 rounded-full flex items-center gap-1 px-2.5 text-sm font-semibold transition-all ${
-                      i + 1 < step ? "bg-success/15 text-success cursor-pointer"
-                        : i + 1 === step ? "bg-primary text-primary-foreground shadow-sm"
-                        : "bg-muted text-muted-foreground cursor-default"
-                    }`}>
-                    {i + 1 < step ? <Check className="h-3 w-3" /> : <span className="text-sm">{i + 1}</span>}
-                    <span className="hidden sm:inline">{s}</span>
-                  </Button>
-                  {i < plannedSteps.length - 1 && (
-                    <div className={`flex-1 h-[2px] mx-1 rounded-full ${i + 1 < step ? "bg-success/40" : "bg-border"}`} />
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+      <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
+        <SheetHeader className="shrink-0 space-y-0 border-b border-border px-5 py-4 pr-14 text-left sm:px-6">
+          <p className="text-[11px] font-extrabold uppercase leading-4 tracking-[0.06em] text-primary">{currentSite?.name || "Residents"}</p>
+          <SheetTitle className="mt-0.5 text-2xl font-extrabold leading-8">{independent ? "Record reported absence" : "Record outing"}</SheetTitle>
+          <SheetDescription className="mt-1 text-[13px]">
+            {independent ? "Optional details shared by the resident. Where they are is not confirmed." : "Follow the resident's individual support arrangements."} Times are in {timeZone}.
+          </SheetDescription>
         </SheetHeader>
 
-        <fieldset disabled={saving || !!attemptedDetails.current} className="flex-1 min-h-0 overflow-y-auto px-6 py-4 text-base">
-          {/* ── Resident Selection ── */}
+        <fieldset disabled={saving || !!attemptedDetails.current} className="min-h-0 flex-1 overflow-y-auto bg-secondary/60 px-4 py-4 sm:px-6">
           {!residentSelected ? (
+            /* ── Choose the resident ── */
             <div className="space-y-4">
               <div className="space-y-2">
-                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Select Resident</p>
+                <label htmlFor="outing-resident-search" className="text-sm font-bold text-foreground">Who is going out?</label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Search by name or room..." className="pl-10 h-10 rounded-xl text-sm" autoFocus />
+                  <Search aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input id="outing-resident-search" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search name, room or wing" className="pl-10" autoFocus />
                 </div>
-              </div>
-              <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
-                {filteredResidents.map(r => {
-                  const away = isAway(r.id);
-                  const presence = getPresence(r.id);
-                  return (
-                    <Button variant="outline"
-                      key={r.id}
-                      onClick={() => { if (!away) setSelectedResident(r); }}
-                      disabled={away}
-                      className={`w-full text-left p-3 rounded-xl border transition-all ${
-                        away
-                          ? "border-border bg-muted/50 opacity-70 cursor-not-allowed"
-                          : "border-border hover:border-primary/30 hover:bg-primary/5"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`h-9 w-9 rounded-lg flex items-center justify-center text-sm font-bold ${
-                          away ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"
-                        }`}>
-                          {r.name.split(" ").map(n => n[0]).join("")}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-semibold text-foreground truncate">{r.name}</p>
-                            {away && presenceBadge(presence)}
-                          </div>
-                          <p className="text-sm text-muted-foreground">{r.room} • {r.wing}</p>
-                        </div>
-                        {away && <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0" />}
-                      </div>
-                    </Button>
-                  );
-                })}
-                {filteredResidents.length === 0 && (
-                  <div className="text-center py-8 border border-dashed border-border rounded-xl">
-                    <p className="text-sm text-muted-foreground">No residents found</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Selected resident banner */}
-              <div className="flex items-center justify-between rounded-xl border border-success/30 bg-success/5 p-3 mb-4">
-                <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-success" />
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">{selectedResident.name}</p>
-                    <p className="text-sm text-muted-foreground">{selectedResident.room} • {selectedResident.wing}</p>
-                  </div>
-                </div>
-                <Button variant="ghost" size="sm" className="text-sm h-7" onClick={() => setSelectedResident(null)}>Change</Button>
               </div>
 
-              {/* ══════════════════════════════════════════════════ */}
-              {/* SHORT OUTING MODE                                  */}
-              {/* ══════════════════════════════════════════════════ */}
-              {mode === "short" && !independent && (
-                <div className="space-y-5">
-                  {/* Destination */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold flex items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5" /> Where are they going?
-                    </Label>
-                    <div className="grid grid-cols-2 gap-1.5">
+              <section aria-label="Residents who can go out" className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+                <p className="border-b border-border bg-secondary/60 px-4 py-2 text-xs font-bold text-muted-foreground">
+                  {availableResidents.length} {availableResidents.length === 1 ? "resident" : "residents"}{searchQuery.trim() ? " match" : ""}
+                </p>
+                {availableResidents.length === 0 ? (
+                  <p className="px-4 py-8 text-center text-sm text-muted-foreground">{searchQuery.trim() ? "Nobody matches that search." : "Every resident is recorded as out."}</p>
+                ) : (
+                  <ul className="divide-y divide-border">
+                    {availableResidents.map(r => (
+                      <li key={r.id}>
+                        <button type="button" onClick={() => setSelectedResident(r)}
+                          className="flex min-h-[60px] w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-accent focus-visible:bg-accent">
+                          <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-extrabold text-accent-foreground">{initials(r.name)}</span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-bold text-foreground">{r.name}</span>
+                            <span className="block truncate text-[13px] text-muted-foreground">{[r.room, r.wing].filter(Boolean).join(" · ") || "Room not recorded"}</span>
+                          </span>
+                          <ArrowRight aria-hidden className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+
+              {awayResidents.length > 0 && (
+                <section aria-label="Already out" className="overflow-hidden rounded-2xl border border-border bg-card">
+                  <p className="border-b border-border bg-secondary/60 px-4 py-2 text-xs font-bold text-muted-foreground">
+                    Already out ({awayResidents.length}) — record their return from the Residents page
+                  </p>
+                  <ul className="divide-y divide-border">
+                    {awayResidents.map(r => {
+                      const status = getPresence(r.id);
+                      return (
+                        <li key={r.id} className="flex min-h-[56px] items-center gap-3 px-4 py-2.5">
+                          <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-extrabold text-muted-foreground">{initials(r.name)}</span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-semibold text-muted-foreground">{r.name}</span>
+                            <span className="block truncate text-[13px] text-muted-foreground">{[r.room, r.wing].filter(Boolean).join(" · ")}</span>
+                          </span>
+                          <span className={`shrink-0 rounded-full px-2 text-xs font-bold leading-6 ${status === "overdue" ? "border border-[hsl(var(--warning)/0.45)] text-warning-strong" : "bg-info-subtle text-info-strong"}`}>
+                            {status === "overdue" && <AlertTriangle aria-hidden className="mr-1 inline h-3 w-3" />}{outLabel(status)}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Chosen resident */}
+              <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm">
+                <span aria-hidden className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-extrabold text-accent-foreground">{initials(selectedResident.name)}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-base font-extrabold text-foreground">{selectedResident.name}</p>
+                  <p className="truncate text-[13px] text-muted-foreground">{[selectedResident.room, selectedResident.wing].filter(Boolean).join(" · ")}</p>
+                </div>
+                <Button variant="ghost" size="sm" className="text-primary-hover" onClick={() => setSelectedResident(null)}>Change</Button>
+              </div>
+
+              {/* Kind of absence */}
+              <div role="group" aria-label="Kind of absence" className="grid grid-cols-2 gap-2">
+                {([["short", packId === "au_rv" ? "Reported absence" : "Short outing", "Back the same day", DoorOpen], ["planned", "Supported leave", "Overnight or longer", CalendarDays]] as const).map(([value, label, note, Icon]) => {
+                  const on = mode === value;
+                  return (
+                    <button key={value} type="button" aria-pressed={on} disabled={saving || !!attemptedDetails.current}
+                      onClick={() => { setMode(value); setStep(1); }}
+                      className={`flex min-h-[60px] items-start gap-2.5 rounded-xl border p-3 text-left transition-colors ${on ? "border-primary bg-accent ring-1 ring-primary" : "border-input bg-card hover:border-primary/60"}`}>
+                      <Icon aria-hidden className={`mt-0.5 h-4 w-4 shrink-0 ${on ? "text-accent-foreground" : "text-muted-foreground"}`} />
+                      <span>
+                        <span className={`block text-sm font-bold ${on ? "text-accent-foreground" : "text-foreground"}`}>{label}</span>
+                        <span className="block text-xs text-muted-foreground">{note}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="space-y-5 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+                {/* ── Short outing ── */}
+                {mode === "short" && !independent && (<>
+                  <Field label="Where are they going?" required>
+                    <div className="grid grid-cols-2 gap-2">
                       {destinationCategories.map(d => (
-                        <Button variant="outline" key={d.value} onClick={() => setDestination(d.value)}
-                          className={`rounded-lg border p-2 text-left transition-all text-sm flex items-center gap-2 ${
-                            destination === d.value ? "border-primary bg-primary/5 font-semibold" : "border-border hover:border-primary/30"
-                          }`}>
-                          <MapPin aria-hidden="true" className="h-4 w-4 shrink-0" /> {d.label}
-                        </Button>
+                        <button key={d.value} type="button" aria-pressed={destination === d.value} onClick={() => setDestination(d.value)} className={chip(destination === d.value)}>{d.label}</button>
                       ))}
                     </div>
                     {destination === "other" && (
-                      <Input value={customDestination} onChange={e => setCustomDestination(e.target.value)}
-                        placeholder="Where are they going?" className="h-9 text-sm mt-1 rounded-lg" />
+                      <Input value={customDestination} onChange={e => setCustomDestination(e.target.value)} placeholder="Where are they going?" aria-label="Where are they going" autoFocus />
                     )}
-                  </div>
+                  </Field>
 
-                  {/* Expected return */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold flex items-center gap-1.5">
-                      <Clock className="h-3.5 w-3.5" /> Expected Return
-                    </Label>
-                    <div className="flex items-center gap-2">
-                      <Select value={returnHours} onValueChange={setReturnHours}>
-                        <SelectTrigger className="h-9 text-sm w-[140px] rounded-lg"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0.5">30 minutes</SelectItem>
-                          <SelectItem value="1">1 hour</SelectItem>
-                          <SelectItem value="2">2 hours</SelectItem>
-                          <SelectItem value="3">3 hours</SelectItem>
-                          <SelectItem value="4">4 hours</SelectItem>
-                          <SelectItem value="6">6 hours</SelectItem>
-                          <SelectItem value="8">8 hours</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-sm text-muted-foreground">
-                        Back by ~<span className="font-semibold text-foreground">
-                          {new Date(Date.now() + Number(returnHours) * 3600000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                      </p>
+                  <Field label="When will they be back?" hint={`Back by about ${backBy}`}>
+                    <div role="group" aria-label="Expected time away" className="flex flex-wrap gap-2">
+                      {[["0.5", "30 min"], ["1", "1 h"], ["2", "2 h"], ["3", "3 h"], ["4", "4 h"], ["6", "6 h"], ["8", "8 h"]].map(([v, l]) => (
+                        <button key={v} type="button" aria-pressed={returnHours === v} onClick={() => setReturnHours(v)}
+                          className={`min-h-11 min-w-[60px] rounded-full border px-3.5 text-sm font-bold transition-colors ${returnHours === v ? "border-primary bg-accent text-accent-foreground" : "border-input bg-card text-foreground hover:border-primary/60"}`}>{l}</button>
+                      ))}
                     </div>
-                  </div>
+                  </Field>
 
-                  {/* Escort */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold flex items-center gap-1.5">
-                      <Users className="h-3.5 w-3.5" /> Who is with them?
-                    </Label>
-                    <Select value={escortType} onValueChange={v => {
-                      setEscortType(v);
-                      if (!escortOptions.find(o => o.value === v)?.showContact && !escortOptions.find(o => o.value === v)?.showStaff) {
-                        setEscortName(""); setEscortPhone("");
-                      }
-                    }}>
-                      <SelectTrigger className="h-9 text-sm rounded-lg"><SelectValue placeholder="Select..." /></SelectTrigger>
-                      <SelectContent>
-                        {escortOptions.map(e => (
-                          <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
+                  <Field label="Who is with them?" required>
+                    <div className="grid grid-cols-2 gap-2">
+                      {escortOptions.map(e => (
+                        <button key={e.value} type="button" aria-pressed={escortType === e.value}
+                          onClick={() => { setEscortType(e.value); if (!e.showContact && !e.showStaff) { setEscortName(""); setEscortPhone(""); } }}
+                          className={chip(escortType === e.value)}>{e.label}</button>
+                      ))}
+                    </div>
                     {needsEscortContact && (
-                      <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
-                        <p className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Escort Contact Details</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <Label className="text-sm">Name</Label>
-                            <Input value={escortName} onChange={e => setEscortName(e.target.value)}
-                              placeholder="Full name" className="h-8 text-sm rounded-lg" />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-sm">Phone</Label>
-                            <Input value={escortPhone} onChange={e => setEscortPhone(e.target.value)}
-                              placeholder="07700..." className="h-8 text-sm rounded-lg" />
-                          </div>
-                        </div>
+                      <div className="grid grid-cols-1 gap-3 rounded-xl bg-secondary/80 p-3 sm:grid-cols-2">
+                        <div className="space-y-1"><Label htmlFor="escort-name">Their name</Label><Input id="escort-name" value={escortName} onChange={e => setEscortName(e.target.value)} placeholder="Full name" /></div>
+                        <div className="space-y-1"><Label htmlFor="escort-phone">Their phone</Label><Input id="escort-phone" type="tel" value={escortPhone} onChange={e => setEscortPhone(e.target.value)} placeholder="Mobile number" /></div>
                       </div>
                     )}
-
                     {escortType === "alone" && (
-                      <div className="rounded-xl bg-warning/10 border border-warning/30 p-3 flex items-start gap-2">
-                        <ShieldAlert className="h-4 w-4 text-warning shrink-0 mt-0.5" />
-                        <p className="text-sm text-warning">Confirm this resident is assessed for independent outings.</p>
-                      </div>
+                      <p className="flex items-start gap-2 rounded-xl bg-warning-subtle px-3 py-2.5 text-[13px] font-semibold text-warning-strong">
+                        <ShieldAlert aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />Check this resident is assessed for going out on their own.
+                      </p>
                     )}
+                  </Field>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="outing-notes">Notes <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                    <Textarea id="outing-notes" value={shortNotes} onChange={e => setShortNotes(e.target.value)} placeholder="Anything staff should know" rows={2} className="resize-none" />
                   </div>
+                </>)}
 
-                  {/* Notes */}
-                  <div className="space-y-1">
-                    <Label className="text-sm">Notes (optional)</Label>
-                    <Textarea value={shortNotes} onChange={e => setShortNotes(e.target.value)}
-                      placeholder="Any additional info..." rows={2} className="text-sm resize-none rounded-lg" />
-                  </div>
-                </div>
-              )}
+                {independent && (<div className="space-y-4">
+                  <div className="space-y-1.5"><Label htmlFor="independent-reason">Destination or reason (optional)</Label>
+                    <Input id="independent-reason" value={customDestination} onChange={e => {setCustomDestination(e.target.value); setDestination("other");}} /></div>
+                  <div className="space-y-1.5"><Label htmlFor="independent-return">Expected return (optional)</Label>
+                    <Input id="independent-return" type="datetime-local" value={optionalReturn} onChange={e => setOptionalReturn(e.target.value)} /></div>
+                  <div className="space-y-1.5"><Label htmlFor="independent-notes">Notes (optional)</Label>
+                    <Textarea id="independent-notes" value={shortNotes} onChange={e => setShortNotes(e.target.value)} /></div>
+                </div>)}
 
-              {independent && <div className="space-y-4">
-                <Label htmlFor="independent-reason">Destination or reason (optional)</Label>
-                <Input id="independent-reason" value={customDestination} onChange={e => {setCustomDestination(e.target.value); setDestination("other");}} className="min-h-touch text-base" />
-                <Label htmlFor="independent-return">Expected return (optional)</Label>
-                <Input id="independent-return" type="datetime-local" value={optionalReturn} onChange={e => setOptionalReturn(e.target.value)} className="min-h-touch text-base" />
-                <Label htmlFor="independent-notes">Notes (optional)</Label>
-                <Textarea id="independent-notes" value={shortNotes} onChange={e => setShortNotes(e.target.value)} className="text-base" />
-              </div>}
+                {/* ── Supported leave, in four short steps ── */}
+                {mode === "planned" && (<>
+                  <ol aria-label="Leave steps" className="flex items-center gap-1.5">
+                    {plannedSteps.map((label, i) => {
+                      const n = i + 1; const done = n < step; const current = n === step;
+                      return (
+                        <li key={label} className="flex flex-1 items-center gap-1.5">
+                          <button type="button" disabled={!done || saving || !!attemptedDetails.current} onClick={() => setStep(n)} aria-current={current ? "step" : undefined}
+                            className={`flex h-8 items-center gap-1.5 rounded-full px-2.5 text-xs font-bold ${done ? "bg-success-subtle text-success-strong" : current ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                            {done ? <Check aria-hidden className="h-3.5 w-3.5" strokeWidth={3} /> : n}
+                            <span className={current ? "" : "hidden sm:inline"}>{label}</span>
+                          </button>
+                          {i < plannedSteps.length - 1 && <span aria-hidden className={`h-0.5 flex-1 rounded-full ${done ? "bg-success/40" : "bg-border"}`} />}
+                        </li>
+                      );
+                    })}
+                  </ol>
 
-              {/* ══════════════════════════════════════════════════ */}
-              {/* LEAVE MODE                                         */}
-              {/* ══════════════════════════════════════════════════ */}
-              {mode === "planned" && (
-                <>
-                  {/* Step 1: Schedule */}
-                  {step === 1 && (
-                    <div className="space-y-4">
-                      <div className="space-y-2.5">
-                        <p className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Communication Details</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <Label className="text-sm">Mobile</Label>
-                            <Input value={mobile} onChange={e => setMobile(e.target.value)} placeholder="07700..." className="rounded-lg h-9 text-sm" />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-sm">Email</Label>
-                            <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@example.com" className="rounded-lg h-9 text-sm" />
-                          </div>
-                        </div>
-                      </div>
-                      <div className="space-y-2.5 pt-2 border-t border-border">
-                        <p className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Expected Return</p>
-                        <div className="space-y-1">
-                          <Label className="text-sm">Return Date & Time <span className="text-destructive">*</span></Label>
-                          <div className="flex gap-2">
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button variant="outline" size="sm" className="flex-1 justify-start text-left h-9 rounded-lg text-sm gap-2">
-                                  <CalendarDays className="h-3.5 w-3.5" />
-                                  {expectedReturnDate ? format(expectedReturnDate, "dd MMM yyyy") : "Select date..."}
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar mode="single" selected={expectedReturnDate} onSelect={d => d && setExpectedReturnDate(d)} initialFocus
-                                  className="pointer-events-auto"
-                                  disabled={date => date < new Date(new Date().setHours(0, 0, 0, 0))} />
-                              </PopoverContent>
-                            </Popover>
-                            <Input type="time" value={expectedReturnTime} onChange={e => setExpectedReturnTime(e.target.value)}
-                              className="w-[120px] rounded-lg h-9 text-sm" />
-                          </div>
-                          {expectedReturnDate && (() => {
-                            const [h, m] = expectedReturnTime.split(":").map(Number);
-                            const combined = new Date(expectedReturnDate);
-                            combined.setHours(h, m, 0, 0);
-                            const diffMs = combined.getTime() - Date.now();
-                            if (diffMs > 0) {
-                              const diffHours = Math.round(diffMs / 3600000);
-                              return (
-                                <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                                  <Clock className="h-3 w-3" />
-                                  Approximately <span className="font-semibold text-foreground">
-                                    {diffHours < 24 ? `${diffHours} hour${diffHours !== 1 ? "s" : ""}` : `${Math.floor(diffHours / 24)} day${Math.floor(diffHours / 24) !== 1 ? "s" : ""}`}
-                                  </span> from now
-                                </p>
-                              );
-                            }
-                            return null;
-                          })()}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Step 2: Reason */}
-                  {step === 2 && (
-                    <div className="space-y-4">
-                      <div className="space-y-1">
-                        <Label className="text-sm">Reason for Leave <span className="text-destructive">*</span></Label>
-                        {leaveTypesData.length > 0 ? (
-                          <div className="grid grid-cols-2 gap-2">
-                            {leaveTypesData.map(lt => (
-                              <Button variant="outline" key={lt.id} type="button" onClick={() => { setCheckoutReason(lt.name); setCustomReason(""); }}
-                                className={`rounded-xl border-2 p-3 text-left transition-all ${
-                                  checkoutReason === lt.name ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
-                                }`}>
-                                <div className="flex items-center gap-2 mb-1">
-                                  <MapPin aria-hidden="true" className="h-4 w-4 shrink-0" />
-                                  <span className="text-sm font-bold text-foreground">{lt.name}</span>
-                                </div>
-                                <p className="text-sm text-muted-foreground">{lt.description}</p>
-                              </Button>
-                            ))}
-                          </div>
-                        ) : (
-                          <Input
-                            value={customReason}
-                            onChange={e => { setCustomReason(e.target.value); setCheckoutReason(""); }}
-                            placeholder="Enter reason for leave..."
-                            className="rounded-lg h-9 text-sm"
-                          />
-                        )}
-                        {leaveTypesData.length > 0 && (
-                          <div className="pt-2">
-                            <Label className="text-sm text-muted-foreground">Or enter a custom reason</Label>
-                            <Input
-                              value={customReason}
-                              onChange={e => { setCustomReason(e.target.value); setCheckoutReason(""); }}
-                              placeholder="Other reason..."
-                              className="rounded-lg h-9 text-sm mt-1"
-                            />
-                          </div>
-                        )}
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-sm">Comments (optional)</Label>
-                        <Textarea value={comments} onChange={e => setComments(e.target.value)}
-                          placeholder="Any additional notes..." className="min-h-[50px] resize-none rounded-lg text-sm" />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Step 3: Companion */}
-                  {step === 3 && (
-                    <div className="space-y-4">
-                      <div className="space-y-1">
-                        <Label className="text-sm">Who is accompanying the resident? <span className="text-destructive">*</span></Label>
-                        <div className="grid grid-cols-2 gap-2">
-                          {escortOptions.map(opt => (
-                            <Button variant="outline" key={opt.value} type="button"
-                              onClick={() => { setAccompaniedBy(opt.value); if (!opt.showContact && !opt.showStaff) setAccompaniedByName(""); }}
-                              className={`rounded-xl border-2 p-3 text-left transition-all ${
-                                accompaniedBy === opt.value ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/30"
-                              }`}>
-                              <div className="flex items-center gap-2">
-                                <MapPin aria-hidden="true" className="h-4 w-4 shrink-0" />
-                                <span className="text-sm font-semibold text-foreground">{opt.label}</span>
-                              </div>
+                  {step === 1 && (<div className="space-y-5">
+                    <Field label="When will they be back?" required>
+                      <div className="flex flex-wrap gap-2">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="min-w-[180px] flex-1 justify-start gap-2">
+                              <CalendarDays aria-hidden className="h-4 w-4" />{expectedReturnDate ? format(expectedReturnDate, "EEE d MMM yyyy") : "Choose a date"}
                             </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={expectedReturnDate} onSelect={d => d && setExpectedReturnDate(d)} initialFocus className="pointer-events-auto"
+                              disabled={date => date < new Date(new Date().setHours(0, 0, 0, 0))} />
+                          </PopoverContent>
+                        </Popover>
+                        <Input type="time" aria-label="Return time" value={expectedReturnTime} onChange={e => setExpectedReturnTime(e.target.value)} className="w-[130px]" />
+                      </div>
+                      {expectedReturnDate && (() => {
+                        const [h, m] = expectedReturnTime.split(":").map(Number);
+                        const combined = new Date(expectedReturnDate); combined.setHours(h, m, 0, 0);
+                        const diffHours = Math.round((combined.getTime() - Date.now()) / 3600000);
+                        return diffHours > 0 ? (
+                          <p className="flex items-center gap-1 text-[13px] text-muted-foreground"><Clock aria-hidden className="h-3.5 w-3.5" />
+                            About <span className="font-bold text-foreground">{diffHours < 24 ? `${diffHours} hour${diffHours !== 1 ? "s" : ""}` : `${Math.floor(diffHours / 24)} day${Math.floor(diffHours / 24) !== 1 ? "s" : ""}`}</span> from now
+                          </p>
+                        ) : null;
+                      })()}
+                    </Field>
+                    <Field label="How to reach them while away" hint="Optional">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div className="space-y-1"><Label htmlFor="leave-mobile">Mobile</Label><Input id="leave-mobile" type="tel" value={mobile} onChange={e => setMobile(e.target.value)} placeholder="Mobile number" /></div>
+                        <div className="space-y-1"><Label htmlFor="leave-email">Email</Label><Input id="leave-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@example.com" /></div>
+                      </div>
+                    </Field>
+                  </div>)}
+
+                  {step === 2 && (<div className="space-y-5">
+                    <Field label="Reason for leave" required>
+                      {leaveTypesData.length > 0 && (
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          {leaveTypesData.map(lt => (
+                            <button key={lt.id} type="button" aria-pressed={checkoutReason === lt.name} onClick={() => { setCheckoutReason(lt.name); setCustomReason(""); }}
+                              className={`rounded-xl border p-3 text-left transition-colors ${checkoutReason === lt.name ? "border-primary bg-accent" : "border-input bg-card hover:border-primary/60"}`}>
+                              <span className="block text-sm font-bold text-foreground">{lt.name}</span>
+                              {lt.description && <span className="block text-[13px] text-muted-foreground">{lt.description}</span>}
+                            </button>
                           ))}
                         </div>
-                      </div>
-
-                      {selectedEscort?.showContact && mode === "planned" && (
-                        <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
-                          <p className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Contact Details</p>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="space-y-1">
-                              <Label className="text-sm">Name</Label>
-                              <Input value={accompaniedByName} onChange={e => setAccompaniedByName(e.target.value)}
-                                placeholder="Full name" className="rounded-lg h-8 text-sm" />
-                            </div>
-                          </div>
-                        </div>
                       )}
+                      <Input value={customReason} onChange={e => { setCustomReason(e.target.value); setCheckoutReason(""); }}
+                        placeholder={leaveTypesData.length > 0 ? "Or type another reason" : "Reason for leave"} aria-label="Other reason" />
+                    </Field>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="leave-comments">Notes <span className="font-normal text-muted-foreground">(optional)</span></Label>
+                      <Textarea id="leave-comments" value={comments} onChange={e => setComments(e.target.value)} placeholder="Anything staff should know" className="min-h-[72px] resize-none" />
+                    </div>
+                  </div>)}
 
+                  {step === 3 && (<div className="space-y-5">
+                    <Field label="Who is going with them?" required>
+                      <div className="grid grid-cols-2 gap-2">
+                        {escortOptions.map(opt => (
+                          <button key={opt.value} type="button" aria-pressed={accompaniedBy === opt.value}
+                            onClick={() => { setAccompaniedBy(opt.value); if (!opt.showContact && !opt.showStaff) setAccompaniedByName(""); }}
+                            className={chip(accompaniedBy === opt.value)}>{opt.label}</button>
+                        ))}
+                      </div>
+                      {selectedEscort?.showContact && mode === "planned" && (
+                        <div className="space-y-1 rounded-xl bg-secondary/80 p-3"><Label htmlFor="leave-escort-name">Their name</Label>
+                          <Input id="leave-escort-name" value={accompaniedByName} onChange={e => setAccompaniedByName(e.target.value)} placeholder="Full name" /></div>
+                      )}
                       {selectedEscort?.showStaff && (
-                        <div className="space-y-1 rounded-xl border border-border p-3 bg-muted/30">
-                          <Label className="text-sm">Staff Member</Label>
+                        <div className="space-y-1 rounded-xl bg-secondary/80 p-3"><Label>Staff member</Label>
                           <Select value={accompaniedByName} onValueChange={setAccompaniedByName}>
-                            <SelectTrigger className="rounded-lg h-9 text-sm"><SelectValue placeholder="Select staff member..." /></SelectTrigger>
-                            <SelectContent>
-                              {staffItems.map(s => (
-                                <SelectItem key={s.id} value={s.name}>{s.name} — {s.role}</SelectItem>
-                              ))}
-                            </SelectContent>
+                            <SelectTrigger aria-label="Staff member"><SelectValue placeholder="Choose a staff member" /></SelectTrigger>
+                            <SelectContent>{staffItems.map(st => <SelectItem key={st.id} value={st.name}>{st.name} — {st.role}</SelectItem>)}</SelectContent>
                           </Select>
                         </div>
                       )}
-
                       {selectedEscort?.showWarning && (
-                        <div className="rounded-xl bg-warning/10 border border-warning/30 p-3 flex items-start gap-2.5">
-                          <ShieldAlert className="h-4 w-4 text-warning shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-sm font-bold text-warning">Independent Outing</p>
-                            <p className="text-sm text-warning mt-0.5">Please confirm this resident has been assessed for independent outings.</p>
-                          </div>
-                        </div>
+                        <p className="flex items-start gap-2 rounded-xl bg-warning-subtle px-3 py-2.5 text-[13px] font-semibold text-warning-strong">
+                          <ShieldAlert aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />Going on their own: check this resident is assessed for it.
+                        </p>
                       )}
-
-                      {/* Additional companions */}
-                      {activeCompanionFields.length > 0 && (
-                        <div className="pt-2 border-t border-border">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                              <Users className="h-3 w-3" /> Additional Companions
-                            </p>
-                            <Button variant="outline" size="sm" className="h-7 text-sm gap-1"
-                              onClick={() => {
-                                const empty: CompanionDetail = {};
-                                activeCompanionFields.forEach(f => { empty[f.field_key.replace("companion_", "")] = ""; });
-                                setCompanions(prev => [...prev, empty]);
-                              }}>
-                              <Plus className="h-3 w-3" /> Add
-                            </Button>
+                    </Field>
+                    {activeCompanionFields.length > 0 && (
+                      <div className="space-y-3 border-t border-border pt-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="flex items-center gap-1.5 text-sm font-bold text-foreground"><Users aria-hidden className="h-4 w-4 text-muted-foreground" />Anyone else going</p>
+                          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+                            const empty: CompanionDetail = {};
+                            activeCompanionFields.forEach(f => { empty[f.field_key.replace("companion_", "")] = ""; });
+                            setCompanions(prev => [...prev, empty]);
+                          }}><Plus aria-hidden className="h-4 w-4" /> Add person</Button>
+                        </div>
+                        {companions.map((companion, cIdx) => (
+                          <div key={cIdx} className="space-y-2 rounded-xl bg-secondary/80 p-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-bold text-foreground">Person {cIdx + 1}</span>
+                              <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive-strong" aria-label={`Remove person ${cIdx + 1}`}
+                                onClick={() => setCompanions(prev => prev.filter((_, i) => i !== cIdx))}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                              {activeCompanionFields.map(f => {
+                                const key = f.field_key.replace("companion_", "");
+                                return (
+                                  <div key={f.id} className="space-y-1"><Label>{f.label}</Label>
+                                    <Input value={companion[key] || ""} aria-label={`${f.label}, person ${cIdx + 1}`} onChange={e => setCompanions(prev => prev.map((c, i) => i === cIdx ? { ...c, [key]: e.target.value } : c))} /></div>
+                                );
+                              })}
+                            </div>
                           </div>
-                          {companions.map((companion, cIdx) => (
-                            <div key={cIdx} className="rounded-xl border border-border p-3 space-y-2 mb-2">
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="text-sm font-semibold text-muted-foreground">Person {cIdx + 1}</span>
-                                <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive hover:text-destructive"
-                                  onClick={() => setCompanions(prev => prev.filter((_, i) => i !== cIdx))}><Trash2 className="h-3 w-3" /></Button>
-                              </div>
-                              <div className="grid grid-cols-2 gap-2">
-                                {activeCompanionFields.map(f => {
-                                  const key = f.field_key.replace("companion_", "");
-                                  return (
-                                    <div key={f.id} className="space-y-1">
-                                      <Label className="text-sm">{f.label}</Label>
-                                      <Input value={companion[key] || ""} onChange={e => setCompanions(prev => prev.map((c, i) => i === cIdx ? { ...c, [key]: e.target.value } : c))}
-                                        placeholder={f.label} className="rounded-lg h-8 text-sm" />
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Step 4: Confirm */}
-                  {step === 4 && (
-                    <div className="space-y-4">
-                      <div className="rounded-xl border border-border bg-muted/30 p-4">
-                        <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-3">Summary</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          {(checkoutReason || customReason) && (() => {
-                            const reason = checkoutReason || customReason;
-                            const lt = leaveTypesData.find(l => l.name === reason);
-                            return (
-                              <div className="rounded-lg bg-card p-2.5 border border-border">
-                                <p className="text-sm text-muted-foreground">Reason</p>
-                                <p className="text-sm font-semibold text-foreground">{lt ? lt.name : reason}</p>
-                              </div>
-                            );
-                          })()}
-                          {expectedReturnDate && (
-                            <div className="rounded-lg bg-card p-2.5 border border-border">
-                              <p className="text-sm text-muted-foreground">Expected Return</p>
-                              <p className="text-sm font-semibold text-foreground">{format(expectedReturnDate, "dd MMM yyyy")} at {expectedReturnTime}</p>
-                            </div>
-                          )}
-                          {accompaniedBy && (() => {
-                            const opt = escortOptions.find(o => o.value === accompaniedBy);
-                            return (
-                              <div className="rounded-lg bg-card p-2.5 border border-border">
-                                <p className="text-sm text-muted-foreground">Accompanied By</p>
-                                <p className="text-sm font-semibold text-foreground">
-                                  {opt ? opt.label : accompaniedBy}
-                                  {accompaniedByName && ` — ${accompaniedByName}`}
-                                </p>
-                              </div>
-                            );
-                          })()}
-                        </div>
+                        ))}
                       </div>
+                    )}
+                  </div>)}
 
-                      {/* Terms */}
-                      <div className="rounded-xl border border-border p-3 space-y-3">
-                        <div className="flex items-center gap-2">
-                          <ScrollText className="h-3.5 w-3.5 text-primary shrink-0" />
-                          <h4 className="text-sm font-bold text-foreground">Terms & Privacy</h4>
-                        </div>
-                        <div className="max-h-[80px] overflow-y-auto rounded-lg bg-muted/30 p-3 text-sm text-muted-foreground leading-relaxed space-y-1 border border-border">
-                          <p>1. I confirm this departure has been properly authorised.</p>
-                          <p>2. The expected return time has been agreed upon.</p>
-                          <p>3. This records a movement, not physically verified safety or message delivery.</p>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted/50 cursor-pointer" onClick={() => setPrivacyAcknowledged(!privacyAcknowledged)}>
-                            <Checkbox checked={privacyAcknowledged} onCheckedChange={c => setPrivacyAcknowledged(c === true)} />
-                            <span className="text-sm text-foreground">I confirm this leave has been authorised</span>
-                          </div>
-                          {expectedReturnDate && (
-                            <div className="rounded-lg border border-border p-2.5 space-y-2">
-                              <div className="flex items-center gap-2 cursor-pointer" onClick={() => setReturnNotificationOptIn(!returnNotificationOptIn)}>
-                                <Checkbox checked={returnNotificationOptIn} onCheckedChange={c => setReturnNotificationOptIn(c === true)} />
-                                <span className="text-sm text-foreground">Flag expected return for staff by <strong>{format(expectedReturnDate, "dd MMM yyyy")} at {expectedReturnTime}</strong></span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                  {step === 4 && (<div className="space-y-4">
+                    <dl className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      {[
+                        ["Reason", checkoutReason || customReason || "—"],
+                        ["Back", expectedReturnDate ? `${format(expectedReturnDate, "EEE d MMM")}, ${expectedReturnTime}` : "—"],
+                        ["With", `${escortOptions.find(o => o.value === accompaniedBy)?.label ?? accompaniedBy ?? "—"}${accompaniedByName ? ` (${accompaniedByName})` : ""}`],
+                      ].map(([k, v]) => (
+                        <div key={k} className="rounded-xl bg-secondary/80 px-3 py-2.5"><dt className="text-xs font-semibold text-muted-foreground">{k}</dt><dd className="text-sm font-bold text-foreground">{v}</dd></div>
+                      ))}
+                    </dl>
+                    <div className="space-y-2">
+                      <p className="flex items-center gap-2 text-sm font-bold text-foreground"><ScrollText aria-hidden className="h-4 w-4 text-muted-foreground" />Before you confirm</p>
+                      <ol className="list-decimal space-y-1 rounded-xl bg-secondary/80 py-3 pl-8 pr-3 text-[13px] text-secondary-foreground">
+                        <li>This departure has been properly authorised.</li>
+                        <li>The expected return time has been agreed.</li>
+                        <li>This records a movement. It does not confirm where the resident is.</li>
+                      </ol>
                     </div>
-                  )}
-                </>
-              )}
-            </>
-          )}
-        </fieldset>
-        {saveError && <p role="alert" className="px-6 py-2 text-base text-destructive-strong">{saveError}</p>}
-        <fieldset disabled={saving || !!attemptedDetails.current} className="px-6 py-2"><TimeOverride value={timeOverride} onChange={setTimeOverride} label="Adjust departure time" /></fieldset>
+                    <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 ${privacyAcknowledged ? "border-primary bg-accent" : "border-input bg-card hover:border-primary/60"}`}>
+                      <Checkbox checked={privacyAcknowledged} onCheckedChange={c => setPrivacyAcknowledged(c === true)} className="mt-0.5" />
+                      <span className="text-sm font-semibold text-foreground">I confirm this leave has been authorised</span>
+                    </label>
+                    {expectedReturnDate && (
+                      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-input bg-card p-3.5 hover:border-primary/60">
+                        <Checkbox checked={returnNotificationOptIn} onCheckedChange={c => setReturnNotificationOptIn(c === true)} className="mt-0.5" />
+                        <span className="text-sm text-foreground">Remind staff if they are not back by <strong>{format(expectedReturnDate, "EEE d MMM")} at {expectedReturnTime}</strong></span>
+                      </label>
+                    )}
+                  </div>)}
+                </>)}
 
-        {/* ── Footer ── */}
-        <div className="shrink-0 flex items-center justify-between px-6 py-3 border-t border-border bg-card/80 backdrop-blur-sm">
-          <Button variant="ghost" size="sm" onClick={handleClose} className="text-muted-foreground">Cancel</Button>
-
-          {residentSelected && mode === "short" && (
-            <Button size="sm" onClick={handleShortSubmit} disabled={saving || !currentSiteId || openedSite.current !== currentSiteId || permissionsLoading || !can("checkout.perform") || !canSubmitShort} className="gap-1.5 rounded-xl">
-              <DoorOpen className="h-4 w-4" /> {saving ? "Saving…" : independent ? "Record absence" : "Record departure"}
-            </Button>
-          )}
-
-          {residentSelected && mode === "planned" && (
-            <div className="flex gap-2">
-              {step > 1 && (
-                <Button variant="outline" size="sm" disabled={saving || !!attemptedDetails.current} onClick={() => setStep(step - 1)} className="gap-1 rounded-xl">
-                  <ArrowLeft className="h-3.5 w-3.5" /> Back
-                </Button>
-              )}
-              {step < 4 ? (
-                <Button size="sm" onClick={() => setStep(step + 1)} className="gap-1 rounded-xl" disabled={!canProceedPlanned()}>
-                  Next <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
-              ) : (
-                <Button size="sm" onClick={handlePlannedSubmit} className="gap-1 rounded-xl" disabled={saving || !currentSiteId || openedSite.current !== currentSiteId || !can("checkout.perform") || !privacyAcknowledged}>
-                  <Check className="h-3.5 w-3.5" /> Confirm Leave
-                </Button>
-              )}
+                <div className="border-t border-border pt-3">
+                  <TimeOverride value={timeOverride} onChange={setTimeOverride} label="Adjust departure time" />
+                </div>
+              </div>
             </div>
           )}
+        </fieldset>
+
+        {/* ── Footer ── */}
+        <div className="shrink-0 border-t border-border bg-card px-4 py-3 sm:px-6">
+          {saveError && <p role="alert" className="mb-2 rounded-lg bg-error-subtle px-3 py-2 text-sm font-semibold text-destructive-strong">{saveError}</p>}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <p aria-live="polite" className="min-w-0 flex-1 basis-full text-sm text-muted-foreground sm:basis-0">
+              {!residentSelected ? "Choose a resident to continue."
+                : mode === "short" ? (shortMissing.length ? <>Still needed: <span className="font-bold text-foreground">{shortMissing.join(" and ")}</span></> : <span className="font-bold text-success-strong">Ready to record</span>)
+                : canProceedPlanned() ? <span className="font-bold text-success-strong">{step < 4 ? `Step ${step} of 4 done` : "Ready to confirm"}</span>
+                : <>Step {step} of 4 · still needed: <span className="font-bold text-foreground">{plannedNeeds}</span></>}
+            </p>
+            <div className="ml-auto flex items-center gap-2">
+              <Button variant="ghost" onClick={handleClose}>Cancel</Button>
+              {residentSelected && mode === "short" && (
+                <Button onClick={handleShortSubmit} disabled={saving || blockedBySite || !canSubmitShort} className="gap-2">
+                  <DoorOpen aria-hidden className="h-4 w-4" />{saving ? "Saving…" : independent ? "Record absence" : "Record departure"}
+                </Button>
+              )}
+              {residentSelected && mode === "planned" && (<>
+                {step > 1 && (
+                  <Button variant="outline" disabled={saving || !!attemptedDetails.current} onClick={() => setStep(step - 1)} className="gap-1.5"><ArrowLeft aria-hidden className="h-4 w-4" />Back</Button>
+                )}
+                {step < 4 ? (
+                  <Button onClick={() => setStep(step + 1)} className="gap-1.5" disabled={!canProceedPlanned()}>Next<ArrowRight aria-hidden className="h-4 w-4" /></Button>
+                ) : (
+                  <Button onClick={handlePlannedSubmit} className="gap-2" disabled={saving || !currentSiteId || openedSite.current !== currentSiteId || !can("checkout.perform") || !privacyAcknowledged}>
+                    <Check aria-hidden className="h-4 w-4" />{saving ? "Saving…" : "Confirm leave"}
+                  </Button>
+                )}
+              </>)}
+            </div>
+          </div>
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+/** Defined outside the dialog so inputs inside keep focus while typing. */
+function Field({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-bold text-foreground">{label}{required && <span aria-hidden className="ml-1 text-destructive">*</span>}</p>
+      {hint && <p className="-mt-1 text-[13px] text-muted-foreground">{hint}</p>}
+      {children}
+    </div>
   );
 }
