@@ -47,18 +47,19 @@ export function StepIdentify({
   }, [onlyType, selectedType, onTypeChange]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Search input */}
-      <div className="space-y-2">
-        <Label htmlFor="staff-returning-search">Returning visitor lookup</Label>
-        <div className="relative mt-2">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="space-y-1.5">
+        <Label htmlFor="staff-returning-search" className="text-sm font-bold">Returning visitor lookup</Label>
+        <p className="text-[13px] text-muted-foreground">Been here before? Search to fill in their details. Leave empty for someone new.</p>
+        <div className="relative">
+          <Search aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             id="staff-returning-search"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search name or phone (optional)"
-            className="pl-11 pr-11 h-12 rounded-xl text-base border-2 border-border focus:border-primary bg-card shadow-sm"
+            placeholder="Name or phone number"
+            className="pl-10"
             autoFocus
           />
 
@@ -66,22 +67,22 @@ export function StepIdentify({
       </div>
 
       {/* Type chips — hidden when the site only has one type enabled */}
-      <div className={`space-y-3 ${onlyType ? "hidden" : ""}`}>
-        <p className="text-sm font-semibold text-muted-foreground">Visitor Type</p>
-        <div className="flex flex-wrap gap-2">
+      <div className={`space-y-2 ${onlyType ? "hidden" : ""}`}>
+        <p id="staff-type-label" className="text-sm font-bold text-foreground">Type of visit</p>
+        <div role="group" aria-labelledby="staff-type-label" className="flex flex-wrap gap-2">
           {typeChips.map((tc) => (
             <Button variant="outline" type="button"
               key={tc.type}
               onClick={() => onTypeChange(tc.type)}
               aria-pressed={selectedType === tc.type}
-              className={`min-h-touch flex items-center gap-2 px-3 rounded-control text-center group ${
+              className={`h-11 gap-2 rounded-full px-4 ${
                 selectedType === tc.type
-                  ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20"
-                  : "border-border hover:border-primary/30 hover:bg-muted/30 hover:shadow-sm"
+                  ? "border-primary bg-accent text-accent-foreground hover:bg-accent"
+                  : "border-input text-foreground hover:border-primary/60 hover:bg-card"
               }`}
             >
-              <tc.Icon className="h-4 w-4 text-primary" aria-hidden />
-              <span className={`text-sm font-bold ${selectedType === tc.type ? "text-primary" : "text-foreground"}`}>
+              <tc.Icon className={`h-4 w-4 ${selectedType === tc.type ? "text-accent-foreground" : "text-muted-foreground"}`} aria-hidden />
+              <span className="text-sm font-bold">
                 {tc.label}
               </span>
 
@@ -95,27 +96,27 @@ export function StepIdentify({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-muted-foreground">
-              {searchResults.length > 0 ? `Returning Visitors (${searchResults.length})` : "No matches found"}
+              {searchResults.length > 0 ? `${searchResults.length} returning ${searchResults.length === 1 ? "match" : "matches"}` : "Nobody matches. Fill in their details below."}
             </p>
           </div>
 
           {searchResults.length > 0 && (
-            <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+            <div className="space-y-2">
               {searchResults.map((profile) => (
                 <Button variant="outline" type="button"
                   key={profile.id}
                   onClick={() => onSelectProfile(profile)}
-                  className={`h-auto min-h-touch w-full justify-start text-left p-3 rounded-control border transition-all duration-150 group ${
+                  className={`h-auto min-h-touch w-full justify-start rounded-xl p-3 text-left ${
                     selectedProfile?.id === profile.id
-                      ? "border-primary bg-primary/5 shadow-sm"
-                      : "border-border hover:border-primary/30 hover:shadow-sm"
+                      ? "border-primary bg-accent hover:bg-accent"
+                      : "border-border hover:border-primary/60 hover:bg-card"
                   }`}
                 >
                   <div className="flex min-w-0 w-full items-center gap-3.5">
-                    <div className={`h-11 w-11 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 transition-colors ${
+                    <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-extrabold shrink-0 transition-colors ${
                       selectedProfile?.id === profile.id
                         ? "bg-primary text-primary-foreground"
-                        : "bg-primary/10 text-primary"
+                        : "bg-accent text-accent-foreground"
                     }`}>
                       {profile.firstName[0]}{profile.surname[0]}
                     </div>
@@ -146,14 +147,9 @@ export function StepIdentify({
           )}
 
           {/* New person button */}
-          <Button variant="outline" type="button"
-            onClick={onNewPerson}
-            className="w-full p-4 rounded-xl border-2 border-dashed border-border hover:border-primary/40 hover:bg-primary/5 transition-all flex items-center justify-center gap-2 group"
-          >
-            <UserPlus className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-            <span className="text-sm font-semibold text-muted-foreground group-hover:text-primary transition-colors">
-              New person — not in system
-            </span>
+          <Button variant="ghost" type="button" onClick={onNewPerson} className="gap-2 text-primary-hover">
+            <UserPlus aria-hidden className="h-4 w-4" />
+            Someone new — enter their details
           </Button>
         </div>
       )}

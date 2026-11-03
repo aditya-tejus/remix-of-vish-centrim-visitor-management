@@ -1,4 +1,3 @@
-import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { ScreeningEvaluation } from "@/lib/screeningOutcome";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -42,10 +41,10 @@ export function StepConfirm({
 }: StepConfirmProps) {
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
-        <p className="text-base font-semibold">{formData.firstName} {formData.surname}</p>
+      <div className="flex flex-wrap items-center gap-2 rounded-xl bg-secondary/80 px-4 py-3">
+        <p className="text-base font-extrabold">{`${formData.firstName} ${formData.surname}`.trim() || "Name not entered yet"}</p>
         {evaluation && <StatusBadge status={evaluation.blocked ? "blocked" : evaluation.flagged ? "flagged" : "clear"} />}
-        {companions.length > 0 && <span className="text-sm text-muted-foreground">With {companions.length} companion{companions.length === 1 ? "" : "s"}</span>}
+        {companions.length > 0 && <span className="text-sm text-muted-foreground">with {companions.length} companion{companions.length === 1 ? "" : "s"}</span>}
       </div>
 
       {/* Time override */}
@@ -56,23 +55,20 @@ export function StepConfirm({
       />
 
       {/* Terms & Privacy */}
-      {privacyRequired && <div className="border-t border-border pt-3 space-y-3">
-        <div className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <ScrollText className="h-4 w-4 text-primary" />
-          </div>
-          <h4 className="text-base font-bold text-foreground">Terms & Privacy</h4>
-        </div>
-        <div className="max-h-[100px] overflow-y-auto rounded-control bg-muted/30 p-4 text-sm text-muted-foreground leading-relaxed space-y-1.5 border border-border whitespace-pre-line">
+      {privacyRequired && <div className="space-y-3">
+        <h4 className="flex items-center gap-2 text-sm font-bold text-foreground">
+          <ScrollText aria-hidden className="h-4 w-4 text-muted-foreground" /> Terms and privacy
+        </h4>
+        <div className="whitespace-pre-line rounded-xl border border-border bg-secondary/60 px-4 py-3 text-sm leading-relaxed text-secondary-foreground">
           {tcContent ? (
             tcContent
           ) : (
-            <>
-              <p>1. I agree to follow all care home policies during my visit.</p>
-              <p>2. I agree to sign out upon leaving the premises.</p>
-              <p>3. I confirm that all information provided is accurate.</p>
-              <p>4. My visit data will be processed per applicable data protection regulations.</p>
-            </>
+            <ol className="list-decimal space-y-1 pl-4">
+              <li>I agree to follow all care home policies during my visit.</li>
+              <li>I agree to sign out when I leave.</li>
+              <li>I confirm that all information provided is accurate.</li>
+              <li>My visit data will be processed under the applicable data protection rules.</li>
+            </ol>
           )}
         </div>
         {(branchTcUrl || branchPrivacyUrl) && (
@@ -80,21 +76,21 @@ export function StepConfirm({
             {branchTcUrl && (
               <a href={branchTcUrl} target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline font-medium">
-                <FileText className="h-3.5 w-3.5" /> View Terms & Conditions
+                <FileText aria-hidden className="h-3.5 w-3.5" /> Full terms and conditions
               </a>
             )}
             {branchPrivacyUrl && (
               <a href={branchPrivacyUrl} target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline font-medium">
-                <Shield className="h-3.5 w-3.5" /> View Privacy Policy
+                <Shield aria-hidden className="h-3.5 w-3.5" /> Privacy policy
               </a>
             )}
           </div>
         )}
-        <div className="flex items-start gap-3 py-2">
-          <Checkbox id="staff-terms" checked={privacyAcknowledged} className="mt-1 h-5 w-5" onCheckedChange={c => setPrivacyAcknowledged(c === true)} />
-          <Label htmlFor="staff-terms" className="text-base leading-relaxed">I accept the Terms & Conditions and acknowledge the Privacy Notice</Label>
-        </div>
+        <label htmlFor="staff-terms" className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${privacyAcknowledged ? "border-primary bg-accent" : "border-input bg-card hover:border-primary/60"}`}>
+          <Checkbox id="staff-terms" checked={privacyAcknowledged} className="mt-0.5" onCheckedChange={c => setPrivacyAcknowledged(c === true)} />
+          <span className="text-sm font-semibold leading-relaxed text-foreground">The person checking in accepts the terms and conditions and has been shown the privacy notice</span>
+        </label>
       </div>}
     </div>
   );

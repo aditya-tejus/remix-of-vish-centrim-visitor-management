@@ -1,12 +1,9 @@
 import { ConfiguredDetails } from "./ConfiguredDetails";
-import { Destination } from "./Destination";
-import { AdditionalPeople } from "./AdditionalPeople";
 import { Button } from "@/components/ui/button";
 import { Camera, Check, X, Phone, Mail } from "lucide-react";
-import { CompanionDetail, VisitorType } from "@/types/visitor";
+import { VisitorType } from "@/types/visitor";
 import { CheckInFormData, VisitorProfile } from "./useCheckInFlow";
 import { useRef, useState, useCallback, useEffect } from "react";
-import type { CompanionFieldSpec } from "@/lib/companionFields";
 import type { CheckInFieldSpec } from "@/lib/checkInFields";
 
 interface StepDetailsProps {
@@ -15,11 +12,6 @@ interface StepDetailsProps {
   selectedProfile: VisitorProfile | null;
   isReturning: boolean;
   selectedType: VisitorType;
-  residentItems: { id: string; name: string; room: string; wing: string }[];
-  staffItems: { id: string; name: string; role: string; department: string }[];
-  companions: CompanionDetail[];
-  setCompanions: React.Dispatch<React.SetStateAction<CompanionDetail[]>>;
-  activeCompanionFields: CompanionFieldSpec[];
   /** Exactly the fields this site asks for this person type. */
   activeFields: CheckInFieldSpec[];
   photo: string | null;
@@ -33,11 +25,6 @@ export function StepDetails({
   selectedProfile,
   isReturning,
   selectedType,
-  residentItems,
-  staffItems,
-  companions,
-  setCompanions,
-  activeCompanionFields,
   activeFields,
   photo,
   setPhoto,
@@ -93,36 +80,27 @@ export function StepDetails({
     <div className="space-y-6">
       {/* Returning visitor quick summary */}
       {isReturning && selectedProfile ? (
-        <div className="border-l-2 border-primary bg-accent/40 px-3 py-2">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center">
-                <Check className="h-3.5 w-3.5 text-primary" />
-              </div>
-              <p className="text-sm font-bold uppercase tracking-wider text-primary">Returning Visitor</p>
-            </div>
-            <Button variant="ghost" onClick={onChangeProfile} className="text-sm text-primary hover:underline font-semibold px-2 py-1 rounded-lg hover:bg-primary/10 transition-colors">Change</Button>
+        <div className="flex items-center gap-3 rounded-xl border border-primary/30 bg-accent/60 p-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-card text-sm font-extrabold text-accent-foreground">
+            {formData.firstName?.[0]}{formData.surname?.[0]}
           </div>
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-[15px] font-bold text-primary">
-              {formData.firstName?.[0]}{formData.surname?.[0]}
-            </div>
-            <div>
-              <p className="text-[16px] font-bold text-foreground">{formData.firstName} {formData.surname}</p>
-              <div className="flex flex-wrap gap-3 mt-1">
-                {formData.mobile && <span className="text-sm text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" />{formData.mobile}</span>}
-                {formData.email && <span className="text-sm text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" />{formData.email}</span>}
-              </div>
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1.5 text-xs font-bold text-accent-foreground"><Check aria-hidden className="h-3.5 w-3.5" strokeWidth={3} />Returning visitor — details filled in</p>
+            <p className="truncate text-base font-extrabold text-foreground">{formData.firstName} {formData.surname}</p>
+            <div className="flex flex-wrap gap-x-3 text-[13px] text-muted-foreground">
+              {formData.mobile && <span className="flex items-center gap-1"><Phone aria-hidden className="h-3 w-3" />{formData.mobile}</span>}
+              {formData.email && <span className="flex items-center gap-1"><Mail aria-hidden className="h-3 w-3" />{formData.email}</span>}
             </div>
           </div>
+          <Button variant="ghost" size="sm" onClick={onChangeProfile} className="shrink-0 text-primary-hover">Change</Button>
         </div>
       ) : null}
 
       {/* Personal details — exactly what this site asks for this person type */}
-      <div className="flex flex-col-reverse gap-4">
+      <div className="flex flex-col-reverse gap-5">
         {/* Photo capture — compact left column */}
-        <details className="w-full">
-          <summary className="cursor-pointer py-2 text-sm font-medium text-muted-foreground">Photo{photo ? " captured" : " (optional)"}</summary>
+        <div className="w-full space-y-2">
+          <p className="text-sm font-semibold text-foreground">Photo <span className="font-normal text-muted-foreground">(optional)</span></p>
           {photo ? (
             <div className="space-y-2">
               <img src={photo} alt="" className="h-[120px] w-[120px] rounded-control object-cover border-2 border-success/30 shadow-sm" />
@@ -148,21 +126,16 @@ export function StepDetails({
               </div>
             </div>
           ) : (
-            <Button variant="outline" onClick={startCamera} className="w-full min-h-touch flex items-center justify-center gap-2 rounded-control border-2 border-dashed border-border hover:border-primary/40 hover:bg-primary/5 transition-all group">
-              <Camera className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" aria-hidden />
-              <span className="text-sm font-medium text-muted-foreground group-hover:text-primary transition-colors">Take Photo</span>
+            <Button variant="outline" onClick={startCamera} className="gap-2">
+              <Camera className="h-4 w-4" aria-hidden />Take photo
             </Button>
           )}
           <canvas ref={canvasRef} className="hidden" />
           <input ref={fileInputRef} type="file" accept="image/*" capture="user" className="hidden" onChange={handleFileUpload} />
-        </details>
+        </div>
 
         <ConfiguredDetails fields={activeFields} values={formData as unknown as Record<string, unknown>} onChange={updateField} />
       </div>
-
-
-      <Destination formData={formData} updateField={updateField} residentItems={residentItems} staffItems={staffItems} activeFields={activeFields} />
-      <AdditionalPeople companions={companions} setCompanions={setCompanions} activeCompanionFields={activeCompanionFields} />
 
     </div>
   );

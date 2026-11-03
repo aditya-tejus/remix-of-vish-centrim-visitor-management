@@ -23,23 +23,26 @@ export function AdditionalPeople({ companions, setCompanions, activeCompanionFie
  return <>
       {/* Companions */}
       {activeCompanionFields.length > 0 && (
-        <div className="border-t border-border pt-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5">
-              <Users className="h-3 w-3" /> Companions ({companions.length})
-            </p>
-            <Button variant="outline" size="sm" className="min-h-touch text-sm gap-1.5 rounded-lg" onClick={addCompanion}>
-              <Plus className="h-3 w-3" /> Add Companion
+        <div className="space-y-3 border-t border-border pt-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+                <Users aria-hidden className="h-4 w-4 text-muted-foreground" /> People with them{companions.length > 0 ? ` (${companions.length})` : ""}
+              </p>
+              <p className="text-[13px] text-muted-foreground">Each companion is counted on site in their own right.</p>
+            </div>
+            <Button variant="outline" className="gap-2" onClick={addCompanion}>
+              <Plus aria-hidden className="h-4 w-4" /> Add companion
             </Button>
           </div>
           {companions.map((companion, cIdx) => (
-            <div key={cIdx} className="rounded-xl border border-border bg-muted/30 p-4 space-y-2.5">
+            <div key={cIdx} className="space-y-3 rounded-xl border border-border bg-secondary/60 p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
                     {cIdx + 1}
                   </div>
-                  <span className="text-sm font-semibold text-foreground">Companion {cIdx + 1}</span>
+                  <span className="text-sm font-bold text-foreground">Companion {cIdx + 1}</span>
                 </div>
                 <Button variant="ghost" size="icon" className="min-h-touch min-w-touch text-destructive hover:bg-destructive/10"
                   aria-label={`Remove companion ${cIdx + 1}`} onClick={() => setCompanions((prev) => prev.filter((_, i) => i !== cIdx))}><Trash2 className="h-3.5 w-3.5" /></Button>

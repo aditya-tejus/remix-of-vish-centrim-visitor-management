@@ -253,6 +253,23 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Design system scrollbars: slim, neutral, no arrows. Applies to every
+     scrolling area so panels and dialogs never show the heavy OS default. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--input)) transparent;
+  }
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--input));
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover { background-color: hsl(var(--text-tertiary)); }
+  *::-webkit-scrollbar-button { display: none; }
+
   /* Focus is always visible and never removed. Keyboard users must be able to
      see where they are on every screen, including the kiosk. */
   :focus-visible {

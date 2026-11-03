@@ -1,7 +1,7 @@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, MessageSquare } from "lucide-react";
+import { MapPin } from "lucide-react";
 import type { CheckInFieldSpec } from "@/lib/checkInFields";
 import type { CheckInFormData } from "./useCheckInFlow";
 
@@ -12,23 +12,30 @@ export function Destination({ formData, updateField, residentItems, staffItems, 
  activeFields: CheckInFieldSpec[];
 }) {
  return (
-      <div className="border-t border-border pt-4 space-y-4">
-        <p className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5">
-          <MapPin className="h-3 w-3" /> Destination / host
-        </p>
-        <Select value={formData.whomToVisit} onValueChange={(val) => { updateField("whomToVisit", val); updateField("selectPerson", ""); }}>
-          <SelectTrigger aria-label="Destination type" className="rounded-control min-h-touch text-base"><SelectValue placeholder="Visiting a..." /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Resident">Resident</SelectItem>
-            <SelectItem value="Staff">Staff Member</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <p id="staff-destination-label" className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+            <MapPin aria-hidden className="h-4 w-4 text-muted-foreground" /> Who are they visiting?
+          </p>
+          <div role="group" aria-labelledby="staff-destination-label" className="grid grid-cols-2 gap-2 sm:max-w-sm">
+            {[["Resident", "A resident"], ["Staff", "A staff member"]].map(([value, label]) => {
+              const on = formData.whomToVisit === value;
+              return (
+                <button key={value} type="button" aria-pressed={on}
+                  onClick={() => { updateField("whomToVisit", value); updateField("selectPerson", ""); }}
+                  className={`min-h-11 rounded-lg border px-3 text-sm font-bold transition-colors ${on ? "border-primary bg-accent text-accent-foreground" : "border-input bg-card text-foreground hover:border-primary/60"}`}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {formData.whomToVisit === "Resident" && (
           <div className="space-y-1.5">
-            <Label className="text-sm font-medium">Select Resident</Label>
+            <Label className="text-sm font-bold">Resident</Label>
             <Select value={formData.selectPerson} onValueChange={(val) => updateField("selectPerson", val)}>
-              <SelectTrigger aria-label="Select resident" className="rounded-control min-h-touch text-base"><SelectValue placeholder="Search or select resident..." /></SelectTrigger>
+              <SelectTrigger aria-label="Select resident" className="rounded-control min-h-touch text-base"><SelectValue placeholder="Choose a resident" /></SelectTrigger>
               <SelectContent>
                 {residentItems.length === 0 && (
                   <div className="px-3 py-4 text-sm text-muted-foreground text-center">
@@ -44,7 +51,7 @@ export function Destination({ formData, updateField, residentItems, staffItems, 
                       {r.wing && (
                         <>
                           <span className="text-muted-foreground text-sm">•</span>
-                          <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-primary/10 text-primary font-medium">{r.wing}</span>
+                          <span className="text-xs font-semibold text-muted-foreground">{r.wing}</span>
                         </>
                       )}
                     </div>
@@ -57,9 +64,9 @@ export function Destination({ formData, updateField, residentItems, staffItems, 
 
         {formData.whomToVisit === "Staff" && (
           <div className="space-y-1.5">
-            <Label className="text-sm font-medium">Select Staff Member</Label>
+            <Label className="text-sm font-bold">Staff member</Label>
             <Select value={formData.selectPerson} onValueChange={(val) => updateField("selectPerson", val)}>
-              <SelectTrigger aria-label="Select staff member" className="rounded-control min-h-touch text-base"><SelectValue placeholder="Select staff member..." /></SelectTrigger>
+              <SelectTrigger aria-label="Select staff member" className="rounded-control min-h-touch text-base"><SelectValue placeholder="Choose a staff member" /></SelectTrigger>
               <SelectContent>
                 {staffItems.map((s) => (
                   <SelectItem key={s.id} value={s.name}>
@@ -77,11 +84,11 @@ export function Destination({ formData, updateField, residentItems, staffItems, 
 
         {!activeFields.some(f => f.valueKey === "comments") && (
         <div className="space-y-1">
-          <Label className="text-sm font-medium flex items-center gap-1.5">
-            <MessageSquare className="h-3 w-3" /> Comments <span className="font-normal text-muted-foreground">(optional)</span>
+          <Label className="text-sm font-bold">
+            Notes <span className="font-normal text-muted-foreground">(optional)</span>
           </Label>
           <Textarea aria-label="Visit comments" value={formData.comments} onChange={(e) => updateField("comments", e.target.value)}
-            placeholder="Any notes about this visit..." className="min-h-[50px] resize-none rounded-control text-base" />
+            placeholder="Anything reception should know about this visit" className="min-h-[72px] resize-none" />
         </div>
         )}
       </div>

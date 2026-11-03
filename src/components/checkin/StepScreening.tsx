@@ -83,27 +83,18 @@ export function StepScreening({
         onBlockedChange={onBlockedChange}
       />
       )}
-      {/* Header section */}
-      {healthQuestions.length > 0 && <div className="border-t border-border pt-4">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Shield className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold text-foreground">Check-in Questions</h3>
-              <p className="text-sm text-muted-foreground">Complete all required questions before proceeding.</p>
-            </div>
-          </div>
-          <div className={`text-sm font-bold px-2.5 py-1 rounded-lg ${
+      {healthQuestions.length > 0 && (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">Answer every question before checking in.</p>
+          <span className={`shrink-0 rounded-full px-2.5 text-xs font-bold leading-6 ${
             answeredCount === healthQuestions.length
-              ? hasYesFlags ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"
-              : "bg-muted text-muted-foreground"
+              ? hasYesFlags ? "bg-error-subtle text-destructive-strong" : "bg-success-subtle text-success-strong"
+              : "bg-muted text-secondary-foreground"
           }`}>
-            {answeredCount}/{healthQuestions.length}
-          </div>
+            {answeredCount} of {healthQuestions.length} answered
+          </span>
         </div>
-      </div>}
+      )}
 
       {/* Health questions */}
       <div className="space-y-3">

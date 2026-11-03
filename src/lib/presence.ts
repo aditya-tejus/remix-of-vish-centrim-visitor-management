@@ -2,7 +2,7 @@
  * On site and today — pure presentation rules for the reception list.
  * The views themselves are derived in useVisitViews from one visitor list.
  */
-import { endOfDay, isSameDay, isToday } from "date-fns";
+import { endOfDay, isSameDay } from "date-fns";
 import type { Visitor } from "@/types/visitor";
 
 /**
@@ -11,7 +11,7 @@ import type { Visitor } from "@/types/visitor";
  * included too — an overdue return is exactly what the desk needs to see.
  */
 export function residentsDue(all: Visitor[], date: Date, now = new Date()): Visitor[] {
-  const today = isToday(date) || isSameDay(date, now);
+  const today = isSameDay(date, now);
   return all
     .filter((v) => {
       if (v.type !== "resident" || v.status !== "checked-out" || !v.expectedReturnDate) return false;
