@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 export const FOOD_TYPES = [
   { value: "homemade", label: "Homemade" },
   { value: "packaged", label: "Packaged" },
-  { value: "takeaway", label: "Takeaway / Delivered" },
+  { value: "takeaway", label: "Takeaway or delivered" },
   { value: "other", label: "Other" },
 ] as const;
 

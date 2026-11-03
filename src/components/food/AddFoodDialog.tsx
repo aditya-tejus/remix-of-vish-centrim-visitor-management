@@ -10,7 +10,6 @@ import { insertFoodRecord } from "@/lib/foodRegister";
 import { useSite } from "@/contexts/SiteContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { UtensilsCrossed } from "lucide-react";
 
 interface AddFoodDialogProps {
   open: boolean;
@@ -76,21 +75,20 @@ export function AddFoodDialog({ open, onOpenChange, onSaved }: AddFoodDialogProp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg rounded-xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-[17px]">
-            <UtensilsCrossed className="h-4 w-4 text-primary" /> Add food Record
-          </DialogTitle>
-          <DialogDescription className="text-[13px]">
-            Record food brought in at reception, or on behalf of someone who did not register at check-in.
+      <DialogContent className="flex max-h-[92dvh] max-w-xl flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="space-y-0 border-b border-border px-6 py-4 pr-14 text-left">
+          <DialogTitle className="text-xl font-extrabold leading-7">Add food record</DialogTitle>
+          <DialogDescription className="mt-1 text-[13px]">
+            For food handed in at reception, or brought by someone who did not record it at check-in.
           </DialogDescription>
         </DialogHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label className="text-[12px] font-medium">Resident *</Label>
+            <Label className="text-sm font-bold">Who is it for?<span aria-hidden className="ml-1 text-destructive">*</span></Label>
             <Select value={residentId} onValueChange={setResidentId}>
-              <SelectTrigger className="rounded-xl h-10 text-[14px]"><SelectValue placeholder="Select resident..." /></SelectTrigger>
+              <SelectTrigger aria-label="Resident"><SelectValue placeholder="Choose a resident" /></SelectTrigger>
               <SelectContent>
                 {residentOptions.map((r) => (
                   <SelectItem key={r.id} value={r.id}>{r.name}{r.room ? ` • ${r.room}` : ""}</SelectItem>
@@ -99,23 +97,23 @@ export function AddFoodDialog({ open, onOpenChange, onSaved }: AddFoodDialogProp
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label className="text-[12px] font-medium">Brought by *</Label>
+              <Label htmlFor="food-brought-by" className="text-sm font-bold">Brought by<span aria-hidden className="ml-1 text-destructive">*</span></Label>
               <Input
+                id="food-brought-by"
                 value={broughtBy}
                 onChange={(e) => setBroughtBy(e.target.value)}
-                placeholder="Type a name"
-                className="rounded-xl h-10 text-[14px]"
+                placeholder="Their name"
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[12px] font-medium">Date &amp; time</Label>
+              <Label htmlFor="food-recorded-at" className="text-sm font-bold">When it came in</Label>
               <Input
+                id="food-recorded-at"
                 type="datetime-local"
                 value={recordedAt}
                 onChange={(e) => setRecordedAt(e.target.value)}
-                className="rounded-xl h-10 text-[14px]"
               />
             </div>
           </div>
@@ -128,11 +126,15 @@ export function AddFoodDialog({ open, onOpenChange, onSaved }: AddFoodDialogProp
           />
         </div>
 
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={save} disabled={!valid || saving} className="rounded-xl">
-            {saving ? "Saving..." : "Save Record"}
-          </Button>
+        </div>
+        <DialogFooter className="flex-row items-center gap-2 border-t border-border px-6 py-3 sm:justify-between">
+          <p className="hidden text-sm text-muted-foreground sm:block">
+            {!residentId ? "Choose who it is for." : !broughtBy.trim() ? "Add who brought it." : !isFoodFormValid(form) ? "Describe the food." : <span className="font-bold text-success-strong">Ready to save</span>}
+          </p>
+          <div className="ml-auto flex gap-2">
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button onClick={save} disabled={!valid || saving}>{saving ? "Saving…" : "Save record"}</Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

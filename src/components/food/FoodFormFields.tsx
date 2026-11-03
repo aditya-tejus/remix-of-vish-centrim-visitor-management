@@ -46,8 +46,10 @@ interface FoodFormFieldsProps {
 
 export function FoodFormFields({ state, onChange, residents, primaryResidentId, size = "default" }: FoodFormFieldsProps) {
   const kiosk = size === "kiosk";
-  const controlH = kiosk ? "h-14 text-base" : "h-10 text-[14px]";
-  const labelCls = kiosk ? "text-sm font-medium" : "text-[12px] font-medium";
+  const controlH = kiosk ? "h-14 text-base" : "";
+  const labelCls = kiosk ? "text-sm font-medium" : "text-sm font-bold";
+  const choice = (on: boolean) => `rounded-lg border font-bold transition-colors ${kiosk ? "h-14 text-base" : "min-h-11 px-3 text-sm"} ${
+    on ? "border-primary bg-accent text-accent-foreground" : "border-input bg-card text-foreground hover:border-primary/60"}`;
 
   const set = (patch: Partial<FoodFormState>) => onChange({ ...state, ...patch });
 
@@ -57,44 +59,39 @@ export function FoodFormFields({ state, onChange, residents, primaryResidentId, 
   return (
     <div className={kiosk ? "space-y-5" : "space-y-4"}>
       <div className="space-y-1.5">
-        <Label className={labelCls}>What food are you bringing? *</Label>
+        <Label htmlFor="food-description" className={labelCls}>What food is it?<span aria-hidden className="ml-1 text-destructive">*</span></Label>
         <Input
+          id="food-description"
           value={state.foodDescription}
           onChange={(e) => set({ foodDescription: e.target.value })}
-          placeholder="e.g. Home-cooked lasagne, box of biscuits"
-          className={`rounded-xl ${controlH}`}
+          placeholder="For example, home-cooked lasagne or a box of biscuits"
+          className={controlH}
         />
       </div>
 
       <div className="space-y-1.5">
-        <Label className={labelCls}>Food type</Label>
-        <Select value={state.foodType} onValueChange={(v) => set({ foodType: v })}>
-          <SelectTrigger className={`rounded-xl ${controlH}`}><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {FOOD_TYPES.map((t) => (
-              <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <p id="food-type-label" className={labelCls}>Type of food</p>
+        <div role="group" aria-labelledby="food-type-label" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {FOOD_TYPES.map((t) => (
+            <button key={t.value} type="button" aria-pressed={state.foodType === t.value} onClick={() => set({ foodType: t.value })} className={choice(state.foodType === t.value)}>
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="space-y-1.5">
-        <Label className={labelCls}>Is this being shared with other residents?</Label>
-        <div className="flex gap-3">
+        <p id="food-shared-label" className={labelCls}>Will it be shared with other residents?</p>
+        <div role="group" aria-labelledby="food-shared-label" className="grid grid-cols-2 gap-2 sm:max-w-xs">
           {[true, false].map((val) => (
             <button
               key={String(val)}
               type="button"
               onClick={() => set({ sharedWithOthers: val, sharedResidentIds: val ? state.sharedResidentIds : [] })}
-              className={`flex-1 rounded-xl border font-semibold transition-all active:scale-[0.98] ${
-                kiosk ? "h-14 text-base" : "h-10 text-[13px]"
-              } ${
-                state.sharedWithOthers === val
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background text-muted-foreground border-border"
-              }`}
+              aria-pressed={state.sharedWithOthers === val}
+              className={choice(state.sharedWithOthers === val)}
             >
-              {val ? "Yes" : "No"}
+              {val ? "Yes, shared" : "No, just them"}
             </button>
           ))}
         </div>
@@ -106,7 +103,7 @@ export function FoodFormFields({ state, onChange, residents, primaryResidentId, 
           {selected.length > 0 && (
             <div className="flex flex-wrap gap-1.5 pb-1">
               {selected.map((r) => (
-                <Badge key={r.id} variant="secondary" className="gap-1 text-[12px]">
+                <Badge key={r.id} variant="secondary" className="gap-1 text-xs">
                   {r.name}
                   <button
                     type="button"
@@ -125,8 +122,8 @@ export function FoodFormFields({ state, onChange, residents, primaryResidentId, 
               if (!state.sharedResidentIds.includes(v)) set({ sharedResidentIds: [...state.sharedResidentIds, v] });
             }}
           >
-            <SelectTrigger className={`rounded-xl ${controlH}`}>
-              <SelectValue placeholder="Add a resident..." />
+            <SelectTrigger aria-label="Add a resident it is shared with" className={controlH}>
+              <SelectValue placeholder="Add a resident" />
             </SelectTrigger>
             <SelectContent>
               {shareOptions
@@ -142,12 +139,13 @@ export function FoodFormFields({ state, onChange, residents, primaryResidentId, 
       )}
 
       <div className="space-y-1.5">
-        <Label className={labelCls}>Notes (optional)</Label>
+        <Label htmlFor="food-notes" className={labelCls}>Notes <span className="font-normal text-muted-foreground">(optional)</span></Label>
         <Textarea
+          id="food-notes"
           value={state.notes}
           onChange={(e) => set({ notes: e.target.value })}
-          placeholder="Anything staff should know"
-          className={`rounded-xl ${kiosk ? "min-h-[96px] text-base" : "min-h-[70px] text-[13px]"}`}
+          placeholder="For example, where it is stored, or allergy information"
+          className={kiosk ? "min-h-[96px] text-base" : "min-h-[72px]"}
         />
       </div>
 
